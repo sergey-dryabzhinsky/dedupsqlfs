@@ -3,7 +3,7 @@
 __author__ = 'sergey'
 
 import sqlite3
-import json
+import pickle
 from dedupsqlfs.db.table import Table
 
 class TableInodeXattr( Table ):
@@ -30,7 +30,7 @@ class TableInodeXattr( Table ):
         cur = self.getCursor()
 
         if values:
-            bvalues = sqlite3.Binary(json.dumps(values))
+            bvalues = sqlite3.Binary(pickle.dumps(values))
         else:
             bvalues = values
         cur.execute("INSERT INTO `%s`(inode_id, data) VALUES (?, ?)" % self._table_name, (
@@ -48,7 +48,7 @@ class TableInodeXattr( Table ):
         """
         cur = self.getCursor()
 
-        bvalues = sqlite3.Binary(json.dumps(values))
+        bvalues = sqlite3.Binary(pickle.dumps(values))
 
         cur.execute("UPDATE `%s` SET `data`=? WHERE `inode_id`=?" % self._table_name, (
             bvalues, inode,
@@ -68,7 +68,7 @@ class TableInodeXattr( Table ):
         ))
         item = cur.fetchone()
         if item:
-            item = json.loads(item["data"])
+            item = pickle.loads(item["data"])
         return item
 
     pass

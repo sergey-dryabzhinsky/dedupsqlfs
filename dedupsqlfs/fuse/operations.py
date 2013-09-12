@@ -672,10 +672,18 @@ class DedupOperations(llfuse.Operations): # {{{1
             inode = self.__fix_inode_if_requested_root(inode)
 
             xattrs = self.getTable("xattr").find_by_inode(inode)
+
+            newxattr = False
             if not xattrs:
+                newxattr = True
                 xattrs = {}
             xattrs[name] = value
-            self.getTable("xattr").update(inode, xattrs)
+
+            if not newxattr:
+                self.getTable("xattr").update(inode, xattrs)
+            else:
+                self.getTable("xattr").insert(inode, xattrs)
+
             self.__commit_changes()
             return 0
         except Exception as e:
@@ -1167,7 +1175,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         # Make sure directories are empty before deleting them to avoid orphaned inodes.
         if check_empty:
             tree_inodes = treeTable.get_children_inodes(cur_node["id"])
-            inodes = inodeTable.find_nlinks_by_ids(tree_inodes)
+            inodes = inodeTable.count_nlinks_by_ids(tree_inodes)
             if inodes:
                 raise FUSEError(errno.ENOTEMPTY)
 

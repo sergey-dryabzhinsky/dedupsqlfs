@@ -161,6 +161,13 @@ class TableInode( Table ):
         self.commit()
         return item
 
+    def count_nlinks_by_ids(self, id_list):
+        cur = self.getCursor()
+        cur.execute("SELECT COUNT(1) as cnt FROM `%s` WHERE id IN (%s) AND nlinks>0" % (
+            self._table_name, ",".join(id_list),)
+        )
+        return cur.fetchone()["cnt"]
+
     def get_count(self):
         cur = self.getCursor()
         cur.execute("SELECT COUNT(id) as cnt FROM `%s`" % self._table_name)

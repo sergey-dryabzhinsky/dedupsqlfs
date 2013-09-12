@@ -1,4 +1,6 @@
+#Python
 *.py[cod]
+__pycache__
 
 # C extensions
 *.so
@@ -33,3 +35,6 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+
+# PyCharm
+.idea

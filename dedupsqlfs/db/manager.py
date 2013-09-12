@@ -1,0 +1,138 @@
+# -*- coding: utf8 -*-
+
+__author__ = 'sergey'
+
+
+class DbManager( object ):
+
+    _table = None
+    _db_name = "dedupsqlfs"
+    _base_path = "/dev/shm/db"
+    _autocommit = True
+    _synchronous = True
+
+    tables = (
+        "option",
+        "tree",
+        "name",
+        "inode",
+        "link",
+        "block",
+        "xattr",
+        "compression_type",
+        "hash",
+        "inode_hash_block",
+    )
+
+    def __init__( self, dbname = None, base_path=None, autocommit=None, synchronous=None ):
+        if not (dbname is None):
+            self._db_name = dbname
+        if not (base_path is None):
+            self._base_path = dbname
+        if not (autocommit is None):
+            self._autocommit = autocommit == True
+        if not (synchronous is None):
+            self._synchronous = synchronous == True
+        self._table = {}
+
+
+    def setSynchronous(self, flag=True):
+        self._synchronous = flag == True
+        return self
+
+    def getSynchronous(self):
+        return self._synchronous
+
+    def setAutocommit(self, flag=True):
+        self._autocommit = flag == True
+        return self
+
+    def getAutocommit(self):
+        return self._autocommit
+
+    def setBasepath(self, base_path):
+        self._base_path = base_path
+        return self
+
+    def getBasePath(self):
+        return self._base_path
+
+    def getDbName(self):
+        return self._db_name
+
+    def getTable(self, name):
+        if name not in self._table:
+            if name == "option":
+                from dedupsqlfs.db.table.option import TableOption
+                self._table[ name ] = TableOption(self)
+            elif name == "tree":
+                from dedupsqlfs.db.table.tree import TableTree
+                self._table[ name ] = TableTree(self)
+            elif name == "name":
+                from dedupsqlfs.db.table.name import TableName
+                self._table[ name ] = TableName(self)
+            elif name == "inode":
+                from dedupsqlfs.db.table.inode import TableInode
+                self._table[ name ] = TableInode(self)
+            elif name == "link":
+                from dedupsqlfs.db.table.link import TableLink
+                self._table[ name ] = TableLink(self)
+            elif name == "block":
+                from dedupsqlfs.db.table.block import TableBlock
+                self._table[ name ] = TableBlock(self)
+            elif name == "xattr":
+                from dedupsqlfs.db.table.xattr import TableInodeXattr
+                self._table[ name ] = TableInodeXattr(self)
+            elif name == "compression_type":
+                from dedupsqlfs.db.table.compression_type import TableCompressionType
+                self._table[ name ] = TableCompressionType(self)
+            elif name == "hash":
+                from dedupsqlfs.db.table.hash import TableHash
+                self._table[ name ] = TableHash(self)
+            elif name == "inode_hash_block":
+                from dedupsqlfs.db.table.inode_hash_block import TableInodeHashBlock
+                self._table[ name ] = TableInodeHashBlock(self)
+            else:
+                raise ValueError("Unknown database %r" % name)
+        return self._table[ name ]
+
+
+    def commit(self):
+        for name, t in self._table.items():
+            t.commit()
+        return self
+
+    def rollback(self):
+        for name, t in self._table.items():
+            t.rollback()
+        return self
+
+    def vacuum(self):
+        for name, t in self._table.items():
+            t.vacuum()
+        return self
+
+    def close(self):
+        for name, t in self._table.items():
+            t.close()
+        return self
+
+    def getSize(self):
+        s = 0
+        for name, t in self._table.items():
+            s += t.getSize()
+        return s
+
+    def getFileSize(self):
+        s = 0
+        for name in self.tables:
+            t = self.getTable(name)
+            s += t.getFileSize()
+        return s
+
+    def create(self):
+        for t in self.tables:
+            self.getTable(t).create()
+        return self
+
+    pass

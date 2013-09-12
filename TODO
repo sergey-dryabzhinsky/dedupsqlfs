@@ -1,0 +1,26 @@
+Here are some things on to-do list, in no particular order:
+
+ * Implement functions for work with blocks, hashes, subvolumes as semarate
+   commands (options) in do.dedupsqlfs. This should reduce code size of
+   FUSE operations file.
+
+ * Automatically switch to a larger block size to reduce the overhead for files
+   that rarely change after being created (like >= 100MB video files :-)
+   Or use defragmentation tool for that.
+   Also different block size for every file.
+
+ * Implement rename() independently of link()/unlink() to improve performance?
+   Need benchmarks.
+
+ * Implement `--verify-reads` option that recalculates hashes when reading to
+   check for data block corruption?
+
+ * Implement `--verify-writes` option that recalculates hashes when writing to
+   check for data block corruption? (dropped by Sergey while porting to pythno3)
+
+ * Tag databases with a version number and implement automatic upgrades because
+   I've grown tired of upgrading my database by hand :-)
+
+ * Support directory hard links without upsetting FUSE and add a command-line
+   option that instructs `dedupfs.py` to search for identical subdirectories
+   and replace them with directory hard links.

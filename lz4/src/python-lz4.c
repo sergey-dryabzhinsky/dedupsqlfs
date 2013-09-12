@@ -1,0 +1,201 @@
+#include "Python.h"
+#include "stdlib.h"
+#include "math.h"
+#include "lz4.h"
+#include "lz4hc.h"
+
+struct module_state {
+    PyObject *error;
+};
+
+#if PY_MAJOR_VERSION >= 3
+#define GETSTATE(m) ((struct module_state*)PyModule_GetState(m))
+#else
+#define GETSTATE(m) (&_state)
+static struct module_state _state;
+#endif
+
+/* if support for Python 2.5 is dropped the bytesobject.h will do this for us */
+#if PY_MAJOR_VERSION < 3
+#define PyBytes_FromStringAndSize PyString_FromStringAndSize
+#define _PyBytes_Resize _PyString_Resize
+#define PyBytes_AS_STRING PyString_AS_STRING
+#endif
+
+#include "python-lz4.h"
+
+#define MAX(a, b)               ((a) > (b) ? (a) : (b))
+
+typedef int (*compressor)(const char *source, char *dest, int isize);
+
+static inline void store_le32(char *c, uint32_t x)
+{
+	c[0] = x & 0xff;
+	c[1] = (x >> 8) & 0xff;
+	c[2] = (x >> 16) & 0xff;
+	c[3] = (x >> 24) & 0xff;
+}
+
+static inline uint32_t load_le32(const char *c)
+{
+    const uint8_t *d = (const uint8_t *)c;
+    return d[0] | (d[1] << 8) | (d[2] << 16) | (d[3] << 24);
+}
+
+static const int hdr_size = sizeof(uint32_t);
+
+static PyObject *
+compress_with(compressor compress, PyObject *self, PyObject *args)
+{
+    PyObject *result;
+    const char *source;
+    int source_size;
+    char *dest;
+    int dest_size;
+
+#if PY_MAJOR_VERSION >= 3
+    if (!PyArg_ParseTuple(args, "y#", &source, &source_size))
+#else
+    if (!PyArg_ParseTuple(args, "s#", &source, &source_size))
+#endif
+        return NULL;
+
+    dest_size = hdr_size + LZ4_compressBound(source_size);
+    result = PyBytes_FromStringAndSize(NULL, dest_size);
+    if (result == NULL)
+        return NULL;
+    dest = PyBytes_AS_STRING(result);
+    store_le32(dest, source_size);
+    if (source_size > 0) {
+        int osize = compress(source, dest + hdr_size, source_size);
+        int actual_size = hdr_size + osize;
+        /* Resizes are expensive; tolerate some slop to avoid. */
+        _PyBytes_Resize(&result, actual_size);
+    }
+    return result;
+}
+
+static PyObject *py_lz4_compress(PyObject *self, PyObject *args)
+{
+    return compress_with(LZ4_compress, self, args);
+}
+
+static PyObject *py_lz4_compressHC(PyObject *self, PyObject *args)
+{
+    return compress_with(LZ4_compressHC, self, args);
+}
+
+static PyObject *
+py_lz4_uncompress(PyObject *self, PyObject *args)
+{
+    PyObject *result;
+    const char *source;
+    int source_size;
+    uint32_t dest_size;
+
+#if PY_MAJOR_VERSION >= 3
+    if (!PyArg_ParseTuple(args, "y#", &source, &source_size))
+#else
+    if (!PyArg_ParseTuple(args, "s#", &source, &source_size))
+#endif
+        return NULL;
+
+    if (source_size < hdr_size) {
+	PyErr_SetString(PyExc_ValueError, "input too short");
+	return NULL;
+    }
+    dest_size = load_le32(source);
+    if (dest_size > INT_MAX) {
+	PyErr_Format(PyExc_ValueError, "invalid size in header: 0x%x",
+		     dest_size);
+	return NULL;
+    }
+    result = PyBytes_FromStringAndSize(NULL, dest_size);
+    if (result != NULL && dest_size > 0) {
+	char *dest = PyBytes_AS_STRING(result);
+	int osize = LZ4_uncompress(source + hdr_size, dest, dest_size);
+
+	if (osize < 0) {
+	    PyErr_Format(PyExc_ValueError, "corrupt input at byte %d", -osize);
+	    Py_CLEAR(result);
+	}
+	else if (osize < source_size - hdr_size) {
+	    PyErr_SetString(PyExc_ValueError, "decompression incomplete");
+	    Py_CLEAR(result);
+	}
+    }
+
+    return result;
+}
+
+static PyMethodDef Lz4Methods[] = {
+    {"LZ4_compress",  py_lz4_compress, METH_VARARGS, COMPRESS_DOCSTRING},
+    {"LZ4_uncompress",  py_lz4_uncompress, METH_VARARGS, UNCOMPRESS_DOCSTRING},
+    {"compress",  py_lz4_compress, METH_VARARGS, COMPRESS_DOCSTRING},
+    {"compressHC",  py_lz4_compressHC, METH_VARARGS, COMPRESSHC_DOCSTRING},
+    {"uncompress",  py_lz4_uncompress, METH_VARARGS, UNCOMPRESS_DOCSTRING},
+    {"decompress",  py_lz4_uncompress, METH_VARARGS, UNCOMPRESS_DOCSTRING},
+    {"dumps",  py_lz4_compress, METH_VARARGS, COMPRESS_DOCSTRING},
+    {"loads",  py_lz4_uncompress, METH_VARARGS, UNCOMPRESS_DOCSTRING},
+    {NULL, NULL, 0, NULL}
+};
+
+
+
+#if PY_MAJOR_VERSION >= 3
+
+static int myextension_traverse(PyObject *m, visitproc visit, void *arg) {
+    Py_VISIT(GETSTATE(m)->error);
+    return 0;
+}
+
+static int myextension_clear(PyObject *m) {
+    Py_CLEAR(GETSTATE(m)->error);
+    return 0;
+}
+
+
+static struct PyModuleDef moduledef = {
+        PyModuleDef_HEAD_INIT,
+        "lz4",
+        NULL,
+        sizeof(struct module_state),
+        Lz4Methods,
+        NULL,
+        myextension_traverse,
+        myextension_clear,
+        NULL
+};
+
+#define INITERROR return NULL
+
+PyObject *
+PyInit_lz4(void)
+#else
+
+#define INITERROR return
+
+void
+initlz4(void)
+#endif
+{
+#if PY_MAJOR_VERSION >= 3
+    PyObject *module = PyModule_Create(&moduledef);
+#else
+    PyObject *module = Py_InitModule("lz4", Lz4Methods);
+#endif
+
+    if (module == NULL)
+        INITERROR;
+    struct module_state *st = GETSTATE(module);
+
+    st->error = PyErr_NewException("lz4.Error", NULL, NULL);
+    if (st->error == NULL) {
+        Py_DECREF(module);
+        INITERROR;
+    }
+
+#if PY_MAJOR_VERSION >= 3
+    return module;
+#endif
+}

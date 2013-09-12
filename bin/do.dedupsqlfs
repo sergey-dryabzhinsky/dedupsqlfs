@@ -1,0 +1,34 @@
+#!/usr/bin/python3 -O
+# -*- coding: utf8 -*-
+
+"""
+Commands for dedupsqlfs
+
+@author: sergey
+@copyright: 2013
+@since: 2013-07-20
+"""
+
+import sys
+import os
+
+dirname = "dedupsqlfs"
+
+# Figure out the directy which is the prefix
+# path-of-current-file/..
+currentdir = os.path.dirname( os.path.abspath( sys.argv[0] ) )
+basedir = os.path.abspath( os.path.join( currentdir, ".." ) )
+
+# Add the base directory where the application is installed in to sys.path
+if not os.path.exists( os.path.join( basedir, dirname ) ):
+    raise SystemExit( "ERROR: Could not find required directory: %s" %
+                      os.path.join( basedir, dirname ) )
+
+sys.path.insert( 0, basedir )
+
+from dedupsqlfs.app.do import main
+
+try:
+    sys.exit( main( ) )
+except KeyboardInterrupt:
+    raise SystemExit

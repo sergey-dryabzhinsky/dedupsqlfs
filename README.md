@@ -72,6 +72,8 @@ The latest version of DedupFS is available at <https://github.com/sergey-dryabzh
 
 ## License
 
-This software is licensed under the MIT license.  
+This software is licensed under the MIT license.
+
 © 2013 Sergey Dryabzhinsky &lt;<sergey.dryabzhinsky@gmail.com>&gt;.
+
 © 2010 Peter Odding &lt;<peter@peterodding.com>&gt;.

@@ -202,7 +202,7 @@ class DedupFS(object): # {{{1
         manager = self.operations.getManager()
         disk_usage = manager.getFileSize()
 
-        hashTable = manager.getTable("hash")
+        indexTable = manager.getTable("inode_hash_block")
 
         apparent_size = self.operations.getApparentSize()
 
@@ -217,7 +217,7 @@ class DedupFS(object): # {{{1
                              100.0 * disk_usage / apparent_size
             )
 
-            curIndex = manager.getTable("inode_hash_block").getCursor()
+            curIndex = indexTable.getCursor()
 
             curIndex.execute("SELECT COUNT(hash_id)-1 AS cnt,block_size FROM `inode_hash_block` GROUP BY hash_id HAVING cnt>0")
 
@@ -246,7 +246,7 @@ class DedupFS(object): # {{{1
         self.getLogger().info("Compression by types:")
         count_all = 0
         comp_types = {}
-        for item in hashTable.count_compression_type():
+        for item in indexTable.count_compression_type():
             count_all += item["cnt"]
             comp_types[ item["cnt"] ] = self.operations.getCompressionTypeName( item["compression_type_id"] )
 

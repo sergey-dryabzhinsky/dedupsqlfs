@@ -77,7 +77,9 @@ class Table( object ):
             self.connect()
         return self._conn
 
-    def getCursor(self):
+    def getCursor(self, new=False):
+        if new:
+            return self.getConnection().cursor()
         if not self._curr:
             self._curr = self.getConnection().cursor()
         return self._curr
@@ -105,16 +107,6 @@ class Table( object ):
         cur = self.getCursor()
         cur.execute("TRUNCATE `%s`" % self.getName())
         return self
-
-    def getConnection(self):
-        if not self._conn:
-            self.connect()
-        return self._conn
-
-    def getCursor(self):
-        if not self._curr:
-            self._curr = self.getConnection().cursor()
-        return self._curr
 
     def create( self ):
         raise NotImplemented

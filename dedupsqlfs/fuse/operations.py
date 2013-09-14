@@ -927,6 +927,23 @@ class DedupOperations(llfuse.Operations): # {{{1
         return self.__fill_attr_inode_row(row)
 
 
+    def __get_block_from_cache(self, inode, block_number):
+        tableIndex = self.getTable("inode_hash_block")
+        tableBlock = self.getTable("block")
+
+        block = self.cached_blocks.get(inode, block_number)
+
+        if block is None:
+            block_index = tableIndex.get_by_inode_number(inode, block_number)
+            if not block_index:
+                block = BytesIO()
+            else:
+                item = tableBlock.get(block_index["hash_id"])
+                block = self.__decompress(item, block_index["compression_type_id"])
+
+            self.cached_blocks.set(inode, block_number, block)
+        return block
+
     def __get_block_data_by_offset(self, inode, offset, size):
         """
         @type inode: int
@@ -947,22 +964,9 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         readed_size = 0
 
-        tableIndex = self.getTable("inode_hash_block")
-        tableBlock = self.getTable("block")
-
         for n in range(read_blocks):
 
-            block = self.cached_blocks.get(inode, n+first_block_number)
-
-            if block is None:
-                block_index = tableIndex.get_by_inode_number(inode, n + first_block_number)
-                if not block_index:
-                    block = BytesIO()
-                else:
-                    item = tableBlock.get(block_index["hash_id"])
-                    block = self.__decompress(item)
-
-                self.cached_blocks.set(inode, n+first_block_number, block)
+            block = self.__get_block_from_cache(inode, n + first_block_number)
 
             read_size = size - readed_size
             if read_size > self.block_size:
@@ -979,10 +983,9 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         return raw_data.getvalue()
 
-    def __decompress(self, block_item):
-        hashItem = self.getTable("hash").fetch(block_item["hash_id"])
-        compression = self.getCompressionTypeName( hashItem["compression_type_id"] )
-        return BytesIO(self.getApplication().decompressData(compression, block_item["data"]))
+    def __decompress(self, block_data, compression_type_id):
+        compression = self.getCompressionTypeName( compression_type_id )
+        return BytesIO(self.getApplication().decompressData(compression, block_data))
 
     def __write_block_data_by_offset(self, inode, offset, block_data):
         """
@@ -1006,20 +1009,9 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         writed_size = 0
 
-        tableIndex = self.getTable("inode_hash_block")
-        tableBlock = self.getTable("block")
-
         for n in range(write_blocks):
 
-            block = self.cached_blocks.get(inode, n+first_block_number)
-
-            if block is None:
-                block_index = tableIndex.get_by_inode_number(inode, n + first_block_number)
-                if not block_index:
-                    block = BytesIO()
-                else:
-                    item = tableBlock.get(block_index["hash_id"])
-                    block = self.__decompress(item)
+            block = self.__get_block_from_cache(inode, n+first_block_number)
 
             write_size = size - writed_size
             if write_size > self.block_size:
@@ -1414,23 +1406,26 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         block_index = tableIndex.get_by_inode_number(inode, block_number)
 
+        cmethod = constants.COMPRESSION_TYPE_NONE
+
         # It is new block now?
         if not hash_id:
+
+            cdata, cmethod = self.__compress(block)
 
             hash_count = 0
             if block_index:
                 hash_count = tableIndex.get_count_hash(block_index["hash_id"])
-
-            cdata, cmethod = self.__compress(block)
+                block_index["compression_type_id"] = self.getCompressionTypeId(cmethod)
 
             cdata_length = len(cdata)
 
             if hash_count == 1:
                 hash_id = block_index["hash_id"]
-                tableHash.update(hash_id, self.getCompressionTypeId(cmethod), hash_value)
+                tableHash.update(hash_id, hash_value)
                 tableBlock.update(hash_id, cdata)
             else:
-                hash_id = tableHash.insert(self.getCompressionTypeId(cmethod), hash_value)
+                hash_id = tableHash.insert(hash_value)
                 tableBlock.insert(hash_id, cdata)
 
             self.bytes_written += block_length
@@ -1440,9 +1435,9 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.bytes_deduped += block_length
 
         if not block_index:
-            tableIndex.insert(inode, block_number, hash_id, block_length)
+            tableIndex.insert(inode, block_number, hash_id, self.getCompressionTypeId(cmethod), block_length)
         elif block_index["hash_id"] != hash_id:
-            tableIndex.update_hash(inode, block_number, hash_id, block_length)
+            tableIndex.update(inode, block_number, hash_id, block_index["compression_type_id"], block_length)
 
         self.time_spent_writing_blocks += time.time() - start_time
         return
@@ -1572,6 +1567,7 @@ class DedupOperations(llfuse.Operations): # {{{1
     def __collect_strings(self): # {{{4
         curTree = self.getTable("tree").getCursor()
         curName = self.getTable("name").getCursor()
+        curName2 = self.getTable("name").getCursor(True)
 
         self.getLogger().info("Clean unused path segments...")
 
@@ -1581,27 +1577,28 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.getLogger().info(" path segments: %d" % countNames)
 
         current = 0
-        proc = -1
+        proc = ""
 
         curName.execute("SELECT id FROM `name`")
-        nameIds = curName.fetchall()
 
         count = 0
-
-        for nameItem in nameIds:
+        while True:
+            nameItem = curName.fetchone()
+            if not nameItem:
+                break
 
             curTree.execute("SELECT COUNT(name_id) as cnt FROM `tree` WHERE name_id=?", (nameItem['id'],))
             _countTreeName = curTree.fetchone()["cnt"]
 
             if not _countTreeName:
-                curName.execute("DELETE FROM `name` WHERE id=?", (nameItem["id"],))
-                count += curName.rowcount
+                curName2.execute("DELETE FROM `name` WHERE id=?", (nameItem["id"],))
+                count += curName2.rowcount
 
             current += 1
-            p = int(100.0 * current / countNames)
+            p = "%3.2f%%" % (100.0 * current / countNames)
             if p != proc:
                 proc = p
-                self.getLogger().info("%3d%%", proc)
+                self.getLogger().info("%s", proc)
 
         self.getManager().commit()
 
@@ -1620,49 +1617,10 @@ class DedupOperations(llfuse.Operations): # {{{1
             return "Cleaned up %i unused inode%s in %%s." % (count, count != 1 and 's' or '')
         return
 
-    def __collect_inodes_scan(self): # {{{4
-        curTree = self.getTable("tree").getCursor()
-        curInode = self.getTable("inode").getCursor()
-
-        self.getLogger().info("Clean unused inodes...")
-
-        curInode.execute("SELECT COUNT(id) as cnt FROM `inode`")
-
-        countInodes = curInode.fetchone()["cnt"]
-        self.getLogger().info(" inodes: %d" % countInodes)
-
-        current = 0
-        proc = -1
-
-        curInode.execute("SELECT id FROM `inode`")
-        inodeIds = curInode.fetchall()
-
-        count = 0
-
-        for inodeItem in inodeIds:
-
-            curTree.execute("SELECT COUNT(inode_id) as cnt FROM `tree` WHERE inode_id=?", (inodeItem['id'],))
-            _countInodes = curTree.fetchone()["cnt"]
-
-            if not _countInodes:
-                curInode.execute("DELETE FROM `inode` WHERE id=?", (inodeItem["id"],))
-                count += curInode.rowcount
-
-            current += 1
-            p = int(100.0 * current / countInodes)
-            if p != proc:
-                proc = p
-                self.getLogger().info("%3d%%", proc)
-
-        self.getManager().commit()
-        if count > 0:
-            self.should_vacuum = True
-            return "Cleaned up %i unused inode%s in %%s." % (count, count != 1 and 's' or '')
-        return
-
     def __collect_xattrs(self): # {{{4
         curInode = self.getTable("inode").getCursor()
         curXattr = self.getTable("xattr").getCursor()
+        curXattr2 = self.getTable("xattr").getCursor(True)
 
         self.getLogger().info("Clean unused xattrs...")
 
@@ -1672,27 +1630,29 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.getLogger().info(" xattrs: %d" % countXattrs)
 
         current = 0
-        proc = -1
+        proc = ""
 
         curXattr.execute("SELECT inode_id FROM `xattr`")
-        xattrInodes = curXattr.fetchall()
 
         count = 0
 
-        for xattrItem in xattrInodes:
+        while True:
+            xattrItem = curXattr.fetchone()
+            if not xattrItem:
+                break
 
             curInode.execute("SELECT COUNT(id) as cnt FROM `inode` WHERE id=?", (xattrItem['inode_id'],))
             _countInodes = curInode.fetchone()["cnt"]
 
             if not _countInodes:
-                curXattr.execute("DELETE FROM `xattr` WHERE inode_id=?", (xattrItem["inode_id"],))
-                count += curXattr.rowcount
+                curXattr2.execute("DELETE FROM `xattr` WHERE inode_id=?", (xattrItem["inode_id"],))
+                count += curXattr2.rowcount
 
             current += 1
-            p = int(100.0 * current / countXattrs)
+            p = "%3.2f%%" % (100.0 * current / countXattrs)
             if p != proc:
                 proc = p
-                self.getLogger().info("%3d%%", proc)
+                self.getLogger().info("%s", proc)
 
         self.getManager().commit()
 
@@ -1704,6 +1664,7 @@ class DedupOperations(llfuse.Operations): # {{{1
     def __collect_links(self): # {{{4
         curInode = self.getTable("inode").getCursor()
         curLink = self.getTable("link").getCursor()
+        curLink2 = self.getTable("link").getCursor(True)
 
         self.getLogger().info("Clean unused links...")
 
@@ -1713,27 +1674,29 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.getLogger().info(" links: %d" % countLinks)
 
         current = 0
-        proc = -1
+        proc = ""
 
         curLink.execute("SELECT inode_id FROM `link`")
-        linkInodes = curLink.fetchall()
 
         count = 0
 
-        for linkItem in linkInodes:
+        while True:
+            linkItem = curLink.fetchone()
+            if not linkItem:
+                break
 
             curInode.execute("SELECT COUNT(id) as cnt FROM `inode` WHERE id=?", (linkItem['inode_id'],))
             _countInodes = curInode.fetchone()["cnt"]
 
             if not _countInodes:
-                curLink.execute("DELETE FROM `link` WHERE inode_id=?", (linkItem["inode_id"],))
-                count += curLink.rowcount
+                curLink2.execute("DELETE FROM `link` WHERE inode_id=?", (linkItem["inode_id"],))
+                count += curLink2.rowcount
 
             current += 1
-            p = int(100.0 * current / countLinks)
+            p = "%3.2f%%" % (100.0 * current / countLinks)
             if p != proc:
                 proc = p
-                self.getLogger().info("%3d%%", proc)
+                self.getLogger().info("%s", proc)
 
         self.getManager().commit()
         if count > 0:
@@ -1744,6 +1707,7 @@ class DedupOperations(llfuse.Operations): # {{{1
     def __collect_indexes(self): # {{{4
         curInode = self.getTable("inode").getCursor()
         curIndex = self.getTable("inode_hash_block").getCursor()
+        curIndex2 = self.getTable("inode_hash_block").getCursor(True)
 
         self.getLogger().info("Clean unused block indexes...")
 
@@ -1753,27 +1717,29 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.getLogger().info(" block inodes: %d" % countInodes)
 
         current = 0
-        proc = -1
+        proc = ""
 
         curIndex.execute("SELECT inode_id FROM `inode_hash_block` GROUP BY inode_id")
-        indexInodes = curIndex.fetchall()
 
         count = 0
 
-        for indexItem in indexInodes:
+        while True:
+            indexItem = curIndex.fetchone()
+            if not indexItem:
+                break
 
             curInode.execute("SELECT COUNT(id) as cnt FROM `inode` WHERE id=?", (indexItem['inode_id'],))
             _countInodes = curInode.fetchone()["cnt"]
 
             if not _countInodes:
-                curIndex.execute("DELETE FROM `inode_hash_block` WHERE inode_id=?", (indexItem["inode_id"],))
-                count += curIndex.rowcount
+                curIndex2.execute("DELETE FROM `inode_hash_block` WHERE inode_id=?", (indexItem["inode_id"],))
+                count += curIndex2.rowcount
 
             current += 1
-            p = int(100.0 * current / countInodes)
+            p = "%3.2f%%" % (100.0 * current / countInodes)
             if p != proc:
                 proc = p
-                self.getLogger().info("%3d%%", proc)
+                self.getLogger().info("%s", proc)
 
         self.getManager().commit()
 
@@ -1784,6 +1750,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __collect_blocks(self): # {{{4
         curHash = self.getTable("hash").getCursor()
+        curHash2 = self.getTable("hash").getCursor(True)
         curBlock = self.getTable("block").getCursor()
         curIndex = self.getTable("inode_hash_block").getCursor()
 
@@ -1795,28 +1762,30 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.getLogger().info(" hashes: %d" % countHashes)
 
         current = 0
-        proc = -1
+        proc = ""
 
         curHash.execute("SELECT id FROM `hash`")
-        hashIds = curHash.fetchall()
 
         count = 0
 
-        for hashItem in hashIds:
+        while True:
+            hashItem = curHash.fetchone()
+            if not hashItem:
+                break
 
             curIndex.execute("SELECT COUNT(hash_id) as cnt FROM `inode_hash_block` WHERE hash_id=?", (hashItem['id'],))
             _countHashes = curIndex.fetchone()["cnt"]
 
             if not _countHashes:
-                curHash.execute("DELETE FROM `hash` WHERE id=?", (hashItem["id"],))
+                curHash2.execute("DELETE FROM `hash` WHERE id=?", (hashItem["id"],))
                 curBlock.execute("DELETE FROM `block` WHERE hash_id=?", (hashItem["id"],))
-                count += curHash.rowcount
+                count += curHash2.rowcount
 
             current += 1
-            p = int(100.0 * current / countHashes)
+            p = "%3.2f%%" % (100.0 * current / countHashes)
             if p != proc:
                 proc = p
-                self.getLogger().info("%3d%%", proc)
+                self.getLogger().info("%s", proc)
 
         self.getManager().commit()
 

@@ -17,6 +17,7 @@ class TableInodeHashBlock( Table ):
                 "inode_id INTEGER NOT NULL, "+
                 "block_number INTEGER NOT NULL, "+
                 "hash_id INTEGER NOT NULL, "+
+                "compression_type_id INTEGER NOT NULL, "+
                 "block_size INTEGER NOT NULL, "+
                 "PRIMARY KEY (inode_id, block_number)"+
             ")"
@@ -26,20 +27,25 @@ class TableInodeHashBlock( Table ):
                 "hash_id"+
             ");"
         )
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS b_compression_type ON `%s` (" % self._table_name+
+                "compression_type_id"+
+            ");"
+        )
         return
 
-    def insert( self, inode, block_number, hash_id, block_size ):
+    def insert( self, inode, block_number, hash_id, compression_type_id, block_size ):
         cur = self.getCursor()
-        cur.execute("INSERT INTO `%s`(inode_id, block_number, hash_id, block_size) VALUES (?,?,?,?)" % self._table_name,
-                    (inode, block_number, hash_id, block_size))
+        cur.execute("INSERT INTO `%s`(inode_id, block_number, hash_id, compression_type_id, block_size) VALUES (?,?,?,?,?)" % self._table_name,
+                    (inode, block_number, hash_id, compression_type_id, block_size))
         item = cur.lastrowid
         self.commit()
         return item
 
-    def update_hash( self, inode, block_number, new_hash_id, new_block_size ):
+    def update( self, inode, block_number, new_hash_id, compression_type_id, new_block_size ):
         cur = self.getCursor()
-        cur.execute("UPDATE `%s` SET hash_id=?, block_size=? WHERE inode_id=? AND block_number=?" % self._table_name,
-                    (new_hash_id, new_block_size, inode, block_number,))
+        cur.execute("UPDATE `%s` SET hash_id=?, compression_type_id=?, block_size=? WHERE inode_id=? AND block_number=?" % self._table_name,
+                    (new_hash_id, compression_type_id, new_block_size, inode, block_number,))
         item = cur.rowcount
         self.commit()
         return item
@@ -50,6 +56,12 @@ class TableInodeHashBlock( Table ):
         count = cur.rowcount
         self.commit()
         return count
+
+    def count_compression_type( self ):
+        cur = self.getCursor()
+        cur.execute("SELECT COUNT(compression_type_id) AS cnt,compression_type_id FROM `%s` GROUP BY compression_type_id" % self._table_name)
+        items = cur.fetchall()
+        return items
 
     def get_by_inode_number( self, inode, block_number ):
         cur = self.getCursor()

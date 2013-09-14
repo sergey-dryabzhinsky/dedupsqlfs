@@ -68,12 +68,20 @@ def main(): # {{{1
     parser.add_argument('--block-size', dest='block_size', metavar='BYTES', default=1024*128, type=int, help="Specify the maximum block size in bytes" + option_stored_in_db + ". Defaults to 128kB.")
     parser.add_argument('--mount-snapshot', dest='snapshot', metavar='NAME', default=None, help="Use shapshot NAME as root fs.")
     parser.add_argument('--raw-root', dest='disable_snapshots', action="store_true", help="Disable use of all snapshots and subvolumes. Unhide them into root of FS.")
+
     parser.add_argument('--no-cache', dest='use_cache', action='store_false', help="Don't use cache in memory and delayed write to storage files (@todo).")
-    parser.add_argument('--cache-timeout', dest='cache_timeout', metavar='NUMBER', type=int, default=5, help="Store data in memory for NUMBER of seconds. Defaults to 5 deconds.")
-    parser.add_argument('--cache-meta-timeout', dest='cache_meta_timeout', metavar='NUMBER', type=int, default=15, help="Delay flush expired metadata for NUMBER of seconds. Defaults to 15 deconds.")
-    parser.add_argument('--cache-block-timeout', dest='cache_block_timeout', metavar='NUMBER', type=int, default=5, help="Delay flush expired data to storage for NUMBER of seconds. Defaults to 5 deconds.")
+    parser.add_argument('--cache-timeout', dest='cache_timeout', metavar='NUMBER', type=int, default=5, help="Store data in memory for NUMBER of seconds. Defaults to 5 seconds.")
+    parser.add_argument('--cache-meta-timeout', dest='cache_meta_timeout', metavar='NUMBER', type=int, default=15, help="Delay flush expired metadata for NUMBER of seconds. Defaults to 15 seconds.")
+    parser.add_argument('--cache-block-write-timeout', dest='cache_block_write_timeout', metavar='NUMBER', type=int, default=5, help="Delay flush expired data from memory to storage for NUMBER of seconds. Defaults to 5 seconds.")
+    parser.add_argument('--cache-block-write-size', dest='cache_block_write_size', metavar='BYTES', type=int,
+                        default=256*1024*1024, help="Blocks write cache size in BYTES. Defaults to 256 MB.")
+    parser.add_argument('--cache-block-read-timeout', dest='cache_block_read_timeout', metavar='NUMBER', type=int, default=10, help="Delay flush expired data from memory for NUMBER of seconds. Defaults to 10 seconds.")
+    parser.add_argument('--cache-block-read-size', dest='cache_block_read_size', metavar='BYTES', type=int,
+                        default=256*1024*1024, help="Blocks read cache size in BYTES. Defaults to 256 MB.")
+
     parser.add_argument('--no-transactions', dest='use_transactions', action='store_false', help="Don't use transactions when making multiple related changes, this might make the file system faster or slower (?).")
     parser.add_argument('--nosync', dest='synchronous', action='store_false', help="Disable SQLite's normal synchronous behavior which guarantees that data is written to disk immediately, because it slows down the file system too much (this means you might lose data when the mount point isn't cleanly unmounted).")
+
     parser.add_argument('--nogc-on-umount', dest='gc_umount_enabled', action='store_false', help="Disable garbage collection on umount operation (only do this when you've got disk space to waste or you know that nothing will be be deleted from the file system, which means little to no garbage will be produced).")
     parser.add_argument('--gc', dest='gc_enabled', action='store_true', help="Enable the periodic garbage collection because it degrades performance (only do this when you've got disk space to waste or you know that nothing will be be deleted from the file system, which means little to no garbage will be produced).")
     parser.add_argument('--gc-vacuum', dest='gc_vacuum_enabled', action='store_true', help="Enable data vacuum after the periodic garbage collection.")

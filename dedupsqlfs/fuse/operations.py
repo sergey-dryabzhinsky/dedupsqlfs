@@ -55,10 +55,14 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.cache_enabled = True
         self.cache_gc_last_run = time.time()
         self.cache_gc_meta_last_run = time.time()
-        self.cache_gc_block_last_run = time.time()
+        self.cache_gc_block_write_last_run = time.time()
+        self.cache_gc_block_read_last_run = time.time()
         self.cache_timeout = 5
         self.cache_meta_timeout = 15
-        self.cache_block_timeout = 5
+        self.cache_block_write_timeout = 5
+        self.cache_block_read_timeout = 10
+        self.cache_block_write_size = 256*1024*1024
+        self.cache_block_read_size = 256*1024*1024
 
         self.cached_nodes = CacheTTLseconds()
         self.cached_attrs = CacheTTLseconds()
@@ -94,6 +98,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.time_spent_traversing_tree = 0
         self.time_spent_writing = 0
         self.time_spent_writing_blocks = 0
+        self.time_spent_flushing_block_cache = 0
         self.time_spent_compressing = 0
 
         self._compression_types = {}
@@ -279,7 +284,10 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.cache_enabled = self.getOption("use_cache")
             self.cache_timeout = self.getOption("cache_timeout")
-            self.cache_block_timeout = self.getOption("cache_block_timeout")
+            self.cache_block_write_timeout = self.getOption("cache_block_write_timeout")
+            self.cache_block_read_timeout = self.getOption("cache_block_read_timeout")
+            self.cache_block_write_size = self.getOption("cache_block_write_size")
+            self.cache_block_read_size = self.getOption("cache_block_read_size")
             self.cache_meta_timeout = self.getOption("cache_meta_timeout")
 
             self.gc_enabled = self.getOption("gc_enabled")
@@ -288,13 +296,23 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.gc_interval = self.getOption("gc_nth_seconds")
             self.gc_nth_request = self.getOption("gc_nth_calls")
 
-            self.cached_blocks.set_max_ttl(self.cache_block_timeout)
-            self.cached_nodes.set_max_ttl(self.cache_meta_timeout)
-            self.cached_attrs.set_max_ttl(self.cache_meta_timeout)
             if not self.cache_enabled:
-                self.cached_blocks.set_max_ttl(0)
+                self.cached_blocks.setMaxReadTtl(0)
+                self.cached_blocks.setMaxWriteTtl(0)
                 self.cached_nodes.set_max_ttl(0)
                 self.cached_attrs.set_max_ttl(0)
+            else:
+                if self.block_size:
+                    self.cached_blocks.setBlockSize(self.block_size)
+                self.cached_blocks.setMaxWriteTtl(self.cache_block_write_timeout)
+                self.cached_blocks.setMaxReadTtl(self.cache_block_read_timeout)
+                if self.cache_block_write_size:
+                    self.cached_blocks.setMaxWriteCacheSize(self.cache_block_write_size)
+                if self.cache_block_read_size:
+                    self.cached_blocks.setMaxReadCacheSize(self.cache_block_read_size)
+
+                self.cached_nodes.set_max_ttl(self.cache_meta_timeout)
+                self.cached_attrs.set_max_ttl(self.cache_meta_timeout)
 
             self.synchronous = self.getOption("synchronous")
             self.use_transactions = self.getOption("use_transactions")
@@ -705,6 +723,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             # The total number of free blocks available to a non privileged process.
             # stats.f_bavail = host_fs.f_bsize * host_fs.f_bavail / self.block_size
             stats.f_bavail = (apparent_size - self.getManager().getFileSize()) / self.block_size
+            if stats.f_bavail < 0:
+                stats.f_bavail = 0
             # The total number of free blocks in the file system.
             # stats.f_bfree = host_fs.f_frsize * host_fs.f_bfree / self.block_size
             stats.f_bfree = stats.f_bavail
@@ -882,15 +902,11 @@ class DedupOperations(llfuse.Operations): # {{{1
     def __fill_attr_inode_row(self, row): # {{{3
         result = llfuse.EntryAttributes()
 
-        generation = 0
-        inode = self.__fix_inode_if_requested_root(llfuse.ROOT_INODE)
-        if inode:
-            generation = inode
-
         result.entry_timeout = self.getOption("cache_timeout")
         result.attr_timeout = self.getOption("cache_timeout")
         result.st_ino       = int(row["id"])
-        result.generation   = int(generation)
+        # http://stackoverflow.com/questions/11071996/what-are-inode-generation-numbers
+        result.generation   = 0
         result.st_nlink     = int(row["nlinks"])
         result.st_mode      = int(row["mode"])
         result.st_uid       = int(row["uid"])
@@ -1117,6 +1133,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.getLogger().warning("Ignoring --block-size=%r argument, using previously chosen block size %i instead",
                 self.block_size, block_size)
             self.block_size = block_size
+            self.cached_blocks.setBlockSize(self.block_size)
 
         hash_function = options.get("hash_function")
         if hash_function != self.hash_function:
@@ -1277,6 +1294,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 (self.time_spent_writing, 'Writing data stream'),
                 (self.time_spent_writing_blocks, 'Writing data blocks (cumulative)'),
                 (self.time_spent_writing_blocks - self.time_spent_compressing - self.time_spent_hashing, 'Writing blocks to database'),
+                (self.time_spent_flushing_block_cache - self.time_spent_writing_blocks, 'Flushing block cache'),
                 (self.time_spent_hashing, 'Hashing data blocks'),
                 (self.time_spent_compressing, 'Compressing data blocks'),
                 (self.time_spent_querying_tree, 'Querying the tree')
@@ -1450,18 +1468,66 @@ class DedupOperations(llfuse.Operations): # {{{1
 
 
     def __cache_block_hook(self): # {{{3
-        if time.time() - self.cache_gc_block_last_run >= self.cache_block_timeout:
-            start_time = time.time()
-            self.getLogger().info("Performing block cache cleanup (this might take a while) ..")
 
-            size = len(self.cached_blocks)
-            count = size - self.__flush_old_cached_blocks(self.cached_blocks.expired())
-            self.getLogger().info(" flushed %i of %i blocks", count, size)
+        start_time = time.time()
+        flushed_writed_blocks = 0
+        flushed_readed_blocks = 0
 
-            self.cache_gc_block_last_run = time.time()
+        if time.time() - self.cache_gc_block_write_last_run >= self.cache_block_write_timeout:
+            # start_time = time.time()
+            # self.getLogger().debug("Performing writed block cache cleanup (this might take a while) ..")
 
-            elapsed_time = time.time() - start_time
-            self.getLogger().info("Finished block cache cleanup in %s.", format_timespan(elapsed_time))
+            # size = len(self.cached_blocks)
+            flushed_writed_blocks += self.__flush_old_cached_blocks(self.cached_blocks.expired(True))
+            # self.getLogger().debug(" flushed %i of %i blocks", count, size)
+
+            self.cache_gc_block_write_last_run = time.time()
+
+            # elapsed_time = time.time() - start_time
+            # self.getLogger().debug("Finished writed block cache cleanup in %s.", format_timespan(elapsed_time))
+
+        if self.cached_blocks.isWritedCacheFull():
+            #start_time = time.time()
+            #self.getLogger().debug("Performing writed block cache cleanup (this might take a while) ..")
+
+            #size = len(self.cached_blocks)
+            flushed_writed_blocks += self.__flush_old_cached_blocks(self.cached_blocks.expireByCount(True))
+            #self.getLogger().debug(" flushed %i of %i blocks", count, size)
+
+            #elapsed_time = time.time() - start_time
+            #self.getLogger().debug("Finished writed block cache cleanup in %s.", format_timespan(elapsed_time))
+
+        if time.time() - self.cache_gc_block_read_last_run >= self.cache_block_read_timeout:
+            #start_time = time.time()
+            #self.getLogger().debug("Performing readed block cache cleanup (this might take a while) ..")
+
+            #size = len(self.cached_blocks)
+            flushed_readed_blocks += self.cached_blocks.expired(False)
+            #self.getLogger().debug(" flushed %i of %i blocks", count, size)
+
+            self.cache_gc_block_read_last_run = time.time()
+
+            #elapsed_time = time.time() - start_time
+            #self.getLogger().debug("Finished readed block cache cleanup in %s.", format_timespan(elapsed_time))
+
+        if self.cached_blocks.isReadCacheFull():
+            #start_time = time.time()
+            #self.getLogger().debug("Performing readed block cache cleanup (this might take a while) ..")
+
+            #size = len(self.cached_blocks)
+            flushed_readed_blocks += self.cached_blocks.expireByCount(False)
+            #self.getLogger().debug(" flushed %i of %i blocks", count, size)
+
+            #elapsed_time = time.time() - start_time
+            #self.getLogger().debug("Finished writed block cache cleanup in %s.", format_timespan(elapsed_time))
+
+        elapsed_time = time.time() - start_time
+
+        self.time_spent_flushing_block_cache += elapsed_time
+
+        if flushed_writed_blocks + flushed_readed_blocks > 0:
+            self.getLogger().info("Block cache cleanup: flushed %i writed, %i readed blocks in %s", flushed_writed_blocks, flushed_readed_blocks, format_timespan(elapsed_time))
+
         return
 
     def __cache_meta_hook(self): # {{{3
@@ -1513,24 +1579,30 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.getLogger().info("Clean unused path segments...")
 
-        curTree.execute("SELECT name_id FROM `tree` GROUP BY name_id")
+        curName.execute("SELECT COUNT(id) as cnt FROM `name`")
 
-        count = 0
+        countNames = curName.fetchone()["cnt"]
+        self.getLogger().info(" path segments: %d" % countNames)
 
-        countNames = self.getTable("tree").get_count_names()
         current = 0
         proc = -1
 
-        while True:
-            nameItem = curTree.fetchone()
-            if not nameItem:
-                break
+        curName.execute("SELECT id FROM `name`")
+        nameIds = curName.fetchall()
 
-            curName.execute("DELETE FROM `name` WHERE id != ?", (nameItem["name_id"],))
-            count += curName.rowcount
+        count = 0
+
+        for nameItem in nameIds:
+
+            curTree.execute("SELECT COUNT(name_id) as cnt FROM `tree` WHERE name_id=?", (nameItem['id'],))
+            _countTreeName = curTree.fetchone()["cnt"]
+
+            if not _countTreeName:
+                curName.execute("DELETE FROM `name` WHERE id=?", (nameItem["id"],))
+                count += curName.rowcount
 
             current += 1
-            p = 100 * current / countNames
+            p = int(100.0 * current / countNames)
             if p != proc:
                 proc = p
                 self.getLogger().info("%3d%%", proc)
@@ -1558,23 +1630,30 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.getLogger().info("Clean unused xattrs...")
 
-        curInode.execute("SELECT id FROM `inode`")
+        curXattr.execute("SELECT COUNT(inode_id) as cnt FROM `xattr`")
 
-        countInodes = self.getTable("inode").get_count()
+        countXattrs = curXattr.fetchone()["cnt"]
+        self.getLogger().info(" xattrs: %d" % countXattrs)
+
         current = 0
         proc = -1
 
-        count = 0
-        while True:
-            inodeItem = curInode.fetchone()
-            if not inodeItem:
-                break
+        curXattr.execute("SELECT inode_id FROM `xattr`")
+        xattrInodes = curXattr.fetchall()
 
-            curXattr.execute("DELETE FROM `xattr` WHERE inode_id != ?", (inodeItem["id"],))
-            count += curXattr.rowcount
+        count = 0
+
+        for xattrItem in xattrInodes:
+
+            curInode.execute("SELECT COUNT(id) as cnt FROM `inode` WHERE id=?", (xattrItem['inode_id'],))
+            _countInodes = curInode.fetchone()["cnt"]
+
+            if not _countInodes:
+                curXattr.execute("DELETE FROM `xattr` WHERE inode_id=?", (xattrItem["inode_id"],))
+                count += curXattr.rowcount
 
             current += 1
-            p = 100 * current / countInodes
+            p = int(100.0 * current / countXattrs)
             if p != proc:
                 proc = p
                 self.getLogger().info("%3d%%", proc)
@@ -1592,23 +1671,30 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.getLogger().info("Clean unused links...")
 
-        curInode.execute("SELECT id FROM `inode`")
+        curLink.execute("SELECT COUNT(inode_id) as cnt FROM `link`")
 
-        countInodes = self.getTable("inode").get_count()
+        countLinks = curLink.fetchone()["cnt"]
+        self.getLogger().info(" links: %d" % countLinks)
+
         current = 0
         proc = -1
 
-        count = 0
-        while True:
-            inodeItem = curInode.fetchone()
-            if not inodeItem:
-                break
+        curLink.execute("SELECT inode_id FROM `link`")
+        linkInodes = curLink.fetchall()
 
-            curLink.execute("DELETE FROM `link` WHERE inode_id != ?", (inodeItem["id"],))
-            count += curLink.rowcount
+        count = 0
+
+        for linkItem in linkInodes:
+
+            curInode.execute("SELECT COUNT(id) as cnt FROM `inode` WHERE id=?", (linkItem['inode_id'],))
+            _countInodes = curInode.fetchone()["cnt"]
+
+            if not _countInodes:
+                curLink.execute("DELETE FROM `link` WHERE inode_id=?", (linkItem["inode_id"],))
+                count += curLink.rowcount
 
             current += 1
-            p = 100 * current / countInodes
+            p = int(100.0 * current / countLinks)
             if p != proc:
                 proc = p
                 self.getLogger().info("%3d%%", proc)
@@ -1625,23 +1711,30 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.getLogger().info("Clean unused block indexes...")
 
-        curInode.execute("SELECT id FROM `inode`")
+        curIndex.execute("SELECT COUNT(inode_id) as cnt FROM `inode_hash_block`")
 
-        countInodes = self.getTable("inode").get_count()
+        countInodes = curIndex.fetchone()["cnt"]
+        self.getLogger().info(" block inodes: %d" % countInodes)
+
         current = 0
-        proc = 1
+        proc = -1
+
+        curIndex.execute("SELECT inode_id FROM `inode_hash_block` GROUP BY inode_id")
+        indexInodes = curIndex.fetchall()
 
         count = 0
-        while True:
-            inodeItem = curInode.fetchone()
-            if not inodeItem:
-                break
 
-            curIndex.execute("DELETE FROM `inode_hash_block` WHERE inode_id != ?", (inodeItem["id"],))
-            count += curIndex.rowcount
+        for indexItem in indexInodes:
+
+            curInode.execute("SELECT COUNT(id) as cnt FROM `inode` WHERE id=?", (indexItem['inode_id'],))
+            _countInodes = curInode.fetchone()["cnt"]
+
+            if not _countInodes:
+                curIndex.execute("DELETE FROM `inode_hash_block` WHERE inode_id=?", (indexItem["inode_id"],))
+                count += curIndex.rowcount
 
             current += 1
-            p = 100 * current / countInodes
+            p = int(100.0 * current / countInodes)
             if p != proc:
                 proc = p
                 self.getLogger().info("%3d%%", proc)
@@ -1660,24 +1753,31 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.getLogger().info("Clean unused data blocks and hashes...")
 
-        curIndex.execute("SELECT hash_id FROM `inode_hash_block` GROUP BY hash_id")
+        curHash.execute("SELECT COUNT(id) AS cnt FROM `hash`")
 
-        countHashes = self.getTable("inode_hash_block").get_hashes_count()
+        countHashes = curHash.fetchone()["cnt"]
+        self.getLogger().info(" hashes: %d" % countHashes)
+
         current = 0
         proc = -1
 
-        count = 0
-        while True:
-            indexItem = curIndex.fetchone()
-            if not indexItem:
-                break
+        curHash.execute("SELECT id FROM `hash`")
+        hashIds = curHash.fetchall()
 
-            curHash.execute("DELETE FROM `hash` WHERE id != ?", (indexItem["hash_id"],))
-            curBlock.execute("DELETE FROM `block` WHERE hash_id != ?", (indexItem["hash_id"],))
-            count += curHash.rowcount
+        count = 0
+
+        for hashItem in hashIds:
+
+            curIndex.execute("SELECT COUNT(hash_id) as cnt FROM `inode_hash_block` WHERE hash_id=?", (hashItem['id'],))
+            _countHashes = curIndex.fetchone()["cnt"]
+
+            if not _countHashes:
+                curHash.execute("DELETE FROM `hash` WHERE id=?", (hashItem["id"],))
+                curBlock.execute("DELETE FROM `block` WHERE hash_id=?", (hashItem["id"],))
+                count += curHash.rowcount
 
             current += 1
-            p = 100 * current / countHashes
+            p = int(100.0 * current / countHashes)
             if p != proc:
                 proc = p
                 self.getLogger().info("%3d%%", proc)
@@ -1694,6 +1794,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __vacuum_metastore(self): # {{{4
         if self.should_vacuum and self.gc_vacuum_enabled:
+            self.getLogger().info("Vacuum databases...")
             self.getManager().vacuum()
             return "Vacuumed SQLite data store in %s."
 

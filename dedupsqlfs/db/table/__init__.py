@@ -58,7 +58,7 @@ class Table( object ):
 
         conn.execute("PRAGMA temp_store=FILE")
         conn.execute("PRAGMA max_page_count=2147483646")
-        conn.execute("PRAGMA page_size=1024")
+        conn.execute("PRAGMA page_size=512")
         conn.execute("PRAGMA journal_mode=TRUNCATE")
 
         if not self.getManager().getAutocommit():

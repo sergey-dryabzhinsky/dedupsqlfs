@@ -1195,6 +1195,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             inodes = inodeTable.count_nlinks_by_ids(tree_inodes)
             if inodes:
                 raise FUSEError(errno.ENOTEMPTY)
+            else:
+                inodeTable.dec_nlinks(cur_node["inode_id"])
 
         treeTable.delete(cur_node["id"])
         inodeTable.dec_nlinks(cur_node["inode_id"])
@@ -1202,9 +1204,10 @@ class DedupOperations(llfuse.Operations): # {{{1
         # Inodes with nlinks = 0 are purged periodically from __collect_garbage() so
         # we don't have to do that here.
         if inodeTable.get_mode(cur_node["inode_id"]) & stat.S_IFDIR:
-            # TODO: cache parent node too
             par_node = self.__get_tree_node_by_inode(parent_inode)
             inodeTable.dec_nlinks(par_node["inode_id"])
+            self.cached_attrs.unset(parent_inode)
+            self.cached_nodes.unset(parent_inode)
 
         self.cached_attrs.unset(cur_node["inode_id"])
         self.cached_nodes.unset((parent_inode, name))
@@ -1455,18 +1458,6 @@ class DedupOperations(llfuse.Operations): # {{{1
                 count += 1
         return count
 
-    def __flush_inode_cached_blocks(self, inode, clean=False):
-        if clean:
-            inode_data = self.cached_blocks.unset_get_i(inode)
-        else:
-            inode_data = self.cached_blocks.get_i(inode)
-        for block_number, block_data in inode_data.items():
-            if block_data["w"]:
-                block = block_data.get("block")
-                self.__write_block_data(inode, block_number, block)
-        return
-
-
     def __cache_block_hook(self): # {{{3
 
         start_time = time.time()
@@ -1526,30 +1517,35 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.time_spent_flushing_block_cache += elapsed_time
 
         if flushed_writed_blocks + flushed_readed_blocks > 0:
-            self.getLogger().info("Block cache cleanup: flushed %i writed, %i readed blocks in %s", flushed_writed_blocks, flushed_readed_blocks, format_timespan(elapsed_time))
+            self.getLogger().info("Block cache cleanup: flushed %i writed, %i readed blocks in %s",
+                                  flushed_writed_blocks, flushed_readed_blocks, format_timespan(elapsed_time))
 
         return
 
     def __cache_meta_hook(self): # {{{3
-        if time.time() - self.cache_gc_meta_last_run >= self.cache_meta_timeout:
 
-            start_time = time.time()
-            self.getLogger().info("Performing metadata cache cleanup (this might take a while) ..")
+        start_time = time.time()
+
+        flushed_nodes = 0
+        flushed_attrs = 0
+
+        if time.time() - self.cache_gc_meta_last_run >= self.cache_meta_timeout:
 
             size = len(self.cached_nodes)
             self.cached_nodes.clear()
-            count = size - len(self.cached_nodes)
-            self.getLogger().info(" flushed %i of %i fs-tree nodes", count, size)
+            flushed_nodes = size - len(self.cached_nodes)
 
             size = len(self.cached_attrs)
             self.cached_attrs.clear()
-            count = size - len(self.cached_attrs)
-            self.getLogger().info(" flushed %i of %i inode attributes", count, size)
+            flushed_attrs = size - len(self.cached_attrs)
 
             self.cache_gc_meta_last_run = time.time()
 
-            elapsed_time = time.time() - start_time
-            self.getLogger().info("Finished metadata cache cleanup in %s.", format_timespan(elapsed_time))
+        elapsed_time = time.time() - start_time
+        if flushed_attrs + flushed_nodes > 0:
+            self.getLogger().info("Nodes cache cleanup: flushed %i nodes, %i attrs in %s.",
+                                  flushed_nodes, flushed_attrs,
+                                  format_timespan(elapsed_time))
         return
 
     def __collect_garbage(self): # {{{3
@@ -1618,6 +1614,46 @@ class DedupOperations(llfuse.Operations): # {{{1
     def __collect_inodes(self): # {{{4
         self.getLogger().info("Clean unused inodes...")
         count = self.getTable("inode").remove_by_nlinks()
+        self.getManager().commit()
+        if count > 0:
+            self.should_vacuum = True
+            return "Cleaned up %i unused inode%s in %%s." % (count, count != 1 and 's' or '')
+        return
+
+    def __collect_inodes_scan(self): # {{{4
+        curTree = self.getTable("tree").getCursor()
+        curInode = self.getTable("inode").getCursor()
+
+        self.getLogger().info("Clean unused inodes...")
+
+        curInode.execute("SELECT COUNT(id) as cnt FROM `inode`")
+
+        countInodes = curInode.fetchone()["cnt"]
+        self.getLogger().info(" inodes: %d" % countInodes)
+
+        current = 0
+        proc = -1
+
+        curInode.execute("SELECT id FROM `inode`")
+        inodeIds = curInode.fetchall()
+
+        count = 0
+
+        for inodeItem in inodeIds:
+
+            curTree.execute("SELECT COUNT(inode_id) as cnt FROM `tree` WHERE inode_id=?", (inodeItem['id'],))
+            _countInodes = curTree.fetchone()["cnt"]
+
+            if not _countInodes:
+                curInode.execute("DELETE FROM `inode` WHERE id=?", (inodeItem["id"],))
+                count += curInode.rowcount
+
+            current += 1
+            p = int(100.0 * current / countInodes)
+            if p != proc:
+                proc = p
+                self.getLogger().info("%3d%%", proc)
+
         self.getManager().commit()
         if count > 0:
             self.should_vacuum = True

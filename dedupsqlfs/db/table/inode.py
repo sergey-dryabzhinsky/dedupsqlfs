@@ -29,6 +29,11 @@ class TableInode( Table ):
                 "ctime_ns INTEGER NOT NULL DEFAULT 0"+
             ");"
         )
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS inode_nlinks ON `%s` (" % self._table_name+
+                "nlinks"+
+            ");"
+        )
         return
 
     def insert( self, nlinks, mode,
@@ -156,10 +161,10 @@ class TableInode( Table ):
 
     def remove_by_nlinks(self):
         cur = self.getCursor()
-        cur.execute("DELETE FROM `%s` WHERE nlinks = 0" % self._table_name)
-        item = cur.rowcount
+        cur.execute("DELETE FROM `%s` WHERE nlinks <= 0" % self._table_name)
+        count = cur.rowcount
         self.commit()
-        return item
+        return count
 
     def count_nlinks_by_ids(self, id_list):
         cur = self.getCursor()

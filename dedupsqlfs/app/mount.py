@@ -118,7 +118,7 @@ def main(): # {{{1
     parser.add_argument('--compress', dest='compression_method', metavar='METHOD', choices=compression_methods, default=constants.COMPRESSION_TYPE_NONE, help=msg)
     parser.add_argument('--custom-compress', dest='compression_custom', metavar='METHOD', choices=compression_methods, action="append", help=msg)
     parser.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")
-    parser.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=256, help="Minimal block data size for compression. Defaults to 256 bytes. Do not do compression if not forced to.")
+    parser.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=64, help="Minimal block data size for compression. Defaults to 64 bytes. Do not do compression if not forced to.")
     # Do not want 'best' after help setup
 
     # Dynamically check for profiling support.

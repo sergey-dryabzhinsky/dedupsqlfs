@@ -1581,24 +1581,49 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         curName.execute("SELECT id FROM `name`")
 
+        maxCnt = int(countNames * 0.01 * 0.01)
+        if maxCnt < 1000:
+            maxCnt = int(countNames * 0.01 * 0.1)
+        if maxCnt < 1000:
+            maxCnt = int(countNames * 0.01)
+        if maxCnt < 1000:
+            maxCnt = int(countNames * 0.1)
+        if maxCnt < 1000:
+            maxCnt = 100
+
+        self.getLogger().info(" rows per iteration: %d" % maxCnt)
+
         count = 0
         while True:
-            nameItem = curName.fetchone()
-            if not nameItem:
+
+            nameIds = []
+
+            n = 0
+            while n < maxCnt:
+                nameItem = curName.fetchone()
+                if not nameItem:
+                    break
+                nameIds.append("%s" % nameItem["id"])
+                n += 1
+            if not nameIds:
                 break
+            current += n
 
-            curTree.execute("SELECT COUNT(name_id) as cnt FROM `tree` WHERE name_id=?", (nameItem['id'],))
-            _countTreeName = curTree.fetchone()["cnt"]
+            curTree.execute("SELECT COUNT(name_id) as cnt,name_id FROM `tree` WHERE name_id IN (%s) GROUP BY name_id HAVING cnt=0" % (",".join(nameIds),))
+            treeNames = curTree.fetchall()
 
-            if not _countTreeName:
-                curName2.execute("DELETE FROM `name` WHERE id=?", (nameItem["id"],))
+            nameIds = []
+            for nameItem in treeNames:
+                nameIds.append("%s" % nameItem["name_id"])
+
+            if nameIds:
+                curName2.execute("DELETE FROM `name` WHERE id IN (%s)" % (",".join(nameIds),))
                 count += curName2.rowcount
 
-            current += 1
-            p = "%3.2f%%" % (100.0 * current / countNames)
+            p = "%5.2f%%" % (100.0 * current / countNames)
             if p != proc:
                 proc = p
-                self.getLogger().info("%s", proc)
+                self.getLogger().info("%s (%d)", proc, count)
 
         self.getManager().commit()
 
@@ -1634,25 +1659,49 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         curXattr.execute("SELECT inode_id FROM `xattr`")
 
+        maxCnt = int(countXattrs * 0.01 * 0.01)
+        if maxCnt < 1000:
+            maxCnt = int(countXattrs * 0.01 * 0.1)
+        if maxCnt < 1000:
+            maxCnt = int(countXattrs * 0.01)
+        if maxCnt < 1000:
+            maxCnt = int(countXattrs * 0.1)
+        if maxCnt < 1000:
+            maxCnt = 100
+
+        self.getLogger().info(" rows per iteration: %d" % maxCnt)
+
         count = 0
-
         while True:
-            xattrItem = curXattr.fetchone()
-            if not xattrItem:
+
+            inodeIds = ()
+
+            n = 0
+            while n < maxCnt:
+                xattrItem = curXattr.fetchone()
+                if not xattrItem:
+                    break
+                inodeIds += ("%s" % xattrItem["inode_id"],)
+                n += 1
+            if not inodeIds:
                 break
+            current += n
 
-            curInode.execute("SELECT COUNT(id) as cnt FROM `inode` WHERE id=?", (xattrItem['inode_id'],))
-            _countInodes = curInode.fetchone()["cnt"]
+            curInode.execute("SELECT COUNT(id) as cnt,id FROM `inode` WHERE id IN (%s) GROUP BY id HAVING cnt=0" % (",".join(inodeIds),))
+            xattrInodes = curInode.fetchall()
 
-            if not _countInodes:
-                curXattr2.execute("DELETE FROM `xattr` WHERE inode_id=?", (xattrItem["inode_id"],))
+            inodeIds = ()
+            for inodeItem in xattrInodes:
+                inodeIds += ("%s" % inodeItem["id"],)
+
+            if inodeIds:
+                curXattr2.execute("DELETE FROM `xattr` WHERE inode_id IN (%s)" % (",".join(inodeIds),))
                 count += curXattr2.rowcount
 
-            current += 1
-            p = "%3.2f%%" % (100.0 * current / countXattrs)
+            p = "%5.2f%%" % (100.0 * current / countXattrs)
             if p != proc:
                 proc = p
-                self.getLogger().info("%s", proc)
+                self.getLogger().info("%s (%d)", proc, count)
 
         self.getManager().commit()
 
@@ -1678,25 +1727,49 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         curLink.execute("SELECT inode_id FROM `link`")
 
+        maxCnt = int(countLinks * 0.01 * 0.01)
+        if maxCnt < 1000:
+            maxCnt = int(countLinks * 0.01 * 0.1)
+        if maxCnt < 1000:
+            maxCnt = int(countLinks * 0.01)
+        if maxCnt < 1000:
+            maxCnt = int(countLinks * 0.1)
+        if maxCnt < 1000:
+            maxCnt = 100
+
+        self.getLogger().info(" rows per iteration: %d" % maxCnt)
+
         count = 0
-
         while True:
-            linkItem = curLink.fetchone()
-            if not linkItem:
+
+            inodeIds = ()
+
+            n = 0
+            while n < maxCnt:
+                linkItem = curLink.fetchone()
+                if not linkItem:
+                    break
+                inodeIds += ("%s" % linkItem["inode_id"],)
+                n += 1
+            if not inodeIds:
                 break
+            current += n
 
-            curInode.execute("SELECT COUNT(id) as cnt FROM `inode` WHERE id=?", (linkItem['inode_id'],))
-            _countInodes = curInode.fetchone()["cnt"]
+            curInode.execute("SELECT COUNT(id) as cnt,id FROM `inode` WHERE id IN (%s) GROUP BY id HAVING cnt=0" % (",".join(inodeIds),))
+            linkInodes = curInode.fetchall()
 
-            if not _countInodes:
-                curLink2.execute("DELETE FROM `link` WHERE inode_id=?", (linkItem["inode_id"],))
+            inodeIds = ()
+            for inodeItem in linkInodes:
+                inodeIds += ("%s" % inodeItem["id"],)
+
+            if inodeIds:
+                curLink2.execute("DELETE FROM `link` WHERE inode_id IN (%s)" % (",".join(inodeIds),))
                 count += curLink2.rowcount
 
-            current += 1
-            p = "%3.2f%%" % (100.0 * current / countLinks)
+            p = "%5.2f%%" % (100.0 * current / countLinks)
             if p != proc:
                 proc = p
-                self.getLogger().info("%s", proc)
+                self.getLogger().info("%s (%d)", proc, count)
 
         self.getManager().commit()
         if count > 0:
@@ -1711,7 +1784,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.getLogger().info("Clean unused block indexes...")
 
-        curIndex.execute("SELECT COUNT(inode_id) as cnt FROM `inode_hash_block`")
+        curIndex.execute("SELECT COUNT(inode_id) as cnt FROM (SELECT inode_id FROM `inode_hash_block` GROUP BY inode_id) as _")
 
         countInodes = curIndex.fetchone()["cnt"]
         self.getLogger().info(" block inodes: %d" % countInodes)
@@ -1721,25 +1794,49 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         curIndex.execute("SELECT inode_id FROM `inode_hash_block` GROUP BY inode_id")
 
+        maxCnt = int(countInodes * 0.01 * 0.01)
+        if maxCnt < 1000:
+            maxCnt = int(countInodes * 0.01 * 0.1)
+        if maxCnt < 1000:
+            maxCnt = int(countInodes * 0.01)
+        if maxCnt < 1000:
+            maxCnt = int(countInodes * 0.1)
+        if maxCnt < 1000:
+            maxCnt = 100
+
+        self.getLogger().info(" rows per iteration: %d" % maxCnt)
+
         count = 0
-
         while True:
-            indexItem = curIndex.fetchone()
-            if not indexItem:
+
+            inodeIds = ()
+
+            n = 0
+            while n < maxCnt:
+                indexItem = curIndex.fetchone()
+                if not indexItem:
+                    break
+                inodeIds += ("%s" % indexItem["inode_id"],)
+                n += 1
+            if not inodeIds:
                 break
+            current += n
 
-            curInode.execute("SELECT COUNT(id) as cnt FROM `inode` WHERE id=?", (indexItem['inode_id'],))
-            _countInodes = curInode.fetchone()["cnt"]
+            curInode.execute("SELECT COUNT(id) as cnt,id FROM `inode` WHERE id IN (%s) GROUP BY id HAVING cnt=0" % (",".join(inodeIds),))
+            indexInodes = curInode.fetchall()
 
-            if not _countInodes:
-                curIndex2.execute("DELETE FROM `inode_hash_block` WHERE inode_id=?", (indexItem["inode_id"],))
+            inodeIds = ()
+            for inodeItem in indexInodes:
+                inodeIds += ("%s" % inodeItem["id"],)
+
+            if inodeIds:
+                curIndex2.execute("DELETE FROM `inode_hash_block` WHERE inode_id IN (%s)" % (",".join(inodeIds),))
                 count += curIndex2.rowcount
 
-            current += 1
-            p = "%3.2f%%" % (100.0 * current / countInodes)
+            p = "%5.2f%%" % (100.0 * current / countInodes)
             if p != proc:
                 proc = p
-                self.getLogger().info("%s", proc)
+                self.getLogger().info("%s (%d)", proc, count)
 
         self.getManager().commit()
 
@@ -1766,26 +1863,50 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         curHash.execute("SELECT id FROM `hash`")
 
+        maxCnt = int(countHashes * 0.01 * 0.01)
+        if maxCnt < 1000:
+            maxCnt = int(countHashes * 0.01 * 0.1)
+        if maxCnt < 1000:
+            maxCnt = int(countHashes * 0.01)
+        if maxCnt < 1000:
+            maxCnt = int(countHashes * 0.1)
+        if maxCnt < 1000:
+            maxCnt = 100
+
+        self.getLogger().info(" rows per iteration: %d" % maxCnt)
+
         count = 0
-
         while True:
-            hashItem = curHash.fetchone()
-            if not hashItem:
+
+            hashIds = ()
+
+            n = 0
+            while n < maxCnt:
+                hashItem = curHash.fetchone()
+                if not hashItem:
+                    break
+                hashIds += ("%s" % hashItem["id"],)
+                n += 1
+            if not hashIds:
                 break
+            current += n
 
-            curIndex.execute("SELECT COUNT(hash_id) as cnt FROM `inode_hash_block` WHERE hash_id=?", (hashItem['id'],))
-            _countHashes = curIndex.fetchone()["cnt"]
+            curIndex.execute("SELECT COUNT(hash_id) as cnt,hash_id FROM `inode_hash_block` WHERE hash_id IN (%s) GROUP BY hash_id HAVING cnt=0" % (",".join(hashIds),))
+            indexHashes = curIndex.fetchall()
 
-            if not _countHashes:
-                curHash2.execute("DELETE FROM `hash` WHERE id=?", (hashItem["id"],))
-                curBlock.execute("DELETE FROM `block` WHERE hash_id=?", (hashItem["id"],))
+            hashIds = ()
+            for hashItem in indexHashes:
+                hashIds += ("%s" % hashItem["hash_id"],)
+
+            if hashIds:
+                curBlock.execute("DELETE FROM `block` WHERE hash_id IN (%s)" % (",".join(hashIds),))
+                curHash2.execute("DELETE FROM `hash` WHERE id IN (%s)" % (",".join(hashIds),))
                 count += curHash2.rowcount
 
-            current += 1
-            p = "%3.2f%%" % (100.0 * current / countHashes)
+            p = "%5.2f%%" % (100.0 * current / countHashes)
             if p != proc:
                 proc = p
-                self.getLogger().info("%s", proc)
+                self.getLogger().info("%s (%d)", proc, count)
 
         self.getManager().commit()
 

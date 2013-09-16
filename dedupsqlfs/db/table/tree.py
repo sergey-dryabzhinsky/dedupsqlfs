@@ -26,6 +26,11 @@ class TableTree( Table ):
                 "inode_id"+
             ");"
         )
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS tree_parent ON `%s` (" % self._table_name+
+                "parent_id"+
+            ");"
+        )
         return
 
     def insert( self, parent_id, name_id, inode_id ):
@@ -75,7 +80,7 @@ class TableTree( Table ):
 
     def get_children(self, parent_id):
         cur = self.getCursor()
-        cur.execute("SELECT * FROM `%s` WHERE parent_id=? ORDER BY id" % self._table_name, (parent_id, ))
+        cur.execute("SELECT * FROM `%s` WHERE parent_id=?" % self._table_name, (parent_id, ))
         items = cur.fetchall()
         return items
 
@@ -91,11 +96,5 @@ class TableTree( Table ):
         cur.execute(query)
         items = cur.fetchall()
         return items
-
-    def get_count_names(self):
-        cur = self.getCursor()
-        cur.execute("SELECT COUNT(name_id) as cnt FROM `%s`" % self._table_name)
-        item = cur.fetchone()
-        return item["cnt"]
 
     pass

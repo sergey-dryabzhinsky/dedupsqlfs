@@ -31,6 +31,11 @@ class TableTree( Table ):
                 "parent_id"+
             ");"
         )
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS tree_name ON `%s` (" % self._table_name+
+                "name_id"+
+            ");"
+        )
         return
 
     def insert( self, parent_id, name_id, inode_id ):

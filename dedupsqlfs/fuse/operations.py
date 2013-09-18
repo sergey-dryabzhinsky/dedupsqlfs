@@ -1553,8 +1553,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                           self.__collect_xattrs, \
                           self.__collect_links, \
                           self.__collect_indexes, \
-                          self.__collect_blocks, \
-                          self.__vacuum_metastore:
+                          self.__collect_blocks:
                 sub_start_time = time.time()
                 msg = method()
                 if msg:
@@ -1609,10 +1608,10 @@ class DedupOperations(llfuse.Operations): # {{{1
                 proc = p
                 self.getLogger().info("%s (count=%d)", proc, count)
 
-        self.getManager().commit()
-
         if count > 0:
+            self.getTable("name").commit()
             self.should_vacuum = True
+            self.__vacuum_datatable("name")
             return "Cleaned up %i unused path segment%s in %%s." % (count, count != 1 and 's' or '')
         return
 
@@ -1623,6 +1622,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.getManager().commit()
         if count > 0:
             self.should_vacuum = True
+            self.__vacuum_datatable("inode")
             return "Cleaned up %i unused inode%s in %%s." % (count, count != 1 and 's' or '')
         return
 
@@ -1669,12 +1669,12 @@ class DedupOperations(llfuse.Operations): # {{{1
             p = "%6.2f%%" % (100.0 * current / countXattrs)
             if p != proc:
                 proc = p
-                self.getLogger().info("%s (%d)", proc, count)
-
-        self.getManager().commit()
+                self.getLogger().info("%s (count=%d)", proc, count)
 
         if count > 0:
+            self.getTable("xattr").commit()
             self.should_vacuum = True
+            self.__vacuum_datatable("xattr")
             return "Cleaned up %i unused xattr%s in %%s." % (count, count != 1 and 's' or '')
         return
 
@@ -1721,11 +1721,12 @@ class DedupOperations(llfuse.Operations): # {{{1
             p = "%6.2f%%" % (100.0 * current / countLinks)
             if p != proc:
                 proc = p
-                self.getLogger().info("%s (%d)", proc, count)
+                self.getLogger().info("%s (count=%d)", proc, count)
 
-        self.getManager().commit()
         if count > 0:
+            self.getTable("link").commit()
             self.should_vacuum = True
+            self.__vacuum_datatable("link")
             return "Cleaned up %i unused link%s in %%s." % (count, count != 1 and 's' or '')
         return
 
@@ -1772,12 +1773,12 @@ class DedupOperations(llfuse.Operations): # {{{1
             p = "%6.2f%%" % (100.0 * current / countInodes)
             if p != proc:
                 proc = p
-                self.getLogger().info("%s (%d)", proc, count)
-
-        self.getManager().commit()
+                self.getLogger().info("%s (count=%d)", proc, count)
 
         if count > 0:
+            self.getTable("inode_hash_block").commit()
             self.should_vacuum = True
+            self.__vacuum_datatable("inode_hash_block")
             return "Cleaned up %i unused index entr%s in %%s." % (count, count != 1 and 'ies' or 'y')
         return
 
@@ -1826,24 +1827,33 @@ class DedupOperations(llfuse.Operations): # {{{1
             p = "%6.2f%%" % (100.0 * current / countHashes)
             if p != proc:
                 proc = p
-                self.getLogger().info("%s (%d)", proc, count)
+                self.getLogger().info("%s (count=%d)", proc, count)
 
         self.getManager().commit()
 
         if count > 0:
             self.should_vacuum = True
+            self.getTable("hash").commit()
+            self.__vacuum_datatable("hash")
+            self.getTable("block").commit()
+            self.__vacuum_datatable("block")
             return "Cleaned up %i unused data block%s and hashes in %%s." % (
                 count, count != 1 and 's' or '',
             )
         return
 
 
-    def __vacuum_metastore(self): # {{{4
+    def __vacuum_datatable(self, tableName): # {{{4
+        msg = ""
+        sub_start_time = time.time()
         if self.should_vacuum and self.gc_vacuum_enabled:
-            self.getLogger().info("Vacuum databases...")
-            self.getManager().vacuum()
-            return "Vacuumed SQLite data store in %s."
-
+            self.getLogger().info(" vacuum %s table" % tableName)
+            self.getTable(tableName).vacuum()
+            msg = "Vacuumed SQLite data store in %s."
+        if msg:
+            elapsed_time = time.time() - sub_start_time
+            self.getLogger().info(msg, format_timespan(elapsed_time))
+        return msg
 
     def __commit_changes(self, nested=False): # {{{3
         if self.use_transactions and not nested:

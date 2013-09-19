@@ -1553,8 +1553,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                           self.__collect_xattrs, \
                           self.__collect_links, \
                           self.__collect_indexes, \
-                          self.__collect_blocks, \
-                          self.__vacuum_metastore:
+                          self.__collect_blocks:
                 sub_start_time = time.time()
                 msg = method()
                 if msg:
@@ -1581,29 +1580,38 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         curName.execute("SELECT id FROM `name`")
 
+        if self.getOption("memory_limit"):
+            maxCnt = 1000
+        else:
+            maxCnt = 10000
+
+        self.getLogger().info(" rows per iteration: %d" % maxCnt)
+
         count = 0
         while True:
-            nameItem = curName.fetchone()
-            if not nameItem:
+
+            nameIds = tuple("%s" % nameItem["id"] for nameItem in curName.fetchmany(maxCnt))
+            if not nameIds:
                 break
+            current += len(nameIds)
 
-            curTree.execute("SELECT COUNT(name_id) as cnt FROM `tree` WHERE name_id=?", (nameItem['id'],))
-            _countTreeName = curTree.fetchone()["cnt"]
+            curTree.execute("SELECT COUNT(name_id) as cnt,name_id FROM `tree` WHERE name_id IN (%s) GROUP BY name_id HAVING cnt=0" % (",".join(nameIds),))
+            treeNames = curTree.fetchall()
 
-            if not _countTreeName:
-                curName2.execute("DELETE FROM `name` WHERE id=?", (nameItem["id"],))
+            nameIds = tuple("%s" % nameItem["name_id"] for nameItem in treeNames)
+            if len(nameIds):
+                curName2.execute("DELETE FROM `name` WHERE id IN (%s)" % (",".join(nameIds),))
                 count += curName2.rowcount
 
-            current += 1
-            p = "%3.2f%%" % (100.0 * current / countNames)
+            p = "%6.2f%%" % (100.0 * current / countNames)
             if p != proc:
                 proc = p
-                self.getLogger().info("%s", proc)
-
-        self.getManager().commit()
+                self.getLogger().info("%s (count=%d)", proc, count)
 
         if count > 0:
+            self.getTable("name").commit()
             self.should_vacuum = True
+            self.__vacuum_datatable("name")
             return "Cleaned up %i unused path segment%s in %%s." % (count, count != 1 and 's' or '')
         return
 
@@ -1614,6 +1622,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.getManager().commit()
         if count > 0:
             self.should_vacuum = True
+            self.__vacuum_datatable("inode")
             return "Cleaned up %i unused inode%s in %%s." % (count, count != 1 and 's' or '')
         return
 
@@ -1634,30 +1643,38 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         curXattr.execute("SELECT inode_id FROM `xattr`")
 
+        if self.getOption("memory_limit"):
+            maxCnt = 1000
+        else:
+            maxCnt = 10000
+
+        self.getLogger().info(" rows per iteration: %d" % maxCnt)
+
         count = 0
-
         while True:
-            xattrItem = curXattr.fetchone()
-            if not xattrItem:
+
+            inodeIds = tuple("%s" % xattrItem["inode_id"] for xattrItem in curXattr.fetchmany(maxCnt))
+            if not inodeIds:
                 break
+            current += len(inodeIds)
 
-            curInode.execute("SELECT COUNT(id) as cnt FROM `inode` WHERE id=?", (xattrItem['inode_id'],))
-            _countInodes = curInode.fetchone()["cnt"]
+            curInode.execute("SELECT COUNT(id) as cnt,id FROM `inode` WHERE id IN (%s) GROUP BY id HAVING cnt=0" % (",".join(inodeIds),))
+            xattrInodes = curInode.fetchall()
 
-            if not _countInodes:
-                curXattr2.execute("DELETE FROM `xattr` WHERE inode_id=?", (xattrItem["inode_id"],))
+            inodeIds = tuple("%s" % inodeItem["id"] for inodeItem in xattrInodes)
+            if inodeIds:
+                curXattr2.execute("DELETE FROM `xattr` WHERE inode_id IN (%s)" % (",".join(inodeIds),))
                 count += curXattr2.rowcount
 
-            current += 1
-            p = "%3.2f%%" % (100.0 * current / countXattrs)
+            p = "%6.2f%%" % (100.0 * current / countXattrs)
             if p != proc:
                 proc = p
-                self.getLogger().info("%s", proc)
-
-        self.getManager().commit()
+                self.getLogger().info("%s (count=%d)", proc, count)
 
         if count > 0:
+            self.getTable("xattr").commit()
             self.should_vacuum = True
+            self.__vacuum_datatable("xattr")
             return "Cleaned up %i unused xattr%s in %%s." % (count, count != 1 and 's' or '')
         return
 
@@ -1678,29 +1695,38 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         curLink.execute("SELECT inode_id FROM `link`")
 
+        if self.getOption("memory_limit"):
+            maxCnt = 1000
+        else:
+            maxCnt = 10000
+
+        self.getLogger().info(" rows per iteration: %d" % maxCnt)
+
         count = 0
-
         while True:
-            linkItem = curLink.fetchone()
-            if not linkItem:
+
+            inodeIds = tuple("%s" % linkItem["inode_id"] for linkItem in curLink.fetchmany(maxCnt))
+            if not inodeIds:
                 break
+            current += len(inodeIds)
 
-            curInode.execute("SELECT COUNT(id) as cnt FROM `inode` WHERE id=?", (linkItem['inode_id'],))
-            _countInodes = curInode.fetchone()["cnt"]
+            curInode.execute("SELECT COUNT(id) as cnt,id FROM `inode` WHERE id IN (%s) GROUP BY id HAVING cnt=0" % (",".join(inodeIds),))
+            linkInodes = curInode.fetchall()
 
-            if not _countInodes:
-                curLink2.execute("DELETE FROM `link` WHERE inode_id=?", (linkItem["inode_id"],))
+            inodeIds = tuple("%s" % inodeItem["id"] for inodeItem in linkInodes)
+            if inodeIds:
+                curLink2.execute("DELETE FROM `link` WHERE inode_id IN (%s)" % (",".join(inodeIds),))
                 count += curLink2.rowcount
 
-            current += 1
-            p = "%3.2f%%" % (100.0 * current / countLinks)
+            p = "%6.2f%%" % (100.0 * current / countLinks)
             if p != proc:
                 proc = p
-                self.getLogger().info("%s", proc)
+                self.getLogger().info("%s (count=%d)", proc, count)
 
-        self.getManager().commit()
         if count > 0:
+            self.getTable("link").commit()
             self.should_vacuum = True
+            self.__vacuum_datatable("link")
             return "Cleaned up %i unused link%s in %%s." % (count, count != 1 and 's' or '')
         return
 
@@ -1711,7 +1737,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.getLogger().info("Clean unused block indexes...")
 
-        curIndex.execute("SELECT COUNT(inode_id) as cnt FROM `inode_hash_block`")
+        curIndex.execute("SELECT COUNT(inode_id) as cnt FROM (SELECT inode_id FROM `inode_hash_block` GROUP BY inode_id) as _")
 
         countInodes = curIndex.fetchone()["cnt"]
         self.getLogger().info(" block inodes: %d" % countInodes)
@@ -1721,30 +1747,38 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         curIndex.execute("SELECT inode_id FROM `inode_hash_block` GROUP BY inode_id")
 
+        if self.getOption("memory_limit"):
+            maxCnt = 1000
+        else:
+            maxCnt = 10000
+
+        self.getLogger().info(" rows per iteration: %d" % maxCnt)
+
         count = 0
-
         while True:
-            indexItem = curIndex.fetchone()
-            if not indexItem:
+
+            inodeIds = tuple("%s" % indexItem["inode_id"] for indexItem in curIndex.fetchmany(maxCnt))
+            if not inodeIds:
                 break
+            current += len(inodeIds)
 
-            curInode.execute("SELECT COUNT(id) as cnt FROM `inode` WHERE id=?", (indexItem['inode_id'],))
-            _countInodes = curInode.fetchone()["cnt"]
+            curInode.execute("SELECT COUNT(id) as cnt,id FROM `inode` WHERE id IN (%s) GROUP BY id HAVING cnt=0" % (",".join(inodeIds),))
+            indexInodes = curInode.fetchall()
 
-            if not _countInodes:
-                curIndex2.execute("DELETE FROM `inode_hash_block` WHERE inode_id=?", (indexItem["inode_id"],))
+            inodeIds = tuple("%s" % inodeItem["id"] for inodeItem in indexInodes)
+            if inodeIds:
+                curIndex2.execute("DELETE FROM `inode_hash_block` WHERE inode_id IN (%s)" % (",".join(inodeIds),))
                 count += curIndex2.rowcount
 
-            current += 1
-            p = "%3.2f%%" % (100.0 * current / countInodes)
+            p = "%6.2f%%" % (100.0 * current / countInodes)
             if p != proc:
                 proc = p
-                self.getLogger().info("%s", proc)
-
-        self.getManager().commit()
+                self.getLogger().info("%s (count=%d)", proc, count)
 
         if count > 0:
+            self.getTable("inode_hash_block").commit()
             self.should_vacuum = True
+            self.__vacuum_datatable("inode_hash_block")
             return "Cleaned up %i unused index entr%s in %%s." % (count, count != 1 and 'ies' or 'y')
         return
 
@@ -1766,43 +1800,60 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         curHash.execute("SELECT id FROM `hash`")
 
+        if self.getOption("memory_limit"):
+            maxCnt = 1000
+        else:
+            maxCnt = 10000
+
+        self.getLogger().info(" rows per iteration: %d" % maxCnt)
+
         count = 0
-
         while True:
-            hashItem = curHash.fetchone()
-            if not hashItem:
+
+            hashIds = tuple("%s" % hashItem["id"] for hashItem in curHash.fetchmany(maxCnt))
+            if not hashIds:
                 break
+            current += len(hashIds)
 
-            curIndex.execute("SELECT COUNT(hash_id) as cnt FROM `inode_hash_block` WHERE hash_id=?", (hashItem['id'],))
-            _countHashes = curIndex.fetchone()["cnt"]
+            curIndex.execute("SELECT COUNT(hash_id) as cnt,hash_id FROM `inode_hash_block` WHERE hash_id IN (%s) GROUP BY hash_id HAVING cnt=0" % (",".join(hashIds),))
+            indexHashes = curIndex.fetchall()
 
-            if not _countHashes:
-                curHash2.execute("DELETE FROM `hash` WHERE id=?", (hashItem["id"],))
-                curBlock.execute("DELETE FROM `block` WHERE hash_id=?", (hashItem["id"],))
+            hashIds = tuple("%s" % hashItem["hash_id"] for hashItem in indexHashes)
+            if hashIds:
+                curBlock.execute("DELETE FROM `block` WHERE hash_id IN (%s)" % (",".join(hashIds),))
+                curHash2.execute("DELETE FROM `hash` WHERE id IN (%s)" % (",".join(hashIds),))
                 count += curHash2.rowcount
 
-            current += 1
-            p = "%3.2f%%" % (100.0 * current / countHashes)
+            p = "%6.2f%%" % (100.0 * current / countHashes)
             if p != proc:
                 proc = p
-                self.getLogger().info("%s", proc)
+                self.getLogger().info("%s (count=%d)", proc, count)
 
         self.getManager().commit()
 
         if count > 0:
             self.should_vacuum = True
+            self.getTable("hash").commit()
+            self.__vacuum_datatable("hash")
+            self.getTable("block").commit()
+            self.__vacuum_datatable("block")
             return "Cleaned up %i unused data block%s and hashes in %%s." % (
                 count, count != 1 and 's' or '',
             )
         return
 
 
-    def __vacuum_metastore(self): # {{{4
+    def __vacuum_datatable(self, tableName): # {{{4
+        msg = ""
+        sub_start_time = time.time()
         if self.should_vacuum and self.gc_vacuum_enabled:
-            self.getLogger().info("Vacuum databases...")
-            self.getManager().vacuum()
-            return "Vacuumed SQLite data store in %s."
-
+            self.getLogger().info(" vacuum %s table" % tableName)
+            self.getTable(tableName).vacuum()
+            msg = "Vacuumed SQLite data store in %s."
+        if msg:
+            elapsed_time = time.time() - sub_start_time
+            self.getLogger().info(msg, format_timespan(elapsed_time))
+        return msg
 
     def __commit_changes(self, nested=False): # {{{3
         if self.use_transactions and not nested:

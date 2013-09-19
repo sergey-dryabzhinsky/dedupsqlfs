@@ -277,23 +277,37 @@ class DedupOperations(llfuse.Operations): # {{{1
     def init(self): # {{{3
         try:
             # Process the custom command line options defined in __init__().
-            self.block_size = self.getOption("block_size")
+            if self.getOption("block_size") is not None:
+                self.block_size = self.getOption("block_size")
 
-            self.compression_method = self.getOption("compression_method")
-            self.hash_function = self.getOption("hash_function")
+            if self.getOption("compression_method") is not None:
+                self.compression_method = self.getOption("compression_method")
+            if self.getOption("hash_function") is not None:
+                self.hash_function = self.getOption("hash_function")
 
-            self.cache_enabled = self.getOption("use_cache")
-            self.cache_timeout = self.getOption("cache_timeout")
-            self.cache_block_write_timeout = self.getOption("cache_block_write_timeout")
-            self.cache_block_read_timeout = self.getOption("cache_block_read_timeout")
-            self.cache_block_write_size = self.getOption("cache_block_write_size")
-            self.cache_block_read_size = self.getOption("cache_block_read_size")
-            self.cache_meta_timeout = self.getOption("cache_meta_timeout")
+            if self.getOption("use_cache") is not None:
+                self.cache_enabled = self.getOption("use_cache")
+            if self.getOption("cache_timeout") is not None:
+                self.cache_timeout = self.getOption("cache_timeout")
+            if self.getOption("cache_block_write_timeout") is not None:
+                self.cache_block_write_timeout = self.getOption("cache_block_write_timeout")
+            if self.getOption("cache_block_read_timeout") is not None:
+                self.cache_block_read_timeout = self.getOption("cache_block_read_timeout")
+            if self.getOption("cache_block_write_size") is not None:
+                self.cache_block_write_size = self.getOption("cache_block_write_size")
+            if self.getOption("cache_block_read_size") is not None:
+                self.cache_block_read_size = self.getOption("cache_block_read_size")
+            if self.getOption("cache_meta_timeout") is not None:
+                self.cache_meta_timeout = self.getOption("cache_meta_timeout")
 
-            self.gc_enabled = self.getOption("gc_enabled")
-            self.gc_umount_enabled = self.getOption("gc_umount_enabled")
-            self.gc_vacuum_enabled = self.getOption("gc_vacuum_enabled")
-            self.gc_interval = self.getOption("gc_nth_seconds")
+            if self.getOption("gc_enabled") is not None:
+                self.gc_enabled = self.getOption("gc_enabled")
+            if self.getOption("gc_umount_enabled") is not None:
+                self.gc_umount_enabled = self.getOption("gc_umount_enabled")
+            if self.getOption("gc_vacuum_enabled") is not None:
+                self.gc_vacuum_enabled = self.getOption("gc_vacuum_enabled")
+            if self.getOption("gc_nth_seconds") is not None:
+                self.gc_interval = self.getOption("gc_nth_seconds")
             self.gc_nth_request = self.getOption("gc_nth_calls")
 
             if not self.cache_enabled:
@@ -314,8 +328,10 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.cached_nodes.set_max_ttl(self.cache_meta_timeout)
                 self.cached_attrs.set_max_ttl(self.cache_meta_timeout)
 
-            self.synchronous = self.getOption("synchronous")
-            self.use_transactions = self.getOption("use_transactions")
+            if self.getOption("synchronous") is not None:
+                self.synchronous = self.getOption("synchronous")
+            if self.getOption("use_transactions") is not None:
+                self.use_transactions = self.getOption("use_transactions")
             # Initialize the logging and database subsystems.
             self.__log_call('init', 'init()')
 
@@ -831,14 +847,17 @@ class DedupOperations(llfuse.Operations): # {{{1
         return apparent_size
 
     def __fix_inode_if_requested_root(self, inode):
-        if inode == llfuse.ROOT_INODE and not self.getOption("disable_snapshots"):
+        if inode == llfuse.ROOT_INODE and not self.getOption("disable_subvolumes"):
             node = self.__get_tree_node_by_parent_inode_and_name(inode, self.mounted_snapshot)
             if node:
                 return node["inode_id"]
         return inode
 
     def __get_tree_node_by_parent_inode_and_name(self, parent_inode, name):
-        node = self.cached_nodes.get((parent_inode, name))
+
+        node = None
+        if self.cache_enabled:
+            node = self.cached_nodes.get((parent_inode, name))
 
         if not node:
 
@@ -859,14 +878,17 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().debug("! No node %i and name %i found, cant get tree node" % (par_node["id"], name_id,))
                 raise FUSEError(errno.ENOENT)
 
-            self.cached_nodes.set((parent_inode, name), node)
+            if self.cache_enabled:
+                self.cached_nodes.set((parent_inode, name), node)
 
             self.time_spent_caching_nodes += time.time() - start_time
 
         return node
 
     def __get_tree_node_by_inode(self, inode):
-        node = self.cached_nodes.get(inode)
+        node = None
+        if self.cache_enabled:
+            node = self.cached_nodes.get(inode)
 
         if not node:
 
@@ -877,14 +899,17 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().debug("! No inode %i found, cant get tree node" % inode)
                 raise FUSEError(errno.ENOENT)
 
-            self.cached_nodes.set(inode, node)
+            if self.cache_enabled:
+                self.cached_nodes.set(inode, node)
 
             self.time_spent_caching_nodes += time.time() - start_time
 
         return node
 
     def __get_inode_row(self, inode_id):
-        row = self.cached_attrs.get(inode_id)
+        row = None
+        if self.cache_enabled:
+            row = self.cached_attrs.get(inode_id)
         if not row:
             start_time = time.time()
 
@@ -893,7 +918,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().debug("! No inode %i found, cant get row" % inode_id)
                 raise FUSEError(errno.ENOENT)
 
-            self.cached_attrs.set(inode_id, row)
+            if self.cache_enabled:
+                self.cached_attrs.set(inode_id, row)
 
             self.time_spent_caching_nodes += time.time() - start_time
 
@@ -1373,11 +1399,16 @@ class DedupOperations(llfuse.Operations): # {{{1
 
 
     def __gc_hook(self): # {{{3
+        if not self.gc_enabled:
+            return
+
         if time.time() - self.gc_hook_last_run >= self.gc_interval:
             self.gc_hook_last_run = time.time()
             self.__collect_garbage()
             self.__print_stats()
             self.gc_hook_last_run = time.time()
+
+        return
 
 
     def __write_block_data(self, inode, block_number, block):
@@ -1455,6 +1486,9 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __cache_block_hook(self): # {{{3
 
+        if not self.cache_enabled:
+            return
+
         start_time = time.time()
         flushed_writed_blocks = 0
         flushed_readed_blocks = 0
@@ -1518,6 +1552,9 @@ class DedupOperations(llfuse.Operations): # {{{1
         return
 
     def __cache_meta_hook(self): # {{{3
+
+        if not self.cache_enabled:
+            return
 
         start_time = time.time()
 

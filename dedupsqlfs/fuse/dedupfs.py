@@ -39,7 +39,7 @@ class DedupFS(object): # {{{1
         @type operations: dedupsqlfs.fuse.operations.DedupOperations
         """
 
-        self.options = vars(options)
+        self.options = dict(vars(options))
 
         self._compressors = {}
         self._readonly = False
@@ -88,6 +88,10 @@ class DedupFS(object): # {{{1
 
     def getOption(self, key):
         return self.options.get(key)
+
+    def setOption(self, key, value):
+        self.options[key] = value
+        return self
 
     def getLogger(self):
         return self.logger

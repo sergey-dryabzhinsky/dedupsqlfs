@@ -49,13 +49,51 @@ def get_db_manager(options):
     return manager
 
 
-def create_snapshot(options, _fuse):
+def create_subvolume(options, _fuse):
+    """
+    @param options: Commandline options
+    @type  options: object
+
+    @param _fuse: FUSE wrapper
+    @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
+    """
     _fuse.operations.init()
     _fuse.setReadonly(False)
     _fuse.getLogger().setLevel(logging.INFO)
-    _fuse.createSubvolume(options.snapshot_create)
+    _fuse.setOption("disable_subvolumes", True)
+    _fuse.operations.gc_enabled = False
+    _fuse.operations.gc_umount_enabled = False
+    _fuse.operations.gc_vacuum_enabled = False
+
+    from dedupsqlfs.fuse.subvolume import Subvolume
+    sv = Subvolume(_fuse.operations)
+    sv.create(options.subvol_create.encode('utf8'))
+
     _fuse.operations.destroy()
 
+
+def list_subvolume(options, _fuse):
+    """
+    @param options: Commandline options
+    @type  options: object
+
+    @param _fuse: FUSE wrapper
+    @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
+    """
+    _fuse.setOption("disable_subvolumes", True)
+    _fuse.setOption("gc_umount_enabled", False)
+    _fuse.setOption("gc_vacuum_enabled", False)
+    _fuse.setOption("gc_enabled", False)
+    _fuse.operations.init()
+    _fuse.setReadonly(True)
+    _fuse.getLogger().setLevel(logging.INFO)
+    # _fuse.operations.cache_enabled = False
+
+    from dedupsqlfs.fuse.subvolume import Subvolume
+    sv = Subvolume(_fuse.operations)
+    sv.list()
+
+    _fuse.operations.destroy()
 
 def print_fs_stats(options, _fuse):
     _fuse.setReadonly(True)
@@ -70,6 +108,7 @@ def data_defragment(options, _fuse):
     _fuse.setReadonly(False)
     _fuse.getLogger().setLevel(logging.INFO)
     _fuse.operations.gc_enabled = True
+    _fuse.operations.gc_umount_enabled = True
     _fuse.operations.gc_vacuum_enabled = True
     _fuse.operations.should_vacuum = True
     _fuse.operations.destroy()
@@ -94,6 +133,14 @@ def do(options, compression_methods=None):
             continue
         module = __import__(modname)
         _fuse.appendCompression(modname, getattr(module, "compress"), getattr(module, "decompress"))
+
+    # Actions
+
+    if options.subvol_create:
+        return create_subvolume(options, _fuse)
+
+    if options.subvol_list:
+        return list_subvolume(options, _fuse)
 
     if options.defragment:
         return data_defragment(options, _fuse)
@@ -186,6 +233,10 @@ def main(): # {{{1
     snapshot.add_argument('--remove-older-than', dest='snapshot_remove_older', metavar='DATE', help="Remove snapshots older than selected date")
     snapshot.add_argument('--snapshot-stats', dest='snapshot_stats', action='store_true', help="Print information about selected snapshot")
 
+    snapshot = parser.add_argument_group('Subvolume')
+    snapshot.add_argument('--list-subvol', dest='subvol_list', action='store_true', help="Show list of all subvolumes")
+    snapshot.add_argument('--create-subvol', dest='subvol_create', metavar='NAME', help="Create new subvolume")
+    snapshot.add_argument('--remove-subvol', dest='subvol_remove', metavar='NAME', help="Remove selected subvolume")
 
     args = parser.parse_args()
 

@@ -67,7 +67,7 @@ def main(): # {{{1
     parser.add_argument('--temp', dest='temp', metavar='DIRECTORY', help="Specify the location for the files in which temporary data is stored. By default honour TMPDIR environment variable value.")
     parser.add_argument('--block-size', dest='block_size', metavar='BYTES', default=1024*128, type=int, help="Specify the maximum block size in bytes" + option_stored_in_db + ". Defaults to 128kB.")
     parser.add_argument('--mount-snapshot', dest='snapshot', metavar='NAME', default=None, help="Use shapshot NAME as root fs.")
-    parser.add_argument('--raw-root', dest='disable_snapshots', action="store_true", help="Disable use of all snapshots and subvolumes. Unhide them into root of FS.")
+    parser.add_argument('--raw-root', dest='disable_subvolumes', action="store_true", help="Disable use of all snapshots and subvolumes. Unhide them into root of FS.")
 
     parser.add_argument('--memory-limit', dest='memory_limit', action='store_true', help="Use some lower values for less memory consumption.")
 

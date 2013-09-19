@@ -6,6 +6,9 @@ Here are some things on to-do list, in no particular order:
 
  * Multiprocess block hashing and compression.
 
+ * Optimize garbage collection. Use database with all tables except for blocks,
+   or use optimized queries...
+
  * Automatically switch to a larger block size to reduce the overhead for files
    that rarely change after being created (like >= 100MB video files :-)
    Or use defragmentation tool for that.

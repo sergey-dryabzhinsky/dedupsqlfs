@@ -69,7 +69,9 @@ def main(): # {{{1
     parser.add_argument('--mount-snapshot', dest='snapshot', metavar='NAME', default=None, help="Use shapshot NAME as root fs.")
     parser.add_argument('--raw-root', dest='disable_snapshots', action="store_true", help="Disable use of all snapshots and subvolumes. Unhide them into root of FS.")
 
-    parser.add_argument('--no-cache', dest='use_cache', action='store_false', help="Don't use cache in memory and delayed write to storage files (@todo).")
+    parser.add_argument('--memory-limit', dest='memory_limit', action='store_true', help="Use some lower values for less memory consumption.")
+
+    parser.add_argument('--no-cache', dest='use_cache', action='store_false', help="Don't use cache in memory and delayed write to storage files.")
     parser.add_argument('--cache-timeout', dest='cache_timeout', metavar='NUMBER', type=int, default=5, help="Store data in memory for NUMBER of seconds. Defaults to 5 seconds.")
     parser.add_argument('--cache-meta-timeout', dest='cache_meta_timeout', metavar='NUMBER', type=int, default=15, help="Delay flush expired metadata for NUMBER of seconds. Defaults to 15 seconds.")
     parser.add_argument('--cache-block-write-timeout', dest='cache_block_write_timeout', metavar='NUMBER', type=int, default=5, help="Delay flush expired data from memory to storage for NUMBER of seconds. Defaults to 5 seconds.")
@@ -118,7 +120,7 @@ def main(): # {{{1
     parser.add_argument('--compress', dest='compression_method', metavar='METHOD', choices=compression_methods, default=constants.COMPRESSION_TYPE_NONE, help=msg)
     parser.add_argument('--custom-compress', dest='compression_custom', metavar='METHOD', choices=compression_methods, action="append", help=msg)
     parser.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")
-    parser.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=256, help="Minimal block data size for compression. Defaults to 256 bytes. Do not do compression if not forced to.")
+    parser.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=64, help="Minimal block data size for compression. Defaults to 64 bytes. Do not do compression if not forced to.")
     # Do not want 'best' after help setup
 
     # Dynamically check for profiling support.

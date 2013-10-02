@@ -4,12 +4,9 @@ __author__ = 'sergey'
 
 import os
 import stat
-import time
-import math
 import llfuse
 import errno
 from datetime import datetime
-from dedupsqlfs.lib import constants
 
 class Subvolume(object):
 
@@ -42,21 +39,22 @@ class Subvolume(object):
         @type  name: bytes
 
         @return: tree node ID
-        @rtype: int|bool
+        @rtype: bool
         """
-        snap_name = b'@' + name
+        subvol_name = b'@' + name
 
         try:
-            attr = self.getManager().lookup(llfuse.ROOT_INODE, snap_name)
+            self.getManager().lookup(llfuse.ROOT_INODE, subvol_name)
+            return False
         except llfuse.FUSEError as e:
             if not e.errno == errno.ENOENT:
                 raise
             ctx = llfuse.RequestContext()
             ctx.uid = os.getuid()
             ctx.gid = os.getgid()
-            attr = self.getManager().mkdir(llfuse.ROOT_INODE, snap_name, self.root_mode, ctx)
+            self.getManager().mkdir(llfuse.ROOT_INODE, subvol_name, self.root_mode, ctx)
 
-        return attr
+        return True
     # -----------------------------------------------
 
     def list(self):
@@ -68,14 +66,46 @@ class Subvolume(object):
 
         print("Subvolumes:")
         print("-"*79)
-        print("%-50s\t%-29s" % ("Name", "Created"))
+        print("%-50s| %-29s" % ("Name", "Created"))
+        print("-"*79)
 
         for name, attr, node in self.getManager().readdir(fh, 0):
-            print("%-50s\t%-29s" % (name.decode("utf8"), datetime.fromtimestamp(attr.st_ctime)))
+            print("%-50s| %-29s" % (name.decode("utf8"), datetime.fromtimestamp(attr.st_ctime)))
 
         self.getManager().releasedir(fh)
 
         print("-"*79)
+
+        return
+
+
+    def remove(self, name):
+        """
+        @param name: Subvolume name
+        @type  name: bytes
+        """
+        subvol_name = b'@' + name
+
+        directories = [(llfuse.ROOT_INODE, subvol_name)]
+
+        while len(directories)>0:
+
+            parent_ino, directory = directories.pop()
+
+            attr = self.getManager().lookup(parent_ino, directory)
+
+            count = 0
+            for rname, rattr, node in self.getManager().readdir(attr.st_ino, 0):
+                if stat.S_ISDIR(rattr.st_mode):
+                    directories.append((rattr.st_ino, rname,))
+                else:
+                    self.getManager().unlink(attr.st_ino, rname)
+                count += 1
+
+            if not count:
+                self.getManager().unlink(parent_ino, directory)
+            else:
+                directories.insert(0, (parent_ino, directory,))
 
         return
 

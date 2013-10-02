@@ -1146,15 +1146,17 @@ class DedupOperations(llfuse.Operations): # {{{1
         options = self.getTable("option").getAll()
         self.getLogger().debug("Options in DB: %r", options)
 
-        block_size = int(options.get("block_size"))
-        if block_size != self.block_size:
-            self.getLogger().warning("Ignoring --block-size=%r argument, using previously chosen block size %i instead",
-                self.block_size, block_size)
-            self.block_size = block_size
-            self.cached_blocks.setBlockSize(self.block_size)
+        block_size = options.get("block_size")
+        if block_size is not None:
+            block_size = int(block_size)
+            if block_size != self.block_size:
+                self.getLogger().warning("Ignoring --block-size=%r argument, using previously chosen block size %i instead",
+                    self.block_size, block_size)
+                self.block_size = block_size
+                self.cached_blocks.setBlockSize(self.block_size)
 
         hash_function = options.get("hash_function")
-        if hash_function != self.hash_function:
+        if hash_function is not None and hash_function != self.hash_function:
             self.getLogger().warning("Ignoring --hash=%r argument, using previously chosen hash function %s instead",
                 self.hash_function, hash_function)
             self.hash_function = hash_function

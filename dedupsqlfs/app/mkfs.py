@@ -36,9 +36,12 @@ def mkfs(options, compression_methods=None, hash_functions=None):
         module = __import__(modname)
         _fuse.appendCompression(modname, getattr(module, "compress"), getattr(module, "decompress"))
 
-    _fuse.setReadonly(True)
-    _fuse.init(None)
-    _fuse.destroy(None)
+    _fuse.setOption("gc_umount_enabled", False)
+    _fuse.setOption("gc_vacuum_enabled", False)
+    _fuse.setOption("gc_enabled", False)
+
+    _fuse.operations.init()
+    _fuse.operations.destroy()
     return 0
 
 def main(): # {{{1
@@ -84,12 +87,15 @@ def main(): # {{{1
             pass
     if len(compression_methods) > 1:
         compression_methods.append(constants.COMPRESSION_TYPE_BEST)
+        compression_methods.append(constants.COMPRESSION_TYPE_CUSTOM)
 
     msg = "enable compression of data blocks using one of the supported compression methods: one of %s"
     msg %= ', '.join('%r' % mth for mth in compression_methods)
     msg += ". Defaults to %r." % constants.COMPRESSION_TYPE_NONE
     parser.add_argument('--compress', dest='compression_method', metavar='METHOD', choices=compression_methods, default=constants.COMPRESSION_TYPE_NONE, help=msg)
     parser.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression event if resulting data is bigger than original.")
+    parser.add_argument('--custom-compress', dest='compression_custom', metavar='METHOD', choices=compression_methods, action="append", help=msg)
+    parser.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=64, help="Minimal block data size for compression. Defaults to 64 bytes. Do not do compression if not forced to.")
 
     # Dynamically check for profiling support.
     try:
@@ -103,6 +109,7 @@ def main(): # {{{1
     args = parser.parse_args()
 
     # Do not want 'best' after help setup
+    compression_methods.pop()
     compression_methods.pop()
 
     if args.profile:

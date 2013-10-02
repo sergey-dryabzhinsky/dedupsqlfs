@@ -57,20 +57,20 @@ def create_subvolume(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.operations.init()
+    _fuse.setOption("disable_subvolumes", True)
+    _fuse.setOption("gc_umount_enabled", False)
+    _fuse.setOption("gc_vacuum_enabled", False)
+    _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(False)
     _fuse.getLogger().setLevel(logging.INFO)
-    _fuse.setOption("disable_subvolumes", True)
-    _fuse.operations.gc_enabled = False
-    _fuse.operations.gc_umount_enabled = False
-    _fuse.operations.gc_vacuum_enabled = False
+    _fuse.operations.init()
 
     from dedupsqlfs.fuse.subvolume import Subvolume
     sv = Subvolume(_fuse.operations)
     sv.create(options.subvol_create.encode('utf8'))
 
     _fuse.operations.destroy()
-
+    return
 
 def list_subvolume(options, _fuse):
     """
@@ -84,8 +84,8 @@ def list_subvolume(options, _fuse):
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
-    _fuse.operations.init()
     _fuse.setReadonly(True)
+    _fuse.operations.init()
     _fuse.getLogger().setLevel(logging.INFO)
     # _fuse.operations.cache_enabled = False
 
@@ -94,6 +94,31 @@ def list_subvolume(options, _fuse):
     sv.list()
 
     _fuse.operations.destroy()
+    return
+
+def remove_subvolume(options, _fuse):
+    """
+    @param options: Commandline options
+    @type  options: object
+
+    @param _fuse: FUSE wrapper
+    @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
+    """
+    _fuse.setOption("disable_subvolumes", True)
+    _fuse.setOption("gc_umount_enabled", False)
+    _fuse.setOption("gc_vacuum_enabled", False)
+    _fuse.setOption("gc_enabled", False)
+    _fuse.setReadonly(False)
+    _fuse.getLogger().setLevel(logging.INFO)
+    _fuse.operations.init()
+
+    from dedupsqlfs.fuse.subvolume import Subvolume
+    sv = Subvolume(_fuse.operations)
+    sv.remove(options.subvol_remove.encode('utf8'))
+
+    _fuse.operations.destroy()
+    return
+
 
 def print_fs_stats(options, _fuse):
     _fuse.setReadonly(True)
@@ -142,6 +167,9 @@ def do(options, compression_methods=None):
     if options.subvol_list:
         return list_subvolume(options, _fuse)
 
+    if options.subvol_remove:
+        return remove_subvolume(options, _fuse)
+
     if options.defragment:
         return data_defragment(options, _fuse)
 
@@ -183,15 +211,15 @@ def main(): # {{{1
     data = parser.add_argument_group('Data')
     data.add_argument('--print-stats', dest='print_stats', action='store_true', help="print the total apparent size and the actual disk usage of the file system and exit")
     data.add_argument('--defragment', dest='defragment', action='store_true', help="defragment all stored data, do garbage collection")
-    data.add_argument('--verify', dest='verify', action='store_true', help="verify all stored data hashes")
-    data.add_argument('--new-block-size', dest='new_block_size', metavar='BYTES', default=1024*128, type=int, help="Specify the new maximum block size in bytes. Defaults to 128kB.")
+    data.add_argument('--verify', dest='verify', action='store_true', help="verify all stored data hashes. (@todo)")
+    data.add_argument('--new-block-size', dest='new_block_size', metavar='BYTES', default=1024*128, type=int, help="Specify the new maximum block size in bytes. Defaults to 128kB. (@todo)")
 
     # Dynamically check for supported hashing algorithms.
     msg = "Specify the hashing algorithm that will be used to recognize duplicate data blocks: one of %s"
     hash_functions = list({}.fromkeys([h.lower() for h in hashlib.algorithms_available]).keys())
     hash_functions.sort()
     msg %= ', '.join('%r' % fun for fun in hash_functions)
-    msg += ". Defaults to 'sha1'."
+    msg += ". Defaults to 'sha1'. (@todo)"
     data.add_argument('--rehash', dest='hash_function', metavar='FUNCTION', choices=hash_functions, default='md5', help=msg)
 
     # Dynamically check for supported compression methods.
@@ -205,15 +233,17 @@ def main(): # {{{1
             pass
     if len(compression_methods) > 1:
         compression_methods.append(constants.COMPRESSION_TYPE_BEST)
+        compression_methods.append(constants.COMPRESSION_TYPE_CUSTOM)
 
     msg = "Enable compression of data blocks using one of the supported compression methods: one of %s"
     msg %= ', '.join('%r' % mth for mth in compression_methods)
     msg += ". Defaults to %r." % constants.COMPRESSION_TYPE_NONE
     data.add_argument('--compress-method', dest='compression_method', metavar='METHOD', choices=compression_methods, default=constants.COMPRESSION_TYPE_NONE, help=msg)
-    data.add_argument('--recompress', dest='recompress_path', metavar='PATH', help="Compress file or entire directory with new compression method")
+    data.add_argument('--recompress', dest='recompress_path', metavar='PATH', help="Compress file or entire directory with new compression method. (@todo)")
+    data.add_argument('--custom-compress', dest='compression_custom', metavar='METHOD', choices=compression_methods, action="append", help=msg)
     data.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")
+    data.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=64, help="Minimal block data size for compression. Defaults to 64 bytes. Do not do compression if not forced to.")
     # Do not want 'best' after help setup
-    compression_methods.pop()
 
     # Dynamically check for profiling support.
     try:
@@ -227,11 +257,11 @@ def main(): # {{{1
 
     snapshot = parser.add_argument_group('Snapshot')
     snapshot.add_argument('--list-snapshots', dest='snapshot_list', action='store_true', help="Show list of all snapshots")
-    snapshot.add_argument('--create-snapshot', dest='snapshot_create', metavar='NAME', help="Create new snapshot")
-    snapshot.add_argument('--select-snapshot', dest='snapshot', metavar='NAME', help="Select snapshot")
-    snapshot.add_argument('--remove-snapshot', dest='snapshot_remove', metavar='NAME', help="Remove selected snapshot")
-    snapshot.add_argument('--remove-older-than', dest='snapshot_remove_older', metavar='DATE', help="Remove snapshots older than selected date")
-    snapshot.add_argument('--snapshot-stats', dest='snapshot_stats', action='store_true', help="Print information about selected snapshot")
+    snapshot.add_argument('--select-snapshot', dest='snapshot', metavar='NAME', default='root', help="Select subvolume/snapshot for operations. Defaults to 'root'.")
+    snapshot.add_argument('--create-snapshot', dest='snapshot_create', metavar='NAME', help="Create new snapshot from selected")
+    snapshot.add_argument('--remove-snapshot', dest='snapshot_remove', action='store_true', help="Remove selected snapshot")
+    snapshot.add_argument('--remove-older-than', dest='snapshot_remove_older', metavar='DATE', help="Remove snapshots older than selected date. Date format: 'YYYY-mm-ddTHH:MM:SS'. ")
+    snapshot.add_argument('--snapshot-stats', dest='snapshot_stats', action='store_true', help="Print information about selected snapshot (@todo)")
 
     snapshot = parser.add_argument_group('Subvolume')
     snapshot.add_argument('--list-subvol', dest='subvol_list', action='store_true', help="Show list of all subvolumes")
@@ -239,6 +269,9 @@ def main(): # {{{1
     snapshot.add_argument('--remove-subvol', dest='subvol_remove', metavar='NAME', help="Remove selected subvolume")
 
     args = parser.parse_args()
+
+    compression_methods.pop()
+    compression_methods.pop()
 
     if args.profile:
         sys.stderr.write("Enabling profiling..\n")

@@ -9,6 +9,11 @@ from dedupsqlfs.fuse.subvolume import Subvolume
 class Snapshot(Subvolume):
 
     def make(self, from_subvol, with_name):
+
+        if not self.create(with_name):
+            self.getManager().getLogger().error("Subvolume with name %r already exists! Can't snapshot into it!", with_name)
+            return
+
         return
 
     def remove_older_than(self, dateStr):
@@ -17,18 +22,13 @@ class Snapshot(Subvolume):
 
         fh = self.getManager().opendir(llfuse.ROOT_INODE)
 
-        print("Subvolumes:")
-        print("-"*79)
-        print("%-50s| %-29s" % ("Name", "Created"))
-        print("-"*79)
-
         for name, attr, node in self.getManager().readdir(fh, 0):
-            if name == '@root':
-                continue
-
             subvolDate = datetime.fromtimestamp(attr.st_ctime)
             if subvolDate < oldDate:
+                self.getManager().getLogger().info("Remove %r subvolume", name)
                 self.remove(name)
+            else:
+                self.getManager().getLogger().info("Skip %r subvolume", name)
 
         self.getManager().releasedir(fh)
 

@@ -7,6 +7,7 @@ import stat
 import llfuse
 import errno
 from datetime import datetime
+from dedupsqlfs.lib import constants
 
 class Subvolume(object):
 
@@ -84,6 +85,10 @@ class Subvolume(object):
         @param name: Subvolume name
         @type  name: bytes
         """
+        if name == constants.ROOT_SUBVOLUME_NAME:
+            self.getManager().getLogger().warn("Can't remove root subvolume!")
+            return
+
         subvol_name = b'@' + name
 
         directories = [(llfuse.ROOT_INODE, subvol_name)]
@@ -92,7 +97,10 @@ class Subvolume(object):
 
             parent_ino, directory = directories.pop()
 
-            attr = self.getManager().lookup(parent_ino, directory)
+            try:
+                attr = self.getManager().lookup(parent_ino, directory)
+            except:
+                continue
 
             count = 0
             for rname, rattr, node in self.getManager().readdir(attr.st_ino, 0):

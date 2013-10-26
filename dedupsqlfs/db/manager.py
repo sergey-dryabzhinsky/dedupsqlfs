@@ -22,6 +22,7 @@ class DbManager( object ):
         "compression_type",
         "hash",
         "inode_hash_block",
+        "subvolume",
     )
 
     def __init__( self, dbname = None, base_path=None, autocommit=None, synchronous=None ):
@@ -92,6 +93,9 @@ class DbManager( object ):
             elif name == "inode_hash_block":
                 from dedupsqlfs.db.table.inode_hash_block import TableInodeHashBlock
                 self._table[ name ] = TableInodeHashBlock(self)
+            elif name == "subvolume":
+                from dedupsqlfs.db.table.subvolume import TableSubvolume
+                self._table[ name ] = TableSubvolume(self)
             else:
                 raise ValueError("Unknown database %r" % name)
         return self._table[ name ]

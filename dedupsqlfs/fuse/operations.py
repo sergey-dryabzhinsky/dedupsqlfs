@@ -36,6 +36,7 @@ from dedupsqlfs.my_formats import format_size, format_timespan
 from dedupsqlfs.get_memory_usage import get_real_memory_usage, get_memory_usage
 from dedupsqlfs.lib.cache import CacheTTLseconds
 from dedupsqlfs.lib.storage import StorageTTLseconds
+from dedupsqlfs.fuse.subvolume import Subvolume
 
 class DedupOperations(llfuse.Operations): # {{{1
 
@@ -834,7 +835,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         curTree = manager.getTable("tree").getCursor()
         curInode = manager.getTable("inode").getCursor()
 
-        curTree.execute("SELECT inode_id FROM tree")
+        curTree.execute("SELECT inode_id FROM tree WHERE subvol_id=?", (manager.getTable("tree").getSelectedSubvolume(),))
 
         apparent_size = 0
         while True:
@@ -842,8 +843,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not treeItem:
                 break
 
-            curInode.execute("SELECT SUM(size) as s FROM `inode` WHERE id=?", (treeItem["inode_id"],))
-            apparent_size += curInode.fetchone()["s"]
+            curInode.execute("SELECT `size` FROM `inode` WHERE id=?", (treeItem["inode_id"],))
+            apparent_size += curInode.fetchone()["size"]
         return apparent_size
 
     def __fix_inode_if_requested_root(self, inode):
@@ -1061,48 +1062,46 @@ class DedupOperations(llfuse.Operations): # {{{1
         # which differs from the info returned in later calls. The simple fix is to
         # use Python's os.getuid() and os.getgid() library functions instead of
         # fuse.FuseGetContext().
-        uid, gid = os.getuid(), os.getgid()
-
-        t_i, t_ns = self.__newctime_tuple()
 
         manager = self.getManager()
         optTable = manager.getTable("option")
-        inodeTable = manager.getTable("inode")
-        treeTable = manager.getTable("tree")
-        nameTable = manager.getTable("name")
         inited = optTable.get("inited")
 
         if not inited:
 
+            inodeTable = manager.getTable("inode")
+            nameTable = manager.getTable("name")
+
+            uid, gid = os.getuid(), os.getgid()
+            t_i, t_ns = self.__newctime_tuple()
             nameRoot = b''
 
-            name_id = nameTable.insert(nameRoot)
+            nameTable.insert(nameRoot)
             sz = len(nameRoot) + 4 + 13*4 + 4*4
-            inode_id = inodeTable.insert(2, self.root_mode, uid, gid, 0, sz, t_i, t_i, t_i, t_ns, t_ns, t_ns)
-            node_id = treeTable.insert(None, name_id, inode_id)
+            inodeTable.insert(2, self.root_mode, uid, gid, 0, sz, t_i, t_i, t_i, t_ns, t_ns, t_ns)
 
             nameRoot = constants.ROOT_SUBVOLUME_NAME
 
-            name_id = nameTable.insert(nameRoot)
-            sz = len(nameRoot) + 4 + 13*4 + 4*4
-            inode_id = inodeTable.insert(2, self.root_mode, uid, gid, 0, sz, t_i, t_i, t_i, t_ns, t_ns, t_ns)
-            treeTable.insert(node_id, name_id, inode_id)
-
+            snap = Subvolume(self)
+            snap.create(nameRoot)
 
             for name in ("block_size",):
                 optTable.insert(name, "%i" % self.getOption(name))
 
-            for name in ("compression_method", "hash_function",):
-                opt = optTable.get(name)
-                popt = self.getOption(name)
-                if opt is None:
-                    optTable.insert(name, "%s" % popt)
-                else:
-                    optTable.update(name, "%s" % popt)
+            for name in ("hash_function",):
+                optTable.insert(name, "%s" % self.getOption(name))
 
             optTable.insert("mounted_snapshot", self.mounted_snapshot)
 
             optTable.insert("inited", 1)
+
+        for name in ("compression_method", "compression_level",):
+            opt = optTable.get(name)
+            popt = self.getOption(name)
+            if opt is None:
+                optTable.insert(name, "%s" % popt)
+            else:
+                optTable.update(name, "%s" % popt)
 
         for name in ("synchronous", "compression_forced",):
             opt = optTable.get(name)
@@ -1122,6 +1121,9 @@ class DedupOperations(llfuse.Operations): # {{{1
         if self.mounted_snapshot:
             if self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, self.mounted_snapshot):
                 #self.setReadonly(True)
+                self.getLogger().warning("Mount previously mounted snapshot: %s",
+                    self.mounted_snapshot.replace(b'@', b''))
+
                 pass
             else:
                 self.mounted_snapshot = constants.ROOT_SUBVOLUME_NAME

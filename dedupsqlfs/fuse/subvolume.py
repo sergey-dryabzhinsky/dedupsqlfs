@@ -45,7 +45,10 @@ class Subvolume(object):
         @return: tree node ID
         @rtype: bool
         """
-        subvol_name = b'@' + name
+        subvol_name = name
+        if name and len(name) > 1:
+            if name[0] != b'@':
+                subvol_name = b'@' + name
 
         try:
             self.getManager().lookup(llfuse.ROOT_INODE, subvol_name)
@@ -94,11 +97,14 @@ class Subvolume(object):
         @param name: Subvolume name
         @type  name: bytes
         """
-        if name == constants.ROOT_SUBVOLUME_NAME:
+        subvol_name = name
+        if name and len(name) > 1:
+            if name[0] != b'@':
+                subvol_name = b'@' + name
+
+        if subvol_name == constants.ROOT_SUBVOLUME_NAME:
             self.getManager().getLogger().warn("Can't remove root subvolume!")
             return
-
-        subvol_name = b'@' + name
 
         try:
             attr = self.getManager().lookup(llfuse.ROOT_INODE, subvol_name)

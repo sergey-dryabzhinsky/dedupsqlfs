@@ -50,6 +50,9 @@ class TableTree( Table ):
         self._selected_subvol = node_id
         return self
 
+    def getSelectedSubvolume(self):
+        return self._selected_subvol
+
     def insert( self, parent_id, name_id, inode_id ):
         """
         :param parent_id: int|None

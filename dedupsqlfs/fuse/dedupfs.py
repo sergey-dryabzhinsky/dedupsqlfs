@@ -105,23 +105,29 @@ class DedupFS(object): # {{{1
 
     def appendCompression(self, name):
         if name == "none":
-            from dedupsqlfs.compression.none import NoneCompression as Compressor
+            from dedupsqlfs.compression.none import NoneCompression
+            self._compressors[name] = NoneCompression()
         elif name == "zlib":
-            from dedupsqlfs.compression.zlib import ZlibCompression as Compressor
+            from dedupsqlfs.compression.zlib import ZlibCompression
+            self._compressors[name] = ZlibCompression()
         elif name == "bz2":
-            from dedupsqlfs.compression.bz2 import Bz2Compression as Compressor
+            from dedupsqlfs.compression.bz2 import Bz2Compression
+            self._compressors[name] = Bz2Compression()
         elif name == "lzma":
-            from dedupsqlfs.compression.lzma import LzmaCompression as Compressor
+            from dedupsqlfs.compression.lzma import LzmaCompression
+            self._compressors[name] = LzmaCompression()
         elif name == "lzo":
-            from dedupsqlfs.compression.lzo import LzoCompression as Compressor
+            from dedupsqlfs.compression.lzo import LzoCompression
+            self._compressors[name] = LzoCompression()
         elif name == "lz4":
-            from dedupsqlfs.compression.lz4 import Lz4Compression as Compressor
+            from dedupsqlfs.compression.lz4 import Lz4Compression
+            self._compressors[name] = Lz4Compression()
         elif name == "snappy":
-            from dedupsqlfs.compression.snappy import SnappyCompression as Compressor
+            from dedupsqlfs.compression.snappy import SnappyCompression
+            self._compressors[name] = SnappyCompression()
         else:
             raise ValueError("Unknown compression method!")
 
-        self._compressors[name] = Compressor()
         return self
 
     def compressData(self, data):
@@ -196,12 +202,6 @@ class DedupFS(object): # {{{1
                 if not m_id:
                     table.insert(m)
             manager.commit()
-        return self
-
-    def createSubvolume(self, name):
-        """
-        @todo
-        """
         return self
 
     # Miscellaneous methods: {{{2

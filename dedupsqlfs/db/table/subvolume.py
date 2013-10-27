@@ -18,7 +18,7 @@ class TableSubvolume( Table ):
                 "node_id INTEGER PRIMARY KEY, "+
                 "created_at INTEGER NOT NULL, "+
                 "mounted_at INTEGER, "+
-                "updated_at INTEGER)"+
+                "updated_at INTEGER"+
             ");"
         )
         c.execute(

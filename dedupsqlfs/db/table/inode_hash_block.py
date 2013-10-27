@@ -72,8 +72,14 @@ class TableInodeHashBlock( Table ):
     def get_hashes_by_inode( self, inode):
         cur = self.getCursor()
         cur.execute("SELECT hash_id,block_size FROM `%s` WHERE inode_id=? GROUP BY hash_id" % self._table_name, (inode,))
-        item = cur.fetchall()
-        return item
+        items = cur.fetchall()
+        return items
+
+    def get_by_inode( self, inode):
+        cur = self.getCursor()
+        cur.execute("SELECT * FROM `%s` WHERE inode_id=?" % self._table_name, (inode,))
+        items = cur.fetchall()
+        return items
 
     def get_count_hash( self, hash_id ):
         cur = self.getCursor()

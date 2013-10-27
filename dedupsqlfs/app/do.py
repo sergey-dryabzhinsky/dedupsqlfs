@@ -144,6 +144,52 @@ def print_subvol_stats(options, _fuse):
     return
 
 
+def create_snapshot(options, _fuse):
+    """
+    @param options: Commandline options
+    @type  options: object
+
+    @param _fuse: FUSE wrapper
+    @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
+    """
+    _fuse.setOption("disable_subvolumes", True)
+    _fuse.setOption("gc_umount_enabled", False)
+    _fuse.setOption("gc_vacuum_enabled", False)
+    _fuse.setOption("gc_enabled", False)
+    _fuse.setReadonly(False)
+    _fuse.getLogger().setLevel(logging.INFO)
+    _fuse.operations.init()
+
+    from dedupsqlfs.fuse.snapshot import Snapshot
+    snap = Snapshot(_fuse.operations)
+    snap.make(options.snapshot.encode('utf8'), options.snapshot_create.encode('utf8'))
+
+    _fuse.operations.destroy()
+    return
+
+def remove_snapshot_older(options, _fuse):
+    """
+    @param options: Commandline options
+    @type  options: object
+
+    @param _fuse: FUSE wrapper
+    @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
+    """
+    _fuse.setOption("disable_subvolumes", True)
+    _fuse.setOption("gc_umount_enabled", False)
+    _fuse.setOption("gc_vacuum_enabled", False)
+    _fuse.setOption("gc_enabled", False)
+    _fuse.setReadonly(False)
+    _fuse.getLogger().setLevel(logging.INFO)
+    _fuse.operations.init()
+
+    from dedupsqlfs.fuse.snapshot import Snapshot
+    snap = Snapshot(_fuse.operations)
+    snap.remove_older_than(options.snapshot_remove_older)
+
+    _fuse.operations.destroy()
+    return
+
 def print_snapshot_stats(options, _fuse):
     """
     @param options: Commandline options
@@ -237,6 +283,18 @@ def do(options, compression_methods=None):
 
     if options.subvol_stats:
         return print_subvol_stats(options, _fuse)
+
+    if options.snapshot_create:
+        return create_snapshot(options, _fuse)
+
+    if options.snapshot_list:
+        return list_subvolume(options, _fuse)
+
+    if options.snapshot_remove:
+        return remove_subvolume(options, _fuse)
+
+    if options.snapshot_remove_older:
+        return remove_snapshot_older(options, _fuse)
 
     if options.snapshot_stats:
         return print_snapshot_stats(options, _fuse)

@@ -344,7 +344,9 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.mounted_snapshot = self.getOption("snapshot")
             if self.mounted_snapshot:
-                self.mounted_snapshot = b'@' + self.mounted_snapshot.encode('utf8')
+                self.mounted_snapshot = self.mounted_snapshot.encode('utf8')
+                if not self.mounted_snapshot.startswith(b'@'):
+                    self.mounted_snapshot = b'@' + self.mounted_snapshot
 
             if not self.isReadonly():
                 self.__init_store()
@@ -426,7 +428,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             parent_inode = self.__fix_inode_if_requested_root(parent_inode)
 
-            inode, parent_ino = self.__insert(parent_inode, name, mode | stat.S_IFDIR, len(name) + 13*4, ctx)
+            inode, parent_ino = self.__insert(parent_inode, name, mode | stat.S_IFDIR, len(name) + 4 + 13*4 + 5*4 + 5*4, ctx)
             self.getManager().getTable("inode").inc_nlinks(parent_ino)
             self.__commit_changes()
             return self.__getattr(inode)
@@ -847,9 +849,10 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __fix_inode_if_requested_root(self, inode):
         if inode == llfuse.ROOT_INODE and not self.getOption("disable_subvolumes"):
-            node = self.__get_tree_node_by_parent_inode_and_name(inode, self.mounted_snapshot)
-            if node:
-                return node["inode_id"]
+            if self.mounted_snapshot:
+                node = self.__get_tree_node_by_parent_inode_and_name(inode, self.mounted_snapshot)
+                if node:
+                    return node["inode_id"]
         return inode
 
     def __update_mounted_subvolume_time(self):
@@ -1017,7 +1020,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __decompress(self, block_data, compression_type_id):
         compression = self.getCompressionTypeName( compression_type_id )
-        return BytesIO(self.getApplication().decompressData(compression, block_data))
+        return BytesIO(self.getApplication().decompressData(compression, block_data["data"]))
 
     def __write_block_data_by_offset(self, inode, offset, block_data):
         """
@@ -1076,19 +1079,30 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             inodeTable = manager.getTable("inode")
             nameTable = manager.getTable("name")
+            treeTable = manager.getTable("tree")
 
             uid, gid = os.getuid(), os.getgid()
             t_i, t_ns = self.__newctime_tuple()
             nameRoot = b''
 
-            nameTable.insert(nameRoot)
-            sz = len(nameRoot) + 4 + 13*4 + 4*4
-            inodeTable.insert(2, self.root_mode, uid, gid, 0, sz, t_i, t_i, t_i, t_ns, t_ns, t_ns)
+            name_id = nameTable.insert(nameRoot)
+            # Directory size: name-row-size + inode-row-size + index-row-size + tree-row-size
+            sz = len(nameRoot) + 4 + 13*4 + 5*4 + 5*4
+            inode_id = inodeTable.insert(2, self.root_mode, uid, gid, 0, sz, t_i, t_i, t_i, t_ns, t_ns, t_ns)
+            treeTable.insert(None, name_id, inode_id)
 
             nameRoot = constants.ROOT_SUBVOLUME_NAME
 
+            # Need to setup option for right subvolume handling...
+            # Disable subvolumes handlers for raw access
+
+            opt_save = self.getApplication().getOption("disable_subvolumes")
+            self.getApplication().setOption("disable_subvolumes", True)
+
             snap = Subvolume(self)
             snap.create(nameRoot)
+
+            self.getApplication().setOption("disable_subvolumes", opt_save)
 
             self.mounted_snapshot = nameRoot
 

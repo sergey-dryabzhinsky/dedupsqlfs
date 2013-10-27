@@ -48,10 +48,14 @@ class Subvolume(object):
         @return: tree node ID
         @rtype: bool
         """
+
+        if not name:
+            self.getManager().getLogger().error("Define subvolume name which you need to create!")
+            return False
+
         subvol_name = name
-        if name and len(name) > 1:
-            if name[0] != b'@':
-                subvol_name = b'@' + name
+        if not subvol_name.startswith(b'@'):
+            subvol_name = b'@' + subvol_name
 
         try:
             self.getManager().lookup(llfuse.ROOT_INODE, subvol_name)
@@ -59,13 +63,14 @@ class Subvolume(object):
         except llfuse.FUSEError as e:
             if not e.errno == errno.ENOENT:
                 raise
-            ctx = llfuse.RequestContext()
-            ctx.uid = os.getuid()
-            ctx.gid = os.getgid()
-            attrs = self.getManager().mkdir(llfuse.ROOT_INODE, subvol_name, self.root_mode, ctx)
 
-            node = self.getTable('tree').find_by_inode(attrs.st_ino)
-            self.getTable('subvolume').insert(node['id'], int(attrs.st_ctime))
+        ctx = llfuse.RequestContext()
+        ctx.uid = os.getuid()
+        ctx.gid = os.getgid()
+        attrs = self.getManager().mkdir(llfuse.ROOT_INODE, subvol_name, self.root_mode, ctx)
+
+        node = self.getTable('tree').find_by_inode(attrs.st_ino)
+        self.getTable('subvolume').insert(node['id'], int(attrs.st_ctime))
 
         return True
 
@@ -78,14 +83,14 @@ class Subvolume(object):
 
         print("Subvolumes:")
         print("-"*79)
-        print("%-50s| %-29s" % ("Name", "Created"))
+        print("%-56s| %-20s|" % ("Name", "Created"))
         print("-"*79)
 
         for name, attr, node in self.getManager().readdir(fh, 0):
 
             subvol = self.getTable('subvolume').get(node)
 
-            print("%-50s| %-29s" % (name.decode("utf8"), datetime.fromtimestamp(subvol["created_at"])))
+            print("%-56s| %-20s|" % (name.decode("utf8"), datetime.fromtimestamp(subvol["created_at"])))
 
         self.getManager().releasedir(fh)
 
@@ -99,10 +104,15 @@ class Subvolume(object):
         @param name: Subvolume name
         @type  name: bytes
         """
+
+        if not name:
+            self.getManager().getLogger().error("Select subvolume which you need to delete!")
+            return
+
+
         subvol_name = name
-        if name and len(name) > 1:
-            if name[0] != b'@':
-                subvol_name = b'@' + name
+        if not subvol_name.startswith(b'@'):
+            subvol_name = b'@' + subvol_name
 
         if subvol_name == constants.ROOT_SUBVOLUME_NAME:
             self.getLogger().warn("Can't remove root subvolume!")
@@ -125,10 +135,15 @@ class Subvolume(object):
         @param name: Subvolume name
         @type  name: bytes
         """
+
+        if not name:
+            self.getManager().getLogger().error("Select subvolume which you need to process!")
+            return
+
+
         subvol_name = name
-        if name and len(name) > 1:
-            if name[0] != b'@':
-                subvol_name = b'@' + name
+        if not subvol_name.startswith(b'@'):
+            subvol_name = b'@' + subvol_name
 
         try:
             attr = self.getManager().lookup(llfuse.ROOT_INODE, subvol_name)
@@ -163,9 +178,8 @@ class Subvolume(object):
                              format_size(unique_size)
             )
 
-        except:
-            self.getManager().getLogger().warn("Can't remove subvolume! Not found!")
-            return
+        except Exception as e:
+            self.getManager().getLogger().warn("Can't process subvolume! %s" % e)
 
         return
 

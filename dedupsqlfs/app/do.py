@@ -120,6 +120,54 @@ def remove_subvolume(options, _fuse):
     return
 
 
+def print_subvol_stats(options, _fuse):
+    """
+    @param options: Commandline options
+    @type  options: object
+
+    @param _fuse: FUSE wrapper
+    @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
+    """
+    _fuse.setOption("disable_subvolumes", True)
+    _fuse.setOption("gc_umount_enabled", False)
+    _fuse.setOption("gc_vacuum_enabled", False)
+    _fuse.setOption("gc_enabled", False)
+    _fuse.setReadonly(True)
+    _fuse.getLogger().setLevel(logging.INFO)
+    _fuse.operations.init()
+
+    from dedupsqlfs.fuse.subvolume import Subvolume
+    sv = Subvolume(_fuse.operations)
+    sv.report_usage(options.subvol_stats.encode('utf8'))
+
+    _fuse.operations.destroy()
+    return
+
+
+def print_snapshot_stats(options, _fuse):
+    """
+    @param options: Commandline options
+    @type  options: object
+
+    @param _fuse: FUSE wrapper
+    @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
+    """
+    _fuse.setOption("disable_subvolumes", True)
+    _fuse.setOption("gc_umount_enabled", False)
+    _fuse.setOption("gc_vacuum_enabled", False)
+    _fuse.setOption("gc_enabled", False)
+    _fuse.setReadonly(True)
+    _fuse.getLogger().setLevel(logging.INFO)
+    _fuse.operations.init()
+
+    from dedupsqlfs.fuse.snapshot import Snapshot
+    snap = Snapshot(_fuse.operations)
+    snap.report_usage(options.snapshot.encode('utf8'))
+
+    _fuse.operations.destroy()
+    return
+
+
 def print_fs_stats(options, _fuse):
     _fuse.setReadonly(True)
     _fuse.getLogger().setLevel(logging.INFO)
@@ -168,6 +216,12 @@ def do(options, compression_methods=None):
 
     if options.subvol_remove:
         return remove_subvolume(options, _fuse)
+
+    if options.subvol_stats:
+        return print_subvol_stats(options, _fuse)
+
+    if options.snapshot_stats:
+        return print_snapshot_stats(options, _fuse)
 
     if options.defragment:
         return data_defragment(options, _fuse)
@@ -234,11 +288,20 @@ def main(): # {{{1
         compression_methods.append(constants.COMPRESSION_TYPE_BEST)
         compression_methods.append(constants.COMPRESSION_TYPE_CUSTOM)
 
-    msg = "Enable compression of data blocks using one of the supported compression methods: one of %s"
+    msg = "Enable compression of data blocks using one of the supported compression methods: %s"
     msg %= ', '.join('%r' % mth for mth in compression_methods)
     msg += ". Defaults to %r." % constants.COMPRESSION_TYPE_NONE
+    if len(compression_methods) > 1:
+        msg += " %r will try all compression methods and choose one with smaller result data." % constants.COMPRESSION_TYPE_BEST
+        msg += " %r will try selected compression methods (--custom-compress) and choose one with smaller result data." % constants
+
     data.add_argument('--compress-method', dest='compression_method', metavar='METHOD', choices=compression_methods, default=constants.COMPRESSION_TYPE_NONE, help=msg)
     data.add_argument('--recompress', dest='recompress_path', metavar='PATH', help="Compress file or entire directory with new compression method")
+
+    msg = "Enable compression of data blocks using one or more of the supported compression methods: %s"
+    msg %= ', '.join('%r' % mth for mth in compression_methods)
+    msg += ". To use two or more methods select this option in command line for each compression method."
+
     data.add_argument('--custom-compress', dest='compression_custom', metavar='METHOD', choices=compression_methods, action="append", help=msg)
     data.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")
     data.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=-1, help="Minimal block data size for compression. Defaults to -1 bytes (auto). Do not do compression if not forced to.")
@@ -265,12 +328,13 @@ def main(): # {{{1
     snapshot.add_argument('--create-snapshot', dest='snapshot_create', metavar='NAME', help="Create new snapshot from selected")
     snapshot.add_argument('--remove-snapshot', dest='snapshot_remove', action='store_true', help="Remove selected snapshot")
     snapshot.add_argument('--remove-older-than', dest='snapshot_remove_older', metavar='DATE', help="Remove snapshots older than selected date. Date format: 'YYYY-mm-ddTHH:MM:SS'. ")
-    snapshot.add_argument('--snapshot-stats', dest='snapshot_stats', action='store_true', help="Print information about selected snapshot (@todo)")
+    snapshot.add_argument('--snapshot-stats', dest='snapshot_stats', action='store_true', help="Print information about selected snapshot")
 
     snapshot = parser.add_argument_group('Subvolume')
     snapshot.add_argument('--list-subvol', dest='subvol_list', action='store_true', help="Show list of all subvolumes")
     snapshot.add_argument('--create-subvol', dest='subvol_create', metavar='NAME', help="Create new subvolume")
     snapshot.add_argument('--remove-subvol', dest='subvol_remove', metavar='NAME', help="Remove selected subvolume")
+    snapshot.add_argument('--subvol-stats', dest='subvol_stats', metavar='NAME', help="Print information about selected subvolume")
 
     args = parser.parse_args()
 

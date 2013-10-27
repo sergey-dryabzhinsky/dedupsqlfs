@@ -8,6 +8,7 @@ import llfuse
 import errno
 from datetime import datetime
 from dedupsqlfs.lib import constants
+from dedupsqlfs.my_formats import format_size
 
 class Subvolume(object):
 
@@ -31,11 +32,13 @@ class Subvolume(object):
     def getTable(self, name):
         return self.getManager().getTable(name)
 
-    def getLogger(self, name):
-        return self.getManager().getTable(name)
+    def getLogger(self):
+        return self.getManager().getLogger()
 
     def getLastError(self):
         return self._last_error
+
+    # -----------------------------------------------
 
     def create(self, name):
         """
@@ -65,7 +68,6 @@ class Subvolume(object):
             self.getTable('subvolume').insert(node['id'], int(attrs.st_ctime))
 
         return True
-    # -----------------------------------------------
 
     def list(self):
         """
@@ -103,7 +105,7 @@ class Subvolume(object):
                 subvol_name = b'@' + name
 
         if subvol_name == constants.ROOT_SUBVOLUME_NAME:
-            self.getManager().getLogger().warn("Can't remove root subvolume!")
+            self.getLogger().warn("Can't remove root subvolume!")
             return
 
         try:
@@ -112,6 +114,55 @@ class Subvolume(object):
             self.getTable('tree').delete_subvolume(node["id"])
 
             self.getTable('subvolume').delete(node['id'])
+        except:
+            self.getLogger().warn("Can't remove subvolume! Not found!")
+            return
+
+        return
+
+    def report_usage(self, name):
+        """
+        @param name: Subvolume name
+        @type  name: bytes
+        """
+        subvol_name = name
+        if name and len(name) > 1:
+            if name[0] != b'@':
+                subvol_name = b'@' + name
+
+        try:
+            attr = self.getManager().lookup(llfuse.ROOT_INODE, subvol_name)
+            node = self.getTable('tree').find_by_inode(attr.st_ino)
+
+            curTree = self.getTable("tree").getCursor()
+            curInode = self.getTable("inode").getCursor()
+
+            curTree.execute("SELECT inode_id FROM tree WHERE subvol_id=?", (node['id'],))
+
+            apparent_size = 0
+            unique_size = 0
+            while True:
+                treeItem = curTree.fetchone()
+                if not treeItem:
+                    break
+
+                curInode.execute("SELECT `size` FROM `inode` WHERE id=?", (treeItem["inode_id"],))
+                apparent_size += curInode.fetchone()["size"]
+
+                hashes = self.getTable('inode_hash_block').get_hashes_by_inode(treeItem["inode_id"])
+                for indexItem in hashes:
+                    cnt = self.getTable('inode_hash_block').get_count_hash(indexItem["hash_id"])
+                    if cnt == 1:
+                        unique_size += indexItem['block_size']
+
+            self.getLogger().info("Apparent size is %s.",
+                             format_size(apparent_size)
+            )
+
+            self.getLogger().info("Unique data size is %s.",
+                             format_size(unique_size)
+            )
+
         except:
             self.getManager().getLogger().warn("Can't remove subvolume! Not found!")
             return

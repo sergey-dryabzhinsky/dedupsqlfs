@@ -103,8 +103,25 @@ class DedupFS(object): # {{{1
     def isReadonly(self):
         return self._readonly
 
-    def appendCompression(self, name, func_comp, func_decomp):
-        self._compressors[name] = (func_comp, func_decomp)
+    def appendCompression(self, name):
+        if name == "none":
+            from dedupsqlfs.compression.none import NoneCompression as Compressor
+        elif name == "zlib":
+            from dedupsqlfs.compression.zlib import ZlibCompression as Compressor
+        elif name == "bz2":
+            from dedupsqlfs.compression.bz2 import Bz2Compression as Compressor
+        elif name == "lzma":
+            from dedupsqlfs.compression.lzma import LzmaCompression as Compressor
+        elif name == "lzo":
+            from dedupsqlfs.compression.lzo import LzoCompression as Compressor
+        elif name == "lz4":
+            from dedupsqlfs.compression.lz4 import Lz4Compression as Compressor
+        elif name == "snappy":
+            from dedupsqlfs.compression.snappy import SnappyCompression as Compressor
+        else:
+            raise ValueError("Unknown compression method!")
+
+        self._compressors[name] = Compressor()
         return self
 
     def compressData(self, data):
@@ -115,21 +132,25 @@ class DedupFS(object): # {{{1
         """
         method = self.getOption("compression_method")
         forced = self.getOption("compression_forced")
+        level = self.getOption("compression_level")
+
         cdata = data
         data_length = len(data)
         cmethod = constants.COMPRESSION_TYPE_NONE
 
-        if data_length <= self.getOption("compression_minimal_size") and not forced:
+        if self.getOption("compression_minimal_size") > 0 and \
+            data_length <= self.getOption("compression_minimal_size") and not forced:
             return cdata, cmethod
 
         if method != constants.COMPRESSION_TYPE_NONE:
             if method not in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_CUSTOM):
-                func_comp = self._compressors[ method ][0]
-                cdata = func_comp(data)
-                cmethod = method
-                if data_length <= len(cdata) and not forced:
-                    cdata = data
-                    cmethod = constants.COMPRESSION_TYPE_NONE
+                comp = self._compressors[ method ]
+                if comp.isDataNeedCompression(data):
+                    cdata = comp.compressData(data, level)
+                    cmethod = method
+                    if data_length <= len(cdata) and not forced:
+                        cdata = data
+                        cmethod = constants.COMPRESSION_TYPE_NONE
             else:
                 min_len = data_length * 2
                 # BEST
@@ -137,13 +158,14 @@ class DedupFS(object): # {{{1
                 if method == constants.COMPRESSION_TYPE_CUSTOM:
                     methods = self.getOption("compression_custom")
                 for m in methods:
-                    func_comp = self._compressors[ m ][0]
-                    _cdata = func_comp(data)
-                    cdata_length = len(_cdata)
-                    if min_len > cdata_length:
-                        min_len = cdata_length
-                        cdata = _cdata
-                        cmethod = m
+                    comp = self._compressors[ m ]
+                    if comp.isDataNeedCompression(data):
+                        _cdata = comp.compressData(data, level)
+                        cdata_length = len(_cdata)
+                        if min_len > cdata_length:
+                            min_len = cdata_length
+                            cdata = _cdata
+                            cmethod = m
 
                 if data_length <= min_len and not forced:
                     cdata = data
@@ -157,8 +179,8 @@ class DedupFS(object): # {{{1
 
         @return bytes
         """
-        func_decomp = self._compressors[ method ][1]
-        dcdata = func_decomp(data)
+        comp = self._compressors[ method ]
+        dcdata = comp.decompressData(data)
         return dcdata
 
     def setDataDirectory(self, data_dir_path):

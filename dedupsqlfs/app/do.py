@@ -156,10 +156,7 @@ def do(options, compression_methods=None):
     _fuse.saveCompressionMethods(compression_methods)
 
     for modname in compression_methods:
-        if modname == constants.COMPRESSION_TYPE_NONE:
-            continue
-        module = __import__(modname)
-        _fuse.appendCompression(modname, getattr(module, "compress"), getattr(module, "decompress"))
+        _fuse.appendCompression(modname)
 
     # Actions
 
@@ -241,10 +238,15 @@ def main(): # {{{1
     msg %= ', '.join('%r' % mth for mth in compression_methods)
     msg += ". Defaults to %r." % constants.COMPRESSION_TYPE_NONE
     data.add_argument('--compress-method', dest='compression_method', metavar='METHOD', choices=compression_methods, default=constants.COMPRESSION_TYPE_NONE, help=msg)
-    data.add_argument('--recompress', dest='recompress_path', metavar='PATH', help="Compress file or entire directory with new compression method. (@todo)")
+    data.add_argument('--recompress', dest='recompress_path', metavar='PATH', help="Compress file or entire directory with new compression method")
     data.add_argument('--custom-compress', dest='compression_custom', metavar='METHOD', choices=compression_methods, action="append", help=msg)
     data.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")
-    data.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=64, help="Minimal block data size for compression. Defaults to 64 bytes. Do not do compression if not forced to.")
+    data.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=-1, help="Minimal block data size for compression. Defaults to -1 bytes (auto). Do not do compression if not forced to.")
+    data.add_argument('--compression-level', dest='compression_level', metavar="LEVEL", default=constants.COMPRESSION_LEVEL_DEFAULT,
+                        choices=(constants.COMPRESSION_LEVEL_DEFAULT, constants.COMPRESSION_LEVEL_FAST, constants.COMPRESSION_LEVEL_NORM, constants.COMPRESSION_LEVEL_BEST),
+                        help="Compression level ratio: one of %s. Defaults to %r. Not all methods support this option." % (
+                            ', '.join((constants.COMPRESSION_LEVEL_DEFAULT, constants.COMPRESSION_LEVEL_FAST, constants.COMPRESSION_LEVEL_NORM, constants.COMPRESSION_LEVEL_BEST)), constants.COMPRESSION_LEVEL_FAST
+                        ))
     # Do not want 'best' after help setup
 
     # Dynamically check for profiling support.

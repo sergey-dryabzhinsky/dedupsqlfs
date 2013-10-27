@@ -8,7 +8,7 @@ setup(
             "lzo",
             ["lzomodule.c"],
             libraries=['lzo2'],
-            extra_compile_args=["-O3", "-march=native"]
+            extra_compile_args=["-O2", "-DFORTIFY_SOURCE=2", "-fstack-protector"]
         )
     ]
 )

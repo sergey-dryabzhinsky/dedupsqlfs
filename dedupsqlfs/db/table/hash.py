@@ -16,8 +16,13 @@ class TableHash( Table ):
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
-                "hash BLOB NOT NULL UNIQUE"+
+                "hash BLOB NOT NULL"+
             ")"
+        )
+        c.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS hash_value ON `%s` (" % self._table_name+
+                "hash"+
+            ");"
         )
         return
 

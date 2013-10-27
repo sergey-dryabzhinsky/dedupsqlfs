@@ -39,7 +39,7 @@ class DedupFS(object): # {{{1
         @type operations: dedupsqlfs.fuse.operations.DedupOperations
         """
 
-        self.options = vars(options)
+        self.options = dict(vars(options))
 
         self._compressors = {}
         self._readonly = False
@@ -89,6 +89,10 @@ class DedupFS(object): # {{{1
     def getOption(self, key):
         return self.options.get(key)
 
+    def setOption(self, key, value):
+        self.options[key] = value
+        return self
+
     def getLogger(self):
         return self.logger
 
@@ -101,23 +105,29 @@ class DedupFS(object): # {{{1
 
     def appendCompression(self, name):
         if name == "none":
-            from dedupsqlfs.compression.none import NoneCompression as Compressor
+            from dedupsqlfs.compression.none import NoneCompression
+            self._compressors[name] = NoneCompression()
         elif name == "zlib":
-            from dedupsqlfs.compression.zlib import ZlibCompression as Compressor
+            from dedupsqlfs.compression.zlib import ZlibCompression
+            self._compressors[name] = ZlibCompression()
         elif name == "bz2":
-            from dedupsqlfs.compression.bz2 import Bz2Compression as Compressor
+            from dedupsqlfs.compression.bz2 import Bz2Compression
+            self._compressors[name] = Bz2Compression()
         elif name == "lzma":
-            from dedupsqlfs.compression.lzma import LzmaCompression as Compressor
+            from dedupsqlfs.compression.lzma import LzmaCompression
+            self._compressors[name] = LzmaCompression()
         elif name == "lzo":
-            from dedupsqlfs.compression.lzo import LzoCompression as Compressor
+            from dedupsqlfs.compression.lzo import LzoCompression
+            self._compressors[name] = LzoCompression()
         elif name == "lz4":
-            from dedupsqlfs.compression.lz4 import Lz4Compression as Compressor
+            from dedupsqlfs.compression.lz4 import Lz4Compression
+            self._compressors[name] = Lz4Compression()
         elif name == "snappy":
-            from dedupsqlfs.compression.snappy import SnappyCompression as Compressor
+            from dedupsqlfs.compression.snappy import SnappyCompression
+            self._compressors[name] = SnappyCompression()
         else:
             raise ValueError("Unknown compression method!")
 
-        self._compressors[name] = Compressor()
         return self
 
     def compressData(self, data):
@@ -134,14 +144,13 @@ class DedupFS(object): # {{{1
         data_length = len(data)
         cmethod = constants.COMPRESSION_TYPE_NONE
 
-        if self.getOption("compression_minimal_size") > 0 and \
-            data_length <= self.getOption("compression_minimal_size") and not forced:
+        if data_length <= self.getOption("compression_minimal_size") and not forced:
             return cdata, cmethod
 
         if method != constants.COMPRESSION_TYPE_NONE:
-            if method not in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_CUSTOM):
+            if method not in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_CUSTOM,):
                 comp = self._compressors[ method ]
-                if comp.isDataNeedCompression(data):
+                if comp.isDataMayBeCompressed(data):
                     cdata = comp.compressData(data, level)
                     cmethod = method
                     if data_length <= len(cdata) and not forced:
@@ -155,7 +164,7 @@ class DedupFS(object): # {{{1
                     methods = self.getOption("compression_custom")
                 for m in methods:
                     comp = self._compressors[ m ]
-                    if comp.isDataNeedCompression(data):
+                    if comp.isDataMayBeCompressed(data):
                         _cdata = comp.compressData(data, level)
                         cdata_length = len(_cdata)
                         if min_len > cdata_length:
@@ -176,8 +185,7 @@ class DedupFS(object): # {{{1
         @return bytes
         """
         comp = self._compressors[ method ]
-        dcdata = comp.decompressData(data)
-        return dcdata
+        return comp.decompressData(data)
 
     def setDataDirectory(self, data_dir_path):
         self.operations.getManager().setBasepath(data_dir_path)
@@ -192,12 +200,6 @@ class DedupFS(object): # {{{1
                 if not m_id:
                     table.insert(m)
             manager.commit()
-        return self
-
-    def createSubvolume(self, name):
-        """
-        @todo
-        """
         return self
 
     # Miscellaneous methods: {{{2
@@ -226,7 +228,7 @@ class DedupFS(object): # {{{1
 
         indexTable = manager.getTable("inode_hash_block")
 
-        apparent_size = self.operations.getApparentSize()
+        apparent_size = self.operations.getApparentSize(False)
 
         self.getLogger().info("--" * 79)
 
@@ -268,7 +270,10 @@ class DedupFS(object): # {{{1
         self.getLogger().info("Compression by types:")
         count_all = 0
         comp_types = {}
-        for item in indexTable.count_compression_type():
+
+        blockTable = manager.getTable("block")
+
+        for item in blockTable.count_compression_type():
             count_all += item["cnt"]
             comp_types[ item["cnt"] ] = self.operations.getCompressionTypeName( item["compression_type_id"] )
 

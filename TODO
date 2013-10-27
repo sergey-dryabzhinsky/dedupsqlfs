@@ -1,6 +1,6 @@
 Here are some things on to-do list, in no particular order:
 
- * Implement functions for work with blocks, hashes, subvolumes as semarate
+ * Implement functions for work with blocks, hashes, subvolumes as separate
    commands (options) in do.dedupsqlfs. This should reduce code size of
    FUSE operations file.
 

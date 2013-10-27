@@ -8,6 +8,8 @@ class TableTree( Table ):
 
     _table_name = "tree"
 
+    _selected_subvol = None
+
     def create( self ):
         c = self.getCursor()
 
@@ -15,10 +17,11 @@ class TableTree( Table ):
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
+                "subvol_id INTEGER, "+
                 "parent_id INTEGER, "+
                 "name_id INTEGER NOT NULL, "+
                 "inode_id INTEGER NOT NULL, "+
-                "UNIQUE (parent_id, name_id)"+
+                "UNIQUE (subvol_id, parent_id, name_id)"+
             ");"
         )
         c.execute(
@@ -32,11 +35,23 @@ class TableTree( Table ):
             ");"
         )
         c.execute(
+            "CREATE INDEX IF NOT EXISTS tree_subvol ON `%s` (" % self._table_name+
+                "subvol_id"+
+            ");"
+        )
+        c.execute(
             "CREATE INDEX IF NOT EXISTS tree_name ON `%s` (" % self._table_name+
                 "name_id"+
             ");"
         )
         return
+
+    def selectSubvolume(self, node_id):
+        self._selected_subvol = node_id
+        return self
+
+    def getSelectedSubvolume(self):
+        return self._selected_subvol
 
     def insert( self, parent_id, name_id, inode_id ):
         """
@@ -46,8 +61,8 @@ class TableTree( Table ):
         :return: int
         """
         cur = self.getCursor()
-        cur.execute("INSERT INTO `%s`(parent_id, name_id, inode_id) " % self._table_name+
-                    "VALUES (?, ?, ?)", (parent_id, name_id, inode_id))
+        cur.execute("INSERT INTO `%s`(subvol_id, parent_id, name_id, inode_id) " % self._table_name+
+                    "VALUES (?, ?, ?, ?)", (self._selected_subvol, parent_id, name_id, inode_id))
         item = cur.lastrowid
         self.commit()
         return item
@@ -56,6 +71,12 @@ class TableTree( Table ):
         cur = self.getCursor()
         cur.execute("DELETE FROM `%s` WHERE id=?" % self._table_name, (node_id,))
         item = cur.rowcount
+        return item
+
+    def delete_subvolume(self, subvol_id):
+        cur = self.getCursor()
+        cur.execute("DELETE FROM `%s` WHERE subvol_id=?" % self._table_name, (subvol_id,))
+        item = cur.rowcount + self.delete(subvol_id)
         return item
 
     def find_by_parent_name(self, parent_id, name_id):
@@ -92,13 +113,13 @@ class TableTree( Table ):
     def fetch(self, limit=None, offset=None):
         cur = self.getCursor()
 
-        query = "SELECT * FROM `%s`" % self._table_name
+        query = "SELECT * FROM `%s` WHERE subvol_id=?" % self._table_name
         if limit is not None:
             query += " LIMIT %d" % limit
             if offset is not None:
                 query += " OFFSET %d" % offset
 
-        cur.execute(query)
+        cur.execute(query, (self._selected_subvol, ))
         items = cur.fetchall()
         return items
 

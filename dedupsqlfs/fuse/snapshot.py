@@ -2,94 +2,118 @@
 
 __author__ = 'sergey'
 
-import os
 import stat
-import time
-import math
 import llfuse
-from dedupsqlfs.lib import constants
+from datetime import datetime
+from dedupsqlfs.fuse.subvolume import Subvolume
 
-class Snapshot(object):
+class Snapshot(Subvolume):
 
-    _manager = None
-    _last_error = None
+    def make(self, from_subvol, with_name):
+        """
+        Copy all tree,inode,index,link data from one subvolume to new
+        """
 
-    def __init__(self, manager):
+        if not from_subvol:
+            self.getManager().getLogger().error("Select subvolume from which you need to create snapshot!")
+            return
 
-        self._manager = manager
+        if not with_name:
+            self.getManager().getLogger().error("Define name for subvolume to which you need to copy %r data!" % from_subvol)
+            return
 
-        self.root_mode = stat.S_IFDIR | 0o755
+        if not self.create(with_name):
+            self.getManager().getLogger().error("Subvolume with name %r already exists! Can't snapshot into it!", with_name)
+            return
 
-        pass
+        subvol_from = from_subvol
+        if not from_subvol.startswith(b'@'):
+            subvol_from = b'@' + from_subvol
 
-    def getManager(self):
-        return self._manager
+        subvol_to = with_name
+        if not with_name.startswith(b'@'):
+            subvol_to = b'@' + with_name
 
-    def getTable(self, name):
-        return self.getManager().getTable(name)
+        try:
+            attr_from = self.getManager().lookup(llfuse.ROOT_INODE, subvol_from)
+            root_node_from = node_from = self.getTable('tree').find_by_inode(attr_from.st_ino)
 
-    def getLastError(self):
-        return self._last_error
+            attr_to = self.getManager().lookup(llfuse.ROOT_INODE, subvol_to)
+            root_node_to = node_to = self.getTable('tree').find_by_inode(attr_to.st_ino)
 
-    def create(self, name):
+            nodes = []
+            for name, attr, node in self.getManager().readdir(node_from["inode_id"], 0):
+                nodes.append((node, attr, name, node_to["id"]))
 
-        snap_name = b'@' + name
+            while len(nodes)>0:
 
-        node = self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, snap_name)
-        if node:
-            self._last_error = "Already has snapshot / subvolume"
-            return False
+                node_from, attr_from, name_from, parent_to_id = nodes.pop()
 
-        root_subvol_node = self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, constants.ROOT_SUBVOLUME_NAME)
-        if not root_subvol_node:
-            self._last_error = "Don't have root subvolume?!"
-            return False
+                inode_from = self.getTable("inode").get(attr_from.st_ino)
 
-        uid, gid = os.getuid(), os.getgid()
+                inode_to = self.getTable("inode").insert(
+                    inode_from["nlinks"], inode_from["mode"],
+                    inode_from["uid"], inode_from["gid"], inode_from["rdev"], inode_from["size"],
+                    inode_from["atime"], inode_from["mtime"], inode_from["ctime"],
+                    inode_from["atime_ns"], inode_from["mtime_ns"], inode_from["ctime_ns"]
+                )
 
-        t_i, t_ns = self.__newctime_tuple()
+                treeItem_from = self.getTable("tree").get(node_from)
 
-        root_node = self.getTable("tree").find_by_inode(llfuse.ROOT_INODE)
+                self.getTable("tree").selectSubvolume(root_node_to["id"])
+                treeNode_to = self.getTable("tree").insert(
+                    parent_to_id,
+                    treeItem_from["name_id"],
+                    inode_to
+                )
+                self.getTable("tree").selectSubvolume(None)
 
-        name_id = self.getTable("name").insert(snap_name)
-        sz = len(snap_name) + 4 + 13*4 + 4*4
-        inode_id = self.getTable("inode").insert(2, self.root_mode, uid, gid, 0, sz, t_i, t_i, t_i, t_ns, t_ns, t_ns)
-        self.getTable("tree").insert(root_node["id"], name_id, inode_id)
+                linkTarget_from = self.getTable("link").find_by_inode(inode_from["id"])
+                if linkTarget_from:
+                    self.getTable("link").insert(inode_to, linkTarget_from)
 
-        subvol_node = self.getTable("tree").find_by_inode(inode_id)
+                xattr_from = self.getTable("xattr").find_by_inode(inode_from["id"])
+                if xattr_from:
+                    self.getTable("xattr").insert(inode_to, xattr_from["data"])
 
-        self.__copy_root_tree_to_new_subvolume(root_subvol_node, subvol_node)
+                indexes_from = self.getTable("inode_hash_block").get_by_inode(inode_from["id"])
+                if len(indexes_from):
+                    for indexItem in indexes_from:
+                        self.getTable("inode_hash_block").insert(
+                            inode_to,
+                            indexItem["block_number"],
+                            indexItem["hash_id"],
+                            indexItem["block_size"]
+                        )
 
-        return True
+                if stat.S_ISDIR(attr_from.st_mode):
+                    for name, attr, node in self.getManager().readdir(inode_from["id"], 0):
+                        nodes.append((node, attr, name, treeNode_to))
 
+        except:
+            self.getManager().getLogger().warn("Error while copying data!")
+            import traceback
+            self.getManager().getLogger().error(traceback.format_exc())
 
-    # -----------------------------------------------
-
-    def __get_tree_node_by_parent_inode_and_name(self, parent_inode, name):
-
-        name_id = self.getTable("name").find(name)
-        if not name_id:
-            return None
-
-        par_node = self.getTable("tree").find_by_inode(parent_inode)
-        if not par_node:
-            return None
-
-        node = self.getTable("tree").find_by_parent_name(par_node["id"], name_id)
-
-        return node
-
-    def __copy_root_tree_to_new_subvolume(self, root_node, subvol_node):
         return
 
-    def __newctime(self): # {{{3
-        return time.time()
+    def remove_older_than(self, dateStr):
 
-    def __newctime_tuple(self): # {{{3
-        return self.__get_time_tuple( self.__newctime() )
+        oldDate = datetime.strptime(dateStr, "%Y-%m-%dT%H:%M:%S")
 
-    def __get_time_tuple(self, t): # {{{3
-        t_ns, t_i = math.modf(t)
-        t_ns = int(t_ns * 10**9)
-        return int(t_i), t_ns
+        fh = self.getManager().opendir(llfuse.ROOT_INODE)
 
+        for name, attr, node in self.getManager().readdir(fh, 0):
+
+            subvol = self.getTable('subvolume').get(node)
+
+            subvolDate = datetime.fromtimestamp(subvol["created_at"])
+            if subvolDate < oldDate:
+                self.getManager().getLogger().info("Remove %r subvolume", name)
+                self.remove(name)
+
+        self.getManager().releasedir(fh)
+
+        return
+
+    pass

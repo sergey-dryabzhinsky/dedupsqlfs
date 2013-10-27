@@ -18,50 +18,17 @@ class LzmaCompression(BaseCompression):
 
     def getFastCompressionOptions(self):
         return {
-            "filters" : [
-                {
-                    "id": self._get_module().FILTER_DELTA,
-                    "dist": 1
-                },
-                {
-                    "id": self._get_module().FILTER_LZMA2,
-                    "preset": 1 | self._get_module().PRESET_DEFAULT,
-                    "dict_size": 1024*1024,
-                    "nice_len": 64
-                },
-            ]
+            "preset": 1,
         }
 
     def getNormCompressionOptions(self):
         return {
-            "filters" : [
-                {
-                    "id": self._get_module().FILTER_DELTA,
-                    "dist": 3
-                },
-                {
-                    "id": self._get_module().FILTER_LZMA2,
-                    "preset": 4 | self._get_module().PRESET_DEFAULT,
-                    "dict_size": 64*1024*1024,
-                    "nice_len": 128
-                },
-            ]
+            "preset": 4,
         }
 
     def getBestCompressionOptions(self):
         return {
-            "filters" : [
-                {
-                    "id": self._get_module().FILTER_DELTA,
-                    "dist": 5
-                },
-                {
-                    "id": self._get_module().FILTER_LZMA2,
-                    "preset": 7 | self._get_module().PRESET_EXTREME,
-                    "dict_size": 256*1024*1024,
-                    "nice_len": 256
-                },
-            ]
+            "preset": 7,
         }
 
     pass

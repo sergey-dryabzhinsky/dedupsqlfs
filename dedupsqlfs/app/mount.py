@@ -32,9 +32,6 @@ def fuse_mount(options, compression_methods=None, hash_functions=None):
 
     _fuse.saveCompressionMethods(compression_methods)
 
-    def do_none(data):
-        return data
-
     for modname in compression_methods:
         _fuse.appendCompression(modname)
 
@@ -46,7 +43,7 @@ def main(): # {{{1
     mount points. Execute "dedupsqlfs -h" for a list of valid command line options.
     """
 
-    logger = logging.getLogger("dedupsqlfs.main")
+    logger = logging.getLogger("mount.dedupsqlfs/main")
     logger.setLevel(logging.INFO)
     logger.addHandler(logging.StreamHandler(sys.stderr))
 
@@ -63,7 +60,7 @@ def main(): # {{{1
     parser.add_argument('--temp', dest='temp', metavar='DIRECTORY', help="Specify the location for the files in which temporary data is stored. By default honour TMPDIR environment variable value.")
     parser.add_argument('--block-size', dest='block_size', metavar='BYTES', default=1024*128, type=int, help="Specify the maximum block size in bytes" + option_stored_in_db + ". Defaults to 128kB.")
     parser.add_argument('--mount-snapshot', dest='snapshot', metavar='NAME', default=None, help="Use shapshot NAME as root fs.")
-    parser.add_argument('--raw-root', dest='disable_snapshots', action="store_true", help="Disable use of all snapshots and subvolumes. Unhide them into root of FS.")
+    parser.add_argument('--raw-root', dest='disable_subvolumes', action="store_true", help="Disable use of all snapshots and subvolumes. Unhide them into root of FS.")
 
     parser.add_argument('--memory-limit', dest='memory_limit', action='store_true', help="Use some lower values for less memory consumption.")
 
@@ -83,8 +80,7 @@ def main(): # {{{1
     parser.add_argument('--nogc-on-umount', dest='gc_umount_enabled', action='store_false', help="Disable garbage collection on umount operation (only do this when you've got disk space to waste or you know that nothing will be be deleted from the file system, which means little to no garbage will be produced).")
     parser.add_argument('--gc', dest='gc_enabled', action='store_true', help="Enable the periodic garbage collection because it degrades performance (only do this when you've got disk space to waste or you know that nothing will be be deleted from the file system, which means little to no garbage will be produced).")
     parser.add_argument('--gc-vacuum', dest='gc_vacuum_enabled', action='store_true', help="Enable data vacuum after the periodic garbage collection.")
-    parser.add_argument('--gc-every-nth-calls', dest='gc_nth_calls', metavar="N", type=int, default=500, help="Call garbage callector after Nth FUSE operations, if GC enabled. Defaults to 500 ops.")
-    parser.add_argument('--gc-every-nth-second', dest='gc_nth_seconds', metavar="N", type=int, default=60, help="call garbage callector after Nth seconds on FUSE operations, if GC enabled. Defaults to 60.")
+    parser.add_argument('--gc-interval', dest='gc_interval', metavar="N", type=int, default=60, help="Call garbage callector after Nth seconds on FUSE operations, if GC enabled. Defaults to 60.")
 
     # Dynamically check for supported hashing algorithms.
     msg = "Specify the hashing algorithm that will be used to recognize duplicate data blocks: one of %s"
@@ -92,7 +88,7 @@ def main(): # {{{1
     hash_functions.sort()
     msg %= ', '.join('%r' % fun for fun in hash_functions)
     msg += ". Defaults to 'sha1'."
-    parser.add_argument('--hash', dest='hash_function', metavar='FUNCTION', choices=hash_functions, default='md5', help=msg)
+    parser.add_argument('--hash', dest='hash_function', metavar='FUNCTION', choices=hash_functions, default='sha1', help=msg)
 
     # Dynamically check for supported compression methods.
     compression_methods = [constants.COMPRESSION_TYPE_NONE]
@@ -113,8 +109,14 @@ def main(): # {{{1
     if len(compression_methods) > 1:
         msg += " %r will try all compression methods and choose one with smaller result data." % constants.COMPRESSION_TYPE_BEST
         msg += " %r will try selected compression methods (--custom-compress) and choose one with smaller result data." % constants.COMPRESSION_TYPE_CUSTOM
+
     parser.add_argument('--compress', dest='compression_method', metavar='METHOD', choices=compression_methods, default=constants.COMPRESSION_TYPE_NONE, help=msg)
-    parser.add_argument('--custom-compress', dest='compression_custom', metavar='METHOD', choices=compression_methods, action="append", help=msg)
+
+    msg = "Enable compression of data blocks using one or more of the supported compression methods: %s"
+    msg %= ', '.join('%r' % mth for mth in compression_methods[:-2])
+    msg += ". To use two or more methods select this option in command line for each compression method."
+
+    parser.add_argument('--custom-compress', dest='compression_custom', metavar='METHOD', choices=compression_methods[:-2], action="append", help=msg)
     parser.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")
     parser.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=-1, help="Minimal block data size for compression. Defaults to -1 bytes (auto). Do not do compression if not forced to.")
     parser.add_argument('--compression-level', dest='compression_level', metavar="LEVEL", default=constants.COMPRESSION_LEVEL_DEFAULT,

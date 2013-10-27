@@ -36,10 +36,10 @@ class Snapshot(Subvolume):
 
         try:
             attr_from = self.getManager().lookup(llfuse.ROOT_INODE, subvol_from)
-            node_from = self.getTable('tree').find_by_inode(attr_from.st_ino)
+            root_node_from = node_from = self.getTable('tree').find_by_inode(attr_from.st_ino)
 
             attr_to = self.getManager().lookup(llfuse.ROOT_INODE, subvol_to)
-            node_to = self.getTable('tree').find_by_inode(attr_to.st_ino)
+            root_node_to = node_to = self.getTable('tree').find_by_inode(attr_to.st_ino)
 
             nodes = []
             for name, attr, node in self.getManager().readdir(node_from["inode_id"], 0):
@@ -60,15 +60,21 @@ class Snapshot(Subvolume):
 
                 treeItem_from = self.getTable("tree").get(node_from)
 
+                self.getTable("tree").selectSubvolume(root_node_to["id"])
                 treeNode_to = self.getTable("tree").insert(
                     parent_to_id,
                     treeItem_from["name_id"],
                     inode_to
                 )
+                self.getTable("tree").selectSubvolume(None)
 
                 linkTarget_from = self.getTable("link").find_by_inode(inode_from["id"])
                 if linkTarget_from:
                     self.getTable("link").insert(inode_to, linkTarget_from)
+
+                xattr_from = self.getTable("xattr").find_by_inode(inode_from["id"])
+                if xattr_from:
+                    self.getTable("xattr").insert(inode_to, xattr_from["data"])
 
                 indexes_from = self.getTable("inode_hash_block").get_by_inode(inode_from["id"])
                 if len(indexes_from):
@@ -77,7 +83,6 @@ class Snapshot(Subvolume):
                             inode_to,
                             indexItem["block_number"],
                             indexItem["hash_id"],
-                            indexItem["compression_type_id"],
                             indexItem["block_size"]
                         )
 

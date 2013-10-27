@@ -65,6 +65,15 @@ class StorageTTLseconds(object):
         return self
 
     def set(self, inode, block_number, block, writed=False):
+        """
+        @type   inode: int
+        @type   block_number: int
+        @type   block: BytesIO
+        @type   writed: bool
+        """
+
+        inode = str(inode)
+        block_number = str(block_number)
 
         new = False
         if inode not in self._inodes:
@@ -103,9 +112,22 @@ class StorageTTLseconds(object):
         return self
 
     def get(self, inode, block_number, default=None):
+
+        inode = str(inode)
+        block_number = str(block_number)
+
+
         inode_data = self._inodes.get(inode, {})
 
         block_data = inode_data.get(block_number, {})
+
+        if not block_data:
+            return default
+
+        now = time()
+        t = block_data["time"]
+        if now - t > self._max_write_ttl:
+            return default
 
         val = block_data.get("block", default)
 
@@ -113,26 +135,6 @@ class StorageTTLseconds(object):
         block_data["time"] = time()
 
         return val
-
-    def get_i(self, inode):
-        return self._inodes.get(inode, {})
-
-    def unset_ib(self, inode, block_number):
-        inode_data = self._inodes.get(inode, {})
-
-        block_data = inode_data.get(block_number, {}).copy()
-
-        if block_data:
-            del inode_data[block_number]
-            if block_data["w"]:
-                self._count_writed -= 1
-            else:
-                self._count_readed -= 1
-
-        if not inode_data and inode in self._inodes:
-            del self._inodes[inode]
-
-        return self
 
     def isWritedCacheFull(self):
         return 100.0 * self._count_writed / self._max_write_count - 100.0 >= self._max_count_trsh
@@ -224,9 +226,14 @@ class StorageTTLseconds(object):
 
         for inode in tuple(self._inodes.keys()):
 
+            inode = str(inode)
+
             inode_data = self._inodes[inode]
 
             for bn in tuple(inode_data.keys()):
+
+                bn = str(bn)
+
                 block_data = inode_data[bn]
 
                 if block_data["w"] != writed:

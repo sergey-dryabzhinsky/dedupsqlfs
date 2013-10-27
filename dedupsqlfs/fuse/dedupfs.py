@@ -228,7 +228,7 @@ class DedupFS(object): # {{{1
 
         indexTable = manager.getTable("inode_hash_block")
 
-        apparent_size = self.operations.getApparentSize()
+        apparent_size = self.operations.getApparentSize(False)
 
         self.getLogger().info("--" * 79)
 
@@ -270,7 +270,10 @@ class DedupFS(object): # {{{1
         self.getLogger().info("Compression by types:")
         count_all = 0
         comp_types = {}
-        for item in indexTable.count_compression_type():
+
+        blockTable = manager.getTable("block")
+
+        for item in blockTable.count_compression_type():
             count_all += item["cnt"]
             comp_types[ item["cnt"] ] = self.operations.getCompressionTypeName( item["compression_type_id"] )
 

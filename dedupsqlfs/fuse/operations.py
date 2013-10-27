@@ -985,7 +985,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __decompress(self, block_data, compression_type_id):
         compression = self.getCompressionTypeName( compression_type_id )
-        return BytesIO(self.getApplication().decompressData(compression, block_data))
+        return BytesIO(self.getApplication().decompressData(compression, block_data["data"]))
 
     def __write_block_data_by_offset(self, inode, offset, block_data):
         """

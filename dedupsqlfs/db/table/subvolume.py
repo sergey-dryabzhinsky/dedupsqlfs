@@ -16,20 +16,9 @@ class TableSubvolume( Table ):
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
                 "node_id INTEGER PRIMARY KEY, "+
-                "name_id INTEGER NOT NULL, "+
                 "created_at INTEGER NOT NULL, "+
                 "mounted_at INTEGER, "+
                 "updated_at INTEGER)"+
-            ");"
-        )
-        c.execute(
-            "CREATE INDEX IF NOT EXISTS subvol_node ON `%s` (" % self._table_name+
-                "node_id"+
-            ");"
-        )
-        c.execute(
-            "CREATE INDEX IF NOT EXISTS subvol_name ON `%s` (" % self._table_name+
-                "name_id"+
             ");"
         )
         c.execute(
@@ -39,7 +28,7 @@ class TableSubvolume( Table ):
         )
         return
 
-    def insert( self, node_id, name_id, created_at, mounted_at=None, updated_at=None ):
+    def insert( self, node_id, created_at, mounted_at=None, updated_at=None ):
         """
         :param node_id: int         - tree node
         :param name_id: int         - node name
@@ -49,8 +38,8 @@ class TableSubvolume( Table ):
         :return: int
         """
         cur = self.getCursor()
-        cur.execute("INSERT INTO `%s`(node_id, name_id, created_at, mounted_at, updated_at) " % self._table_name+
-                    "VALUES (?, ?, ?, ?, ?)", (node_id, name_id, created_at, mounted_at, updated_at))
+        cur.execute("INSERT INTO `%s`(node_id, created_at, mounted_at, updated_at) " % self._table_name+
+                    "VALUES (?, ?, ?, ?)", (node_id, created_at, mounted_at, updated_at))
         self.commit()
         return node_id
 
@@ -79,5 +68,20 @@ class TableSubvolume( Table ):
         cur.execute("SELECT * FROM `%s` WHERE node_id=?" % self._table_name, (node_id,))
         item = cur.fetchone()
         return item
+
+    def fetch(self, limit=None, offset=None, order="created_at"):
+        cur = self.getCursor()
+
+        query = "SELECT * FROM `%s`" % self._table_name
+        if order:
+            query += "ORDER BY `%s`" % order
+        if limit is not None:
+            query += " LIMIT %d" % limit
+            if offset is not None:
+                query += " OFFSET %d" % offset
+
+        cur.execute(query)
+        items = cur.fetchall()
+        return items
 
     pass

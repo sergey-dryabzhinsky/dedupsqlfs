@@ -70,6 +70,12 @@ class TableTree( Table ):
         item = cur.rowcount
         return item
 
+    def delete_subvolume(self, subvol_id):
+        cur = self.getCursor()
+        cur.execute("DELETE FROM `%s` WHERE subvol_id=?" % self._table_name, (subvol_id,))
+        item = cur.rowcount + self.delete(subvol_id)
+        return item
+
     def find_by_parent_name(self, parent_id, name_id):
         cur = self.getCursor()
         cur.execute("SELECT id, inode_id FROM `%s` WHERE parent_id=? AND name_id=?" % self._table_name, (parent_id, name_id,))

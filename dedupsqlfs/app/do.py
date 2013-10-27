@@ -122,19 +122,21 @@ def remove_subvolume(options, _fuse):
 
 def print_fs_stats(options, _fuse):
     _fuse.setReadonly(True)
-    _fuse.operations.init()
     _fuse.getLogger().setLevel(logging.INFO)
+    _fuse.operations.init()
     _fuse.report_disk_usage()
     _fuse.operations.destroy()
     return 0
 
 def data_defragment(options, _fuse):
-    _fuse.operations.init()
+    _fuse.setOption("gc_umount_enabled", True)
+    _fuse.setOption("gc_vacuum_enabled", True)
+    _fuse.setOption("gc_enabled", True)
+
     _fuse.setReadonly(False)
     _fuse.getLogger().setLevel(logging.INFO)
-    _fuse.operations.gc_enabled = True
-    _fuse.operations.gc_umount_enabled = True
-    _fuse.operations.gc_vacuum_enabled = True
+
+    _fuse.operations.init()
     _fuse.operations.should_vacuum = True
     _fuse.operations.destroy()
     return 0

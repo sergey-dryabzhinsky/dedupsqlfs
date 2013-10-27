@@ -31,6 +31,9 @@ class Subvolume(object):
     def getTable(self, name):
         return self.getManager().getTable(name)
 
+    def getLogger(self, name):
+        return self.getManager().getTable(name)
+
     def getLastError(self):
         return self._last_error
 
@@ -53,7 +56,10 @@ class Subvolume(object):
             ctx = llfuse.RequestContext()
             ctx.uid = os.getuid()
             ctx.gid = os.getgid()
-            self.getManager().mkdir(llfuse.ROOT_INODE, subvol_name, self.root_mode, ctx)
+            attrs = self.getManager().mkdir(llfuse.ROOT_INODE, subvol_name, self.root_mode, ctx)
+
+            node = self.getTable('tree').find_by_inode(attrs.st_ino)
+            self.getTable('subvolume').insert(node['id'], int(attrs.st_ctime))
 
         return True
     # -----------------------------------------------
@@ -71,7 +77,10 @@ class Subvolume(object):
         print("-"*79)
 
         for name, attr, node in self.getManager().readdir(fh, 0):
-            print("%-50s| %-29s" % (name.decode("utf8"), datetime.fromtimestamp(attr.st_ctime)))
+
+            subvol = self.getTable('subvolume').get(node)
+
+            print("%-50s| %-29s" % (name.decode("utf8"), datetime.fromtimestamp(subvol["created_at"])))
 
         self.getManager().releasedir(fh)
 
@@ -91,29 +100,15 @@ class Subvolume(object):
 
         subvol_name = b'@' + name
 
-        directories = [(llfuse.ROOT_INODE, subvol_name)]
+        try:
+            attr = self.getManager().lookup(llfuse.ROOT_INODE, subvol_name)
+            node = self.getTable('tree').find_by_inode(attr.st_ino)
+            self.getTable('tree').delete_subvolume(node["id"])
 
-        while len(directories)>0:
-
-            parent_ino, directory = directories.pop()
-
-            try:
-                attr = self.getManager().lookup(parent_ino, directory)
-            except:
-                continue
-
-            count = 0
-            for rname, rattr, node in self.getManager().readdir(attr.st_ino, 0):
-                if stat.S_ISDIR(rattr.st_mode):
-                    directories.append((rattr.st_ino, rname,))
-                else:
-                    self.getManager().unlink(attr.st_ino, rname)
-                count += 1
-
-            if not count:
-                self.getManager().unlink(parent_ino, directory)
-            else:
-                directories.insert(0, (parent_ino, directory,))
+            self.getTable('subvolume').delete(node['id'])
+        except:
+            self.getManager().getLogger().warn("Can't remove subvolume! Not found!")
+            return
 
         return
 

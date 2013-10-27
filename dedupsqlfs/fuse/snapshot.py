@@ -74,7 +74,7 @@ class Snapshot(Subvolume):
 
                 xattr_from = self.getTable("xattr").find_by_inode(inode_from["id"])
                 if xattr_from:
-                    self.getTable("xattr").insert(inode_to, xattr_from["data"])
+                    self.getTable("xattr").insert(inode_to, xattr_from)
 
                 indexes_from = self.getTable("inode_hash_block").get_by_inode(inode_from["id"])
                 if len(indexes_from):

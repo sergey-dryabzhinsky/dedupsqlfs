@@ -176,7 +176,25 @@ def print_fs_stats(options, _fuse):
     _fuse.operations.destroy()
     return 0
 
+
+def data_vacuum(options, _fuse):
+    _fuse.setOption("gc_umount_enabled", True)
+    _fuse.setOption("gc_vacuum_enabled", True)
+    _fuse.setOption("gc_enabled", True)
+
+    _fuse.setReadonly(False)
+    _fuse.getLogger().setLevel(logging.INFO)
+
+    _fuse.operations.init()
+    _fuse.operations.should_vacuum = True
+    _fuse.operations.destroy()
+    return 0
+
+
 def data_defragment(options, _fuse):
+    """
+    @todo
+    """
     _fuse.setOption("gc_umount_enabled", True)
     _fuse.setOption("gc_vacuum_enabled", True)
     _fuse.setOption("gc_enabled", True)
@@ -223,6 +241,9 @@ def do(options, compression_methods=None):
     if options.snapshot_stats:
         return print_snapshot_stats(options, _fuse)
 
+    if options.vacuum:
+        return data_vacuum(options, _fuse)
+
     if options.defragment:
         return data_defragment(options, _fuse)
 
@@ -263,9 +284,11 @@ def main(): # {{{1
 
     data = parser.add_argument_group('Data')
     data.add_argument('--print-stats', dest='print_stats', action='store_true', help="print the total apparent size and the actual disk usage of the file system and exit")
-    data.add_argument('--defragment', dest='defragment', action='store_true', help="defragment all stored data, do garbage collection")
+    data.add_argument('--defragment', dest='defragment', action='store_true', help="Defragment all stored data, adjust block sizes for some non-compressible files, do garbage collection. (@todo)")
+    data.add_argument('--vacuum', dest='vacuum', action='store_true', help="Defragment all stored data, do garbage collection.")
     data.add_argument('--verify', dest='verify', action='store_true', help="verify all stored data hashes. (@todo)")
-    data.add_argument('--new-block-size', dest='new_block_size', metavar='BYTES', default=1024*128, type=int, help="Specify the new maximum block size in bytes. Defaults to 128kB. (@todo)")
+    data.add_argument('--new-block-size', dest='new_block_size', metavar='BYTES', default=1024*128, type=int, help="Specify the new block size in bytes. Defaults to 128kB. (@todo)")
+    data.add_argument('--maximum-block-size', dest='maximum_block_size', metavar='BYTES', default=1024*1024*10, type=int, help="Specify the maximum block size in bytes for defragmentation. Defaults to 10MB.")
 
     # Dynamically check for supported hashing algorithms.
     msg = "Specify the hashing algorithm that will be used to recognize duplicate data blocks: one of %s"
@@ -273,7 +296,7 @@ def main(): # {{{1
     hash_functions.sort()
     msg %= ', '.join('%r' % fun for fun in hash_functions)
     msg += ". Defaults to 'sha1'. (@todo)"
-    data.add_argument('--rehash', dest='hash_function', metavar='FUNCTION', choices=hash_functions, default='md5', help=msg)
+    data.add_argument('--rehash', dest='hash_function', metavar='FUNCTION', choices=hash_functions, default='sha1', help=msg)
 
     # Dynamically check for supported compression methods.
     compression_methods = [constants.COMPRESSION_TYPE_NONE]

@@ -80,7 +80,6 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.gc_vacuum_enabled = True
         self.gc_hook_last_run = time.time()
         self.gc_interval = 60
-        self.gc_nth_request = 500
 
         self.link_mode = stat.S_IFLNK | 0o777
 
@@ -307,9 +306,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.gc_umount_enabled = self.getOption("gc_umount_enabled")
             if self.getOption("gc_vacuum_enabled") is not None:
                 self.gc_vacuum_enabled = self.getOption("gc_vacuum_enabled")
-            if self.getOption("gc_nth_seconds") is not None:
-                self.gc_interval = self.getOption("gc_nth_seconds")
-            self.gc_nth_request = self.getOption("gc_nth_calls")
+            if self.getOption("gc_interval") is not None:
+                self.gc_interval = self.getOption("gc_interval")
 
             if not self.cache_enabled:
                 self.cached_blocks.setMaxReadTtl(0)
@@ -854,6 +852,13 @@ class DedupOperations(llfuse.Operations): # {{{1
                 return node["inode_id"]
         return inode
 
+    def __update_mounted_subvolume_time(self):
+        if self.mounted_snapshot:
+            node = self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, self.mounted_snapshot)
+            if node:
+                self.getTable('subvolume').update_time(node["id"])
+        return self
+
     def __get_tree_node_by_parent_inode_and_name(self, parent_inode, name):
 
         node = None
@@ -1085,6 +1090,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             snap = Subvolume(self)
             snap.create(nameRoot)
 
+            self.mounted_snapshot = nameRoot
+
             for name in ("block_size",):
                 optTable.insert(name, "%i" % self.getOption(name))
 
@@ -1119,10 +1126,12 @@ class DedupOperations(llfuse.Operations): # {{{1
         optTable = manager.getTable("option")
 
         if self.mounted_snapshot:
-            if self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, self.mounted_snapshot):
+            node =  self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, self.mounted_snapshot)
+            if node:
+
+                self.getTable('subvolume').mount_time(node["id"])
+
                 #self.setReadonly(True)
-                self.getLogger().warning("Mount previously mounted snapshot: %s",
-                    self.mounted_snapshot.replace(b'@', b''))
 
                 pass
             else:
@@ -1131,6 +1140,10 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.mounted_snapshot = constants.ROOT_SUBVOLUME_NAME
 
         optTable.update("mounted_snapshot", self.mounted_snapshot)
+
+        node =  self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, self.mounted_snapshot)
+        if node:
+            self.getTable('tree').selectSubvolume(node["id"])
 
         return
 
@@ -1897,6 +1910,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         return msg
 
     def __commit_changes(self, nested=False): # {{{3
+        self.__update_mounted_subvolume_time()
         if self.use_transactions and not nested:
             self.getManager().commit()
 

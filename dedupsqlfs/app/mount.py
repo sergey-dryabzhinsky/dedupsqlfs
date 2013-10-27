@@ -46,7 +46,7 @@ def main(): # {{{1
     mount points. Execute "dedupsqlfs -h" for a list of valid command line options.
     """
 
-    logger = logging.getLogger("dedupsqlfs.main")
+    logger = logging.getLogger("mount.dedupsqlfs/main")
     logger.setLevel(logging.INFO)
     logger.addHandler(logging.StreamHandler(sys.stderr))
 
@@ -83,8 +83,7 @@ def main(): # {{{1
     parser.add_argument('--nogc-on-umount', dest='gc_umount_enabled', action='store_false', help="Disable garbage collection on umount operation (only do this when you've got disk space to waste or you know that nothing will be be deleted from the file system, which means little to no garbage will be produced).")
     parser.add_argument('--gc', dest='gc_enabled', action='store_true', help="Enable the periodic garbage collection because it degrades performance (only do this when you've got disk space to waste or you know that nothing will be be deleted from the file system, which means little to no garbage will be produced).")
     parser.add_argument('--gc-vacuum', dest='gc_vacuum_enabled', action='store_true', help="Enable data vacuum after the periodic garbage collection.")
-    parser.add_argument('--gc-every-nth-calls', dest='gc_nth_calls', metavar="N", type=int, default=500, help="Call garbage callector after Nth FUSE operations, if GC enabled. Defaults to 500 ops.")
-    parser.add_argument('--gc-every-nth-second', dest='gc_nth_seconds', metavar="N", type=int, default=60, help="call garbage callector after Nth seconds on FUSE operations, if GC enabled. Defaults to 60.")
+    parser.add_argument('--gc-interval', dest='gc_interval', metavar="N", type=int, default=60, help="Call garbage callector after Nth seconds on FUSE operations, if GC enabled. Defaults to 60.")
 
     # Dynamically check for supported hashing algorithms.
     msg = "Specify the hashing algorithm that will be used to recognize duplicate data blocks: one of %s"
@@ -92,7 +91,7 @@ def main(): # {{{1
     hash_functions.sort()
     msg %= ', '.join('%r' % fun for fun in hash_functions)
     msg += ". Defaults to 'sha1'."
-    parser.add_argument('--hash', dest='hash_function', metavar='FUNCTION', choices=hash_functions, default='md5', help=msg)
+    parser.add_argument('--hash', dest='hash_function', metavar='FUNCTION', choices=hash_functions, default='sha1', help=msg)
 
     # Dynamically check for supported compression methods.
     compression_methods = [constants.COMPRESSION_TYPE_NONE]

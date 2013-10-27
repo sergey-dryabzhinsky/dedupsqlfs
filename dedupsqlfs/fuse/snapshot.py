@@ -22,8 +22,11 @@ class Snapshot(Subvolume):
 
         fh = self.getManager().opendir(llfuse.ROOT_INODE)
 
-        for name, attr, node in self.getManager().readdir(fh, 0):
-            subvolDate = datetime.fromtimestamp(attr.st_ctime)
+        for name, attr, node in tuple(self.getManager().readdir(fh, 0)):
+
+            subvol = self.getTable('subvolume').get(node)
+
+            subvolDate = datetime.fromtimestamp(subvol["created_at"])
             if subvolDate < oldDate:
                 self.getManager().getLogger().info("Remove %r subvolume", name)
                 self.remove(name)

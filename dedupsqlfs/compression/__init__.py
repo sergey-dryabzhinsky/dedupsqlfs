@@ -17,38 +17,44 @@ class BaseCompression:
     _has_comp_level_options = False
 
     _module = None
-
+    _func_comp = None
+    _func_decomp = None
 
     def __init__(self):
-        pass
-
-    def _get_module(self):
         if self._method_name is None:
             raise AttributeError("Attribute _method_name must be set!")
+        self._init_module()
+        pass
+
+    def _init_module(self):
         if not self._module:
             self._module = __import__(self._method_name)
-        return self._module
-
+            self._func_comp = getattr(self._module, "compress")
+            self._func_decomp = getattr(self._module, "decompress")
+        return
 
     def _get_comp_func(self):
-        return self._get_module().compress
+        return self._func_comp
 
     def _get_decomp_func(self):
-        return self._get_module().decompress
+        return self._func_decomp
 
     def hasCompressionLevelOptions(self):
         return self._has_comp_level_options
 
     def getFastCompressionOptions(self):
-        return {}
+        return False
 
     def getNormCompressionOptions(self):
-        return {}
+        return False
 
     def getBestCompressionOptions(self):
-        return {}
+        return False
 
     def getCompressionLevelOptions(self, level=None):
+        """
+        @rtype: dict or tuple or bool
+        """
         opts = {}
         if level == constants.COMPRESSION_LEVEL_FAST:
             opts = self.getFastCompressionOptions()
@@ -58,7 +64,7 @@ class BaseCompression:
             opts = self.getBestCompressionOptions()
         return opts
 
-    def isDataNeedCompression(self, data):
+    def isDataMayBeCompressed(self, data):
         data_len = len(data)
         if self._minimal_size > data_len:
             return False
@@ -71,22 +77,24 @@ class BaseCompression:
 
         @param  comp_level: compression level - None (default), fast, normal, best
         @type   comp_level: str
-        """
-        if not self.isDataNeedCompression(data):
-            return data
 
+        @return:    compressed data
+        @rtype:     bytes
+        """
+        func = self._get_comp_func()
         if self.hasCompressionLevelOptions():
             opts = self.getCompressionLevelOptions(comp_level)
             if opts is dict and opts:
-                return self._get_comp_func()(data, **opts)
+                return func(data, **opts)
             if opts is tuple and opts:
-                return self._get_comp_func()(data, *opts)
+                return func(data, *opts)
             else:
-                return self._get_comp_func()(data)
+                return func(data)
         else:
-            return self._get_comp_func()(data)
+            return func(data)
 
     def decompressData(self, cdata):
-        return self._get_decomp_func()(cdata)
+        func = self._get_decomp_func()
+        return func(cdata)
 
     pass

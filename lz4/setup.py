@@ -21,6 +21,6 @@ setup(
             'src/lz4.c',
             'src/lz4hc.c',
             'src/python-lz4.c'
-        ], extra_compile_args=["-O3", "-march=native"])
+        ], extra_compile_args=["-O2", "-DFORTIFY_SOURCE=2", "-fstack-protector"])
     ],
 )

@@ -16,7 +16,7 @@ class NoneCompression(BaseCompression):
 
     _has_comp_level_options = False
 
-    def _get_module(self):
+    def _init_module(self):
         return None
 
     def _noop(self, data):

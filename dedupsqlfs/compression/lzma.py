@@ -18,14 +18,16 @@ class LzmaCompression(BaseCompression):
 
     def getFastCompressionOptions(self):
         return {
+            "preset": 1,
             "filters" : [
                 {
-                    "id": self._get_module().FILTER_DELTA,
+                    "id": self._module.FILTER_DELTA,
                     "dist": 1
                 },
                 {
-                    "id": self._get_module().FILTER_LZMA2,
-                    "preset": 1 | self._get_module().PRESET_DEFAULT,
+                    "id": self._module.FILTER_LZMA2,
+                    "preset": 1,
+                    "mode": self._module.MODE_FAST,
                     "dict_size": 1024*1024,
                     "nice_len": 64
                 },
@@ -34,14 +36,15 @@ class LzmaCompression(BaseCompression):
 
     def getNormCompressionOptions(self):
         return {
+            "preset": 6,
             "filters" : [
                 {
-                    "id": self._get_module().FILTER_DELTA,
-                    "dist": 3
+                    "id": self._module.FILTER_DELTA,
+                    "dist": 2
                 },
                 {
-                    "id": self._get_module().FILTER_LZMA2,
-                    "preset": 4 | self._get_module().PRESET_DEFAULT,
+                    "id": self._module.FILTER_LZMA2,
+                    "preset": 6,
                     "dict_size": 64*1024*1024,
                     "nice_len": 128
                 },
@@ -50,14 +53,15 @@ class LzmaCompression(BaseCompression):
 
     def getBestCompressionOptions(self):
         return {
+            "preset": 9,
             "filters" : [
                 {
-                    "id": self._get_module().FILTER_DELTA,
+                    "id": self._module.FILTER_DELTA,
                     "dist": 5
                 },
                 {
-                    "id": self._get_module().FILTER_LZMA2,
-                    "preset": 7 | self._get_module().PRESET_EXTREME,
+                    "id": self._module.FILTER_LZMA2,
+                    "preset": 9,
                     "dict_size": 256*1024*1024,
                     "nice_len": 256
                 },

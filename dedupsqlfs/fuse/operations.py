@@ -974,7 +974,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 block = BytesIO()
             else:
                 item = tableBlock.get(block_index["hash_id"])
-                block = self.__decompress(item, block_index["compression_type_id"])
+                block = self.__decompress(item["data"], block_index["compression_type_id"])
 
             self.cached_blocks.set(inode, block_number, block)
         return block
@@ -1020,7 +1020,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __decompress(self, block_data, compression_type_id):
         compression = self.getCompressionTypeName( compression_type_id )
-        return BytesIO(self.getApplication().decompressData(compression, block_data["data"]))
+        return BytesIO(self.getApplication().decompressData(compression, block_data))
 
     def __write_block_data_by_offset(self, inode, offset, block_data):
         """
@@ -1430,15 +1430,11 @@ class DedupOperations(llfuse.Operations): # {{{1
 
 
     def __gc_hook(self): # {{{3
-        if not self.gc_enabled:
-            return
-
         if time.time() - self.gc_hook_last_run >= self.gc_interval:
             self.gc_hook_last_run = time.time()
             self.__collect_garbage()
             self.__print_stats()
             self.gc_hook_last_run = time.time()
-
         return
 
 

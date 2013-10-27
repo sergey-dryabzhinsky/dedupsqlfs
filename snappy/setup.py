@@ -37,7 +37,7 @@ snappymodule = Extension('snappy',
                          libraries=['snappy'],
                          language='c++',
                          sources=['snappymodule.cc'],
-        extra_compile_args=["-O3", "-march=native"]
+        extra_compile_args=["-O2", "-DFORTIFY_SOURCE=2", "-fstack-protector"]
     )
 
 setup(

@@ -144,14 +144,13 @@ class DedupFS(object): # {{{1
         data_length = len(data)
         cmethod = constants.COMPRESSION_TYPE_NONE
 
-        if self.getOption("compression_minimal_size") > 0 and \
-            data_length <= self.getOption("compression_minimal_size") and not forced:
+        if data_length <= self.getOption("compression_minimal_size") and not forced:
             return cdata, cmethod
 
         if method != constants.COMPRESSION_TYPE_NONE:
-            if method not in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_CUSTOM):
+            if method not in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_CUSTOM,):
                 comp = self._compressors[ method ]
-                if comp.isDataNeedCompression(data):
+                if comp.isDataMayBeCompressed(data):
                     cdata = comp.compressData(data, level)
                     cmethod = method
                     if data_length <= len(cdata) and not forced:
@@ -165,7 +164,7 @@ class DedupFS(object): # {{{1
                     methods = self.getOption("compression_custom")
                 for m in methods:
                     comp = self._compressors[ m ]
-                    if comp.isDataNeedCompression(data):
+                    if comp.isDataMayBeCompressed(data):
                         _cdata = comp.compressData(data, level)
                         cdata_length = len(_cdata)
                         if min_len > cdata_length:
@@ -186,8 +185,7 @@ class DedupFS(object): # {{{1
         @return bytes
         """
         comp = self._compressors[ method ]
-        dcdata = comp.decompressData(data)
-        return dcdata
+        return comp.decompressData(data)
 
     def setDataDirectory(self, data_dir_path):
         self.operations.getManager().setBasepath(data_dir_path)

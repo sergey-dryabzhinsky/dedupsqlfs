@@ -77,7 +77,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.gc_enabled = True
         self.gc_umount_enabled = True
-        self.gc_vacuum_enabled = True
+        self.gc_vacuum_enabled = False
         self.gc_hook_last_run = time.time()
         self.gc_interval = 60
 
@@ -206,7 +206,6 @@ class DedupOperations(llfuse.Operations): # {{{1
                 if self.getOption("gc_umount_enabled"):
                     # Force vacuum on umount
                     self.gc_enabled = True
-                    self.gc_vacuum_enabled = True
                     self.__collect_garbage()
                 self.getLogger().info("Committing outstanding changes.")
                 self.getManager().commit()

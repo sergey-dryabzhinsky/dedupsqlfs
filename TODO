@@ -4,6 +4,11 @@ Here are some things on to-do list, in no particular order:
    commands (options) in do.dedupsqlfs. This should reduce code size of
    FUSE operations file.
 
+ * Vacuum on demand
+
+ * Implement creation of subvolumes, snapshots on-the-fly via commands through
+   socket interface. And other commands too.
+
  * Multiprocess block hashing and compression.
 
  * Optimize garbage collection. Use database with all tables except for blocks,

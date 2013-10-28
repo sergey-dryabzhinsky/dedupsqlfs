@@ -319,8 +319,15 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.cached_blocks.setMaxWriteTtl(self.cache_block_write_timeout)
                 self.cached_blocks.setMaxReadTtl(self.cache_block_read_timeout)
                 if self.cache_block_write_size:
+                    if self.getOption("memory_limit") and not self.getOption("cache_block_write_size"):
+                        if self.cache_block_write_size > 256*self.block_size:
+                            self.cache_block_write_size = 256*self.block_size
                     self.cached_blocks.setMaxWriteCacheSize(self.cache_block_write_size)
+
                 if self.cache_block_read_size:
+                    if self.getOption("memory_limit") and not self.getOption("cache_block_read_size"):
+                        if self.cache_block_read_size > 256*self.block_size:
+                            self.cache_block_read_size = 256*self.block_size
                     self.cached_blocks.setMaxReadCacheSize(self.cache_block_read_size)
 
                 self.cached_nodes.set_max_ttl(self.cache_meta_timeout)

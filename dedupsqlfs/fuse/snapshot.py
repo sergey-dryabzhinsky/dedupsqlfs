@@ -110,7 +110,7 @@ class Snapshot(Subvolume):
 
         return
 
-    def remove_older_than(self, dateStr):
+    def remove_older_than(self, dateStr, use_last_update_time=False):
 
         oldDate = datetime.strptime(dateStr, "%Y-%m-%dT%H:%M:%S")
 
@@ -120,7 +120,11 @@ class Snapshot(Subvolume):
 
             subvol = self.getTable('subvolume').get(node)
 
-            subvolDate = datetime.fromtimestamp(subvol["created_at"])
+            if not use_last_update_time:
+                subvolDate = datetime.fromtimestamp(subvol["created_at"])
+            else:
+                subvolDate = datetime.fromtimestamp(subvol["updated_at"])
+
             if subvolDate < oldDate:
                 self.getManager().getLogger().info("Remove %r subvolume", name)
                 self.remove(name)

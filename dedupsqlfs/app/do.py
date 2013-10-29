@@ -388,7 +388,7 @@ def main(): # {{{1
     data.add_argument('--compression-level', dest='compression_level', metavar="LEVEL", default=constants.COMPRESSION_LEVEL_DEFAULT,
                         choices=(constants.COMPRESSION_LEVEL_DEFAULT, constants.COMPRESSION_LEVEL_FAST, constants.COMPRESSION_LEVEL_NORM, constants.COMPRESSION_LEVEL_BEST),
                         help="Compression level ratio: one of %s. Defaults to %r. Not all methods support this option." % (
-                            ', '.join((constants.COMPRESSION_LEVEL_DEFAULT, constants.COMPRESSION_LEVEL_FAST, constants.COMPRESSION_LEVEL_NORM, constants.COMPRESSION_LEVEL_BEST)), constants.COMPRESSION_LEVEL_FAST
+                            ', '.join((constants.COMPRESSION_LEVEL_DEFAULT, constants.COMPRESSION_LEVEL_FAST, constants.COMPRESSION_LEVEL_NORM, constants.COMPRESSION_LEVEL_BEST)), constants.COMPRESSION_LEVEL_DEFAULT
                         ))
     # Do not want 'best' after help setup
 

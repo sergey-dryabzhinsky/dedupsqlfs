@@ -1174,7 +1174,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             node =  self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, self.mounted_snapshot)
             if node:
 
-                self.getTable('subvolume').mount_time(node["id"])
+                if not self.getOption("disable_subvolumes"):
+                    self.getTable('subvolume').mount_time(node["id"])
 
                 #self.setReadonly(True)
 

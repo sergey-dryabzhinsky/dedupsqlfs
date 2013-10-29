@@ -83,7 +83,7 @@ class Subvolume(object):
 
         print("Subvolumes:")
         print("-"*(46+22+22+22+1))
-        print("%-56s| %-20s| %-20s| %-20s|" % ("Name", "Created", "Last mounted", "Last updated"))
+        print("%-46s| %-20s| %-20s| %-20s|" % ("Name", "Created", "Last mounted", "Last updated"))
         print("-"*(46+22+22+22+1))
 
         for name, attr, node in self.getManager().readdir(fh, 0):

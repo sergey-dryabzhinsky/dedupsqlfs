@@ -82,19 +82,24 @@ class Subvolume(object):
         fh = self.getManager().opendir(llfuse.ROOT_INODE)
 
         print("Subvolumes:")
-        print("-"*79)
-        print("%-56s| %-20s|" % ("Name", "Created"))
-        print("-"*79)
+        print("-"*(46+22+22+22+1))
+        print("%-56s| %-20s| %-20s| %-20s|" % ("Name", "Created", "Last mounted", "Last updated"))
+        print("-"*(46+22+22+22+1))
 
         for name, attr, node in self.getManager().readdir(fh, 0):
 
             subvol = self.getTable('subvolume').get(node)
 
-            print("%-56s| %-20s|" % (name.decode("utf8"), datetime.fromtimestamp(subvol["created_at"])))
+            print("%-46s| %-20s| %-20s| %-20s|" % (
+                name.decode("utf8"),
+                datetime.fromtimestamp(subvol["created_at"]),
+                datetime.fromtimestamp(subvol["mounted_at"]),
+                datetime.fromtimestamp(subvol["updated_at"]),
+            ))
+
+        print("-"*(46+22+22+22+1))
 
         self.getManager().releasedir(fh)
-
-        print("-"*79)
 
         return
 

@@ -865,7 +865,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         return inode
 
     def __update_mounted_subvolume_time(self):
-        if self.mounted_snapshot:
+        if self.mounted_snapshot and not self.getOption("disable_subvolumes"):
             node = self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, self.mounted_snapshot)
             if node:
                 self.getTable('subvolume').update_time(node["id"])

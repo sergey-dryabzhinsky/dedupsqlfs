@@ -224,15 +224,16 @@ def print_fs_stats(options, _fuse):
 
 
 def data_vacuum(options, _fuse):
-    _fuse.setOption("gc_umount_enabled", True)
+    _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", True)
-    _fuse.setOption("gc_enabled", True)
+    _fuse.setOption("gc_enabled", False)
 
     _fuse.setReadonly(False)
     _fuse.getLogger().setLevel(logging.INFO)
 
     _fuse.operations.init()
     _fuse.operations.should_vacuum = True
+    _fuse.operations.forced_vacuum()
     _fuse.operations.destroy()
     return 0
 

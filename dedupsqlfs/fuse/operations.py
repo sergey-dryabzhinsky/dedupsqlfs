@@ -1661,6 +1661,16 @@ class DedupOperations(llfuse.Operations): # {{{1
                                   format_timespan(elapsed_time))
         return
 
+    def forced_vacuum(self): # {{{3
+        if not self.isReadonly():
+            start_time = time.time()
+            self.getLogger().info("Performing data vacuum (this might take a while) ..")
+            for table_name in self.getManager().tables:
+                self.__vacuum_datatable(table_name)
+            elapsed_time = time.time() - start_time
+            self.getLogger().info("Finished data vacuum in %s.", format_timespan(elapsed_time))
+        return
+
     def __collect_garbage(self): # {{{3
         if self.gc_enabled and not self.isReadonly():
             start_time = time.time()
@@ -2051,7 +2061,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         if self.should_vacuum and self.gc_vacuum_enabled:
             self.getLogger().info(" vacuum %s table" % tableName)
             self.getTable(tableName).vacuum()
-            msg = "Vacuumed SQLite data store in %s."
+            msg = "  vacuumed SQLite data store in %s."
         if msg:
             elapsed_time = time.time() - sub_start_time
             self.getLogger().info(msg, format_timespan(elapsed_time))

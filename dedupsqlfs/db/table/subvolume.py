@@ -43,17 +43,21 @@ class TableSubvolume( Table ):
         self.commit()
         return node_id
 
-    def mount_time(self, node_id):
+    def mount_time(self, node_id, mtime=None):
+        if mtime is None:
+            mtime = int(time())
         cur = self.getCursor()
         cur.execute("UPDATE `%s` SET mounted_at=? WHERE node_id=? " % self._table_name,
-                    (int(time()), node_id,))
+                    (mtime, node_id,))
         self.commit()
         return self
 
-    def update_time(self, node_id):
+    def update_time(self, node_id, utime=None):
+        if utime is None:
+            utime = int(time())
         cur = self.getCursor()
         cur.execute("UPDATE `%s` SET updated_at=? WHERE node_id=? " % self._table_name,
-                    (int(time()), node_id,))
+                    (utime, node_id,))
         self.commit()
         return self
 

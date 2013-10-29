@@ -41,6 +41,13 @@ class Snapshot(Subvolume):
             attr_to = self.getManager().lookup(llfuse.ROOT_INODE, subvol_to)
             root_node_to = node_to = self.getTable('tree').find_by_inode(attr_to.st_ino)
 
+
+            inode_from = self.getTable("inode").get(attr_from.st_ino)
+            del inode_from["id"]
+
+            self.getTable("inode").update_data(attr_to.st_ino, inode_from)
+
+
             nodes = []
             for name, attr, node in self.getManager().readdir(node_from["inode_id"], 0):
                 nodes.append((node, attr, name, node_to["id"]))
@@ -89,6 +96,12 @@ class Snapshot(Subvolume):
                 if stat.S_ISDIR(attr_from.st_mode):
                     for name, attr, node in self.getManager().readdir(inode_from["id"], 0):
                         nodes.append((node, attr, name, treeNode_to))
+
+
+            # Copy attrs from subvolume table
+            subvol_from = self.getTable("subvolume").get(root_node_from["id"])
+            self.getTable("subvolume").mount_time(root_node_to["id"], subvol_from["mounted_at"])
+            self.getTable("subvolume").update_time(root_node_to["id"], subvol_from["updated_at"])
 
         except:
             self.getManager().getLogger().warn("Error while copying data!")

@@ -90,11 +90,23 @@ class Subvolume(object):
 
             subvol = self.getTable('subvolume').get(node)
 
+            ctime = "---"
+            if subvol["created_at"]:
+                ctime = datetime.fromtimestamp(subvol["created_at"])
+
+            mtime = "not mounted"
+            if subvol["mounted_at"]:
+                mtime = datetime.fromtimestamp(subvol["mounted_at"])
+
+            utime = "not updated"
+            if subvol["updated_at"]:
+                utime = datetime.fromtimestamp(subvol["updated_at"])
+
             print("%-46s| %-20s| %-20s| %-20s|" % (
                 name.decode("utf8"),
-                datetime.fromtimestamp(subvol["created_at"]),
-                datetime.fromtimestamp(subvol["mounted_at"]),
-                datetime.fromtimestamp(subvol["updated_at"]),
+                ctime,
+                mtime,
+                utime,
             ))
 
         print("-"*(46+22+22+22+1))

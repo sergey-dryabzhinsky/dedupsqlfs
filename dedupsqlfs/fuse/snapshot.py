@@ -2,12 +2,18 @@
 
 __author__ = 'sergey'
 
+import sys
 import stat
 import llfuse
 from datetime import datetime
 from dedupsqlfs.fuse.subvolume import Subvolume
 
 class Snapshot(Subvolume):
+
+    def print_msg(self, msg):
+        sys.stdout.write(msg)
+        sys.stdout.flush()
+        return self
 
     def make(self, from_subvol, with_name):
         """
@@ -41,6 +47,14 @@ class Snapshot(Subvolume):
             attr_to = self.getManager().lookup(llfuse.ROOT_INODE, subvol_to)
             root_node_to = node_to = self.getTable('tree').find_by_inode(attr_to.st_ino)
 
+            count_to_do = self.getTable('tree').count_subvolume_inodes(root_node_from["id"])
+            count_done = 0
+            count_proc = 0
+            if count_to_do:
+                count_proc = "%5.2F" % (count_done * 100.0 / count_to_do,)
+
+            self.getLogger().info("Progress!")
+            self.print_msg("\r%s %%" % count_proc)
 
             inode_from = self.getTable("inode").get(attr_from.st_ino)
             del inode_from["id"]
@@ -98,12 +112,25 @@ class Snapshot(Subvolume):
                         nodes.append((node, attr, name, treeNode_to))
 
 
+                count_done += 1
+
+                if count_to_do:
+                    proc = "%5.2F" % (count_done * 100.0 / count_to_do,)
+                    if proc != count_proc:
+                        count_proc = proc
+                        self.print_msg("\r%s %%" % count_proc)
+
+            self.print_msg("\n")
+
             # Copy attrs from subvolume table
             subvol_from = self.getTable("subvolume").get(root_node_from["id"])
             self.getTable("subvolume").mount_time(root_node_to["id"], subvol_from["mounted_at"])
             self.getTable("subvolume").update_time(root_node_to["id"], subvol_from["updated_at"])
 
+            self.getManager().getLogger().info("Done")
+
         except:
+            self.print_msg("\n")
             self.getManager().getLogger().warn("Error while copying data!")
             import traceback
             self.getManager().getLogger().error(traceback.format_exc())

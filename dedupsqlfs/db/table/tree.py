@@ -79,6 +79,16 @@ class TableTree( Table ):
         item = cur.rowcount + self.delete(subvol_id)
         return item
 
+    def count_subvolume_inodes(self, subvol_id):
+        cur = self.getCursor()
+        cur.execute("SELECT COUNT(inode_id) AS cnt FROM `%s` WHERE subvol_id=?" % self._table_name, (subvol_id,))
+        item = cur.fetchone()
+        if item:
+            item = item["cnt"]
+        else:
+            item = 0
+        return item
+
     def find_by_parent_name(self, parent_id, name_id):
         cur = self.getCursor()
         cur.execute("SELECT id, inode_id FROM `%s` WHERE parent_id=? AND name_id=?" % self._table_name, (parent_id, name_id,))

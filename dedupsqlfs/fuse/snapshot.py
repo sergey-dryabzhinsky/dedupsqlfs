@@ -51,7 +51,7 @@ class Snapshot(Subvolume):
             count_done = 0
             count_proc = 0
             if count_to_do:
-                count_proc = "%5.2F" % (count_done * 100.0 / count_to_do,)
+                count_proc = "%6.2f" % (count_done * 100.0 / count_to_do,)
 
             self.getLogger().info("Progress!")
             self.print_msg("\r%s %%" % count_proc)
@@ -115,7 +115,7 @@ class Snapshot(Subvolume):
                 count_done += 1
 
                 if count_to_do:
-                    proc = "%5.2F" % (count_done * 100.0 / count_to_do,)
+                    proc = "%6.2f" % (count_done * 100.0 / count_to_do,)
                     if proc != count_proc:
                         count_proc = proc
                         self.print_msg("\r%s %%" % count_proc)

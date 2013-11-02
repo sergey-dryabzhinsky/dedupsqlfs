@@ -214,6 +214,7 @@ def print_snapshot_stats(options, _fuse):
 
 
 def print_fs_stats(options, _fuse):
+    _fuse.setOption("disable_subvolumes", True)
     _fuse.setReadonly(True)
     _fuse.getLogger().setLevel(logging.INFO)
     _fuse.operations.init()
@@ -223,6 +224,7 @@ def print_fs_stats(options, _fuse):
 
 
 def data_vacuum(options, _fuse):
+    _fuse.setOption("disable_subvolumes", True)
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", True)
     _fuse.setOption("gc_enabled", False)
@@ -239,6 +241,7 @@ def data_defragment(options, _fuse):
     """
     @todo
     """
+    _fuse.setOption("disable_subvolumes", True)
     _fuse.setOption("gc_umount_enabled", True)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", True)

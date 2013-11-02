@@ -166,6 +166,29 @@ def create_snapshot(options, _fuse):
     _fuse.operations.destroy()
     return
 
+def remove_snapshot(options, _fuse):
+    """
+    @param options: Commandline options
+    @type  options: object
+
+    @param _fuse: FUSE wrapper
+    @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
+    """
+    _fuse.setOption("disable_subvolumes", True)
+    _fuse.setOption("gc_umount_enabled", False)
+    _fuse.setOption("gc_vacuum_enabled", False)
+    _fuse.setOption("gc_enabled", False)
+    _fuse.setReadonly(False)
+
+    _fuse.operations.init()
+
+    from dedupsqlfs.fuse.snapshot import Snapshot
+    snap = Snapshot(_fuse.operations)
+    snap.remove(options.snapshot.encode('utf8'))
+
+    _fuse.operations.destroy()
+    return
+
 def remove_snapshot_older(options, _fuse):
     """
     @param options: Commandline options
@@ -289,7 +312,7 @@ def do(options, compression_methods=None):
         return list_subvolume(options, _fuse)
 
     if options.snapshot_remove:
-        return remove_subvolume(options, _fuse)
+        return remove_snapshot(options, _fuse)
 
     if options.snapshot_remove_older:
         return remove_snapshot_older(options, _fuse)

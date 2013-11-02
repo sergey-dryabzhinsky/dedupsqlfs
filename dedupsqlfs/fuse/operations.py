@@ -1172,6 +1172,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         manager = self.getManager()
         optTable = manager.getTable("option")
 
+        self.getLogger().debug("__select_snapshot(1): mounted_snapshot=%r" % self.mounted_snapshot)
+
         if self.mounted_snapshot:
             node =  self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, self.mounted_snapshot)
             if node:
@@ -1193,6 +1195,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             node =  self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, self.mounted_snapshot)
             if node:
                 self.getTable('tree').selectSubvolume(node["id"])
+
+        self.getLogger().debug("__select_snapshot(2): mounted_snapshot=%r" % self.mounted_snapshot)
 
         return
 

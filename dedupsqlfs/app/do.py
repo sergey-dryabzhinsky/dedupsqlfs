@@ -62,7 +62,7 @@ def create_subvolume(options, _fuse):
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(False)
-    _fuse.getLogger().setLevel(logging.INFO)
+
     _fuse.operations.init()
 
     from dedupsqlfs.fuse.subvolume import Subvolume
@@ -85,9 +85,8 @@ def list_subvolume(options, _fuse):
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(True)
-    _fuse.getLogger().setLevel(logging.INFO)
+
     _fuse.operations.init()
-    # _fuse.operations.cache_enabled = False
 
     from dedupsqlfs.fuse.subvolume import Subvolume
     sv = Subvolume(_fuse.operations)
@@ -109,7 +108,7 @@ def remove_subvolume(options, _fuse):
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(False)
-    _fuse.getLogger().setLevel(logging.INFO)
+
     _fuse.operations.init()
 
     from dedupsqlfs.fuse.subvolume import Subvolume
@@ -133,7 +132,7 @@ def print_subvol_stats(options, _fuse):
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(True)
-    _fuse.getLogger().setLevel(logging.INFO)
+
     _fuse.operations.init()
 
     from dedupsqlfs.fuse.subvolume import Subvolume
@@ -157,7 +156,7 @@ def create_snapshot(options, _fuse):
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(False)
-    _fuse.getLogger().setLevel(logging.INFO)
+
     _fuse.operations.init()
 
     from dedupsqlfs.fuse.snapshot import Snapshot
@@ -180,7 +179,7 @@ def remove_snapshot_older(options, _fuse):
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(False)
-    _fuse.getLogger().setLevel(logging.INFO)
+
     _fuse.operations.init()
 
     from dedupsqlfs.fuse.snapshot import Snapshot
@@ -203,7 +202,7 @@ def print_snapshot_stats(options, _fuse):
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(True)
-    _fuse.getLogger().setLevel(logging.INFO)
+
     _fuse.operations.init()
 
     from dedupsqlfs.fuse.snapshot import Snapshot
@@ -227,9 +226,7 @@ def data_vacuum(options, _fuse):
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", True)
     _fuse.setOption("gc_enabled", False)
-
     _fuse.setReadonly(False)
-    _fuse.getLogger().setLevel(logging.INFO)
 
     _fuse.operations.init()
     _fuse.operations.should_vacuum = True
@@ -245,9 +242,7 @@ def data_defragment(options, _fuse):
     _fuse.setOption("gc_umount_enabled", True)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", True)
-
     _fuse.setReadonly(False)
-    _fuse.getLogger().setLevel(logging.INFO)
 
     _fuse.operations.init()
     _fuse.operations.destroy()
@@ -422,6 +417,9 @@ def main(): # {{{1
 
     compression_methods.pop()
     compression_methods.pop()
+
+    if args.verbosity <= 0:
+        args.verbosity = 1
 
     if args.profile:
         sys.stderr.write("Enabling profiling..\n")

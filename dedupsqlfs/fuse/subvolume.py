@@ -50,7 +50,7 @@ class Subvolume(object):
         """
 
         if not name:
-            self.getManager().getLogger().error("Define subvolume name which you need to create!")
+            self.getLogger().error("Define subvolume name which you need to create!")
             return False
 
         subvol_name = name
@@ -70,6 +70,8 @@ class Subvolume(object):
         attrs = self.getManager().mkdir(llfuse.ROOT_INODE, subvol_name, self.root_mode, ctx)
 
         node = self.getTable('tree').find_by_inode(attrs.st_ino)
+        self.getLogger().debug("Created tree node: %r" % (node,))
+
         self.getTable('subvolume').insert(node['id'], int(attrs.st_ctime))
 
         return True
@@ -125,7 +127,7 @@ class Subvolume(object):
         """
 
         if not name:
-            self.getManager().getLogger().error("Select subvolume which you need to delete!")
+            self.getLogger().error("Select subvolume which you need to delete!")
             return
 
         subvol_name = name
@@ -151,9 +153,8 @@ class Subvolume(object):
         """
 
         if not name:
-            self.getManager().getLogger().error("Select subvolume which you need to process!")
+            self.getLogger().error("Select subvolume which you need to process!")
             return
-
 
         subvol_name = name
         if not subvol_name.startswith(b'@'):
@@ -193,7 +194,7 @@ class Subvolume(object):
             )
 
         except Exception as e:
-            self.getManager().getLogger().warn("Can't process subvolume! %s" % e)
+            self.getLogger().warn("Can't process subvolume! %s" % e)
 
         return
 

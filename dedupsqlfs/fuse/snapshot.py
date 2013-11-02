@@ -22,15 +22,15 @@ class Snapshot(Subvolume):
         """
 
         if not from_subvol:
-            self.getManager().getLogger().error("Select subvolume from which you need to create snapshot!")
+            self.getLogger().error("Select subvolume from which you need to create snapshot!")
             return
 
         if not with_name:
-            self.getManager().getLogger().error("Define name for subvolume to which you need to copy %r data!" % from_subvol)
+            self.getLogger().error("Define name for subvolume to which you need to copy %r data!" % from_subvol)
             return
 
         if not self.create(with_name):
-            self.getManager().getLogger().error("Subvolume with name %r already exists! Can't snapshot into it!", with_name)
+            self.getLogger().error("Subvolume with name %r already exists! Can't snapshot into it!", with_name)
             return
 
         subvol_from = from_subvol
@@ -41,12 +41,19 @@ class Snapshot(Subvolume):
         if not with_name.startswith(b'@'):
             subvol_to = b'@' + with_name
 
+        self.getLogger().debug("Use subvolume: %r" % subvol_from)
+        self.getLogger().debug("Into subvolume: %r" % subvol_to)
+
         try:
             attr_from = self.getManager().lookup(llfuse.ROOT_INODE, subvol_from)
             root_node_from = node_from = self.getTable('tree').find_by_inode(attr_from.st_ino)
 
+            self.getLogger().debug("-- use subvolume node: %r" % (root_node_from,))
+
             attr_to = self.getManager().lookup(llfuse.ROOT_INODE, subvol_to)
             root_node_to = node_to = self.getTable('tree').find_by_inode(attr_to.st_ino)
+
+            self.getLogger().debug("-- into subvolume node: %r" % (root_node_to,))
 
             count_to_do = self.getTable('tree').count_subvolume_inodes(root_node_from["id"])
             count_done = 0

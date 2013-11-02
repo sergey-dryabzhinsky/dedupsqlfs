@@ -85,8 +85,8 @@ def list_subvolume(options, _fuse):
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(True)
-    _fuse.operations.init()
     _fuse.getLogger().setLevel(logging.INFO)
+    _fuse.operations.init()
     # _fuse.operations.cache_enabled = False
 
     from dedupsqlfs.fuse.subvolume import Subvolume

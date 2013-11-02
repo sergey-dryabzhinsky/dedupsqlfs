@@ -42,6 +42,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __init__(self, **kwargs):  # {{{2
 
+        llfuse.Operations.__init__(self, **kwargs)
+
         # Initialize instance attributes.
         self.block_size = 1024 * 128
 
@@ -1182,14 +1184,15 @@ class DedupOperations(llfuse.Operations): # {{{1
                 pass
             else:
                 self.mounted_snapshot = constants.ROOT_SUBVOLUME_NAME
-        else:
+        elif not self.getOption("disable_subvolumes"):
             self.mounted_snapshot = constants.ROOT_SUBVOLUME_NAME
 
-        optTable.update("mounted_snapshot", self.mounted_snapshot)
+        if self.mounted_snapshot:
+            optTable.update("mounted_snapshot", self.mounted_snapshot)
 
-        node =  self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, self.mounted_snapshot)
-        if node:
-            self.getTable('tree').selectSubvolume(node["id"])
+            node =  self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, self.mounted_snapshot)
+            if node:
+                self.getTable('tree').selectSubvolume(node["id"])
 
         return
 

@@ -527,7 +527,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 continue
             name = self.getTable("name").get(node["name_id"])
             attrs = self.__getattr(node["inode_id"])
-            self.__log_call('readdir', '->(name=%r, attrs=%r, inode=%i)', name, attrs, node["id"])
+            self.__log_call('readdir', '->(name=%r, attrs=%r, node=%i)', name, attrs, node["id"])
             yield (name, attrs, node["id"],)
 
 

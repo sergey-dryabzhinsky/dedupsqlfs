@@ -88,6 +88,8 @@ class Subvolume(object):
 
         for name, attr, node in self.getManager().readdir(fh, 0):
 
+            self.getLogger().debug("subvolume.list(): name=%r, attr=%r, node=%r" % (name, attr, node,))
+
             subvol = self.getTable('subvolume').get(node)
 
             ctime = "---"
@@ -125,7 +127,6 @@ class Subvolume(object):
         if not name:
             self.getManager().getLogger().error("Select subvolume which you need to delete!")
             return
-
 
         subvol_name = name
         if not subvol_name.startswith(b'@'):

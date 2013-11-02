@@ -161,7 +161,7 @@ def create_snapshot(options, _fuse):
 
     from dedupsqlfs.fuse.snapshot import Snapshot
     snap = Snapshot(_fuse.operations)
-    snap.make(options.snapshot.encode('utf8'), options.snapshot_create.encode('utf8'))
+    snap.make(options.snapshot_selected.encode('utf8'), options.snapshot_create.encode('utf8'))
 
     _fuse.operations.destroy()
     return
@@ -184,7 +184,7 @@ def remove_snapshot(options, _fuse):
 
     from dedupsqlfs.fuse.snapshot import Snapshot
     snap = Snapshot(_fuse.operations)
-    snap.remove(options.snapshot.encode('utf8'))
+    snap.remove(options.snapshot_selected.encode('utf8'))
 
     _fuse.operations.destroy()
     return
@@ -230,7 +230,7 @@ def print_snapshot_stats(options, _fuse):
 
     from dedupsqlfs.fuse.snapshot import Snapshot
     snap = Snapshot(_fuse.operations)
-    snap.report_usage(options.snapshot.encode('utf8'))
+    snap.report_usage(options.snapshot_selected.encode('utf8'))
 
     _fuse.operations.destroy()
     return
@@ -426,7 +426,7 @@ def main(): # {{{1
 
     snapshot = parser.add_argument_group('Snapshot')
     snapshot.add_argument('--list-snapshots', dest='snapshot_list', action='store_true', help="Show list of all snapshots")
-    snapshot.add_argument('--select-snapshot', dest='snapshot', metavar='NAME', default=None, help="Select subvolume/snapshot for operations.")
+    snapshot.add_argument('--select-snapshot', dest='snapshot_selected', metavar='NAME', default=None, help="Select subvolume/snapshot for operations.")
     snapshot.add_argument('--create-snapshot', dest='snapshot_create', metavar='NAME', help="Create new snapshot from selected")
     snapshot.add_argument('--remove-snapshot', dest='snapshot_remove', action='store_true', help="Remove selected snapshot")
     snapshot.add_argument('--remove-snapshots-older-than', dest='snapshot_remove_older', metavar='DATE', help="Remove snapshots older than selected creation date. Date format: 'YYYY-mm-ddTHH:MM:SS'.")

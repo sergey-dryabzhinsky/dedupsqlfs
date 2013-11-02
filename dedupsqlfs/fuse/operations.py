@@ -350,7 +350,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getManager().close()
                 self.getManager().setSynchronous(self.synchronous)
 
-            self.mounted_snapshot = self.getOption("snapshot")
+            self.mounted_snapshot = self.getOption("snapshot_mount")
             if self.mounted_snapshot:
                 self.mounted_snapshot = self.mounted_snapshot.encode('utf8')
                 if not self.mounted_snapshot.startswith(b'@'):

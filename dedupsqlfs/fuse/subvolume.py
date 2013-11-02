@@ -131,10 +131,6 @@ class Subvolume(object):
         if not subvol_name.startswith(b'@'):
             subvol_name = b'@' + subvol_name
 
-        if subvol_name == constants.ROOT_SUBVOLUME_NAME:
-            self.getLogger().warn("Can't remove root subvolume!")
-            return
-
         try:
             attr = self.getManager().lookup(llfuse.ROOT_INODE, subvol_name)
             node = self.getTable('tree').find_by_inode(attr.st_ino)

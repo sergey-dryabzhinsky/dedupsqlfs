@@ -7,6 +7,7 @@ import stat
 import llfuse
 from datetime import datetime
 from dedupsqlfs.fuse.subvolume import Subvolume
+from dedupsqlfs.lib import constants
 
 class Snapshot(Subvolume):
 
@@ -144,6 +145,9 @@ class Snapshot(Subvolume):
         fh = self.getManager().opendir(llfuse.ROOT_INODE)
 
         for name, attr, node in self.getManager().readdir(fh, 0):
+
+            if name == constants.ROOT_SUBVOLUME_NAME:
+                continue
 
             subvol = self.getTable('subvolume').get(node)
 

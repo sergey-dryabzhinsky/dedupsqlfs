@@ -61,7 +61,7 @@ class Snapshot(Subvolume):
             if count_to_do:
                 count_proc = "%6.2f" % (count_done * 100.0 / count_to_do,)
 
-            self.getLogger().info("Progress!")
+            self.getLogger().info("Progress:")
             self.print_msg("\r%s %%" % count_proc)
 
             inode_from = self.getTable("inode").get(attr_from.st_ino)

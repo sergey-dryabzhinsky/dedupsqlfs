@@ -81,7 +81,27 @@ class TableTree( Table ):
 
     def count_subvolume_inodes(self, subvol_id):
         cur = self.getCursor()
-        cur.execute("SELECT COUNT(inode_id) AS cnt FROM `%s` WHERE subvol_id=?" % self._table_name, (subvol_id,))
+        cur.execute("SELECT DISTINCT COUNT(inode_id) AS cnt FROM `%s` WHERE subvol_id=?" % self._table_name, (subvol_id,))
+        item = cur.fetchone()
+        if item:
+            item = item["cnt"]
+        else:
+            item = 0
+        return item
+
+    def count_subvolume_names(self, subvol_id):
+        cur = self.getCursor()
+        cur.execute("SELECT DISTINCT COUNT(name_id) AS cnt FROM `%s` WHERE subvol_id=?" % self._table_name, (subvol_id,))
+        item = cur.fetchone()
+        if item:
+            item = item["cnt"]
+        else:
+            item = 0
+        return item
+
+    def count_subvolume_nodes(self, subvol_id):
+        cur = self.getCursor()
+        cur.execute("SELECT COUNT(1) AS cnt FROM `%s` WHERE subvol_id=?" % self._table_name, (subvol_id,))
         item = cur.fetchone()
         if item:
             item = item["cnt"]

@@ -4,10 +4,10 @@ __author__ = 'sergey'
 
 import os
 import stat
+import sys
 import llfuse
 import errno
 from datetime import datetime
-from dedupsqlfs.lib import constants
 from dedupsqlfs.my_formats import format_size
 
 class Subvolume(object):
@@ -37,6 +37,13 @@ class Subvolume(object):
 
     def getLastError(self):
         return self._last_error
+
+    def print_msg(self, msg):
+        if self.getManager().getOption("verbose") <= 0:
+            return self
+        sys.stdout.write(msg)
+        sys.stdout.flush()
+        return self
 
     # -----------------------------------------------
 
@@ -167,10 +174,23 @@ class Subvolume(object):
             curTree = self.getTable("tree").getCursor()
             curInode = self.getTable("inode").getCursor()
 
-            curTree.execute("SELECT inode_id FROM tree WHERE subvol_id=?", (node['id'],))
+            count_to_do = self.getTable('tree').count_subvolume_inodes(node["id"])
+            count_done = 0
+            count_proc = 0
+            if count_to_do:
+                count_proc = "%6.2f" % (count_done * 100.0 / count_to_do,)
+
+            self.getLogger().info("Progress:")
+            self.print_msg("\r%s %%" % count_proc)
 
             apparent_size = 0
+            compressed_size = 0
             unique_size = 0
+
+            compMethods = {}
+
+            curTree.execute("SELECT inode_id FROM tree WHERE subvol_id=?", (node['id'],))
+
             while True:
                 treeItem = curTree.fetchone()
                 if not treeItem:
@@ -182,8 +202,24 @@ class Subvolume(object):
                 hashes = self.getTable('inode_hash_block').get_hashes_by_inode(treeItem["inode_id"])
                 for indexItem in hashes:
                     cnt = self.getTable('inode_hash_block').get_count_hash(indexItem["hash_id"])
+
+                    blockItem = self.getTable("block").get(indexItem["hash_id"])
+                    method = self.getManager().getCompressionTypeName(blockItem["compression_type_id"])
+                    compMethods[ method ] = compMethods.get(method, 0) + 1
+
                     if cnt == 1:
                         unique_size += indexItem['block_size']
+                        compressed_size += len(blockItem["data"])
+
+                count_done += 1
+
+                if count_to_do:
+                    proc = "%6.2f" % (count_done * 100.0 / count_to_do,)
+                    if proc != count_proc:
+                        count_proc = proc
+                        self.print_msg("\r%s %%" % count_proc)
+
+            self.print_msg("\n")
 
             self.getLogger().info("Apparent size is %s.",
                              format_size(apparent_size)
@@ -192,6 +228,28 @@ class Subvolume(object):
             self.getLogger().info("Unique data size is %s.",
                              format_size(unique_size)
             )
+
+            if unique_size:
+                self.getLogger().info("Compressed data size is %s (%.2f %%).",
+                    format_size(compressed_size), compressed_size * 100.0 / unique_size
+                )
+
+            self.getLogger().info("Compression by types:")
+            count_all = 0
+            comp_types = {}
+
+            for method, cnt in compMethods.items():
+                count_all += cnt
+                comp_types[ cnt ] = method
+
+            keys = list(comp_types.keys())
+            keys.sort(reverse=True)
+
+            for key in keys:
+                compression = comp_types[key]
+                self.getLogger().info(" %8s used by %.2f%% blocks",
+                    compression, 100.0 * key / count_all
+                )
 
         except Exception as e:
             self.getLogger().warn("Can't process subvolume! %s" % e)

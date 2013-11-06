@@ -11,11 +11,6 @@ from dedupsqlfs.lib import constants
 
 class Snapshot(Subvolume):
 
-    def print_msg(self, msg):
-        sys.stdout.write(msg)
-        sys.stdout.flush()
-        return self
-
     def make(self, from_subvol, with_name):
         """
         Copy all tree,inode,index,link data from one subvolume to new

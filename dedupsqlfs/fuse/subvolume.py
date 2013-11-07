@@ -253,6 +253,8 @@ class Subvolume(object):
 
         except Exception as e:
             self.getLogger().warn("Can't process subvolume! %s" % e)
+            import traceback
+            self.getLogger().error(traceback.format_exc())
 
         return
 

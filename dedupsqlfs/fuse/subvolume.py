@@ -39,7 +39,7 @@ class Subvolume(object):
         return self._last_error
 
     def print_msg(self, msg):
-        if self.getManager().getOption("verbose") <= 0:
+        if self.getManager().getOption("verbosity") <= 0:
             return self
         sys.stdout.write(msg)
         sys.stdout.flush()

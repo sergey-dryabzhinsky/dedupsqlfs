@@ -120,7 +120,9 @@ class StorageTTLseconds(object):
                 if block_data["w"] != writed:
                     continue
 
-                size += len(block_data["block"].getvalue())
+                block_data["block"].seek(0, 2)
+                size += block_data["block"].tell()
+                block_data["block"].seek(0, 0)
         return size
 
 

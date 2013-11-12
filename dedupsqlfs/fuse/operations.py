@@ -67,6 +67,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.cache_block_write_size = 256*1024*1024
         self.cache_block_read_size = 256*1024*1024
 
+        self.subvol_uptate_last_run = time.time()
+
         self.cached_nodes = CacheTTLseconds()
         self.cached_attrs = CacheTTLseconds()
 
@@ -868,6 +870,12 @@ class DedupOperations(llfuse.Operations): # {{{1
         return inode
 
     def __update_mounted_subvolume_time(self):
+        t_now = time.time()
+        if t_now - self.subvol_uptate_last_run < 1:
+            return self
+
+        self.subvol_uptate_last_run = t_now
+
         if self.mounted_snapshot and not self.getOption("disable_subvolumes"):
             node = self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, self.mounted_snapshot)
             if node:

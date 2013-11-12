@@ -11,27 +11,18 @@ class StorageTTLseconds(object):
     _max_write_ttl = 5
     # Maximum cache size in bytes for block that writed recently
     _max_write_cache_size = 256*1024*1024
-    # Maximum records in cache that writed recently
-    _max_write_count = 0
     # Maximum seconds after that cache is expired for readed blocks
     _max_read_ttl = 10
     # Maximum cache size in bytes for block that accessed recently
     _max_read_cache_size = 256*1024*1024
-    # Maximum records in cache that accessed recently
-    _max_read_count = 0
-    # Blocks count treshhold in %
-    _max_count_trsh = 10
+    # Expired maximum cache size in %
+    _max_size_trsh = 10
 
     _inodes = None
     _block_size = 128*1024
 
-    _count_writed = 0
-    _count_readed = 0
-
     def __init__(self):
         self._inodes = {}
-        self._max_write_count = int(self._max_write_cache_size / self._block_size)
-        self._max_read_count = int(self._max_read_cache_size / self._block_size)
         pass
 
     def __len__(self):
@@ -42,18 +33,14 @@ class StorageTTLseconds(object):
 
     def setBlockSize(self, in_bytes):
         self._block_size = in_bytes
-        self._max_write_count = int(self._max_write_cache_size / self._block_size)
-        self._max_read_count = int(self._max_read_cache_size / self._block_size)
         return self
 
     def setMaxWriteCacheSize(self, in_bytes):
         self._max_write_cache_size = in_bytes
-        self._max_write_count = int(self._max_write_cache_size / self._block_size)
         return self
 
     def setMaxReadCacheSize(self, in_bytes):
         self._max_read_cache_size = in_bytes
-        self._max_read_count = int(self._max_read_cache_size / self._block_size)
         return self
 
     def setMaxWriteTtl(self, seconds):
@@ -92,22 +79,9 @@ class StorageTTLseconds(object):
         block_data["block"] = block
 
         if writed:
-            if new:
-                self._count_writed += 1
-            else:
-                if not block_data["w"]:
-                    self._count_writed += 1
-                    self._count_readed -= 1
-
             block_data["w"] = True
         else:
-            if new:
-                self._count_readed += 1
-
             block_data["w"] = block_data.get("w", False)
-
-        #inode_data[ block_number ] = block_data
-        #self._inodes[ inode ] = inode_data
 
         return self
 
@@ -136,11 +110,25 @@ class StorageTTLseconds(object):
 
         return val
 
+    def getCachedSize(self, writed=False):
+        size = 0
+        for inode in self._inodes.keys():
+            inode_data = self._inodes[inode]
+            for bn in inode_data.keys():
+                block_data = inode_data[bn]
+
+                if block_data["w"] != writed:
+                    continue
+
+                size += len(block_data["block"].getvalue())
+        return size
+
+
     def isWritedCacheFull(self):
-        return 100.0 * self._count_writed / self._max_write_count - 100.0 >= self._max_count_trsh
+        return 100.0 * self.getCachedSize(True) / self._max_write_cache_size >= 100 + self._max_size_trsh
 
     def isReadCacheFull(self):
-        return 100.0 * self._count_readed / self._max_read_count - 100.0 >= self._max_count_trsh
+        return 100.0 * self.getCachedSize(False) / self._max_write_cache_size >= 100 + self._max_size_trsh
 
     def expired(self, writed=False):
         now = time()
@@ -197,19 +185,42 @@ class StorageTTLseconds(object):
                 if block_data["w"] != writed:
                     continue
 
-                heapq.heappush(heap, (int((now - t)*10**6), inode, bn,))
+                heapq.heappush(
+                    heap, (
+                        int((now - t)*10**6),
+                        inode,
+                        bn,
+                        len(block_data["block"].getvalue())
+                    )
+                )
 
         # 2. Sort heap
 
+        currentSize = self.getCachedSize(writed)
+
         if writed:
-            mostrecent = heapq.nsmallest(self._max_write_count, heap)
+            maxSize = self._max_write_cache_size
         else:
-            mostrecent = heapq.nsmallest(self._max_read_count, heap)
+            maxSize = self._max_read_cache_size
+
+        nget = int((currentSize - maxSize) / self._block_size)
+
+        needMaxSize = maxSize * (100 - self._max_size_trsh) / 100
+
+        mostrecent = []
+        while True:
+            needSize = currentSize
+            mostrecent = heapq.nsmallest(nget, heap)
+            for dt, inode, bn, bsize in mostrecent:
+                needSize -= bsize
+            if needSize <= needMaxSize:
+                break
+            nget += 1
 
         # 3. Convert data
 
         heap_inodes = {}
-        for dt, inode, bn in mostrecent:
+        for dt, inode, bn, bsize in mostrecent:
             if inode not in heap_inodes:
                 heap_inodes[ inode ] = ()
             heap_inodes[ inode ] += (bn,)

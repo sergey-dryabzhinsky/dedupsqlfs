@@ -8,14 +8,14 @@ __author__ = 'sergey'
 class StorageTTLseconds(object):
 
     # Maximum seconds after that cache is expired for writed blocks
-    _max_write_ttl = 10
+    _max_write_ttl = 5
 
     # Maximum cache size in bytes for block that writed recently
     _max_write_cache_size = 256*1024*1024
     _cur_write_cache_size = 0
 
     # Maximum seconds after that cache is expired for readed blocks
-    _max_read_ttl = 20
+    _max_read_ttl = 10
 
     # Maximum cache size in bytes for block that accessed recently
     _max_read_cache_size = 256*1024*1024

@@ -102,7 +102,15 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.time_spent_traversing_tree = 0
         self.time_spent_writing = 0
         self.time_spent_writing_blocks = 0
+
         self.time_spent_flushing_block_cache = 0
+        self.time_spent_flushing_writed_block_cache = 0
+        self.time_spent_flushing_readed_block_cache = 0
+        self.time_spent_flushing_writedByTime_block_cache = 0
+        self.time_spent_flushing_readedByTime_block_cache = 0
+        self.time_spent_flushing_writedBySize_block_cache = 0
+        self.time_spent_flushing_readedBySize_block_cache = 0
+
         self.time_spent_compressing = 0
         self.time_spent_decompressing = 0
 
@@ -1393,7 +1401,14 @@ class DedupOperations(llfuse.Operations): # {{{1
                 (self.time_spent_writing, 'Writing data stream'),
                 (self.time_spent_writing_blocks, 'Writing data blocks (cumulative)'),
                 (self.time_spent_writing_blocks - self.time_spent_compressing - self.time_spent_hashing, 'Writing blocks to database'),
-                (self.time_spent_flushing_block_cache - self.time_spent_writing_blocks, 'Flushing block cache'),
+                (self.time_spent_flushing_writed_block_cache - self.time_spent_writing_blocks, 'Flushing writed block cache'),
+                (self.time_spent_flushing_readed_block_cache, 'Flushing readed block cache (cumulative)'),
+                (self.time_spent_flushing_writed_block_cache, 'Flushing writed block cache (cumulative)'),
+                (self.time_spent_flushing_writedByTime_block_cache, 'Flushing writed block cache (by Time)'),
+                (self.time_spent_flushing_writedBySize_block_cache, 'Flushing writed block cache (by Size)'),
+                (self.time_spent_flushing_readedByTime_block_cache, 'Flushing readed block cache (by Time)'),
+                (self.time_spent_flushing_readedBySize_block_cache, 'Flushing readed block cache (by Size)'),
+                (self.time_spent_flushing_block_cache, 'Flushing block cache (cumulative)'),
                 (self.time_spent_hashing, 'Hashing data blocks'),
                 (self.time_spent_compressing, 'Compressing data blocks'),
                 (self.time_spent_decompressing, 'Decompressing data blocks'),
@@ -1599,61 +1614,53 @@ class DedupOperations(llfuse.Operations): # {{{1
         flushed_writed_expiredBySize_blocks = 0
         flushed_readed_expiredBySize_blocks = 0
 
+        start_time1 = time.time()
         if time.time() - self.cache_gc_block_write_last_run >= self.cache_block_write_timeout:
-            # start_time = time.time()
-            # self.getLogger().debug("Performing writed block cache cleanup (this might take a while) ..")
-
-            # size = len(self.cached_blocks)
             flushed = self.__flush_old_cached_blocks(self.cached_blocks.expired(True), True)
             flushed_writed_blocks += flushed
             flushed_writed_expiredByTime_blocks += flushed
-            # self.getLogger().debug(" flushed %i of %i blocks", count, size)
 
             self.cache_gc_block_write_last_run = time.time()
 
-            # elapsed_time = time.time() - start_time
-            # self.getLogger().debug("Finished writed block cache cleanup in %s.", format_timespan(elapsed_time))
+        elapsed_time1 = time.time() - start_time1
+        self.time_spent_flushing_writed_block_cache += elapsed_time1
+        self.time_spent_flushing_writedByTime_block_cache += elapsed_time1
 
+
+        start_time1 = time.time()
         if self.cached_blocks.isWritedCacheFull():
-            #start_time = time.time()
-            #self.getLogger().debug("Performing writed block cache cleanup (this might take a while) ..")
-
-            #size = len(self.cached_blocks)
             flushed = self.__flush_old_cached_blocks(self.cached_blocks.expireByCount(True), True)
             flushed_writed_blocks += flushed
             flushed_writed_expiredBySize_blocks += flushed
-            #self.getLogger().debug(" flushed %i of %i blocks", count, size)
 
-            #elapsed_time = time.time() - start_time
-            #self.getLogger().debug("Finished writed block cache cleanup in %s.", format_timespan(elapsed_time))
+        elapsed_time1 = time.time() - start_time1
+        self.time_spent_flushing_writed_block_cache += elapsed_time1
+        self.time_spent_flushing_writedBySize_block_cache += elapsed_time1
 
+
+        start_time1 = time.time()
         if time.time() - self.cache_gc_block_read_last_run >= self.cache_block_read_timeout:
-            #start_time = time.time()
-            #self.getLogger().debug("Performing readed block cache cleanup (this might take a while) ..")
-
-            #size = len(self.cached_blocks)
             flushed = self.cached_blocks.expired(False)
             flushed_readed_blocks += flushed
             flushed_readed_expiredByTime_blocks += flushed
-            #self.getLogger().debug(" flushed %i of %i blocks", count, size)
 
             self.cache_gc_block_read_last_run = time.time()
 
-            #elapsed_time = time.time() - start_time
-            #self.getLogger().debug("Finished readed block cache cleanup in %s.", format_timespan(elapsed_time))
+        elapsed_time1 = time.time() - start_time1
+        self.time_spent_flushing_readed_block_cache += elapsed_time1
+        self.time_spent_flushing_readedByTime_block_cache += elapsed_time1
 
+
+        start_time1 = time.time()
         if self.cached_blocks.isReadCacheFull():
-            #start_time = time.time()
-            #self.getLogger().debug("Performing readed block cache cleanup (this might take a while) ..")
-
-            #size = len(self.cached_blocks)
             flushed = self.cached_blocks.expireByCount(False)
             flushed_readed_blocks += flushed
             flushed_readed_expiredBySize_blocks += flushed
-            #self.getLogger().debug(" flushed %i of %i blocks", count, size)
 
-            #elapsed_time = time.time() - start_time
-            #self.getLogger().debug("Finished writed block cache cleanup in %s.", format_timespan(elapsed_time))
+        elapsed_time1 = time.time() - start_time1
+        self.time_spent_flushing_readed_block_cache += elapsed_time1
+        self.time_spent_flushing_readedBySize_block_cache += elapsed_time1
+
 
         elapsed_time = time.time() - start_time
 

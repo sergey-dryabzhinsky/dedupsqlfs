@@ -47,6 +47,15 @@ class Table( object ):
         if not os.path.exists(db_dir):
             os.makedirs(db_dir)
 
+        pageSize = 512
+        if os.path.isfile(db_path):
+            fileSize = os.path.getsize(db_path)
+        else:
+            fileSize = 0
+        filePageSize = fileSize / 2147483646.0 * 1.05
+        while pageSize < filePageSize:
+            pageSize *= 2
+
         conn = sqlite3.connect(db_path)
 
         conn.row_factory = dict_factory
@@ -58,8 +67,8 @@ class Table( object ):
 
         conn.execute("PRAGMA temp_store=FILE")
         conn.execute("PRAGMA max_page_count=2147483646")
-        conn.execute("PRAGMA page_size=1024")
-        conn.execute("PRAGMA journal_mode=TRUNCATE")
+        conn.execute("PRAGMA page_size=%i" % pageSize)
+        conn.execute("PRAGMA journal_mode=WAL")
 
         if not self.getManager().getAutocommit():
             conn.execute("PRAGMA read_uncommitted=ON")

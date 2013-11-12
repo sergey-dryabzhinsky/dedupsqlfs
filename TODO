@@ -15,6 +15,17 @@ Here are some things on to-do list, in no particular order:
  * Automatically switch to a larger block size to reduce the overhead for files
    that rarely change after being created (like >= 100MB video files :-)
    Or use defragmentation tool for that.
+   Block size must be stored in xattr for every file.
+
+ * Implement adaptive compression for different file types:
+   - no compression for audio/video/images/archives - *.mp3/*.mp4/*.jpg/*.zip
+   - fast compression for some types - *.wav/*.pdf
+   - best for texts and some other types - *.txt/*.html/*.bmp
+   There must be variants for pairs - types:compression. Even custom compression
+   methods: "*.wav,*.pdf:custom:zlib,snappy".
+   Compression status must be stored in xattr for every file.
+
+ * Rewrite block cache size limiting - don't use block cells but real block size.
 
  * Implement rename() independently of link()/unlink() to improve performance?
    Need benchmarks.

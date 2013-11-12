@@ -1589,13 +1589,19 @@ class DedupOperations(llfuse.Operations): # {{{1
         start_time = time.time()
         flushed_writed_blocks = 0
         flushed_readed_blocks = 0
+        flushed_writed_expiredByTime_blocks = 0
+        flushed_readed_expiredByTime_blocks = 0
+        flushed_writed_expiredBySize_blocks = 0
+        flushed_readed_expiredBySize_blocks = 0
 
         if time.time() - self.cache_gc_block_write_last_run >= self.cache_block_write_timeout:
             # start_time = time.time()
             # self.getLogger().debug("Performing writed block cache cleanup (this might take a while) ..")
 
             # size = len(self.cached_blocks)
-            flushed_writed_blocks += self.__flush_old_cached_blocks(self.cached_blocks.expired(True), True)
+            flushed = self.__flush_old_cached_blocks(self.cached_blocks.expired(True), True)
+            flushed_writed_blocks += flushed
+            flushed_writed_expiredByTime_blocks += flushed
             # self.getLogger().debug(" flushed %i of %i blocks", count, size)
 
             self.cache_gc_block_write_last_run = time.time()
@@ -1608,7 +1614,9 @@ class DedupOperations(llfuse.Operations): # {{{1
             #self.getLogger().debug("Performing writed block cache cleanup (this might take a while) ..")
 
             #size = len(self.cached_blocks)
-            flushed_writed_blocks += self.__flush_old_cached_blocks(self.cached_blocks.expireByCount(True), True)
+            flushed = self.__flush_old_cached_blocks(self.cached_blocks.expireByCount(True), True)
+            flushed_writed_blocks += flushed
+            flushed_writed_expiredBySize_blocks += flushed
             #self.getLogger().debug(" flushed %i of %i blocks", count, size)
 
             #elapsed_time = time.time() - start_time
@@ -1619,7 +1627,9 @@ class DedupOperations(llfuse.Operations): # {{{1
             #self.getLogger().debug("Performing readed block cache cleanup (this might take a while) ..")
 
             #size = len(self.cached_blocks)
-            flushed_readed_blocks += self.cached_blocks.expired(False)
+            flushed = self.cached_blocks.expired(False)
+            flushed_readed_blocks += flushed
+            flushed_readed_expiredByTime_blocks += flushed
             #self.getLogger().debug(" flushed %i of %i blocks", count, size)
 
             self.cache_gc_block_read_last_run = time.time()
@@ -1632,7 +1642,9 @@ class DedupOperations(llfuse.Operations): # {{{1
             #self.getLogger().debug("Performing readed block cache cleanup (this might take a while) ..")
 
             #size = len(self.cached_blocks)
-            flushed_readed_blocks += self.cached_blocks.expireByCount(False)
+            flushed = self.cached_blocks.expireByCount(False)
+            flushed_readed_blocks += flushed
+            flushed_readed_expiredBySize_blocks += flushed
             #self.getLogger().debug(" flushed %i of %i blocks", count, size)
 
             #elapsed_time = time.time() - start_time
@@ -1645,6 +1657,10 @@ class DedupOperations(llfuse.Operations): # {{{1
         if flushed_writed_blocks + flushed_readed_blocks > 0:
             self.getLogger().info("Block cache cleanup: flushed %i writed, %i readed blocks in %s",
                                   flushed_writed_blocks, flushed_readed_blocks, format_timespan(elapsed_time))
+            self.getLogger().info(" -- writed: %i by time, %i bt size",
+                                  flushed_writed_expiredByTime_blocks, flushed_writed_expiredBySize_blocks)
+            self.getLogger().info(" -- readed: %i by time, %i bt size",
+                                  flushed_readed_expiredByTime_blocks, flushed_readed_expiredBySize_blocks)
 
         return
 

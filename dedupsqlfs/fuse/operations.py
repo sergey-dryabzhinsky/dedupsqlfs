@@ -102,6 +102,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.time_spent_writing_blocks = 0
         self.time_spent_flushing_block_cache = 0
         self.time_spent_compressing = 0
+        self.time_spent_decompressing = 0
 
         self._compression_types = {}
         self._compression_types_revert = {}
@@ -1045,11 +1046,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         return raw_data.getvalue()
 
-    def __decompress(self, block_data, compression_type_id):
-        compression = self.getCompressionTypeName( compression_type_id )
-        self.getLogger().debug("-- decompress block: type = %s" % compression)
-        return BytesIO(self.getApplication().decompressData(compression, block_data))
-
     def __write_block_data_by_offset(self, inode, offset, block_data):
         """
         @param inode: Inode ID
@@ -1361,6 +1357,14 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.time_spent_compressing += time.time() - start_time
         return cdata, cmethod
 
+    def __decompress(self, block_data, compression_type_id):
+        start_time = time.time()
+        compression = self.getCompressionTypeName( compression_type_id )
+        self.getLogger().debug("-- decompress block: type = %s" % compression)
+        result = BytesIO(self.getApplication().decompressData(compression, block_data))
+        self.time_spent_decompressing += time.time() - start_time
+        return result
+
 
     def __print_stats(self): # {{{3
         self.getLogger().info('-' * 79)
@@ -1384,6 +1388,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 (self.time_spent_flushing_block_cache - self.time_spent_writing_blocks, 'Flushing block cache'),
                 (self.time_spent_hashing, 'Hashing data blocks'),
                 (self.time_spent_compressing, 'Compressing data blocks'),
+                (self.time_spent_decompressing, 'Decompressing data blocks'),
                 (self.time_spent_querying_tree, 'Querying the tree')
             ]
             maxdescwidth = max([len(l) for t, l in timings]) + 3

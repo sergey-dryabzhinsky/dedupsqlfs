@@ -60,9 +60,9 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.cache_gc_meta_last_run = time.time()
         self.cache_gc_block_write_last_run = time.time()
         self.cache_gc_block_read_last_run = time.time()
-        self.cache_timeout = 5
-        self.cache_meta_timeout = 15
-        self.cache_block_write_timeout = 5
+        self.cache_timeout = 10
+        self.cache_meta_timeout = 20
+        self.cache_block_write_timeout = 10
         self.cache_block_read_timeout = 10
         self.cache_block_write_size = 256*1024*1024
         self.cache_block_read_size = 256*1024*1024
@@ -1663,12 +1663,10 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.time_spent_flushing_block_cache += elapsed_time
 
         if flushed_writed_blocks + flushed_readed_blocks > 0:
-            self.getLogger().info("Block cache cleanup: flushed %i writed, %i readed blocks in %s",
-                                  flushed_writed_blocks, flushed_readed_blocks, format_timespan(elapsed_time))
-            self.getLogger().info(" -- writed: %i by time, %i bt size",
-                                  flushed_writed_expiredByTime_blocks, flushed_writed_expiredBySize_blocks)
-            self.getLogger().info(" -- readed: %i by time, %i bt size",
-                                  flushed_readed_expiredByTime_blocks, flushed_readed_expiredBySize_blocks)
+            self.getLogger().info("Block cache cleanup: flushed %i writed (%i/t, %i/sz), %i readed (%i/t, %i/sz) blocks in %s",
+                                  flushed_writed_blocks, flushed_writed_expiredByTime_blocks, flushed_writed_expiredBySize_blocks,
+                                  flushed_readed_blocks, flushed_readed_expiredByTime_blocks, flushed_readed_expiredBySize_blocks,
+                                  format_timespan(elapsed_time))
 
         return
 

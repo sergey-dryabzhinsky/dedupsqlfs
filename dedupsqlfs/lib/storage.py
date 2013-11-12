@@ -9,12 +9,18 @@ class StorageTTLseconds(object):
 
     # Maximum seconds after that cache is expired for writed blocks
     _max_write_ttl = 10
+
     # Maximum cache size in bytes for block that writed recently
     _max_write_cache_size = 256*1024*1024
+    _cur_write_cache_size = 0
+
     # Maximum seconds after that cache is expired for readed blocks
     _max_read_ttl = 20
+
     # Maximum cache size in bytes for block that accessed recently
     _max_read_cache_size = 256*1024*1024
+    _cur_read_cache_size = 0
+
     # Expired maximum cache size in %
     _max_size_trsh = 10
 
@@ -70,13 +76,36 @@ class StorageTTLseconds(object):
         inode_data = self._inodes[inode]
 
         if block_number not in inode_data:
-            inode_data[ block_number ] = {}
+            inode_data[ block_number ] = {
+                "size" : 0
+            }
             new = True
 
         block_data = inode_data[block_number]
 
+        blockSize = len(block.getvalue())
+
+        if not new:
+            # Not new block
+            oldBlockSize = block_data["size"]
+            if writed:
+                # If it now writed
+                if not block_data["w"]:
+                    # But not was
+                    self._cur_read_cache_size -= oldBlockSize
+                else:
+                    self._cur_write_cache_size -= oldBlockSize
+            else:
+                self._cur_read_cache_size -= oldBlockSize
+
+        if writed:
+            self._cur_write_cache_size += blockSize
+        else:
+            self._cur_read_cache_size += blockSize
+
         block_data["time"] = time()
         block_data["block"] = block
+        block_data["size"] = blockSize
 
         if writed:
             block_data["w"] = True
@@ -124,12 +153,12 @@ class StorageTTLseconds(object):
 
 
     def isWritedCacheFull(self):
-        filled = 100.0 * self.getCachedSize(True) / self._max_write_cache_size
+        filled = 100.0 * self._cur_write_cache_size / self._max_write_cache_size
         max_fill = 100 + self._max_size_trsh
         return filled > max_fill
 
     def isReadCacheFull(self):
-        filled = 100.0 * self.getCachedSize(False) / self._max_read_cache_size
+        filled = 100.0 * self._cur_read_cache_size / self._max_read_cache_size
         max_fill = 100 + self._max_size_trsh
         return filled > max_fill
 
@@ -157,8 +186,13 @@ class StorageTTLseconds(object):
                         old_inode_data = old_inodes.get(inode, {})
                         old_inode_data[bn] = block_data.copy()
                         old_inodes[inode] = old_inode_data
+
+                        self._cur_write_cache_size -= block_data["size"]
                     else:
                         old_inodes += 1
+
+                        self._cur_read_cache_size -= block_data["size"]
+
                     del inode_data[bn]
 
             if not inode_data and inode in self._inodes:
@@ -257,8 +291,13 @@ class StorageTTLseconds(object):
                         old_inode_data = old_inodes.get(inode, {})
                         old_inode_data[bn] = block_data.copy()
                         old_inodes[inode] = old_inode_data
+
+                        self._cur_write_cache_size -= block_data["size"]
                     else:
                         old_inodes += 1
+
+                        self._cur_read_cache_size -= block_data["size"]
+
                     del inode_data[bn]
 
             if not inode_data and inode in self._inodes:

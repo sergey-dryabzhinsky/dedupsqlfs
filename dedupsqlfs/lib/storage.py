@@ -77,7 +77,8 @@ class StorageTTLseconds(object):
 
         if block_number not in inode_data:
             inode_data[ block_number ] = {
-                "size" : 0
+                "size" : 0,
+                "w" : writed
             }
             new = True
 
@@ -109,8 +110,6 @@ class StorageTTLseconds(object):
 
         if writed:
             block_data["w"] = True
-        else:
-            block_data["w"] = block_data.get("w", False)
 
         return self
 
@@ -173,6 +172,7 @@ class StorageTTLseconds(object):
         for inode in tuple(self._inodes.keys()):
 
             inode_data = self._inodes[inode]
+            updated = False
 
             for bn in tuple(inode_data.keys()):
                 block_data = inode_data[bn]
@@ -194,9 +194,12 @@ class StorageTTLseconds(object):
                         self._cur_read_cache_size -= block_data["size"]
 
                     del inode_data[bn]
+                    updated = True
 
             if not inode_data and inode in self._inodes:
                 del self._inodes[inode]
+            elif updated:
+                self._inodes[inode] = inode_data
 
         return old_inodes
 
@@ -231,11 +234,11 @@ class StorageTTLseconds(object):
 
         # 2. Sort heap
 
-        currentSize = self.getCachedSize(writed)
-
         if writed:
+            currentSize = self._cur_write_cache_size
             maxSize = self._max_write_cache_size
         else:
+            currentSize = self._cur_read_cache_size
             maxSize = self._max_read_cache_size
 
         needMaxSize = maxSize * (100 - self._max_size_trsh) / 100
@@ -275,8 +278,6 @@ class StorageTTLseconds(object):
             inode_data = self._inodes[inode]
 
             for bn in tuple(inode_data.keys()):
-
-                bn = str(bn)
 
                 block_data = inode_data[bn]
 

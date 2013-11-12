@@ -113,10 +113,7 @@ class StorageTTLseconds(object):
     def getCachedSize(self, writed=False):
         size = 0
         for inode in self._inodes.keys():
-            inode_data = self._inodes[inode]
-            for bn in inode_data.keys():
-                block_data = inode_data[bn]
-
+            for block_data in self._inodes[inode].values():
                 if block_data["w"] != writed:
                     continue
 

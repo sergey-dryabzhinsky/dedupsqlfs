@@ -8,11 +8,11 @@ __author__ = 'sergey'
 class StorageTTLseconds(object):
 
     # Maximum seconds after that cache is expired for writed blocks
-    _max_write_ttl = 5
+    _max_write_ttl = 10
     # Maximum cache size in bytes for block that writed recently
     _max_write_cache_size = 256*1024*1024
     # Maximum seconds after that cache is expired for readed blocks
-    _max_read_ttl = 10
+    _max_read_ttl = 20
     # Maximum cache size in bytes for block that accessed recently
     _max_read_cache_size = 256*1024*1024
     # Expired maximum cache size in %
@@ -124,10 +124,14 @@ class StorageTTLseconds(object):
 
 
     def isWritedCacheFull(self):
-        return 100.0 * self.getCachedSize(True) / self._max_write_cache_size >= 100 + self._max_size_trsh
+        filled = 100.0 * self.getCachedSize(True) / self._max_write_cache_size
+        max_fill = 100 + self._max_size_trsh
+        return filled > max_fill
 
     def isReadCacheFull(self):
-        return 100.0 * self.getCachedSize(False) / self._max_write_cache_size >= 100 + self._max_size_trsh
+        filled = 100.0 * self.getCachedSize(False) / self._max_read_cache_size
+        max_fill = 100 + self._max_size_trsh
+        return filled > max_fill
 
     def expired(self, writed=False):
         now = time()

@@ -16,7 +16,10 @@ dirname = "dedupsqlfs"
 
 # Figure out the directy which is the prefix
 # path-of-current-file/..
-currentdir = os.path.dirname( os.path.abspath( sys.argv[0] ) )
+curpath = os.path.abspath( sys.argv[0] )
+if os.path.islink(curpath):
+    curpath = os.readlink(curpath)
+currentdir = os.path.dirname( curpath )
 basedir = os.path.abspath( os.path.join( currentdir, ".." ) )
 
 # Add the base directory where the application is installed in to sys.path

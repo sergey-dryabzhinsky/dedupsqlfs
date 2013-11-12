@@ -1492,20 +1492,28 @@ class DedupOperations(llfuse.Operations): # {{{1
         start_time = time.time()
 
         tableIndex = self.getTable("inode_hash_block")
-        tableBlock = self.getTable("block")
-        tableHash = self.getTable("hash")
 
         block.seek(0)
         data_block = block.getvalue()
 
         block_length = len(data_block)
 
-        hash_value = self.__hash(data_block)
-        hash_id = tableHash.find(hash_value)
-
         block_index = tableIndex.get_by_inode_number(inode, block_number)
 
         self.getLogger().debug("write block: inode=%s, block number = %s, data length = %s" % (inode, block_number, block_length))
+
+        if block_length == 0 and block_index:
+            self.getLogger().debug("write block: remove empty block")
+            tableIndex.delete_by_inode_number(inode, block_number)
+
+            self.time_spent_writing_blocks += time.time() - start_time
+            return
+
+        tableBlock = self.getTable("block")
+        tableHash = self.getTable("hash")
+
+        hash_value = self.__hash(data_block)
+        hash_id = tableHash.find(hash_value)
 
         # It is new block now?
         if not hash_id:

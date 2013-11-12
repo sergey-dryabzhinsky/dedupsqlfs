@@ -157,10 +157,6 @@ class StorageTTLseconds(object):
                     else:
                         old_inodes += 1
                     del inode_data[bn]
-                    if writed:
-                        self._count_writed -= 1
-                    else:
-                        self._count_readed -= 1
 
             if not inode_data and inode in self._inodes:
                 del self._inodes[inode]

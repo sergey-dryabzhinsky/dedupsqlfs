@@ -1591,9 +1591,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __cache_block_hook(self): # {{{3
 
-        if not self.cache_enabled:
-            return
-
         start_time = time.time()
         flushed_writed_blocks = 0
         flushed_readed_blocks = 0
@@ -1671,9 +1668,6 @@ class DedupOperations(llfuse.Operations): # {{{1
         return
 
     def __cache_meta_hook(self): # {{{3
-
-        if not self.cache_enabled:
-            return
 
         start_time = time.time()
 

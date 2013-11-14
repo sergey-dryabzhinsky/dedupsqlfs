@@ -16,8 +16,9 @@ class TableInodeXattr( Table ):
         # Create table
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
-                "inode_id INTEGER NOT NULL UNIQUE, "+
-                "data BLOB NOT NULL"+
+                "inode_id INTEGER NOT NULL, "+
+                "data BLOB NOT NULL, "+
+                "UNIQUE(inode_id) " +
             ");"
         )
         return

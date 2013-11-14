@@ -1534,6 +1534,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         tableBlock = self.getTable("block")
         tableHash = self.getTable("hash")
+        tableHCT = self.getTable("hash_compression_type")
+        tableHBS = self.getTable("hash_block_size")
 
         hash_value = self.__hash(data_block)
         hash_id = tableHash.find(hash_value)
@@ -1555,11 +1557,20 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().debug("-- update one block data")
 
                 hash_id = block_index["hash_id"]
+                hash_CT = tableHCT.get(hash_id)
+                hash_BS = tableHBS.get(hash_id)
+
                 tableHash.update(hash_id, hash_value)
-                tableBlock.update(hash_id, self.getCompressionTypeId(cmethod), cdata)
+                if hash_CT["compression_type_id"] != self.getCompressionTypeId(cmethod):
+                    tableHCT.update(hash_id, self.getCompressionTypeId(cmethod))
+                if hash_BS["real_size"] != block_length or hash_BS["comp_size"] != cdata_length:
+                    tableHBS.update(hash_id, block_length, cdata_length)
+                tableBlock.update(hash_id, cdata)
             else:
                 hash_id = tableHash.insert(hash_value)
-                tableBlock.insert(hash_id, self.getCompressionTypeId(cmethod), cdata)
+                tableBlock.insert(hash_id, cdata)
+                tableHCT.insert(hash_id, self.getCompressionTypeId(cmethod))
+                tableHBS.insert(hash_id, block_length, cdata_length)
 
             self.bytes_written += block_length
             self.bytes_written_compressed += cdata_length
@@ -1582,9 +1593,9 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.bytes_deduped += block_length
 
         if not block_index:
-            tableIndex.insert(inode, block_number, hash_id, block_length)
+            tableIndex.insert(inode, block_number, hash_id)
         elif block_index["hash_id"] != hash_id:
-            tableIndex.update(inode, block_number, hash_id, block_length)
+            tableIndex.update(inode, block_number, hash_id)
 
         self.time_spent_writing_blocks += time.time() - start_time
         return

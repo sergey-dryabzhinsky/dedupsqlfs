@@ -35,6 +35,11 @@ class TableTree( Table ):
             ");"
         )
         c.execute(
+            "CREATE INDEX IF NOT EXISTS tree_parent_name ON `%s` (" % self._table_name+
+                "parent_id,name_id"+
+            ");"
+        )
+        c.execute(
             "CREATE INDEX IF NOT EXISTS tree_subvol ON `%s` (" % self._table_name+
                 "subvol_id"+
             ");"

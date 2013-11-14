@@ -21,11 +21,6 @@ class TableSubvolume( Table ):
                 "updated_at INTEGER"+
             ");"
         )
-        c.execute(
-            "CREATE INDEX IF NOT EXISTS subvol_created ON `%s` (" % self._table_name+
-                "created_at"+
-            ");"
-        )
         return
 
     def insert( self, node_id, created_at, mounted_at=None, updated_at=None ):

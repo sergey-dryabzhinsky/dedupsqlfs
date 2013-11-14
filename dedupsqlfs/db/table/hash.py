@@ -16,13 +16,9 @@ class TableHash( Table ):
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
-                "hash BLOB NOT NULL"+
+                "hash BLOB NOT NULL, "+
+                "UNIQUE(hash) " +
             ")"
-        )
-        c.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS hash_value ON `%s` (" % self._table_name+
-                "hash"+
-            ");"
         )
         return
 
@@ -54,12 +50,6 @@ class TableHash( Table ):
         item = cur.fetchone()
         if item:
             item = item["hash"]
-        return item
-
-    def fetch( self, item_id ):
-        cur = self.getCursor()
-        cur.execute("SELECT * FROM `%s` WHERE id=?" % self._table_name, (item_id,))
-        item = cur.fetchone()
         return item
 
     def find( self, value ):

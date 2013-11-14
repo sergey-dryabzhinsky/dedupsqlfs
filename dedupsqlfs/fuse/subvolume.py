@@ -191,6 +191,10 @@ class Subvolume(object):
 
             curTree.execute("SELECT inode_id FROM tree WHERE subvol_id=?", (node['id'],))
 
+            tableIndex = self.getTable('inode_hash_block')
+            tableHCT = self.getTable('hash_compression_type')
+            tableHBS = self.getTable('hash_block_size')
+
             while True:
                 treeItem = curTree.fetchone()
                 if not treeItem:
@@ -199,17 +203,18 @@ class Subvolume(object):
                 curInode.execute("SELECT `size` FROM `inode` WHERE id=?", (treeItem["inode_id"],))
                 apparent_size += curInode.fetchone()["size"]
 
-                hashes = self.getTable('inode_hash_block').get_hashes_by_inode(treeItem["inode_id"])
+                hashes = tableIndex.get_hashes_by_inode(treeItem["inode_id"])
                 for indexItem in hashes:
-                    cnt = self.getTable('inode_hash_block').get_count_hash(indexItem["hash_id"])
+                    cnt = tableIndex.get_count_hash(indexItem["hash_id"])
 
-                    blockItem = self.getTable("block").get(indexItem["hash_id"])
-                    method = self.getManager().getCompressionTypeName(blockItem["compression_type_id"])
+                    hctItem = tableHCT.get(indexItem["hash_id"])
+                    method = self.getManager().getCompressionTypeName(hctItem["compression_type_id"])
                     compMethods[ method ] = compMethods.get(method, 0) + 1
 
                     if cnt == 1:
-                        unique_size += indexItem['block_size']
-                        compressed_size += len(blockItem["data"])
+                        hbsItem = tableHBS.get(indexItem["hash_id"])
+                        unique_size += hbsItem['real_size']
+                        compressed_size += hbsItem['comp_size']
 
                 count_done += 1
 

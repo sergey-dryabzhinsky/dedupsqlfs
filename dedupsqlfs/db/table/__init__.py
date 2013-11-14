@@ -34,14 +34,18 @@ class Table( object ):
         return self._op_count
 
     def incOperationsCount(self, op):
-        self._op_count[ op ] = self._op_count.get(op, 0) + 1
+        if not op in self._op_count:
+            self._op_count[ op ] = 0
+        self._op_count[ op ] += 1
         return self
 
     def getTimeSpent(self):
         return self._time_spent
 
     def incOperationsTimeSpent(self, op, start_time):
-        self._time_spent[ op ] = self._time_spent.get(op, 0) + time() - start_time
+        if not op in self._time_spent:
+            self._time_spent[ op ] = 0
+        self._time_spent[ op ] += time() - start_time
         return self
 
     def startTimer(self):

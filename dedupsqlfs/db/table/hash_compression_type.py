@@ -20,7 +20,7 @@ class TableHashCompressionType( Table ):
             ");"
         )
         c.execute(
-            "CREATE INDEX IF NOT EXISTS hash_compression_type ON `%s` (" % self._table_name+
+            "CREATE INDEX IF NOT EXISTS hct_compression_type ON `%s` (" % self._table_name+
                 "compression_type_id"+
             ");"
         )

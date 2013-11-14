@@ -451,7 +451,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             inodeTable = self.getTable("inode")
             treeTable = self.getTable("tree")
             # SIZE = name row size + tree row size + inode row size
-            size = nameTable.getRowSize() + inodeTable.getRowSize() + treeTable.getRowSize()
+            size = nameTable.getRowSize(name) + inodeTable.getRowSize() + treeTable.getRowSize()
 
             inode, parent_ino = self.__insert(parent_inode, name, mode | stat.S_IFDIR, size, ctx)
             self.getManager().getTable("inode").inc_nlinks(parent_ino)
@@ -1137,7 +1137,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             name_id = nameTable.insert(nameRoot)
             # Directory size: name-row-size + inode-row-size + tree-row-size
-            sz = nameTable.getRowSize() + inodeTable.getRowSize() + treeTable.getRowSize()
+            sz = nameTable.getRowSize(nameRoot) + inodeTable.getRowSize() + treeTable.getRowSize()
             inode_id = inodeTable.insert(2, self.root_mode, uid, gid, 0, sz, t_i, t_i, t_i, t_ns, t_ns, t_ns)
             treeTable.insert(None, name_id, inode_id)
 

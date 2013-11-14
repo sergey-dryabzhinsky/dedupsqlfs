@@ -207,7 +207,7 @@ class Subvolume(object):
 
                 apparent_size += tableInode.get_size(treeItem["inode_id"])
 
-                hashes = set([ item["hash_id"] for item in tableIndex.get_hashes_by_inode(treeItem["inode_id"])])
+                hashes = set(( item["hash_id"] for item in tableIndex.get_hashes_by_inode(treeItem["inode_id"])))
 
                 for hash_id in hashes:
 

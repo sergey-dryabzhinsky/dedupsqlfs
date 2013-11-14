@@ -16,7 +16,8 @@ class TableName( Table ):
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
-                "value BLOB NOT NULL UNIQUE"+
+                "value BLOB NOT NULL, "+
+                "UNIQUE(value) "
             ");"
         )
         return
@@ -62,15 +63,5 @@ class TableName( Table ):
         if item:
             item = item["value"]
         return item
-
-    def remove_by_ids(self, ids_list, _not_=False):
-        cur = self.getCursor()
-        if not _not_:
-            cur.execute("DELETE FROM `%s` WHERE id IN (%s)" % (self._table_name, ",".join(ids_list,)))
-        else:
-            cur.execute("DELETE FROM `%s` WHERE id NOT IN (%s)" % (self._table_name, ",".join(ids_list,)))
-        count = cur.rowcount
-        self.commit()
-        return count
 
     pass

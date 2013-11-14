@@ -142,6 +142,20 @@ class DbManager( object ):
             s += t.getFileSize()
         return s
 
+    def getOperationsCount(self):
+        s = 0
+        for name in self.tables:
+            t = self.getTable(name)
+            s += t.getOperationsCount()['all']
+        return s
+
+    def getTimeSpent(self):
+        s = 0
+        for name in self.tables:
+            t = self.getTable(name)
+            s += t.getTimeSpent()['all']
+        return s
+
     def create(self):
         for t in self.tables:
             self.getTable(t).create()

@@ -10,6 +10,7 @@ class TableHash( Table ):
     _table_name = "hash"
 
     def create( self ):
+        self.startTimer()
         c = self.getCursor()
 
         # Create table
@@ -20,15 +21,18 @@ class TableHash( Table ):
                 "UNIQUE(hash) " +
             ")"
         )
+        self.stopTimer()
         return
 
     def insert( self, value):
+        self.startTimer()
         cur = self.getCursor()
         bvalue = sqlite3.Binary(value)
         cur.execute("INSERT INTO `%s`(hash) VALUES (?)" % self._table_name,
                     (bvalue,))
         item = cur.lastrowid
         self.commit()
+        self.stopTimer()
         return item
 
     def update( self, item_id, value ):
@@ -36,29 +40,35 @@ class TableHash( Table ):
         @return: count updated rows
         @rtype: int
         """
+        self.startTimer()
         cur = self.getCursor()
         bvalue = sqlite3.Binary(value)
         cur.execute("UPDATE `%s` SET hash=? WHERE id=?" % self._table_name,
                     (bvalue, item_id))
         count = cur.rowcount
         self.commit()
+        self.stopTimer()
         return count
 
     def get( self, item_id ):
+        self.startTimer()
         cur = self.getCursor()
         cur.execute("SELECT hash FROM `%s` WHERE id=?" % self._table_name, (item_id,))
         item = cur.fetchone()
         if item:
             item = item["hash"]
+        self.stopTimer()
         return item
 
     def find( self, value ):
+        self.startTimer()
         cur = self.getCursor()
         bvalue = sqlite3.Binary(value)
         cur.execute("SELECT id FROM `%s` WHERE hash=?" % self._table_name, (bvalue,))
         item = cur.fetchone()
         if item:
             item = item["id"]
+        self.stopTimer()
         return item
 
     pass

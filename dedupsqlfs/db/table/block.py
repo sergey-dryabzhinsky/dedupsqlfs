@@ -10,6 +10,7 @@ class TableBlock( Table ):
     _table_name = "block"
 
     def create( self ):
+        self.startTimer()
         c = self.getCursor()
 
         # Create table
@@ -19,6 +20,7 @@ class TableBlock( Table ):
                 "data BLOB NOT NULL"+
             ");"
         )
+        self.stopTimer()
         return
 
     def insert( self, hash_id, data):
@@ -26,6 +28,7 @@ class TableBlock( Table ):
         :param data: bytes
         :return: int
         """
+        self.startTimer()
         cur = self.getCursor()
 
         bdata = sqlite3.Binary(data)
@@ -34,6 +37,7 @@ class TableBlock( Table ):
                     (hash_id, bdata,))
         item = cur.lastrowid
         self.commit()
+        self.stopTimer()
         return item
 
     def update( self, hash_id, data):
@@ -41,6 +45,7 @@ class TableBlock( Table ):
         :param data: bytes
         :return: int
         """
+        self.startTimer()
         cur = self.getCursor()
 
         bdata = sqlite3.Binary(data)
@@ -49,6 +54,7 @@ class TableBlock( Table ):
                     (bdata, hash_id,))
         count = cur.rowcount
         self.commit()
+        self.stopTimer()
         return count
 
     def get( self, hash_id):
@@ -56,9 +62,11 @@ class TableBlock( Table ):
         :param hash_id: int
         :return: Row
         """
+        self.startTimer()
         cur = self.getCursor()
         cur.execute("SELECT * FROM `%s` WHERE hash_id=?" % self._table_name, (hash_id,))
         item = cur.fetchone()
+        self.stopTimer()
         return item
 
     pass

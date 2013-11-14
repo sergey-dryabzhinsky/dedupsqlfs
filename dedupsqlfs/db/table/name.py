@@ -10,6 +10,7 @@ class TableName( Table ):
     _table_name = "name"
 
     def create(self):
+        self.startTimer()
         c = self.getCursor()
 
         # Create table
@@ -20,6 +21,7 @@ class TableName( Table ):
                 "UNIQUE(value) "
             ");"
         )
+        self.stopTimer()
         return
 
     def getRowSize(self, value):
@@ -35,6 +37,7 @@ class TableName( Table ):
         :param value: bytes
         :return: int
         """
+        self.startTimer()
         cur = self.getCursor()
 
         bvalue = sqlite3.Binary(value)
@@ -42,6 +45,7 @@ class TableName( Table ):
         cur.execute("INSERT INTO `%s`(value) VALUES (?)" % self._table_name, (bvalue,))
         item = cur.lastrowid
         self.commit()
+        self.stopTimer()
         return item
 
     def find(self, value):
@@ -49,6 +53,7 @@ class TableName( Table ):
         :param value: bytes
         :return: int
         """
+        self.startTimer()
         cur = self.getCursor()
 
         bvalue = sqlite3.Binary(value)
@@ -57,6 +62,7 @@ class TableName( Table ):
         item = cur.fetchone()
         if item:
             item = item["id"]
+        self.stopTimer()
         return item
 
     def get(self, name_id):
@@ -64,12 +70,14 @@ class TableName( Table ):
         :param name_id: int
         :return: bytes
         """
+        self.startTimer()
         cur = self.getCursor()
 
         cur.execute("SELECT value FROM `%s` WHERE id=?" % self._table_name, (name_id,))
         item = cur.fetchone()
         if item:
             item = item["value"]
+        self.stopTimer()
         return item
 
     pass

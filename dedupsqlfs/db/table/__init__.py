@@ -2,7 +2,9 @@
 
 __author__ = 'sergey'
 
+from time import time
 import os
+import inspect
 
 from dedupsqlfs.db import dict_factory
 
@@ -16,11 +18,45 @@ class Table( object ):
     _manager = None
     _autocommit = True
 
+    _last_time = None
+    _time_spent = None
+    _op_count = None
+
     def __init__(self, manager):
         if self._table_name is None:
             raise AttributeError("Define non-empty class variable '_table_name'")
         self._manager = manager
+        self._time_spent = {'all':0}
+        self._op_count = {'all':0}
         pass
+
+    def getOperationsCount(self):
+        return self._op_count
+
+    def incOperationsCount(self, op):
+        self._op_count[ op ] = self._op_count.get(op, 0) + 1
+        return self
+
+    def getTimeSpent(self):
+        return self._time_spent
+
+    def incOperationsTimeSpent(self, op, start_time):
+        self._time_spent[ op ] = self._time_spent.get(op, 0) + time() - start_time
+        return self
+
+    def startTimer(self):
+        self._last_time = time()
+        return self
+
+    def stopTimer(self):
+        op = inspect.stack()[1][3]
+
+        self.incOperationsCount('all')
+        self.incOperationsCount(op)
+        self.incOperationsTimeSpent('all', self._last_time)
+        self.incOperationsTimeSpent(op, self._last_time)
+        self._last_time = None
+        return self
 
     def getName(self):
         return self._table_name

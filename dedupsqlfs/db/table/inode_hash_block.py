@@ -9,6 +9,7 @@ class TableInodeHashBlock( Table ):
     _table_name = "inode_hash_block"
 
     def create( self ):
+        self.startTimer()
         c = self.getCursor()
 
         # Create table
@@ -30,56 +31,72 @@ class TableInodeHashBlock( Table ):
                 "inode_id"+
             ");"
         )
+        self.stopTimer()
         return
 
     def insert( self, inode, block_number, hash_id):
+        self.startTimer()
         cur = self.getCursor()
         cur.execute("INSERT INTO `%s`(inode_id, block_number, hash_id) VALUES (?,?,?)" % self._table_name,
                     (inode, block_number, hash_id))
         item = cur.lastrowid
         self.commit()
+        self.stopTimer()
         return item
 
     def update( self, inode, block_number, new_hash_id):
+        self.startTimer()
         cur = self.getCursor()
         cur.execute("UPDATE `%s` SET hash_id=? WHERE inode_id=? AND block_number=?" % self._table_name,
                     (new_hash_id, inode, block_number,))
         item = cur.rowcount
         self.commit()
+        self.stopTimer()
         return item
 
     def delete( self, inode ):
+        self.startTimer()
         cur = self.getCursor()
         cur.execute("DELETE FROM `%s` WHERE inode_id=?" % self._table_name, (inode,))
         count = cur.rowcount
         self.commit()
+        self.stopTimer()
         return count
 
     def get_by_inode_number( self, inode, block_number ):
+        self.startTimer()
         cur = self.getCursor()
         cur.execute("SELECT * FROM `%s` WHERE inode_id=? AND block_number=?" % self._table_name, (inode, block_number,))
         item = cur.fetchone()
+        self.stopTimer()
         return item
 
     def delete_by_inode_number( self, inode, block_number ):
+        self.startTimer()
         cur = self.getCursor()
         cur.execute("DELETE FROM `%s` WHERE inode_id=? AND block_number=?" % self._table_name, (inode, block_number,))
         item = cur.rowcount
+        self.stopTimer()
         return item
 
     def get_hashes_by_inode( self, inode):
+        self.startTimer()
         cur = self.getCursor()
         cur.execute("SELECT hash_id FROM `%s` WHERE inode_id=? GROUP BY hash_id" % self._table_name, (inode,))
         items = cur.fetchall()
+        self.stopTimer()
         return items
 
     def get_by_inode( self, inode):
+        self.startTimer()
         cur = self.getCursor()
         cur.execute("SELECT * FROM `%s` WHERE inode_id=?" % self._table_name, (inode,))
         items = cur.fetchall()
+        self.stopTimer()
         return items
 
     def get_count_hash( self, hash_id ):
+        self.startTimer()
         cur = self.getCursor()
         cur.execute("SELECT COUNT(1) as cnt FROM `%s` WHERE hash_id=?" % self._table_name, (hash_id,))
         item = cur.fetchone()
@@ -87,6 +104,7 @@ class TableInodeHashBlock( Table ):
             item = item["cnt"]
         else:
             item = 0
+        self.stopTimer()
         return item
 
     pass

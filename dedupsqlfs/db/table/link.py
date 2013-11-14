@@ -10,6 +10,7 @@ class TableLink( Table ):
     _table_name = "link"
 
     def create( self ):
+        self.startTimer()
         c = self.getCursor()
 
         # Create table
@@ -19,6 +20,7 @@ class TableLink( Table ):
                 "target BLOB NOT NULL"+
             ");"
         )
+        self.stopTimer()
         return
 
     def insert( self, inode, target):
@@ -26,6 +28,7 @@ class TableLink( Table ):
         :param target: bytes
         :return: int
         """
+        self.startTimer()
         cur = self.getCursor()
 
         btarget = sqlite3.Binary(target)
@@ -35,6 +38,7 @@ class TableLink( Table ):
         ))
         item = cur.lastrowid
         self.commit()
+        self.stopTimer()
         return item
 
     def find_by_inode( self, inode):
@@ -42,6 +46,7 @@ class TableLink( Table ):
         :param inode: int
         :return: int
         """
+        self.startTimer()
         cur = self.getCursor()
         cur.execute("SELECT target FROM `%s` WHERE inode_id=?" % self._table_name, (
             inode,
@@ -49,6 +54,7 @@ class TableLink( Table ):
         item = cur.fetchone()
         if item:
             item = item["target"]
+        self.stopTimer()
         return item
 
     pass

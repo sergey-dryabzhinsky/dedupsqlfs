@@ -1397,6 +1397,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.__report_compressed_usage()
         self.__report_throughput()
         self.__report_timings()
+        self.__report_database_timings()
+        self.__report_database_operations()
         self.getLogger().info(' ' * 79)
 
 
@@ -1405,9 +1407,11 @@ class DedupOperations(llfuse.Operations): # {{{1
             timings = [
                 (self.time_spent_caching_nodes, 'Caching tree nodes'),
                 (self.time_spent_interning, 'Interning path components'),
+                (self.time_spent_reading, 'Reading data stream'),
                 (self.time_spent_writing, 'Writing data stream'),
                 (self.time_spent_writing_blocks, 'Writing data blocks (cumulative)'),
                 (self.time_spent_writing_blocks - self.time_spent_compressing - self.time_spent_hashing, 'Writing blocks to database'),
+                (self.getManager().getTimeSpent(), 'Database operations'),
                 (self.time_spent_flushing_writed_block_cache - self.time_spent_writing_blocks, 'Flushing writed block cache'),
                 (self.time_spent_flushing_readed_block_cache, 'Flushing readed block cache (cumulative)'),
                 (self.time_spent_flushing_writed_block_cache, 'Flushing writed block cache (cumulative)'),
@@ -1430,12 +1434,70 @@ class DedupOperations(llfuse.Operations): # {{{1
             printed_heading = False
             for timespan, description in timings:
                 percentage = 100.0 * timespan / uptime
-                if percentage >= 0.01:
+                if percentage >= 0.1:
                     if not printed_heading:
                         self.getLogger().info("Cumulative timings of slowest operations:")
                         printed_heading = True
                     self.getLogger().info(
-                        " - %-*s%s (%.2f%%)" % (maxdescwidth, description + ':', format_timespan(timespan), percentage))
+                        " - %-*s%s (%.1f%%)" % (maxdescwidth, description + ':', format_timespan(timespan), percentage))
+
+    def __report_database_timings(self): # {{{3
+        if self.getLogger().isEnabledFor(logging.INFO):
+            timings = []
+            for tn in self.getManager().tables:
+                t = self.getTable(tn)
+
+                opTimes = t.getTimeSpent()
+                for op, time in opTimes.items():
+                    if op == 'all':
+                        timings.append((time, 'Table %r - cumulative timings' % tn,))
+                    else:
+                        timings.append((time, 'Table %r - operation %r timings' % (tn, op,),))
+
+            maxdescwidth = max([len(l) for t, l in timings]) + 3
+            timings.sort(reverse=True)
+
+            alltime = self.getManager().getTimeSpent()
+            self.getLogger().info("Database all operations timings: %s", format_timespan(alltime))
+
+            printed_heading = False
+            for timespan, description in timings:
+                percentage = 100.0 * timespan / alltime
+                if percentage >= 0.1:
+                    if not printed_heading:
+                        self.getLogger().info("Cumulative timings of slowest tables:")
+                        printed_heading = True
+                    self.getLogger().info(
+                        " - %-*s%s (%.1f%%)" % (maxdescwidth, description + ':', format_timespan(timespan), percentage))
+
+    def __report_database_operations(self): # {{{3
+        if self.getLogger().isEnabledFor(logging.INFO):
+            counts = []
+            for tn in self.getManager().tables:
+                t = self.getTable(tn)
+
+                opCount = t.getOperationsCount()
+                for op, count in opCount.items():
+                    if op == 'all':
+                        counts.append((count, 'Table %r - cumulative operations count' % tn,))
+                    else:
+                        counts.append((count, 'Table %r - operation %r count' % (tn, op,),))
+
+            maxdescwidth = max([len(l) for t, l in counts]) + 3
+            counts.sort(reverse=True)
+
+            allcount = self.getManager().getOperationsCount()
+            self.getLogger().info("Database all operations: %s", format_timespan(allcount))
+
+            printed_heading = False
+            for count, description in counts:
+                percentage = 100.0 * count / allcount
+                if percentage >= 0.1:
+                    if not printed_heading:
+                        self.getLogger().info("Cumulative count of operations:")
+                        printed_heading = True
+                    self.getLogger().info(
+                        " - %-*s%s (%.1f%%)" % (maxdescwidth, description + ':', count, percentage))
 
     def __report_memory_usage(self): # {{{3
         memory_usage = get_memory_usage()

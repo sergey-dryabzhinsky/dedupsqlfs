@@ -189,6 +189,10 @@ class Subvolume(object):
 
             compMethods = {}
 
+            hashCount = {}
+            hashCT = {}
+            hashBS = {}
+
             curTree = tableTree.getCursor()
             curTree.execute("SELECT inode_id FROM tree WHERE subvol_id=?", (node['id'],))
 
@@ -206,14 +210,30 @@ class Subvolume(object):
                 hashes = set([ item["hash_id"] for item in tableIndex.get_hashes_by_inode(treeItem["inode_id"])])
 
                 for hash_id in hashes:
-                    cnt = tableIndex.get_count_hash(hash_id)
 
-                    hctItem = tableHCT.get(hash_id)
-                    method = self.getManager().getCompressionTypeName(hctItem["compression_type_id"])
+                    if hash_id in hashCount:
+                        cnt = hashCount[hash_id]
+                    else:
+                        cnt = tableIndex.get_count_hash(hash_id)
+                        hashCount[hash_id] = cnt
+
+                    if hash_id in hashCT:
+                        method = hashCT[hash_id]
+                    else:
+                        hctItem = tableHCT.get(hash_id)
+                        method = self.getManager().getCompressionTypeName(hctItem["compression_type_id"])
+                        hashCT[hash_id] = method
+
                     compMethods[ method ] = compMethods.get(method, 0) + 1
 
                     if cnt == 1:
-                        hbsItem = tableHBS.get(hash_id)
+
+                        if hash_id in hashBS:
+                            hbsItem = hashBS[ hash_id ]
+                        else:
+                            hbsItem = tableHBS.get(hash_id)
+                            hashBS[ hash_id ] = hbsItem
+
                         unique_size += hbsItem['real_size']
                         compressed_size += hbsItem['comp_size']
 

@@ -447,7 +447,13 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             parent_inode = self.__fix_inode_if_requested_root(parent_inode)
 
-            inode, parent_ino = self.__insert(parent_inode, name, mode | stat.S_IFDIR, len(name) + 4 + 13*4 + 5*4 + 5*4, ctx)
+            nameTable = self.getTable("name")
+            inodeTable = self.getTable("inode")
+            treeTable = self.getTable("tree")
+            # SIZE = name row size + tree row size + inode row size
+            size = nameTable.getRowSize() + inodeTable.getRowSize() + treeTable.getRowSize()
+
+            inode, parent_ino = self.__insert(parent_inode, name, mode | stat.S_IFDIR, size, ctx)
             self.getManager().getTable("inode").inc_nlinks(parent_ino)
             self.__commit_changes()
             return self.__getattr(inode)
@@ -1116,23 +1122,22 @@ class DedupOperations(llfuse.Operations): # {{{1
         # use Python's os.getuid() and os.getgid() library functions instead of
         # fuse.FuseGetContext().
 
-        manager = self.getManager()
-        optTable = manager.getTable("option")
+        optTable = self.getTable("option")
         inited = optTable.get("inited")
 
         if not inited:
 
-            inodeTable = manager.getTable("inode")
-            nameTable = manager.getTable("name")
-            treeTable = manager.getTable("tree")
+            inodeTable = self.getTable("inode")
+            nameTable = self.getTable("name")
+            treeTable = self.getTable("tree")
 
             uid, gid = os.getuid(), os.getgid()
             t_i, t_ns = self.__newctime_tuple()
             nameRoot = b''
 
             name_id = nameTable.insert(nameRoot)
-            # Directory size: name-row-size + inode-row-size + index-row-size + tree-row-size
-            sz = len(nameRoot) + 4 + 13*4 + 5*4 + 5*4
+            # Directory size: name-row-size + inode-row-size + tree-row-size
+            sz = nameTable.getRowSize() + inodeTable.getRowSize() + treeTable.getRowSize()
             inode_id = inodeTable.insert(2, self.root_mode, uid, gid, 0, sz, t_i, t_i, t_i, t_ns, t_ns, t_ns)
             treeTable.insert(None, name_id, inode_id)
 
@@ -1243,6 +1248,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         nlinks = mode & stat.S_IFDIR and 2 or 1
 
         manager = self.getManager()
+        nameTable = manager.getTable("name")
         inodeTable = manager.getTable("inode")
         treeTable = manager.getTable("tree")
 
@@ -1253,6 +1259,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             t_i, t_i, t_i,
             t_ns, t_ns, t_ns
         )
+
         name_id = self.__intern(name)
 
         par_node = self.__get_tree_node_by_inode(parent_inode)

@@ -51,6 +51,9 @@ class TableTree( Table ):
         )
         return
 
+    def getRowSize(self):
+        return 5 * 13
+
     def selectSubvolume(self, node_id):
         self._selected_subvol = node_id
         return self

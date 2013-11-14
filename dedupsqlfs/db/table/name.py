@@ -22,6 +22,14 @@ class TableName( Table ):
         )
         return
 
+    def getRowSize(self, value):
+        """
+        :param value: bytes
+        :return: int
+        """
+        bvalue = sqlite3.Binary(value)
+        return 8 + len(bvalue)*2+12
+
     def insert(self, value):
         """
         :param value: bytes

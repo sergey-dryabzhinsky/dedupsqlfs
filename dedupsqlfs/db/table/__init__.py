@@ -65,7 +65,8 @@ class Table( object ):
         return self
 
     def stopTimer(self):
-        op = '%s' % inspect.stack()[1][3]
+        caller = inspect.currentframe().f_back
+        op = inspect.getframeinfo(caller)[2]
 
         self.incOperationsCount(op)
         self.incOperationsTimeSpent(op, self._last_time)

@@ -26,15 +26,21 @@ class Table( object ):
         if self._table_name is None:
             raise AttributeError("Define non-empty class variable '_table_name'")
         self._manager = manager
-        self._time_spent = {'all':0}
-        self._op_count = {'all':0}
+        self._time_spent = {}
+        self._op_count = {}
         pass
 
     def getOperationsCount(self):
         return self._op_count
 
+    def getAllOperationsCount(self):
+        s = 0
+        for op, c in self._op_count.items():
+            s += c
+        return s
+
     def incOperationsCount(self, op):
-        if not op in self._op_count:
+        if not (op in self._op_count):
             self._op_count[ op ] = 0
         self._op_count[ op ] += 1
         return self
@@ -42,8 +48,14 @@ class Table( object ):
     def getTimeSpent(self):
         return self._time_spent
 
+    def getAllTimeSpent(self):
+        s = 0
+        for op, t in self._time_spent.items():
+            s += t
+        return s
+
     def incOperationsTimeSpent(self, op, start_time):
-        if not op in self._time_spent:
+        if not (op in self._time_spent):
             self._time_spent[ op ] = 0
         self._time_spent[ op ] += time() - start_time
         return self
@@ -53,9 +65,6 @@ class Table( object ):
         return self
 
     def stopTimer(self):
-        self.incOperationsCount('all')
-        self.incOperationsTimeSpent('all', self._last_time)
-
         op = '%s' % inspect.stack()[1][3]
 
         self.incOperationsCount(op)

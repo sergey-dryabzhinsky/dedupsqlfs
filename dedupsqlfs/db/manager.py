@@ -146,14 +146,14 @@ class DbManager( object ):
         s = 0
         for name in self.tables:
             t = self.getTable(name)
-            s += t.getOperationsCount()['all']
+            s += t.getAllOperationsCount()
         return s
 
     def getTimeSpent(self):
         s = 0
         for name in self.tables:
             t = self.getTable(name)
-            s += t.getTimeSpent()['all']
+            s += t.getAllTimeSpent()
         return s
 
     def create(self):

@@ -60,12 +60,14 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.cache_gc_meta_last_run = time.time()
         self.cache_gc_block_write_last_run = time.time()
         self.cache_gc_block_read_last_run = time.time()
-        self.cache_timeout = 5
-        self.cache_meta_timeout = 15
+        self.cache_timeout = 10
+        self.cache_meta_timeout = 20
         self.cache_block_write_timeout = 5
         self.cache_block_read_timeout = 10
         self.cache_block_write_size = 256*1024*1024
         self.cache_block_read_size = 256*1024*1024
+
+        self.subvol_uptate_last_run = time.time()
 
         self.cached_nodes = CacheTTLseconds()
         self.cached_attrs = CacheTTLseconds()
@@ -100,7 +102,15 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.time_spent_traversing_tree = 0
         self.time_spent_writing = 0
         self.time_spent_writing_blocks = 0
+
         self.time_spent_flushing_block_cache = 0
+        self.time_spent_flushing_writed_block_cache = 0
+        self.time_spent_flushing_readed_block_cache = 0
+        self.time_spent_flushing_writedByTime_block_cache = 0
+        self.time_spent_flushing_readedByTime_block_cache = 0
+        self.time_spent_flushing_writedBySize_block_cache = 0
+        self.time_spent_flushing_readedBySize_block_cache = 0
+
         self.time_spent_compressing = 0
         self.time_spent_decompressing = 0
 
@@ -868,6 +878,12 @@ class DedupOperations(llfuse.Operations): # {{{1
         return inode
 
     def __update_mounted_subvolume_time(self):
+        t_now = time.time()
+        if t_now - self.subvol_uptate_last_run < 1:
+            return self
+
+        self.subvol_uptate_last_run = t_now
+
         if self.mounted_snapshot and not self.getOption("disable_subvolumes"):
             node = self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, self.mounted_snapshot)
             if node:
@@ -1385,7 +1401,14 @@ class DedupOperations(llfuse.Operations): # {{{1
                 (self.time_spent_writing, 'Writing data stream'),
                 (self.time_spent_writing_blocks, 'Writing data blocks (cumulative)'),
                 (self.time_spent_writing_blocks - self.time_spent_compressing - self.time_spent_hashing, 'Writing blocks to database'),
-                (self.time_spent_flushing_block_cache - self.time_spent_writing_blocks, 'Flushing block cache'),
+                (self.time_spent_flushing_writed_block_cache - self.time_spent_writing_blocks, 'Flushing writed block cache'),
+                (self.time_spent_flushing_readed_block_cache, 'Flushing readed block cache (cumulative)'),
+                (self.time_spent_flushing_writed_block_cache, 'Flushing writed block cache (cumulative)'),
+                (self.time_spent_flushing_writedByTime_block_cache, 'Flushing writed block cache (by Time)'),
+                (self.time_spent_flushing_writedBySize_block_cache, 'Flushing writed block cache (by Size)'),
+                (self.time_spent_flushing_readedByTime_block_cache, 'Flushing readed block cache (by Time)'),
+                (self.time_spent_flushing_readedBySize_block_cache, 'Flushing readed block cache (by Size)'),
+                (self.time_spent_flushing_block_cache, 'Flushing block cache (cumulative)'),
                 (self.time_spent_hashing, 'Hashing data blocks'),
                 (self.time_spent_compressing, 'Compressing data blocks'),
                 (self.time_spent_decompressing, 'Decompressing data blocks'),
@@ -1492,20 +1515,28 @@ class DedupOperations(llfuse.Operations): # {{{1
         start_time = time.time()
 
         tableIndex = self.getTable("inode_hash_block")
-        tableBlock = self.getTable("block")
-        tableHash = self.getTable("hash")
 
         block.seek(0)
         data_block = block.getvalue()
 
         block_length = len(data_block)
 
-        hash_value = self.__hash(data_block)
-        hash_id = tableHash.find(hash_value)
-
         block_index = tableIndex.get_by_inode_number(inode, block_number)
 
         self.getLogger().debug("write block: inode=%s, block number = %s, data length = %s" % (inode, block_number, block_length))
+
+        if block_length == 0 and block_index:
+            self.getLogger().debug("write block: remove empty block")
+            tableIndex.delete_by_inode_number(inode, block_number)
+
+            self.time_spent_writing_blocks += time.time() - start_time
+            return
+
+        tableBlock = self.getTable("block")
+        tableHash = self.getTable("hash")
+
+        hash_value = self.__hash(data_block)
+        hash_id = tableHash.find(hash_value)
 
         # It is new block now?
         if not hash_id:
@@ -1575,75 +1606,75 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __cache_block_hook(self): # {{{3
 
-        if not self.cache_enabled:
-            return
-
         start_time = time.time()
         flushed_writed_blocks = 0
         flushed_readed_blocks = 0
+        flushed_writed_expiredByTime_blocks = 0
+        flushed_readed_expiredByTime_blocks = 0
+        flushed_writed_expiredBySize_blocks = 0
+        flushed_readed_expiredBySize_blocks = 0
 
+        start_time1 = time.time()
         if time.time() - self.cache_gc_block_write_last_run >= self.cache_block_write_timeout:
-            # start_time = time.time()
-            # self.getLogger().debug("Performing writed block cache cleanup (this might take a while) ..")
-
-            # size = len(self.cached_blocks)
-            flushed_writed_blocks += self.__flush_old_cached_blocks(self.cached_blocks.expired(True), True)
-            # self.getLogger().debug(" flushed %i of %i blocks", count, size)
+            flushed = self.__flush_old_cached_blocks(self.cached_blocks.expired(True), True)
+            flushed_writed_blocks += flushed
+            flushed_writed_expiredByTime_blocks += flushed
 
             self.cache_gc_block_write_last_run = time.time()
 
-            # elapsed_time = time.time() - start_time
-            # self.getLogger().debug("Finished writed block cache cleanup in %s.", format_timespan(elapsed_time))
+        elapsed_time1 = time.time() - start_time1
+        self.time_spent_flushing_writed_block_cache += elapsed_time1
+        self.time_spent_flushing_writedByTime_block_cache += elapsed_time1
 
+
+        start_time1 = time.time()
         if self.cached_blocks.isWritedCacheFull():
-            #start_time = time.time()
-            #self.getLogger().debug("Performing writed block cache cleanup (this might take a while) ..")
+            flushed = self.__flush_old_cached_blocks(self.cached_blocks.expireByCount(True), True)
+            flushed_writed_blocks += flushed
+            flushed_writed_expiredBySize_blocks += flushed
 
-            #size = len(self.cached_blocks)
-            flushed_writed_blocks += self.__flush_old_cached_blocks(self.cached_blocks.expireByCount(True), True)
-            #self.getLogger().debug(" flushed %i of %i blocks", count, size)
+        elapsed_time1 = time.time() - start_time1
+        self.time_spent_flushing_writed_block_cache += elapsed_time1
+        self.time_spent_flushing_writedBySize_block_cache += elapsed_time1
 
-            #elapsed_time = time.time() - start_time
-            #self.getLogger().debug("Finished writed block cache cleanup in %s.", format_timespan(elapsed_time))
 
+        start_time1 = time.time()
         if time.time() - self.cache_gc_block_read_last_run >= self.cache_block_read_timeout:
-            #start_time = time.time()
-            #self.getLogger().debug("Performing readed block cache cleanup (this might take a while) ..")
-
-            #size = len(self.cached_blocks)
-            flushed_readed_blocks += self.cached_blocks.expired(False)
-            #self.getLogger().debug(" flushed %i of %i blocks", count, size)
+            flushed = self.cached_blocks.expired(False)
+            flushed_readed_blocks += flushed
+            flushed_readed_expiredByTime_blocks += flushed
 
             self.cache_gc_block_read_last_run = time.time()
 
-            #elapsed_time = time.time() - start_time
-            #self.getLogger().debug("Finished readed block cache cleanup in %s.", format_timespan(elapsed_time))
+        elapsed_time1 = time.time() - start_time1
+        self.time_spent_flushing_readed_block_cache += elapsed_time1
+        self.time_spent_flushing_readedByTime_block_cache += elapsed_time1
 
+
+        start_time1 = time.time()
         if self.cached_blocks.isReadCacheFull():
-            #start_time = time.time()
-            #self.getLogger().debug("Performing readed block cache cleanup (this might take a while) ..")
+            flushed = self.cached_blocks.expireByCount(False)
+            flushed_readed_blocks += flushed
+            flushed_readed_expiredBySize_blocks += flushed
 
-            #size = len(self.cached_blocks)
-            flushed_readed_blocks += self.cached_blocks.expireByCount(False)
-            #self.getLogger().debug(" flushed %i of %i blocks", count, size)
+        elapsed_time1 = time.time() - start_time1
+        self.time_spent_flushing_readed_block_cache += elapsed_time1
+        self.time_spent_flushing_readedBySize_block_cache += elapsed_time1
 
-            #elapsed_time = time.time() - start_time
-            #self.getLogger().debug("Finished writed block cache cleanup in %s.", format_timespan(elapsed_time))
 
         elapsed_time = time.time() - start_time
 
         self.time_spent_flushing_block_cache += elapsed_time
 
         if flushed_writed_blocks + flushed_readed_blocks > 0:
-            self.getLogger().info("Block cache cleanup: flushed %i writed, %i readed blocks in %s",
-                                  flushed_writed_blocks, flushed_readed_blocks, format_timespan(elapsed_time))
+            self.getLogger().info("Block cache cleanup: flushed %i writed (%i/t, %i/sz), %i readed (%i/t, %i/sz) blocks in %s",
+                                  flushed_writed_blocks, flushed_writed_expiredByTime_blocks, flushed_writed_expiredBySize_blocks,
+                                  flushed_readed_blocks, flushed_readed_expiredByTime_blocks, flushed_readed_expiredBySize_blocks,
+                                  format_timespan(elapsed_time))
 
         return
 
     def __cache_meta_hook(self): # {{{3
-
-        if not self.cache_enabled:
-            return
 
         start_time = time.time()
 

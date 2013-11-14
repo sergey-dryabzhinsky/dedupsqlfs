@@ -65,12 +65,12 @@ def main(): # {{{1
     parser.add_argument('--memory-limit', dest='memory_limit', action='store_true', help="Use some lower values for less memory consumption.")
 
     parser.add_argument('--no-cache', dest='use_cache', action='store_false', help="Don't use cache in memory and delayed write to storage files.")
-    parser.add_argument('--cache-timeout', dest='cache_timeout', metavar='NUMBER', type=int, default=5, help="Store data in memory for NUMBER of seconds. Defaults to 5 seconds.")
-    parser.add_argument('--cache-meta-timeout', dest='cache_meta_timeout', metavar='NUMBER', type=int, default=15, help="Delay flush expired metadata for NUMBER of seconds. Defaults to 15 seconds.")
-    parser.add_argument('--cache-block-write-timeout', dest='cache_block_write_timeout', metavar='NUMBER', type=int, default=5, help="Delay flush expired data from memory to storage for NUMBER of seconds. Defaults to 5 seconds.")
+    parser.add_argument('--cache-timeout', dest='cache_timeout', metavar='NUMBER', type=int, default=10, help="Store data in memory for NUMBER of seconds. Defaults to 10 seconds.")
+    parser.add_argument('--cache-meta-timeout', dest='cache_meta_timeout', metavar='NUMBER', type=int, default=20, help="Delay flush expired metadata for NUMBER of seconds. Defaults to 20 seconds.")
+    parser.add_argument('--cache-block-write-timeout', dest='cache_block_write_timeout', metavar='NUMBER', type=int, default=5, help="Delay flush expired data from memory to storage for NUMBER of seconds. Defaults to 10 seconds.")
     parser.add_argument('--cache-block-write-size', dest='cache_block_write_size', metavar='BYTES', type=int,
                         default=256*1024*1024, help="Blocks write cache potential size in BYTES. Defines upper limit of blocks count in cache. Defaults to 256 MB (2048 default blocks).")
-    parser.add_argument('--cache-block-read-timeout', dest='cache_block_read_timeout', metavar='NUMBER', type=int, default=2, help="Delay flush expired data from memory for NUMBER of seconds. Defaults to 2 seconds.")
+    parser.add_argument('--cache-block-read-timeout', dest='cache_block_read_timeout', metavar='NUMBER', type=int, default=10, help="Delay flush expired data from memory for NUMBER of seconds. Defaults to 5 seconds.")
     parser.add_argument('--cache-block-read-size', dest='cache_block_read_size', metavar='BYTES', type=int,
                         default=256*1024*1024, help="Blocks read cache potential size in BYTES. Defines upper limit of blocks count in cache. Defaults to 256 MB (2048 default blocks).")
 

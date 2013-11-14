@@ -57,6 +57,12 @@ class TableInodeHashBlock( Table ):
         item = cur.fetchone()
         return item
 
+    def delete_by_inode_number( self, inode, block_number ):
+        cur = self.getCursor()
+        cur.execute("DELETE FROM `%s` WHERE inode_id=? AND block_number=?" % self._table_name, (inode, block_number,))
+        item = cur.rowcount
+        return item
+
     def get_hashes_by_inode( self, inode):
         cur = self.getCursor()
         cur.execute("SELECT hash_id,block_size FROM `%s` WHERE inode_id=? GROUP BY hash_id" % self._table_name, (inode,))

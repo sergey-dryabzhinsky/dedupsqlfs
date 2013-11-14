@@ -1448,11 +1448,11 @@ class DedupOperations(llfuse.Operations): # {{{1
                 t = self.getTable(tn)
 
                 opTimes = t.getTimeSpent()
-                for op, time in opTimes.items():
+                for op, timespan in opTimes.items():
                     if op == 'all':
-                        timings.append((time, 'Table %r - cumulative timings' % tn,))
+                        timings.append((timespan, 'Table %r - cumulative timings' % tn,))
                     else:
-                        timings.append((time, 'Table %r - operation %r timings' % (tn, op,),))
+                        timings.append((timespan, 'Table %r - operation %r timings' % (tn, op,),))
 
             maxdescwidth = max([len(l) for t, l in timings]) + 3
             timings.sort(reverse=True)
@@ -1487,7 +1487,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             counts.sort(reverse=True)
 
             allcount = self.getManager().getOperationsCount()
-            self.getLogger().info("Database all operations: %s", format_timespan(allcount))
+            self.getLogger().info("Database all operations: %s", allcount)
 
             printed_heading = False
             for count, description in counts:

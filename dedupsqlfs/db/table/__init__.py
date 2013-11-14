@@ -56,7 +56,7 @@ class Table( object ):
         self.incOperationsCount('all')
         self.incOperationsTimeSpent('all', self._last_time)
 
-        op = inspect.stack()[1][3]
+        op = '%s' % inspect.stack()[1][3]
 
         self.incOperationsCount(op)
         self.incOperationsTimeSpent(op, self._last_time)

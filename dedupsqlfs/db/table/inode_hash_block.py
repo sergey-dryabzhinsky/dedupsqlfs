@@ -80,7 +80,7 @@ class TableInodeHashBlock( Table ):
     def get_hashes_by_inode( self, inode):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT hash_id FROM `%s` WHERE inode_id=? GROUP BY hash_id" % self._table_name, (inode,))
+        cur.execute("SELECT hash_id FROM `%s` WHERE inode_id=?" % self._table_name, (inode,))
         items = cur.fetchall()
         self.stopTimer()
         return items

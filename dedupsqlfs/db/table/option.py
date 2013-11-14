@@ -9,7 +9,6 @@ class TableOption( Table ):
     _table_name = "option"
 
     def create( self ):
-        self.startTimer()
         c = self.getCursor()
 
         # Create table
@@ -19,7 +18,6 @@ class TableOption( Table ):
                 "value TEXT NULL"+
             ")"
         )
-        self.stopTimer()
         return
 
     def insert( self, name, value ):

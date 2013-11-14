@@ -9,7 +9,6 @@ class TableInodeHashBlock( Table ):
     _table_name = "inode_hash_block"
 
     def create( self ):
-        self.startTimer()
         c = self.getCursor()
 
         # Create table
@@ -31,7 +30,6 @@ class TableInodeHashBlock( Table ):
                 "inode_id"+
             ");"
         )
-        self.stopTimer()
         return
 
     def insert( self, inode, block_number, hash_id):

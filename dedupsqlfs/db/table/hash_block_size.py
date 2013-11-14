@@ -9,7 +9,6 @@ class TableHashBlockSize( Table ):
     _table_name = "hash_block_size"
 
     def create( self ):
-        self.startTimer()
         c = self.getCursor()
 
         # Create table
@@ -21,7 +20,6 @@ class TableHashBlockSize( Table ):
                 "UNIQUE(hash_id) " +
             ");"
         )
-        self.stopTimer()
         return
 
     def insert( self, hash_id, real_size, comp_size):

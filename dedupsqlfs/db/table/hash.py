@@ -10,7 +10,6 @@ class TableHash( Table ):
     _table_name = "hash"
 
     def create( self ):
-        self.startTimer()
         c = self.getCursor()
 
         # Create table
@@ -21,7 +20,6 @@ class TableHash( Table ):
                 "UNIQUE(hash) " +
             ")"
         )
-        self.stopTimer()
         return
 
     def insert( self, value):

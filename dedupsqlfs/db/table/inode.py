@@ -9,7 +9,6 @@ class TableInode( Table ):
     _table_name = "inode"
 
     def create( self ):
-        self.startTimer()
         c = self.getCursor()
 
         # Create table
@@ -35,7 +34,6 @@ class TableInode( Table ):
                 "nlinks"+
             ");"
         )
-        self.stopTimer()
         return
 
     def getRowSize(self):

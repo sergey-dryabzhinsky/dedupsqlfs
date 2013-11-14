@@ -9,7 +9,6 @@ class TableHashCompressionType( Table ):
     _table_name = "hash_compression_type"
 
     def create( self ):
-        self.startTimer()
         c = self.getCursor()
 
         # Create table
@@ -25,7 +24,6 @@ class TableHashCompressionType( Table ):
                 "compression_type_id"+
             ");"
         )
-        self.stopTimer()
         return
 
     def insert( self, hash_id, compression_type_id):

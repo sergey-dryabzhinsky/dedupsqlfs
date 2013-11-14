@@ -11,7 +11,6 @@ class TableInodeXattr( Table ):
     _table_name = "xattr"
 
     def create( self ):
-        self.startTimer()
         c = self.getCursor()
 
         # Create table
@@ -22,7 +21,6 @@ class TableInodeXattr( Table ):
                 "UNIQUE(inode_id) " +
             ");"
         )
-        self.stopTimer()
         return
 
     def insert( self, inode, values):

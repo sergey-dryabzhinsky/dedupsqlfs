@@ -10,7 +10,6 @@ class TableLink( Table ):
     _table_name = "link"
 
     def create( self ):
-        self.startTimer()
         c = self.getCursor()
 
         # Create table
@@ -20,7 +19,6 @@ class TableLink( Table ):
                 "target BLOB NOT NULL"+
             ");"
         )
-        self.stopTimer()
         return
 
     def insert( self, inode, target):

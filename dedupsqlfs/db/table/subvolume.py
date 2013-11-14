@@ -10,7 +10,6 @@ class TableSubvolume( Table ):
     _table_name = "subvolume"
 
     def create( self ):
-        self.startTimer()
         c = self.getCursor()
 
         # Create table
@@ -22,7 +21,6 @@ class TableSubvolume( Table ):
                 "updated_at INTEGER"+
             ");"
         )
-        self.stopTimer()
         return
 
     def insert( self, node_id, created_at, mounted_at=None, updated_at=None ):

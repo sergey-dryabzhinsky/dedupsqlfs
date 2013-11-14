@@ -10,7 +10,6 @@ class TableBlock( Table ):
     _table_name = "block"
 
     def create( self ):
-        self.startTimer()
         c = self.getCursor()
 
         # Create table
@@ -20,7 +19,6 @@ class TableBlock( Table ):
                 "data BLOB NOT NULL"+
             ");"
         )
-        self.stopTimer()
         return
 
     def insert( self, hash_id, data):

@@ -11,7 +11,6 @@ class TableTree( Table ):
     _selected_subvol = None
 
     def create( self ):
-        self.startTimer()
         c = self.getCursor()
 
         # Create table
@@ -50,7 +49,6 @@ class TableTree( Table ):
                 "name_id"+
             ");"
         )
-        self.stopTimer()
         return
 
     def getRowSize(self):

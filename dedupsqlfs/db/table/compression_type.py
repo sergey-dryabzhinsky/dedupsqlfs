@@ -9,7 +9,6 @@ class TableCompressionType( Table ):
     _table_name = "compression_type"
 
     def create( self ):
-        self.startTimer()
         c = self.getCursor()
 
         # Create table
@@ -19,7 +18,6 @@ class TableCompressionType( Table ):
                 "value TEXT NOT NULL UNIQUE"+
             ")"
         )
-        self.stopTimer()
         return
 
     def insert( self, value ):

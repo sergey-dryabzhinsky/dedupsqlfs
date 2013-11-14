@@ -89,10 +89,12 @@ class Table( object ):
         if not os.path.exists(db_dir):
             os.makedirs(db_dir)
 
+        isNew = False
         pageSize = 512
         if os.path.isfile(db_path):
             fileSize = os.path.getsize(db_path)
         else:
+            isNew = True
             fileSize = 0
         filePageSize = fileSize / 2147483646.0 * 1.05
         while pageSize < filePageSize:
@@ -120,7 +122,8 @@ class Table( object ):
 
         self._conn = conn
 
-        self.create()
+        if isNew:
+            self.create()
         return
 
     def getConnection(self):

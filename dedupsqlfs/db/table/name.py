@@ -10,7 +10,6 @@ class TableName( Table ):
     _table_name = "name"
 
     def create(self):
-        self.startTimer()
         c = self.getCursor()
 
         # Create table
@@ -21,7 +20,6 @@ class TableName( Table ):
                 "UNIQUE(value) "
             ");"
         )
-        self.stopTimer()
         return
 
     def getRowSize(self, value):

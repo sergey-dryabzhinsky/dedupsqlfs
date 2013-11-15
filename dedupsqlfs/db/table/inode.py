@@ -82,7 +82,7 @@ class TableInode( Table ):
         cur.execute(query, values)
         item = cur.rowcount
         self.commit()
-        self.stopTimer('update_date')
+        self.stopTimer('update_data')
         return item
 
     def set_size(self, inode, size):

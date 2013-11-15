@@ -35,7 +35,9 @@ class InodesTime(object):
         inode = str(inode)
 
         if inode not in self._inodes:
-            self._inodes[ inode ] = {}
+            self._inodes[ inode ] = {
+                "w" : writed
+            }
 
         inode_data = self._inodes[inode]
 
@@ -80,10 +82,10 @@ class InodesTime(object):
 
             inode_data = self._inodes[inode]
 
-            t = inode_data["time"]
             if inode_data["w"] != writed:
                 continue
 
+            t = inode_data["time"]
             if now - t > self._max_ttl:
                 if writed:
                     old_inodes[inode] = inode_data["data"]

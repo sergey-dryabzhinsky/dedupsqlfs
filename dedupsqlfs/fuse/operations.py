@@ -666,7 +666,11 @@ class DedupOperations(llfuse.Operations): # {{{1
         @type   attr:   llfuse.EntryAttributes
         """
         try:
-            self.__log_call('setattr', 'setattr(inode=%i, attr=%r)', inode, vars(attr))
+            v = {}
+            for a in attr.__slots__:
+                v[a] = getattr(attr, a)
+
+            self.__log_call('setattr', 'setattr(inode=%i, attr=%r)', inode, v)
             if self.isReadonly(): return -errno.EROFS
 
             inode = self.__fix_inode_if_requested_root(inode)

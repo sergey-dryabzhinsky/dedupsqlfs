@@ -34,8 +34,9 @@ except ImportError:
 # Local modules that are mostly useful for debugging.
 from dedupsqlfs.my_formats import format_size, format_timespan
 from dedupsqlfs.get_memory_usage import get_real_memory_usage, get_memory_usage
-from dedupsqlfs.lib.cache import CacheTTLseconds
-from dedupsqlfs.lib.storage import StorageTTLseconds
+from dedupsqlfs.lib.cache.simple import CacheTTLseconds
+from dedupsqlfs.lib.cache.storage import StorageTimeSize
+from dedupsqlfs.lib.cache.inodes import InodesTime
 from dedupsqlfs.fuse.subvolume import Subvolume
 
 class DedupOperations(llfuse.Operations): # {{{1
@@ -71,9 +72,9 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.cached_names = CacheTTLseconds()
         self.cached_nodes = CacheTTLseconds()
-        self.cached_attrs = CacheTTLseconds()
+        self.cached_attrs = InodesTime()
 
-        self.cached_blocks = StorageTTLseconds()
+        self.cached_blocks = StorageTimeSize()
 
         self.calls_log_filter = []
 
@@ -709,10 +710,10 @@ class DedupOperations(llfuse.Operations): # {{{1
                                        attr.st_atime, attr.st_mtime, attr.st_ctime)
                 self.getLogger().debug("new attrs: %r", new_data)
 
-                self.getTable("inode").update_data(inode, new_data)
+                # self.getTable("inode").update_data(inode, new_data)
 
                 row.update(new_data)
-                self.cached_attrs.set(inode, row)
+                self.cached_attrs.set(inode, row, writed=True)
 
             self.__cache_meta_hook()
 
@@ -831,9 +832,9 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             attrs = self.__get_inode_row(fh)
             if attrs["size"] < offset + length:
-                self.getTable("inode").set_size(fh, offset + length)
+                # self.getTable("inode").set_size(fh, offset + length)
                 attrs["size"] = offset + length
-                self.cached_attrs.set(fh, attrs)
+                self.cached_attrs.set(fh, attrs, writed=True)
 
             # self.bytes_written is incremented from release().
             self.__cache_meta_hook()
@@ -948,9 +949,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         return node
 
     def __get_inode_row(self, inode_id):
-        row = None
-        if self.cache_enabled:
-            row = self.cached_attrs.get(inode_id)
+        row = self.cached_attrs.get(inode_id)
         if not row:
             start_time = time.time()
 
@@ -959,8 +958,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().debug("! No inode %i found, cant get row" % inode_id)
                 raise FUSEError(errno.ENOENT)
 
-            if self.cache_enabled:
-                self.cached_attrs.set(inode_id, row)
+            self.cached_attrs.set(inode_id, row)
 
             self.time_spent_caching_nodes += time.time() - start_time
 
@@ -1757,6 +1755,14 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         return
 
+
+    def __flush_expired_inodes(self, inodes):
+        count = 0
+        for inode_id, update_data in inodes.items():
+            count += self.getTable("inode").update_data(inode_id, update_data)
+        return count
+
+
     def __cache_meta_hook(self): # {{{3
 
         self.__update_mounted_subvolume_time()
@@ -1771,7 +1777,11 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             flushed_nodes = self.cached_nodes.clear()
             flushed_names = self.cached_names.clear()
-            flushed_attrs = self.cached_attrs.clear()
+
+            # Just readed...
+            flushed_attrs += self.cached_attrs.expired(False)
+            # Just writed/updated...
+            flushed_attrs += self.__flush_expired_inodes(self.cached_attrs.expired(True))
 
             self.__commit_changes()
 

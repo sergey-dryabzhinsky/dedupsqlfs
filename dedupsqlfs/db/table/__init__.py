@@ -113,6 +113,8 @@ class Table( object ):
         while pageSize < filePageSize:
             pageSize *= 2
 
+        cacheSize = 16*1024*1024 / pageSize
+
         conn = sqlite3.connect(db_path)
 
         conn.row_factory = dict_factory
@@ -125,6 +127,7 @@ class Table( object ):
         conn.execute("PRAGMA temp_store=FILE")
         conn.execute("PRAGMA max_page_count=2147483646")
         conn.execute("PRAGMA page_size=%i" % pageSize)
+        conn.execute("PRAGMA cache_size=%i" % cacheSize)
         conn.execute("PRAGMA journal_mode=WAL")
 
         if not self.getManager().getAutocommit():

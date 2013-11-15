@@ -15,7 +15,7 @@ class TableLink( Table ):
         # Create table
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
-                "inode_id INTEGER UNIQUE, "+
+                "inode_id INTEGER PRIMARY KEY, "+
                 "target BLOB NOT NULL"+
             ");"
         )

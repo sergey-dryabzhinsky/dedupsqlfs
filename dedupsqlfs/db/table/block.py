@@ -15,7 +15,7 @@ class TableBlock( Table ):
         # Create table
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
-                "hash_id INTEGER UNIQUE, "+
+                "hash_id INTEGER PRIMARY KEY, "+
                 "data BLOB NOT NULL"+
             ");"
         )

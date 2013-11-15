@@ -1799,7 +1799,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.getLogger().info("Performing garbage collection (this might take a while) ..")
             self.should_vacuum = False
             for method in self.__collect_strings, \
-                          self.__collect_inodes, \
                           self.__collect_inodes_all, \
                           self.__collect_xattrs, \
                           self.__collect_links, \
@@ -1869,17 +1868,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.should_vacuum = True
             self.__vacuum_datatable("name")
             return "Cleaned up %i unused path segment%s in %%s." % (count, count != 1 and 's' or '')
-        return
-
-
-    def __collect_inodes(self): # {{{4
-        self.getLogger().info("Clean unused inodes...")
-        count = self.getTable("inode").remove_by_nlinks()
-        self.getManager().commit()
-        if count > 0:
-            self.should_vacuum = True
-            self.__vacuum_datatable("inode")
-            return "Cleaned up %i unused inode%s in %%s." % (count, count != 1 and 's' or '')
         return
 
     def __collect_inodes_all(self): # {{{4

@@ -14,9 +14,8 @@ class TableHashCompressionType( Table ):
         # Create table
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
-                "hash_id INTEGER, "+
-                "compression_type_id INTEGER NOT NULL, "+
-                "UNIQUE(hash_id) "+
+                "hash_id INTEGER PRIMARY KEY, "+
+                "compression_type_id INTEGER NOT NULL "+
             ");"
         )
         c.execute(

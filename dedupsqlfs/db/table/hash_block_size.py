@@ -14,10 +14,9 @@ class TableHashBlockSize( Table ):
         # Create table
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
-                "hash_id INTEGER, "+
+                "hash_id INTEGER PRIMARY KEY, "+
                 "real_size INTEGER NOT NULL, "+
-                "comp_size INTEGER NOT NULL, "+
-                "UNIQUE(hash_id) " +
+                "comp_size INTEGER NOT NULL "+
             ");"
         )
         return

@@ -86,7 +86,7 @@ class InodesTime(object):
 
             if now - t > self._max_ttl:
                 if writed:
-                    old_inodes[inode] = inode_data
+                    old_inodes[inode] = inode_data["data"]
                 else:
                     old_inodes += 1
 

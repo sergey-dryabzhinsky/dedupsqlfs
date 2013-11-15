@@ -212,6 +212,8 @@ class DedupFS(object): # {{{1
         # Configure logging of messages to a file.
         if self.getOption("log_file"):
             handler = logging.StreamHandler(open(self.getOption("log_file"), 'w'))
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
             self.getLogger().addHandler(handler)
         # Convert verbosity argument to logging level?
         if self.getOption("verbosity") > 0:

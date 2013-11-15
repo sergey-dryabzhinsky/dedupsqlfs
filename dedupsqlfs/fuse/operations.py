@@ -1788,7 +1788,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.cache_gc_meta_last_run = time.time()
 
         elapsed_time = time.time() - start_time
-        if flushed_attrs + flushed_nodes > 0:
+        if flushed_attrs + flushed_nodes + flushed_names > 0:
             self.getLogger().info("Meta cache cleanup: flushed %i nodes, %i attrs, %i names in %s.",
                                   flushed_nodes, flushed_attrs, flushed_names,
                                   format_timespan(elapsed_time))

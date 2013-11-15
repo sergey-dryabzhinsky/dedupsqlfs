@@ -653,7 +653,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         @param  inode:  inode ID
         @type   inode:  int
         @param  attr:   attributes
-        @type   attr:   fuse.EntryAttributes
+        @type   attr:   llfuse.EntryAttributes
         """
         try:
             self.__log_call('setattr', 'setattr(inode=%i, attr=%r)', inode, attr)
@@ -671,36 +671,49 @@ class DedupOperations(llfuse.Operations): # {{{1
                 if row["mode"] != attr.st_mode:
                     new_data["mode"] = attr.st_mode
                     set_ctime = True
+                    update_db = True
 
             if attr.st_uid is not None:
                 if row["uid"] != attr.st_uid:
                     new_data["uid"] = attr.st_uid
                     set_ctime = True
+                    update_db = True
 
             if attr.st_gid is not None:
                 if row["gid"] != attr.st_gid:
                     new_data["gid"] = attr.st_gid
                     set_ctime = True
+                    update_db = True
 
             if attr.st_atime is not None:
                 atime_i, atime_ns = self.__get_time_tuple(attr.st_atime)
-                if row["atime"] != atime_i or row["atime_ns"] != atime_ns:
+                if row["atime"] != atime_i:
                     new_data["atime"] = atime_i
-                    new_data["atime_ns"] = atime_i
                     set_ctime = True
+                    update_db = True
+                if row["atime_ns"] != atime_ns:
+                    new_data["atime_ns"] = atime_ns
+                    set_ctime = True
+                    update_db = True
 
             if attr.st_mtime is not None:
                 mtime_i, mtime_ns = self.__get_time_tuple(attr.st_mtime)
-                if row["mtime"] != mtime_i or row["mtime_ns"] != mtime_ns:
+                if row["mtime"] != mtime_i:
                     new_data["mtime"] = mtime_i
-                    new_data["mtime_ns"] = mtime_i
                     set_ctime = True
+                    update_db = True
+                if row["mtime_ns"] != mtime_ns:
+                    new_data["mtime_ns"] = mtime_ns
+                    set_ctime = True
+                    update_db = True
 
             if attr.st_ctime is not None:
                 ctime_i, ctime_ns = self.__get_time_tuple(attr.st_ctime)
-                if row["ctime"] != ctime_i or row["ctime_ns"] != ctime_ns:
+                if row["ctime"] != ctime_i:
                     new_data["ctime"] = ctime_i
-                    new_data["ctime_ns"] = ctime_i
+                    update_db = True
+                if row["ctime_ns"] != ctime_ns:
+                    new_data["ctime_ns"] = ctime_ns
                     update_db = True
             elif set_ctime:
                 ctime_i, ctime_ns = self.__newctime_tuple()

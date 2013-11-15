@@ -35,7 +35,6 @@ class TableLink( Table ):
             inode, btarget,
         ))
         item = cur.lastrowid
-        self.commit()
         self.stopTimer('insert')
         return item
 

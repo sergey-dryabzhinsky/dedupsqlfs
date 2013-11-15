@@ -38,7 +38,6 @@ class TableInodeHashBlock( Table ):
         cur.execute("INSERT INTO `%s`(inode_id, block_number, hash_id) VALUES (?,?,?)" % self._table_name,
                     (inode, block_number, hash_id))
         item = cur.lastrowid
-        self.commit()
         self.stopTimer('insert')
         return item
 
@@ -48,7 +47,6 @@ class TableInodeHashBlock( Table ):
         cur.execute("UPDATE `%s` SET hash_id=? WHERE inode_id=? AND block_number=?" % self._table_name,
                     (new_hash_id, inode, block_number,))
         item = cur.rowcount
-        self.commit()
         self.stopTimer('update')
         return item
 
@@ -57,7 +55,6 @@ class TableInodeHashBlock( Table ):
         cur = self.getCursor()
         cur.execute("DELETE FROM `%s` WHERE inode_id=?" % self._table_name, (inode,))
         count = cur.rowcount
-        self.commit()
         self.stopTimer('delete')
         return count
 

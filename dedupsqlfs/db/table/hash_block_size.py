@@ -31,7 +31,6 @@ class TableHashBlockSize( Table ):
         cur.execute("INSERT INTO `%s`(hash_id, real_size, comp_size) VALUES (?,?,?)" % self._table_name,
                     (hash_id, real_size, comp_size,))
         item = cur.lastrowid
-        self.commit()
         self.stopTimer('insert')
         return item
 
@@ -45,7 +44,6 @@ class TableHashBlockSize( Table ):
         cur.execute("UPDATE `%s` SET real_size=?, comp_size=? WHERE hash_id=?" % self._table_name,
                     (real_size, comp_size, hash_id,))
         count = cur.rowcount
-        self.commit()
         self.stopTimer('update')
         return count
 

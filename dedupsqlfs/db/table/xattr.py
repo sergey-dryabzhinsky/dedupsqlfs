@@ -39,7 +39,6 @@ class TableInodeXattr( Table ):
         ))
 
         item = cur.lastrowid
-        self.commit()
         self.stopTimer('insert')
         return item
 
@@ -57,7 +56,6 @@ class TableInodeXattr( Table ):
             bvalues, inode,
         ))
         item = cur.rowcount
-        self.commit()
         self.stopTimer('update')
         return item
 

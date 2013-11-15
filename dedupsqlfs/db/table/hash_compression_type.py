@@ -35,7 +35,6 @@ class TableHashCompressionType( Table ):
         cur.execute("INSERT INTO `%s`(hash_id, compression_type_id) VALUES (?,?)" % self._table_name,
                     (hash_id, compression_type_id,))
         item = cur.lastrowid
-        self.commit()
         self.stopTimer('insert')
         return item
 
@@ -49,7 +48,6 @@ class TableHashCompressionType( Table ):
         cur.execute("UPDATE `%s` SET compression_type_id=? WHERE hash_id=?" % self._table_name,
                     (compression_type_id, hash_id,))
         count = cur.rowcount
-        self.commit()
         self.stopTimer('update')
         return count
 

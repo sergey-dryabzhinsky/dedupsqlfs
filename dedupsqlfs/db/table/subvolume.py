@@ -36,7 +36,6 @@ class TableSubvolume( Table ):
         cur = self.getCursor()
         cur.execute("INSERT INTO `%s`(node_id, created_at, mounted_at, updated_at) " % self._table_name+
                     "VALUES (?, ?, ?, ?)", (node_id, created_at, mounted_at, updated_at))
-        self.commit()
         self.stopTimer('insert')
         return node_id
 
@@ -47,7 +46,6 @@ class TableSubvolume( Table ):
         cur = self.getCursor()
         cur.execute("UPDATE `%s` SET mounted_at=? WHERE node_id=? " % self._table_name,
                     (mtime, node_id,))
-        self.commit()
         self.stopTimer('mount_time')
         return cur.rowcount
 
@@ -58,7 +56,6 @@ class TableSubvolume( Table ):
         cur = self.getCursor()
         cur.execute("UPDATE `%s` SET updated_at=? WHERE node_id=? " % self._table_name,
                     (utime, node_id,))
-        self.commit()
         self.stopTimer('update_time')
         return cur.rowcount
 

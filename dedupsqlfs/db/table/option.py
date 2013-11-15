@@ -25,7 +25,6 @@ class TableOption( Table ):
         cur = self.getCursor()
         cur.execute("INSERT INTO `%s`(name, value) VALUES (?, ?)" % self._table_name, (name, value))
         item = cur.lastrowid
-        self.commit()
         self.stopTimer('insert')
         return item
 
@@ -38,7 +37,6 @@ class TableOption( Table ):
         cur = self.getCursor()
         cur.execute("UPDATE `%s` SET value=? WHERE name=?" % self._table_name, (value, name))
         count = cur.rowcount
-        self.commit()
         self.stopTimer('update')
         return count
 

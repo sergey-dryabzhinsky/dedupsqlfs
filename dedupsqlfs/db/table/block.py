@@ -34,7 +34,6 @@ class TableBlock( Table ):
         cur.execute("INSERT INTO `%s`(hash_id, data) VALUES (?,?)" % self._table_name,
                     (hash_id, bdata,))
         item = cur.lastrowid
-        self.commit()
         self.stopTimer('insert')
         return item
 
@@ -51,7 +50,6 @@ class TableBlock( Table ):
         cur.execute("UPDATE `%s` SET data=? WHERE hash_id=?" % self._table_name,
                     (bdata, hash_id,))
         count = cur.rowcount
-        self.commit()
         self.stopTimer('update')
         return count
 

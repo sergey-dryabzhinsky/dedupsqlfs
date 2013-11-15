@@ -42,7 +42,6 @@ class TableName( Table ):
 
         cur.execute("INSERT INTO `%s`(value) VALUES (?)" % self._table_name, (bvalue,))
         item = cur.lastrowid
-        self.commit()
         self.stopTimer('insert')
         return item
 

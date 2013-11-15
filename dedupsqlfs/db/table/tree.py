@@ -73,7 +73,6 @@ class TableTree( Table ):
         cur.execute("INSERT INTO `%s`(subvol_id, parent_id, name_id, inode_id) " % self._table_name+
                     "VALUES (?, ?, ?, ?)", (self._selected_subvol, parent_id, name_id, inode_id))
         item = cur.lastrowid
-        self.commit()
         self.stopTimer('insert')
         return item
 

@@ -181,6 +181,12 @@ class Table( object ):
     def create( self ):
         raise NotImplemented
 
+    def begin( self ):
+        if not self.getManager().getAutocommit():
+            cur = self.getCursor()
+            cur.execute("BEGIN")
+        return self
+
     def commit(self):
         if not self.getManager().getAutocommit():
             self.getConnection().commit()

@@ -109,6 +109,11 @@ class DbManager( object ):
         return self._table[ name ]
 
 
+    def begin(self):
+        for name, t in self._table.items():
+            t.commit()
+        return self
+
     def commit(self):
         for name, t in self._table.items():
             t.commit()

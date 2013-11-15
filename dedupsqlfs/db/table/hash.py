@@ -29,7 +29,6 @@ class TableHash( Table ):
         cur.execute("INSERT INTO `%s`(hash) VALUES (?)" % self._table_name,
                     (bvalue,))
         item = cur.lastrowid
-        self.commit()
         self.stopTimer('insert')
         return item
 
@@ -44,7 +43,6 @@ class TableHash( Table ):
         cur.execute("UPDATE `%s` SET hash=? WHERE id=?" % self._table_name,
                     (bvalue, item_id))
         count = cur.rowcount
-        self.commit()
         self.stopTimer('update')
         return count
 

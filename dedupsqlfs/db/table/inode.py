@@ -53,7 +53,6 @@ class TableInode( Table ):
             nlinks, mode, uid, gid, rdev, size, atime, mtime, ctime, atime_ns, mtime_ns, ctime_ns
         ))
         item = cur.lastrowid
-        self.commit()
         self.stopTimer('insert')
         return item
 
@@ -81,7 +80,6 @@ class TableInode( Table ):
 
         cur.execute(query, values)
         item = cur.rowcount
-        self.commit()
         self.stopTimer('update_data')
         return item
 
@@ -90,7 +88,6 @@ class TableInode( Table ):
         cur = self.getCursor()
         cur.execute("UPDATE `%s` SET size=? WHERE id=?" % self._table_name, (size, inode,))
         count = cur.rowcount
-        self.commit()
         self.stopTimer('set_size')
         return count
 
@@ -123,7 +120,6 @@ class TableInode( Table ):
         cur = self.getCursor()
         cur.execute("UPDATE `%s` SET nlinks = nlinks + 1 WHERE id = ?" % self._table_name, (inode,))
         count = cur.rowcount
-        self.commit()
         self.stopTimer('inc_nlinks')
         return count
 
@@ -132,7 +128,6 @@ class TableInode( Table ):
         cur = self.getCursor()
         cur.execute("UPDATE `%s` SET nlinks = nlinks - 1 WHERE id = ?" % self._table_name, (inode,))
         count = cur.rowcount
-        self.commit()
         self.stopTimer('dec_nlinks')
         return count
 

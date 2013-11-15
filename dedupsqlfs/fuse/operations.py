@@ -909,7 +909,11 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             start_time = time.time()
 
-            name_id = self.getTable("name").find(name)
+            name_id = self.cached_names.get(name)
+            if not name_id:
+                name_id = self.getTable("name").find(name)
+                if name_id:
+                    self.cached_names.set(name, name_id)
             if not name_id:
                 self.getLogger().debug("! No name %r found, cant get name_id" % name)
                 raise FUSEError(errno.ENOENT)

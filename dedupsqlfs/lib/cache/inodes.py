@@ -107,6 +107,16 @@ class InodesTime(object):
 
 
     def clear(self):
-        old_inodes = self._inodes.copy()
+        old_inodes = {}
+
+        for inode in tuple(self._inodes.keys()):
+
+            inode_data = self._inodes[inode]
+
+            if not inode_data["w"]:
+                continue
+
+            old_inodes[inode] = inode_data["data"]
+
         self._inodes = {}
         return old_inodes

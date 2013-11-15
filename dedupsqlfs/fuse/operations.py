@@ -96,6 +96,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.root_mode = stat.S_IFDIR | 0o755
 
+        self.timing_report_last_run = time.time()
+
         self.time_spent_caching_nodes = 0
         self.time_spent_hashing = 0
         self.time_spent_interning = 0
@@ -216,6 +218,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.getLogger().info("Umount file system in process...")
             if not self.getOption("readonly"):
                 # Flush all cached blocks
+                self.getLogger().info("Flush remaining inodes.")
+                self.__flush_expired_inodes(self.cached_attrs.clear())
                 self.getLogger().info("Flush remaining blocks.")
                 self.__flush_old_cached_blocks(self.cached_blocks.clear())
 
@@ -1561,8 +1565,14 @@ class DedupOperations(llfuse.Operations): # {{{1
         if time.time() - self.gc_hook_last_run >= self.gc_interval:
             self.gc_hook_last_run = time.time()
             self.__collect_garbage()
-            self.__print_stats()
+            self.__timing_report_hook()
             self.gc_hook_last_run = time.time()
+        return
+
+    def __timing_report_hook(self): # {{{3
+        if time.time() - self.timing_report_last_run >= self.gc_interval:
+            self.__print_stats()
+            self.timing_report_last_run = time.time()
         return
 
 
@@ -1753,6 +1763,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                                   flushed_readed_blocks, flushed_readed_expiredByTime_blocks, flushed_readed_expiredBySize_blocks,
                                   format_timespan(elapsed_time))
 
+        self.__timing_report_hook()
+
         return
 
 
@@ -1787,11 +1799,14 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.cache_gc_meta_last_run = time.time()
 
-        elapsed_time = time.time() - start_time
         if flushed_attrs + flushed_nodes + flushed_names > 0:
+            elapsed_time = time.time() - start_time
             self.getLogger().info("Meta cache cleanup: flushed %i nodes, %i attrs, %i names in %s.",
                                   flushed_nodes, flushed_attrs, flushed_names,
                                   format_timespan(elapsed_time))
+
+        self.__timing_report_hook()
+
         return
 
     def forced_vacuum(self): # {{{3

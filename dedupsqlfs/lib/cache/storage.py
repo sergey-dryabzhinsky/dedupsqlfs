@@ -161,6 +161,11 @@ class StorageTimeSize(object):
         max_fill = 100 + self._max_size_trsh
         return filled > max_fill
 
+    def forget(self, inode):
+        if inode in self._inodes:
+            del self._inodes[inode]
+        return
+
     def expired(self, writed=False):
         now = time()
 

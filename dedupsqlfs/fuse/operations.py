@@ -241,6 +241,12 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.__log_call('flush', 'flush(fh=%i)', fh)
             if self.isReadonly(): raise FUSEError(errno.EROFS)
             #self.__flush_inode_cached_blocks(fh, clean=False)
+
+            attr = self.__get_inode_row(fh)
+            if not attr.st_size:
+                self.getTable("inode_hash_block").delete(fh)
+                self.cached_blocks.forget(fh)
+
             self.__cache_block_hook()
         except Exception as e:
             self.__rollback_changes()
@@ -1052,11 +1058,16 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         @return: bytes
         """
+        if not size:
+            return b''
+
         inblock_offset = offset % self.block_size
-        first_block_number = int(math.floor((offset - inblock_offset) / self.block_size))
+        first_block_number = int(math.floor(1.0 * (offset - inblock_offset) / self.block_size))
         raw_data = BytesIO()
 
         read_blocks = int(math.ceil(1.0 * size / self.block_size))
+        if not read_blocks:
+            read_blocks = 1
 
         self.getLogger().debug("first block number = %s, read blocks = %s inblock offset = %s" % (first_block_number, read_blocks, inblock_offset,))
 
@@ -1074,8 +1085,6 @@ class DedupOperations(llfuse.Operations): # {{{1
                 block.seek(inblock_offset)
                 if read_size > (self.block_size - inblock_offset):
                     read_size = self.block_size - inblock_offset
-
-            self.getLogger().debug("block number = %s, read size = %s, block size = %s" % (n, read_size, len(block.getvalue())))
 
             raw_data.write(block.read(read_size))
             readed_size += read_size
@@ -1095,14 +1104,18 @@ class DedupOperations(llfuse.Operations): # {{{1
         @param block_data: Data buffer - length can by more than block_size
         @type block_data: bytes
         """
+        size = len(block_data)
+        if not size:
+            return 0
+
         inblock_offset = offset % self.block_size
-        first_block_number = int(math.floor((offset - inblock_offset) / self.block_size))
+        first_block_number = int(math.floor(1.0 * (offset - inblock_offset) / self.block_size))
 
         io_data = BytesIO(block_data)
 
-        size = len(block_data)
-
         write_blocks = int(math.ceil(1.0 * size / self.block_size))
+        if not write_blocks:
+            write_blocks = 1
 
         self.getLogger().debug("first block number = %s, size = %s, write blocks = %s inblock offset = %s" % (first_block_number, size, write_blocks, inblock_offset,))
 
@@ -1121,8 +1134,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 if write_size > (self.block_size - inblock_offset):
                     write_size = self.block_size - inblock_offset
 
-            self.getLogger().debug("block number = %s, write size = %s, block size = %s" % (n, write_size, len(block.getvalue())))
-
+            block.write(io_data.read(write_size))
             block.write(io_data.read(write_size))
 
             self.cached_blocks.set(inode, n + first_block_number, block, writed=True)

@@ -2124,7 +2124,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if current == countInodes:
                 break
 
-            curIndex.execute("SELECT inode_id FROM `inode_hash_block` GROUP BY inode_id WHERE inode_id>=? AND inode_id<?", (
+            curIndex.execute("SELECT inode_id FROM `inode_hash_block` WHERE inode_id>=? AND inode_id<? GROUP BY inode_id", (
                 curBlock, curBlock+maxCnt
             ))
 

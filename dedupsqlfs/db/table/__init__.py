@@ -4,7 +4,9 @@ __author__ = 'sergey'
 
 from time import time
 import os
-import inspect
+
+# Too slow =(
+# import inspect
 
 from dedupsqlfs.db import dict_factory
 
@@ -64,9 +66,10 @@ class Table( object ):
         self._last_time = time()
         return self
 
-    def stopTimer(self):
-        caller = inspect.currentframe().f_back
-        op = inspect.getframeinfo(caller)[2]
+    def stopTimer(self, op):
+        # Too slow =(
+        # caller = inspect.currentframe().f_back
+        # op = inspect.getframeinfo(caller)[2]
 
         self.incOperationsCount(op)
         self.incOperationsTimeSpent(op, self._last_time)

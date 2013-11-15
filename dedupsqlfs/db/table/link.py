@@ -36,7 +36,7 @@ class TableLink( Table ):
         ))
         item = cur.lastrowid
         self.commit()
-        self.stopTimer()
+        self.stopTimer('insert')
         return item
 
     def find_by_inode( self, inode):
@@ -52,7 +52,7 @@ class TableLink( Table ):
         item = cur.fetchone()
         if item:
             item = item["target"]
-        self.stopTimer()
+        self.stopTimer('find_by_inode')
         return item
 
     pass

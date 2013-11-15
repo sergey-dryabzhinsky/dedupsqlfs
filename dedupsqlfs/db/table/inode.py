@@ -54,7 +54,7 @@ class TableInode( Table ):
         ))
         item = cur.lastrowid
         self.commit()
-        self.stopTimer()
+        self.stopTimer('insert')
         return item
 
     def update_data( self, inode_id, row_data=None):
@@ -82,35 +82,8 @@ class TableInode( Table ):
         cur.execute(query, values)
         item = cur.rowcount
         self.commit()
-        self.stopTimer()
+        self.stopTimer('update_date')
         return item
-
-    def set_mode(self, inode, mode):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute("UPDATE `%s` SET mode=? WHERE id=?" % self._table_name, (mode, inode,))
-        count = cur.rowcount
-        self.commit()
-        self.stopTimer()
-        return count
-
-    def set_uid(self, inode, uid):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute("UPDATE `%s` SET uid=? WHERE id=?" % self._table_name, (uid, inode,))
-        count = cur.rowcount
-        self.commit()
-        self.stopTimer()
-        return count
-
-    def set_gid(self, inode, gid):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute("UPDATE `%s` SET gid=? WHERE id=?" % self._table_name, (gid, inode,))
-        count = cur.rowcount
-        self.commit()
-        self.stopTimer()
-        return count
 
     def set_size(self, inode, size):
         self.startTimer()
@@ -118,40 +91,7 @@ class TableInode( Table ):
         cur.execute("UPDATE `%s` SET size=? WHERE id=?" % self._table_name, (size, inode,))
         count = cur.rowcount
         self.commit()
-        self.stopTimer()
-        return count
-
-    def set_atime(self, inode, atime, atime_ns=0):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute("UPDATE `%s` SET atime=?, atime_ns=? WHERE id=?" % self._table_name, (
-            atime, atime_ns, inode,
-        ))
-        count = cur.rowcount
-        self.commit()
-        self.stopTimer()
-        return count
-
-    def set_mtime(self, inode, mtime, mtime_ns=0):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute("UPDATE `%s` SET mtime=?, mtime_ns=? WHERE id=?" % self._table_name, (
-            mtime, mtime_ns, inode,
-        ))
-        count = cur.rowcount
-        self.commit()
-        self.stopTimer()
-        return count
-
-    def set_ctime(self, inode, ctime, ctime_ns=0):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute("UPDATE `%s` SET ctime=?, ctime_ns=? WHERE id=?" % self._table_name, (
-            ctime, ctime_ns, inode,
-        ))
-        count = cur.rowcount
-        self.commit()
-        self.stopTimer()
+        self.stopTimer('set_size')
         return count
 
     def get(self, inode):
@@ -159,7 +99,7 @@ class TableInode( Table ):
         cur = self.getCursor()
         cur.execute("SELECT * FROM `%s` WHERE id=?" % self._table_name, (inode,))
         item = cur.fetchone()
-        self.stopTimer()
+        self.stopTimer('get')
         return item
 
     def get_mode(self, inode):
@@ -167,7 +107,7 @@ class TableInode( Table ):
         cur = self.getCursor()
         cur.execute("SELECT mode FROM `%s` WHERE id=?" % self._table_name, (inode,))
         item = int(cur.fetchone()["mode"])
-        self.stopTimer()
+        self.stopTimer('get_mode')
         return item
 
     def get_size(self, inode):
@@ -175,7 +115,7 @@ class TableInode( Table ):
         cur = self.getCursor()
         cur.execute("SELECT size FROM `%s` WHERE id=?" % self._table_name, (inode,))
         item = int(cur.fetchone()["size"])
-        self.stopTimer()
+        self.stopTimer('get_size')
         return item
 
     def inc_nlinks(self, inode):
@@ -184,7 +124,7 @@ class TableInode( Table ):
         cur.execute("UPDATE `%s` SET nlinks = nlinks + 1 WHERE id = ?" % self._table_name, (inode,))
         count = cur.rowcount
         self.commit()
-        self.stopTimer()
+        self.stopTimer('inc_nlinks')
         return count
 
     def dec_nlinks(self, inode):
@@ -193,7 +133,7 @@ class TableInode( Table ):
         cur.execute("UPDATE `%s` SET nlinks = nlinks - 1 WHERE id = ?" % self._table_name, (inode,))
         count = cur.rowcount
         self.commit()
-        self.stopTimer()
+        self.stopTimer('dec_nlinks')
         return count
 
     def remove_by_nlinks(self):
@@ -202,7 +142,7 @@ class TableInode( Table ):
         cur.execute("DELETE FROM `%s` WHERE nlinks <= 0" % self._table_name)
         count = cur.rowcount
         self.commit()
-        self.stopTimer()
+        self.stopTimer('remove_by_nlinks')
         return count
 
     def count_nlinks_by_ids(self, id_list):
@@ -212,7 +152,7 @@ class TableInode( Table ):
             self._table_name, ",".join(id_list),)
         )
         result = cur.fetchone()["cnt"]
-        self.stopTimer()
+        self.stopTimer('count_nlinks_by_ids')
         return result
 
     def get_count(self):
@@ -220,7 +160,7 @@ class TableInode( Table ):
         cur = self.getCursor()
         cur.execute("SELECT COUNT(1) as cnt FROM `%s`" % self._table_name)
         item = cur.fetchone()
-        self.stopTimer()
+        self.stopTimer('get_count')
         return item["cnt"]
 
     pass

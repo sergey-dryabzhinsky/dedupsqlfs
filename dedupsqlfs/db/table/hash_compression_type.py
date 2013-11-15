@@ -37,7 +37,7 @@ class TableHashCompressionType( Table ):
                     (hash_id, compression_type_id,))
         item = cur.lastrowid
         self.commit()
-        self.stopTimer()
+        self.stopTimer('insert')
         return item
 
     def update( self, hash_id, compression_type_id):
@@ -51,7 +51,7 @@ class TableHashCompressionType( Table ):
                     (compression_type_id, hash_id,))
         count = cur.rowcount
         self.commit()
-        self.stopTimer()
+        self.stopTimer('update')
         return count
 
     def get( self, hash_id):
@@ -63,7 +63,7 @@ class TableHashCompressionType( Table ):
         cur = self.getCursor()
         cur.execute("SELECT * FROM `%s` WHERE hash_id=?" % self._table_name, (hash_id,))
         item = cur.fetchone()
-        self.stopTimer()
+        self.stopTimer('get')
         return item
 
     def count_compression_type( self ):
@@ -71,7 +71,7 @@ class TableHashCompressionType( Table ):
         cur = self.getCursor()
         cur.execute("SELECT COUNT(compression_type_id) AS cnt,compression_type_id FROM `%s` GROUP BY compression_type_id" % self._table_name)
         items = cur.fetchall()
-        self.stopTimer()
+        self.stopTimer('count_compression_type')
         return items
 
     pass

@@ -43,7 +43,7 @@ class TableName( Table ):
         cur.execute("INSERT INTO `%s`(value) VALUES (?)" % self._table_name, (bvalue,))
         item = cur.lastrowid
         self.commit()
-        self.stopTimer()
+        self.stopTimer('insert')
         return item
 
     def find(self, value):
@@ -60,7 +60,7 @@ class TableName( Table ):
         item = cur.fetchone()
         if item:
             item = item["id"]
-        self.stopTimer()
+        self.stopTimer('find')
         return item
 
     def get(self, name_id):
@@ -75,7 +75,7 @@ class TableName( Table ):
         item = cur.fetchone()
         if item:
             item = item["value"]
-        self.stopTimer()
+        self.stopTimer('get')
         return item
 
     pass

@@ -26,7 +26,7 @@ class TableOption( Table ):
         cur.execute("INSERT INTO `%s`(name, value) VALUES (?, ?)" % self._table_name, (name, value))
         item = cur.lastrowid
         self.commit()
-        self.stopTimer()
+        self.stopTimer('insert')
         return item
 
     def update( self, name, value ):
@@ -39,7 +39,7 @@ class TableOption( Table ):
         cur.execute("UPDATE `%s` SET value=? WHERE name=?" % self._table_name, (value, name))
         count = cur.rowcount
         self.commit()
-        self.stopTimer()
+        self.stopTimer('update')
         return count
 
     def get( self, name ):
@@ -51,7 +51,7 @@ class TableOption( Table ):
         item = cur.fetchone()
         if item:
             item = item["value"].decode()
-        self.stopTimer()
+        self.stopTimer('get')
         return item
 
     def getAll( self ):
@@ -62,7 +62,7 @@ class TableOption( Table ):
         opts = {}
         for item in items:
             opts[ item["name"].decode() ] = item["value"].decode()
-        self.stopTimer()
+        self.stopTimer('getAll')
         return opts
 
     pass

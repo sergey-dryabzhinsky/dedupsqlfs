@@ -37,7 +37,7 @@ class TableSubvolume( Table ):
         cur.execute("INSERT INTO `%s`(node_id, created_at, mounted_at, updated_at) " % self._table_name+
                     "VALUES (?, ?, ?, ?)", (node_id, created_at, mounted_at, updated_at))
         self.commit()
-        self.stopTimer()
+        self.stopTimer('insert')
         return node_id
 
     def mount_time(self, node_id, mtime=None):
@@ -48,7 +48,7 @@ class TableSubvolume( Table ):
         cur.execute("UPDATE `%s` SET mounted_at=? WHERE node_id=? " % self._table_name,
                     (mtime, node_id,))
         self.commit()
-        self.stopTimer()
+        self.stopTimer('mount_time')
         return cur.rowcount
 
     def update_time(self, node_id, utime=None):
@@ -59,7 +59,7 @@ class TableSubvolume( Table ):
         cur.execute("UPDATE `%s` SET updated_at=? WHERE node_id=? " % self._table_name,
                     (utime, node_id,))
         self.commit()
-        self.stopTimer()
+        self.stopTimer('update_time')
         return cur.rowcount
 
     def delete(self, node_id):
@@ -67,7 +67,7 @@ class TableSubvolume( Table ):
         cur = self.getCursor()
         cur.execute("DELETE FROM `%s` WHERE node_id=?" % self._table_name, (node_id,))
         item = cur.rowcount
-        self.stopTimer()
+        self.stopTimer('delete')
         return item
 
     def get(self, node_id):
@@ -75,24 +75,7 @@ class TableSubvolume( Table ):
         cur = self.getCursor()
         cur.execute("SELECT * FROM `%s` WHERE node_id=?" % self._table_name, (node_id,))
         item = cur.fetchone()
-        self.stopTimer()
+        self.stopTimer('get')
         return item
-
-    def fetch(self, limit=None, offset=None, order="created_at"):
-        self.startTimer()
-        cur = self.getCursor()
-
-        query = "SELECT * FROM `%s`" % self._table_name
-        if order:
-            query += "ORDER BY `%s`" % order
-        if limit is not None:
-            query += " LIMIT %d" % limit
-            if offset is not None:
-                query += " OFFSET %d" % offset
-
-        cur.execute(query)
-        items = cur.fetchall()
-        self.stopTimer()
-        return items
 
     pass

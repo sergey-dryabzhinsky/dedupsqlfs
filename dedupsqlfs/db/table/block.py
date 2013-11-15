@@ -35,7 +35,7 @@ class TableBlock( Table ):
                     (hash_id, bdata,))
         item = cur.lastrowid
         self.commit()
-        self.stopTimer()
+        self.stopTimer('insert')
         return item
 
     def update( self, hash_id, data):
@@ -52,7 +52,7 @@ class TableBlock( Table ):
                     (bdata, hash_id,))
         count = cur.rowcount
         self.commit()
-        self.stopTimer()
+        self.stopTimer('update')
         return count
 
     def get( self, hash_id):
@@ -64,7 +64,7 @@ class TableBlock( Table ):
         cur = self.getCursor()
         cur.execute("SELECT * FROM `%s` WHERE hash_id=?" % self._table_name, (hash_id,))
         item = cur.fetchone()
-        self.stopTimer()
+        self.stopTimer('get')
         return item
 
     pass

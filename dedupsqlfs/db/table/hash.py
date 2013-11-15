@@ -30,7 +30,7 @@ class TableHash( Table ):
                     (bvalue,))
         item = cur.lastrowid
         self.commit()
-        self.stopTimer()
+        self.stopTimer('insert')
         return item
 
     def update( self, item_id, value ):
@@ -45,7 +45,7 @@ class TableHash( Table ):
                     (bvalue, item_id))
         count = cur.rowcount
         self.commit()
-        self.stopTimer()
+        self.stopTimer('update')
         return count
 
     def get( self, item_id ):
@@ -55,7 +55,7 @@ class TableHash( Table ):
         item = cur.fetchone()
         if item:
             item = item["hash"]
-        self.stopTimer()
+        self.stopTimer('get')
         return item
 
     def find( self, value ):
@@ -66,7 +66,7 @@ class TableHash( Table ):
         item = cur.fetchone()
         if item:
             item = item["id"]
-        self.stopTimer()
+        self.stopTimer('find')
         return item
 
     pass

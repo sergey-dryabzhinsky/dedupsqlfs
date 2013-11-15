@@ -26,7 +26,7 @@ class TableCompressionType( Table ):
         cur.execute("INSERT INTO `%s`(value) VALUES (?)" % self._table_name, (value,))
         item = cur.lastrowid
         self.commit()
-        self.stopTimer()
+        self.stopTimer('insert')
         return item
 
     def update( self, item_id, value ):
@@ -39,7 +39,7 @@ class TableCompressionType( Table ):
         cur.execute("UPDATE `%s` SET value=? WHERE id=?" % self._table_name, (value, item_id))
         count = cur.rowcount
         self.commit()
-        self.stopTimer()
+        self.stopTimer('update')
         return count
 
     def get( self, item_id ):
@@ -49,7 +49,7 @@ class TableCompressionType( Table ):
         item = cur.fetchone()
         if item:
             item = item["value"].decode()
-        self.stopTimer()
+        self.stopTimer('get')
         return item
 
     def find( self, value ):
@@ -59,7 +59,7 @@ class TableCompressionType( Table ):
         item = cur.fetchone()
         if item:
             item = item["id"]
-        self.stopTimer()
+        self.stopTimer('find')
         return item
 
     def getAll( self ):
@@ -70,7 +70,7 @@ class TableCompressionType( Table ):
         opts = {}
         for item in items:
             opts[ item["id"] ] = item["value"].decode()
-        self.stopTimer()
+        self.stopTimer('getAll')
         return opts
 
     def getAllRevert( self ):
@@ -81,7 +81,7 @@ class TableCompressionType( Table ):
         opts = {}
         for item in items:
             opts[ item["value"].decode() ] = item["id"]
-        self.stopTimer()
+        self.stopTimer('getAllRevert')
         return opts
 
     pass

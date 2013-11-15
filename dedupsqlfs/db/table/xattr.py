@@ -41,7 +41,7 @@ class TableInodeXattr( Table ):
 
         item = cur.lastrowid
         self.commit()
-        self.stopTimer()
+        self.stopTimer('insert')
         return item
 
     def update( self, inode, values):
@@ -59,7 +59,7 @@ class TableInodeXattr( Table ):
         ))
         item = cur.rowcount
         self.commit()
-        self.stopTimer()
+        self.stopTimer('update')
         return item
 
     def find_by_inode( self, inode):
@@ -75,7 +75,7 @@ class TableInodeXattr( Table ):
         item = cur.fetchone()
         if item:
             item = pickle.loads(item["data"])
-        self.stopTimer()
+        self.stopTimer('find_by_inode')
         return item
 
     pass

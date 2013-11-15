@@ -33,7 +33,7 @@ class TableHashBlockSize( Table ):
                     (hash_id, real_size, comp_size,))
         item = cur.lastrowid
         self.commit()
-        self.stopTimer()
+        self.stopTimer('insert')
         return item
 
     def update( self, hash_id, real_size, comp_size):
@@ -47,7 +47,7 @@ class TableHashBlockSize( Table ):
                     (real_size, comp_size, hash_id,))
         count = cur.rowcount
         self.commit()
-        self.stopTimer()
+        self.stopTimer('update')
         return count
 
     def get( self, hash_id):
@@ -59,7 +59,7 @@ class TableHashBlockSize( Table ):
         cur = self.getCursor()
         cur.execute("SELECT * FROM `%s` WHERE hash_id=?" % self._table_name, (hash_id,))
         item = cur.fetchone()
-        self.stopTimer()
+        self.stopTimer('get')
         return item
 
     pass

@@ -1447,12 +1447,11 @@ class DedupOperations(llfuse.Operations): # {{{1
             for tn in self.getManager().tables:
                 t = self.getTable(tn)
 
+                timings.append((t.getAllTimeSpent(), 'Table %r - cumulative timings' % tn,))
+
                 opTimes = t.getTimeSpent()
                 for op, timespan in opTimes.items():
-                    if op == 'all':
-                        timings.append((timespan, 'Table %r - cumulative timings' % tn,))
-                    else:
-                        timings.append((timespan, 'Table %r - operation %r timings' % (tn, op,),))
+                    timings.append((timespan, 'Table %r - operation %r timings' % (tn, op,),))
 
             maxdescwidth = max([len(l) for t, l in timings]) + 3
             timings.sort(reverse=True)
@@ -1476,12 +1475,11 @@ class DedupOperations(llfuse.Operations): # {{{1
             for tn in self.getManager().tables:
                 t = self.getTable(tn)
 
+                counts.append((t.getAllOperationsCount(), 'Table %r - cumulative operations count' % tn,))
+
                 opCount = t.getOperationsCount()
                 for op, count in opCount.items():
-                    if op == 'all':
-                        counts.append((count, 'Table %r - cumulative operations count' % tn,))
-                    else:
-                        counts.append((count, 'Table %r - operation %r count' % (tn, op,),))
+                    counts.append((count, 'Table %r - operation %r count' % (tn, op,),))
 
             maxdescwidth = max([len(l) for t, l in counts]) + 3
             counts.sort(reverse=True)

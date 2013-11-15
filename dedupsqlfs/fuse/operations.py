@@ -250,6 +250,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getTable("inode_hash_block").delete(fh)
                 self.cached_blocks.forget(fh)
 
+            self.__cache_meta_hook()
             self.__cache_block_hook()
         except Exception as e:
             self.__rollback_changes()
@@ -919,9 +920,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __get_tree_node_by_parent_inode_and_name(self, parent_inode, name):
 
-        node = None
-        if self.cache_enabled:
-            node = self.cached_nodes.get((parent_inode, name))
+        node = self.cached_nodes.get((parent_inode, name))
 
         if not node:
 
@@ -946,17 +945,14 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().debug("! No node %i and name %i found, cant get tree node" % (par_node["id"], name_id,))
                 raise FUSEError(errno.ENOENT)
 
-            if self.cache_enabled:
-                self.cached_nodes.set((parent_inode, name), node)
+            self.cached_nodes.set((parent_inode, name), node)
 
             self.time_spent_caching_nodes += time.time() - start_time
 
         return node
 
     def __get_tree_node_by_inode(self, inode):
-        node = None
-        if self.cache_enabled:
-            node = self.cached_nodes.get(inode)
+        node = self.cached_nodes.get(inode)
 
         if not node:
 
@@ -967,8 +963,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().debug("! No inode %i found, cant get tree node" % inode)
                 raise FUSEError(errno.ENOENT)
 
-            if self.cache_enabled:
-                self.cached_nodes.set(inode, node)
+            self.cached_nodes.set(inode, node)
 
             self.time_spent_caching_nodes += time.time() - start_time
 

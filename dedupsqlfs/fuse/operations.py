@@ -136,6 +136,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.manager.setSynchronous(self.getOption("synchronous"))
             self.manager.setAutocommit(self.getOption("use_transactions"))
             self.manager.setBasepath(os.path.expanduser(self.getOption("data")))
+            self.manager.begin()
         return self.manager
 
     def getTable(self, table_name):
@@ -361,6 +362,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().warning("Warning: Disabling synchronous operation, you might lose data..")
                 self.getManager().close()
                 self.getManager().setSynchronous(self.synchronous)
+                self.getManager().begin()
 
             self.mounted_snapshot = self.getOption("snapshot_mount")
             if self.mounted_snapshot:
@@ -2203,12 +2205,13 @@ class DedupOperations(llfuse.Operations): # {{{1
         return msg
 
     def __commit_changes(self): # {{{3
-        self.getManager().commit()
-        self.getManager().begin()
+        if not self.use_transactions:
+            self.getManager().commit()
+            self.getManager().begin()
 
 
-    def __rollback_changes(self, nested=False): # {{{3
-        if self.use_transactions and not nested:
+    def __rollback_changes(self): # {{{3
+        if not self.use_transactions:
             self.getLogger().info('Rolling back changes')
             self.getManager().rollback()
 

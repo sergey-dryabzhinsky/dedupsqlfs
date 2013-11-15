@@ -132,9 +132,10 @@ class Table( object ):
 
         if not self.getManager().getAutocommit():
             conn.execute("PRAGMA read_uncommitted=ON")
-            conn.isolation_level = "DEFERRED"
-        else:
-            conn.isolation_level = None
+        #    conn.isolation_level = "DEFERRED"
+        #else:
+
+        conn.isolation_level = None
 
         self._conn = conn
 
@@ -194,7 +195,7 @@ class Table( object ):
             self.startTimer()
             cur = self.getCursor()
             try:
-                cur.execute("END")
+                cur.execute("COMMIT")
             except:
                 pass
             self.stopTimer("commit")

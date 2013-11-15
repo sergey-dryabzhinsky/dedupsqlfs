@@ -1920,7 +1920,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().info("%s (count=%d)", proc, count)
 
         if count > 0:
-            curName2.execute("END")
+            curName2.execute("COMMIT")
 
             self.getTable("name").commit()
             self.should_vacuum = True

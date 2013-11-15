@@ -1005,19 +1005,22 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.getLogger().debug("get block from DB")
 
             tableIndex = self.getTable("inode_hash_block")
-            tableBlock = self.getTable("block")
 
             block_index = tableIndex.get_by_inode_number(inode, block_number)
             if not block_index:
                 self.getLogger().debug("-- new block")
                 block = BytesIO()
             else:
+                tableBlock = self.getTable("block")
+                tableHCT = self.getTable("hash_compression_type")
+
                 item = tableBlock.get(block_index["hash_id"])
+                compType = tableHCT.get(block_index["hash_id"])
 
                 self.getLogger().debug("-- decompress block")
                 self.getLogger().debug("-- db size: %s" % len(item["data"]))
 
-                block = self.__decompress(item["data"], item["compression_type_id"])
+                block = self.__decompress(item["data"], compType["compression_type_id"])
 
                 self.getLogger().debug("-- decomp size: %s" % len(block.getvalue()))
 

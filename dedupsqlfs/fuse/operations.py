@@ -453,7 +453,11 @@ class DedupOperations(llfuse.Operations): # {{{1
         node = self.__get_tree_node_by_parent_inode_and_name(parent_inode, name)
         attr = self.__getattr(node["inode_id"])
 
-        self.__log_call('lookup', '->(node=%r, attr=%r)', node, attr)
+        v = {}
+        for a in attr.__slots__:
+            v[a] = getattr(attr, a)
+
+        self.__log_call('lookup', '->(node=%r, attr=%r)', node, v)
 
         self.__cache_meta_hook()
         return attr
@@ -1801,6 +1805,7 @@ class DedupOperations(llfuse.Operations): # {{{1
     def __flush_expired_inodes(self, inodes):
         count = 0
         for inode_id, update_data in inodes.items():
+            self.getLogger().debug("flush inode: %i = %r", inode_id, update_data)
             count += self.getTable("inode").update_data(inode_id, update_data)
         return count
 

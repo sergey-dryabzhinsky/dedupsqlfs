@@ -174,8 +174,10 @@ class Table( object ):
         return self.getPageSize() * self.getPageCount()
 
     def clean( self ):
+        self.startTimer()
         cur = self.getCursor()
         cur.execute("TRUNCATE `%s`" % self.getName())
+        self.stopTimer("clean")
         return self
 
     def create( self ):
@@ -189,21 +191,27 @@ class Table( object ):
 
     def commit(self):
         if not self.getManager().getAutocommit():
+            self.startTimer()
             cur = self.getCursor()
             try:
                 cur.execute("END")
             except:
                 pass
+            self.stopTimer("commit")
         return self
 
     def rollback(self):
         if not self.getManager().getAutocommit():
+            self.startTimer()
             self.getConnection().rollback()
+            self.stopTimer("rollback")
         return self
 
     def vacuum(self):
+        self.startTimer()
         cur = self.getCursor()
         cur.execute("VACUUM")
+        self.stopTimer("vacuum")
         return self
 
     def close(self):

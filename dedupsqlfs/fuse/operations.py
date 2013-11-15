@@ -69,6 +69,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.subvol_uptate_last_run = time.time()
 
+        self.cached_names = CacheTTLseconds()
         self.cached_nodes = CacheTTLseconds()
         self.cached_attrs = CacheTTLseconds()
 
@@ -325,6 +326,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.cached_blocks.setMaxReadTtl(0)
                 self.cached_blocks.setMaxWriteTtl(0)
                 self.cached_nodes.set_max_ttl(0)
+                self.cached_names.set_max_ttl(0)
                 self.cached_attrs.set_max_ttl(0)
             else:
                 if self.block_size:
@@ -344,6 +346,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                     self.cached_blocks.setMaxReadCacheSize(self.cache_block_read_size)
 
                 self.cached_nodes.set_max_ttl(self.cache_meta_timeout)
+                self.cached_names.set_max_ttl(self.cache_meta_timeout)
                 self.cached_attrs.set_max_ttl(self.cache_meta_timeout)
 
             if self.getOption("synchronous") is not None:
@@ -1273,10 +1276,15 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __intern(self, string): # {{{3
         start_time = time.time()
-        nameTable = self.getTable("name")
-        result = nameTable.find(string)
+
+        result = self.cached_names.get(string)
         if not result:
-            result = nameTable.insert(string)
+            nameTable = self.getTable("name")
+            result = nameTable.find(string)
+            if not result:
+                result = nameTable.insert(string)
+            self.cached_names.set(string, result)
+
         self.time_spent_interning += time.time() - start_time
         return int(result)
 
@@ -1757,24 +1765,21 @@ class DedupOperations(llfuse.Operations): # {{{1
         start_time = time.time()
 
         flushed_nodes = 0
+        flushed_names = 0
         flushed_attrs = 0
 
         if time.time() - self.cache_gc_meta_last_run >= self.cache_meta_timeout:
 
-            size = len(self.cached_nodes)
-            self.cached_nodes.clear()
-            flushed_nodes = size - len(self.cached_nodes)
-
-            size = len(self.cached_attrs)
-            self.cached_attrs.clear()
-            flushed_attrs = size - len(self.cached_attrs)
+            flushed_nodes = self.cached_nodes.clear()
+            flushed_names = self.cached_names.clear()
+            flushed_attrs = self.cached_attrs.clear()
 
             self.cache_gc_meta_last_run = time.time()
 
         elapsed_time = time.time() - start_time
         if flushed_attrs + flushed_nodes > 0:
-            self.getLogger().info("Nodes cache cleanup: flushed %i nodes, %i attrs in %s.",
-                                  flushed_nodes, flushed_attrs,
+            self.getLogger().info("Meta cache cleanup: flushed %i nodes, %i attrs, %i names in %s.",
+                                  flushed_nodes, flushed_attrs, flushed_names,
                                   format_timespan(elapsed_time))
         return
 

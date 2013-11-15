@@ -51,7 +51,9 @@ class CacheTTLseconds(object):
 
     def clear(self):
         now = time()
+        count = 0
         for key, t in tuple(self._keys.items()):
             if t + self._max_ttl < now:
                 self.unset(key)
-        return self
+                count += 1
+        return count

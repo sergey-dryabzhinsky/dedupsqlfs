@@ -1327,6 +1327,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.cached_attrs.unset(cur_node["inode_id"])
         self.cached_nodes.unset((parent_inode, name))
         self.cached_nodes.unset(cur_node["inode_id"])
+        self.cached_names.unset(name)
 
         self.__cache_meta_hook()
         return

@@ -243,7 +243,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             #self.__flush_inode_cached_blocks(fh, clean=False)
 
             attr = self.__get_inode_row(fh)
-            if not attr["st_size"]:
+            if not attr["size"]:
                 self.getTable("inode_hash_block").delete(fh)
                 self.cached_blocks.forget(fh)
 

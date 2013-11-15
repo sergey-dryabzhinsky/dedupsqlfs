@@ -666,12 +666,13 @@ class DedupOperations(llfuse.Operations): # {{{1
         @type   attr:   llfuse.EntryAttributes
         """
         try:
-            self.__log_call('setattr', 'setattr(inode=%i, attr=%r)', inode, attr)
+            self.__log_call('setattr', 'setattr(inode=%i, attr=%r)', inode, vars(attr))
             if self.isReadonly(): return -errno.EROFS
 
             inode = self.__fix_inode_if_requested_root(inode)
 
             row = self.__get_inode_row(inode)
+            self.getLogger().debug("-- current row: %r", row)
 
             set_ctime = False
             update_db = False
@@ -733,13 +734,13 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             if update_db:
 
-                self.getLogger().debug("times: atime=%r, mtime=%r, ctime=%r",
-                                       attr.st_atime, attr.st_mtime, attr.st_ctime)
-                self.getLogger().debug("new attrs: %r", new_data)
+                self.getLogger().debug("-- new attrs: %r", new_data)
 
                 # self.getTable("inode").update_data(inode, new_data)
 
                 row.update(new_data)
+                self.getLogger().debug("-- new row: %r", row)
+
                 self.cached_attrs.set(inode, row, writed=True)
 
             self.__cache_meta_hook()
@@ -1009,7 +1010,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __getattr(self, inode_id): # {{{3
         row = self.__get_inode_row(inode_id)
-        self.__cache_meta_hook()
         return self.__fill_attr_inode_row(row)
 
 

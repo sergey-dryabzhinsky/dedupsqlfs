@@ -71,8 +71,14 @@ class TableInode( Table ):
         params = ()
         values = ()
         for key in row_data.keys():
+            if key == "id":
+                continue
             params += ("%s=?" % key,)
             values += (row_data[key],)
+
+        if not values:
+            return 0
+
         query += ", ".join(params)
         query += " WHERE id=?"
 

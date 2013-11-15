@@ -111,7 +111,7 @@ class DbManager( object ):
 
     def begin(self):
         for name, t in self._table.items():
-            t.commit()
+            t.begin()
         return self
 
     def commit(self):

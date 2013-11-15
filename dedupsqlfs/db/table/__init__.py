@@ -182,14 +182,13 @@ class Table( object ):
         raise NotImplemented
 
     def begin( self ):
-        if not self.getManager().getAutocommit():
-            cur = self.getCursor()
-            cur.execute("BEGIN")
+        cur = self.getCursor()
+        cur.execute("BEGIN")
         return self
 
     def commit(self):
-        if not self.getManager().getAutocommit():
-            self.getConnection().commit()
+        cur = self.getCursor()
+        cur.execute("END")
         return self
 
     def rollback(self):

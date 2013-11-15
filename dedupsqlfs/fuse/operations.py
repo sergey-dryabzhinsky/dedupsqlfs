@@ -2202,10 +2202,9 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.getLogger().info(msg, format_timespan(elapsed_time))
         return msg
 
-    def __commit_changes(self, nested=False): # {{{3
-        if not self.use_transactions and not nested:
-            self.getManager().commit()
-            self.getManager().begin()
+    def __commit_changes(self): # {{{3
+        self.getManager().commit()
+        self.getManager().begin()
 
 
     def __rollback_changes(self, nested=False): # {{{3

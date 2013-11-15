@@ -2235,6 +2235,10 @@ class DedupOperations(llfuse.Operations): # {{{1
             sys.stderr.write('%s\n' % ('-' * 50))
             sys.stderr.write("Returning %i\n" % code)
             sys.stderr.flush()
+
+            self.getLogger().error("Caught exception in %s(): %s\n" % (method, exception))
+            self.getLogger().error(traceback.format_exc())
+            self.getLogger().error("Returning %i\n" % code)
             # Convert the exception to a FUSE error code.
         if isinstance(exception, OSError):
             return FUSEError(exception.errno)

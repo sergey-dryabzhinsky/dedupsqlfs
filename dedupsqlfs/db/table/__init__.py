@@ -132,7 +132,7 @@ class Table( object ):
 
         if not self.getManager().getAutocommit():
             conn.execute("PRAGMA read_uncommitted=ON")
-            conn.isolation_level = "DEFFERED"
+            conn.isolation_level = "DEFERRED"
         else:
             conn.isolation_level = None
 

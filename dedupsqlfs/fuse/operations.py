@@ -1879,27 +1879,26 @@ class DedupOperations(llfuse.Operations): # {{{1
         countNames = curName.fetchone()["cnt"]
         self.getLogger().info(" path segments: %d" % countNames)
 
+        count = 0
         current = 0
         proc = ""
 
-        curName.execute("SELECT id FROM `name`")
+        maxCnt = 10000
+        curBlock = 0
 
-        if self.getOption("memory_limit"):
-            maxCnt = 1000
-        else:
-            maxCnt = 10000
-
-        self.getLogger().info(" rows per iteration: %d" % maxCnt)
-
-        curName2.execute("BEGIN")
-
-        count = 0
         while True:
 
-            nameIds = tuple("%s" % nameItem["id"] for nameItem in curName.fetchmany(maxCnt))
-            if not nameIds:
+            if current == countNames:
                 break
+
+            curName.execute("SELECT id FROM `name` WHERE id>=? AND id<?", (curBlock, curBlock+maxCnt))
+
+            nameIds = tuple("%s" % nameItem["id"] for nameItem in curName.fetchmany(maxCnt))
             current += len(nameIds)
+
+            curBlock += maxCnt
+            if not nameIds:
+                continue
 
             curTree.execute("SELECT name_id FROM `tree` WHERE name_id IN (%s)" % (",".join(nameIds),))
             treeNames = curTree.fetchall()
@@ -1920,8 +1919,6 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().info("%s (count=%d)", proc, count)
 
         if count > 0:
-            curName2.execute("COMMIT")
-
             self.getTable("name").commit()
             self.should_vacuum = True
             self.__vacuum_datatable("name")
@@ -1940,27 +1937,26 @@ class DedupOperations(llfuse.Operations): # {{{1
         countInodes = curInode.fetchone()["cnt"]
         self.getLogger().info(" inodes: %d" % countInodes)
 
+        count = 0
         current = 0
         proc = ""
 
-        curInode.execute("SELECT id FROM `inode`")
+        curBlock = 0
+        maxCnt = 10000
 
-        if self.getOption("memory_limit"):
-            maxCnt = 1000
-        else:
-            maxCnt = 10000
-
-        self.getLogger().info(" rows per iteration: %d" % maxCnt)
-
-        curInode2.execute("BEGIN")
-
-        count = 0
         while True:
 
-            inodeIds = tuple("%s" % inodeItem["id"] for inodeItem in curInode.fetchmany(maxCnt))
-            if not inodeIds:
+            if current == countInodes:
                 break
+
+            curInode.execute("SELECT id FROM `inode` WHERE id>=? AND id<?", (curBlock, curBlock+maxCnt))
+
+            inodeIds = tuple("%s" % inodeItem["id"] for inodeItem in curInode.fetchmany(maxCnt))
             current += len(inodeIds)
+
+            curBlock += maxCnt
+            if not inodeIds:
+                continue
 
             curTree.execute("SELECT inode_id FROM `tree` WHERE inode_id IN (%s)" % (",".join(inodeIds),))
             treeInodes = curTree.fetchall()
@@ -1981,8 +1977,6 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().info("%s (count=%d)", proc, count)
 
         if count > 0:
-            curInode2.execute("END")
-
             self.getTable("inode").commit()
             self.should_vacuum = True
             self.__vacuum_datatable("inode")
@@ -2002,27 +1996,26 @@ class DedupOperations(llfuse.Operations): # {{{1
         countXattrs = curXattr.fetchone()["cnt"]
         self.getLogger().info(" xattrs: %d" % countXattrs)
 
+        count = 0
         current = 0
         proc = ""
 
-        curXattr.execute("SELECT inode_id FROM `xattr`")
+        curBlock = 0
+        maxCnt = 10000
 
-        if self.getOption("memory_limit"):
-            maxCnt = 1000
-        else:
-            maxCnt = 10000
-
-        self.getLogger().info(" rows per iteration: %d" % maxCnt)
-
-        curXattr2.execute("BEGIN")
-
-        count = 0
         while True:
 
-            inodeIds = tuple("%s" % xattrItem["inode_id"] for xattrItem in curXattr.fetchmany(maxCnt))
-            if not inodeIds:
+            if current == countXattrs:
                 break
+
+            curXattr.execute("SELECT inode_id FROM `xattr` WHERE inode_id>=? AND inode_id<?", (curBlock, curBlock+maxCnt))
+
+            inodeIds = tuple("%s" % xattrItem["inode_id"] for xattrItem in curXattr.fetchmany(maxCnt))
             current += len(inodeIds)
+
+            curBlock += maxCnt
+            if not inodeIds:
+                continue
 
             curInode.execute("SELECT id FROM `inode` WHERE id IN (%s)" % (",".join(inodeIds),))
             xattrInodes = curInode.fetchall()
@@ -2043,8 +2036,6 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().info("%s (count=%d)", proc, count)
 
         if count > 0:
-            curXattr2.execute("END")
-
             self.getTable("xattr").commit()
             self.should_vacuum = True
             self.__vacuum_datatable("xattr")
@@ -2063,27 +2054,26 @@ class DedupOperations(llfuse.Operations): # {{{1
         countLinks = curLink.fetchone()["cnt"]
         self.getLogger().info(" links: %d" % countLinks)
 
+        count = 0
         current = 0
         proc = ""
 
-        curLink.execute("SELECT inode_id FROM `link`")
+        curBlock = 0
+        maxCnt = 10000
 
-        if self.getOption("memory_limit"):
-            maxCnt = 1000
-        else:
-            maxCnt = 10000
-
-        self.getLogger().info(" rows per iteration: %d" % maxCnt)
-
-        curLink2.execute("BEGIN")
-
-        count = 0
         while True:
 
-            inodeIds = tuple("%s" % linkItem["inode_id"] for linkItem in curLink.fetchmany(maxCnt))
-            if not inodeIds:
+            if current == countLinks:
                 break
+
+            curLink.execute("SELECT inode_id FROM `link` WHERE inode_id>=? AND inode_id<?", (curBlock, curBlock+maxCnt))
+
+            inodeIds = tuple("%s" % linkItem["inode_id"] for linkItem in curLink.fetchmany(maxCnt))
             current += len(inodeIds)
+
+            curBlock += maxCnt
+            if not inodeIds:
+                continue
 
             curInode.execute("SELECT id FROM `inode` WHERE id IN (%s)" % (",".join(inodeIds),))
             linkInodes = curInode.fetchall()
@@ -2104,8 +2094,6 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().info("%s (count=%d)", proc, count)
 
         if count > 0:
-            curLink2.execute("END")
-
             self.getTable("link").commit()
             self.should_vacuum = True
             self.__vacuum_datatable("link")
@@ -2124,27 +2112,28 @@ class DedupOperations(llfuse.Operations): # {{{1
         countInodes = curIndex.fetchone()["cnt"]
         self.getLogger().info(" block inodes: %d" % countInodes)
 
+        count = 0
         current = 0
         proc = ""
 
-        curIndex.execute("SELECT inode_id FROM `inode_hash_block` GROUP BY inode_id")
+        curBlock = 0
+        maxCnt = 10000
 
-        if self.getOption("memory_limit"):
-            maxCnt = 1000
-        else:
-            maxCnt = 10000
-
-        self.getLogger().info(" rows per iteration: %d" % maxCnt)
-
-        curIndex2.execute("BEGIN")
-
-        count = 0
         while True:
 
-            inodeIds = tuple("%s" % indexItem["inode_id"] for indexItem in curIndex.fetchmany(maxCnt))
-            if not inodeIds:
+            if current == countInodes:
                 break
+
+            curIndex.execute("SELECT inode_id FROM `inode_hash_block` GROUP BY inode_id WHERE inode_id>=? AND inode_id<?", (
+                curBlock, curBlock+maxCnt
+            ))
+
+            inodeIds = tuple("%s" % indexItem["inode_id"] for indexItem in curIndex.fetchmany(maxCnt))
             current += len(inodeIds)
+
+            curBlock += maxCnt
+            if not inodeIds:
+                continue
 
             curInode.execute("SELECT id FROM `inode` WHERE id IN (%s)" % (",".join(inodeIds),))
             indexInodes = curInode.fetchall()
@@ -2186,28 +2175,26 @@ class DedupOperations(llfuse.Operations): # {{{1
         countHashes = curHash.fetchone()["cnt"]
         self.getLogger().info(" hashes: %d" % countHashes)
 
+        count = 0
         current = 0
         proc = ""
 
-        curHash.execute("SELECT id FROM `hash`")
+        _curBlock = 0
+        maxCnt = 10000
 
-        if self.getOption("memory_limit"):
-            maxCnt = 1000
-        else:
-            maxCnt = 10000
-
-        self.getLogger().info(" rows per iteration: %d" % maxCnt)
-
-        curBlock.execute("BEGIN")
-        curHash2.execute("BEGIN")
-
-        count = 0
         while True:
 
-            hashIds = tuple("%s" % hashItem["id"] for hashItem in curHash.fetchmany(maxCnt))
-            if not hashIds:
+            if current == countHashes:
                 break
+
+            curHash.execute("SELECT id FROM `hash` WHERE id>=? AND id<?", (_curBlock, _curBlock+maxCnt))
+
+            hashIds = tuple("%s" % hashItem["id"] for hashItem in curHash.fetchmany(maxCnt))
             current += len(hashIds)
+
+            _curBlock += maxCnt
+            if not hashIds:
+                continue
 
             curIndex.execute("SELECT hash_id FROM `inode_hash_block` WHERE hash_id IN (%s) GROUP BY hash_id" % (",".join(hashIds),))
             indexHashes = curIndex.fetchall()
@@ -2231,9 +2218,6 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.getManager().commit()
 
         if count > 0:
-            curBlock.execute("END")
-            curHash2.execute("END")
-
             self.should_vacuum = True
             self.getTable("hash").commit()
             self.__vacuum_datatable("hash")

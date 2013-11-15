@@ -132,7 +132,7 @@ class Table( object ):
 
         if not self.getManager().getAutocommit():
             conn.execute("PRAGMA read_uncommitted=ON")
-            conn.isolation_level = "EXCLUSIVE"
+            conn.isolation_level = "DEFFERED"
         else:
             conn.isolation_level = None
 

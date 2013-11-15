@@ -223,12 +223,13 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().info("Flush remaining blocks.")
                 self.__flush_old_cached_blocks(self.cached_blocks.clear())
 
+                self.getLogger().info("Committing outstanding changes.")
+                self.getManager().commit()
+
                 if self.getOption("gc_umount_enabled"):
                     # Force vacuum on umount
                     self.gc_enabled = True
                     self.__collect_garbage()
-                self.getLogger().info("Committing outstanding changes.")
-                self.getManager().commit()
             if self.getOption("verbosity"):
                 self.__print_stats()
             self.getManager().close()

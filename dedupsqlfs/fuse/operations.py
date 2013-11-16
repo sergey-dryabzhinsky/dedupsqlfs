@@ -512,11 +512,21 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         inode = self.__fix_inode_if_requested_root(inode)
 
-        node = self.__get_tree_node_by_inode(inode)
-        if not node:
+        inode = self.__get_inode_row(inode)
+        if not inode:
             raise FUSEError(errno.ENOENT)
+
+        if flags & os.O_CREAT and flags & os.O_EXCL:
+            self.__log_call('open', '-- exception for existed file! cant create!')
+            raise FUSEError(errno.ENOENT)
+
+        if flags & os.O_TRUNC:
+            self.__log_call('open', '-- truncate file!')
+            inode["size"] = 0
+            self.cached_attrs.set(inode["id"], inode, writed=True)
+
         # Make sure the file is readable and/or writable.
-        return node["inode_id"]
+        return inode["id"]
 
     def opendir(self, inode): # {{{3
         self.__log_call('opendir', 'opendir(inode=%i)', inode)

@@ -51,16 +51,19 @@ class InodesTime(object):
 
     def get(self, inode, default=None):
 
+        now = time()
+
         inode = str(inode)
 
-        inode_data = self._inodes.get(inode, {})
+        inode_data = self._inodes.get(inode, {
+            "time" : now
+        })
 
         if not inode_data:
             return default
 
         val = inode_data.get("data", default)
 
-        now = time()
         t = inode_data["time"]
         if now - t > self._max_ttl:
             return val

@@ -118,17 +118,19 @@ class StorageTimeSize(object):
         inode = str(inode)
         block_number = str(block_number)
 
+        now = time()
 
         inode_data = self._inodes.get(inode, {})
 
-        block_data = inode_data.get(block_number, {})
+        block_data = inode_data.get(block_number, {
+            "time" : now
+        })
 
         if not block_data:
             return default
 
         val = block_data.get("block", default)
 
-        now = time()
         t = block_data["time"]
         if now - t > self._max_write_ttl:
             return val

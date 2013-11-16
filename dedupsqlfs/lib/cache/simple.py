@@ -33,7 +33,8 @@ class CacheTTLseconds(object):
         val = self._values.get(key, default)
         now = time()
         # expired
-        if self._keys[ key ] + self._max_ttl < now:
+        t = self._keys.get( key, 0 )
+        if t + self._max_ttl < now:
             return val
 
         self._keys[ key ] = now

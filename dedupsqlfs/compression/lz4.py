@@ -12,7 +12,7 @@ class Lz4Compression(BaseCompression):
 
     _method_name = "lz4"
 
-    _minimal_size = 38
+    _minimal_size = 15
 
     _has_comp_level_options = False
 

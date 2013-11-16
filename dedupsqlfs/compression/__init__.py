@@ -86,7 +86,7 @@ class BaseCompression:
             opts = self.getCompressionLevelOptions(comp_level)
             if opts is dict and opts:
                 return func(data, **opts)
-            if opts is tuple and opts:
+            elif opts is tuple and opts:
                 return func(data, *opts)
             else:
                 return func(data)

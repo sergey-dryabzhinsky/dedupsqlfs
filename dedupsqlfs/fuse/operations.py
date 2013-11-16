@@ -288,8 +288,13 @@ class DedupOperations(llfuse.Operations): # {{{1
     def getattr(self, inode): # {{{3
         self.__log_call('getattr', 'getattr(inode=%r)', inode)
         inode = self.__fix_inode_if_requested_root(inode)
-        result = self.__getattr(inode)
-        return result
+        attr = self.__getattr(inode)
+        v = {}
+        for a in attr.__slots__:
+            v[a] = getattr(attr, a)
+
+        self.__log_call('getattr', '->(inode=%r, attr=%r)', inode, v)
+        return attr
 
     def getxattr(self, inode, name): # {{{3
         self.__log_call('getxattr', 'getxattr(inode=%r, name=%r)', inode, name)
@@ -1027,7 +1032,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         if block is None:
 
-            self.getLogger().debug("get block from DB")
+            self.getLogger().debug("get block from DB: inode=%i, number=%i", inode, block_number)
 
             tableIndex = self.getTable("inode_hash_block")
 
@@ -1632,7 +1637,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         block_index = tableIndex.get_by_inode_number(inode, block_number)
 
-        self.getLogger().debug("write block: inode=%s, block number = %s, data length = %s" % (inode, block_number, block_length))
+        self.getLogger().debug("write block: inode=%s, block number=%s, data length=%s" % (inode, block_number, block_length))
 
         if block_length == 0 and block_index:
             self.getLogger().debug("write block: remove empty block")

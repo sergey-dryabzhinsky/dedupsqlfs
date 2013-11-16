@@ -177,7 +177,6 @@ class StorageTimeSize(object):
         for inode in tuple(self._inodes.keys()):
 
             inode_data = self._inodes[inode]
-            updated = False
 
             for bn in tuple(inode_data.keys()):
                 block_data = inode_data[bn]
@@ -199,12 +198,9 @@ class StorageTimeSize(object):
                         self._cur_read_cache_size -= block_data["size"]
 
                     del inode_data[bn]
-                    updated = True
 
             if not inode_data and inode in self._inodes:
                 del self._inodes[inode]
-            elif updated:
-                self._inodes[inode] = inode_data
 
         return old_inodes
 

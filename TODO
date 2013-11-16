@@ -14,7 +14,7 @@ Here are some things on to-do list, in no particular order:
  * Automatically switch to a larger block size to reduce the overhead for files
    that rarely change after being created (like >= 100MB video files :-)
    Or use defragmentation tool for that.
-   Block size must be stored in xattr for every file if it differs from default.
+   Block size must be stored for every file if it differs from default.
 
  * Implement adaptive compression for different file types:
    - no compression for audio/video/images/archives - *.mp3/*.mp4/*.jpg/*.zip
@@ -22,8 +22,9 @@ Here are some things on to-do list, in no particular order:
    - best for texts and some other types - *.txt/*.html/*.bmp
    There must be variants for pairs - types:compression. Even custom compression
    methods: "*.wav,*.pdf:custom:zlib,snappy:fast".
-   Compression for file types must be stored options.
-   Compression can be overrided by xattr for every file.
+   Compression for file types must be redefinable.
+   Compression can be overrided for every file.
+   Need recompression tool. And fsck support for old-new compression options.
 
  * Use configuration file with defined default compression, hash algo, and other options.
 

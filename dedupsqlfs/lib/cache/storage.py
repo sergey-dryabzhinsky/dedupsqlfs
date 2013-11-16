@@ -126,12 +126,12 @@ class StorageTimeSize(object):
         if not block_data:
             return default
 
+        val = block_data.get("block", default)
+
         now = time()
         t = block_data["time"]
         if now - t > self._max_write_ttl:
-            return default
-
-        val = block_data.get("block", default)
+            return val
 
         # update last request time
         block_data["time"] = time()

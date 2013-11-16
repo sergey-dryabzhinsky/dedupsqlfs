@@ -701,6 +701,13 @@ class DedupOperations(llfuse.Operations): # {{{1
             update_db = False
             new_data = {}
 
+            # Emulate truncate
+            if attr.st_size is not None:
+                if row["size"] != attr.st_size:
+                    new_data["size"] = attr.st_size
+                    set_ctime = True
+                    update_db = True
+
             if attr.st_mode is not None:
                 if row["mode"] != attr.st_mode:
                     new_data["mode"] = attr.st_mode

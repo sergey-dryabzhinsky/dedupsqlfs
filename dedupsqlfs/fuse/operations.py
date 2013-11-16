@@ -1931,8 +1931,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().info("%s (count=%d)", proc, count)
 
         if count > 0:
-            self.getTable("name").commit()
             self.should_vacuum = True
+            self.getTable("name").commit()
             self.__vacuum_datatable("name")
             return "Cleaned up %i unused path segment%s in %%s." % (count, count != 1 and 's' or '')
         return
@@ -1989,8 +1989,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().info("%s (count=%d)", proc, count)
 
         if count > 0:
-            self.getTable("inode").commit()
             self.should_vacuum = True
+            self.getTable("inode").commit()
             self.__vacuum_datatable("inode")
             return "Cleaned up %i unused inode%s in %%s." % (count, count != 1 and 's' or '')
         return
@@ -2048,8 +2048,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().info("%s (count=%d)", proc, count)
 
         if count > 0:
-            self.getTable("xattr").commit()
             self.should_vacuum = True
+            self.getTable("xattr").commit()
             self.__vacuum_datatable("xattr")
             return "Cleaned up %i unused xattr%s in %%s." % (count, count != 1 and 's' or '')
         return
@@ -2106,8 +2106,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().info("%s (count=%d)", proc, count)
 
         if count > 0:
-            self.getTable("link").commit()
             self.should_vacuum = True
+            self.getTable("link").commit()
             self.__vacuum_datatable("link")
             return "Cleaned up %i unused link%s in %%s." % (count, count != 1 and 's' or '')
         return
@@ -2166,10 +2166,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().info("%s (count=%d)", proc, count)
 
         if count > 0:
-            curIndex2.execute("END")
-
-            self.getTable("inode_hash_block").commit()
             self.should_vacuum = True
+            self.getTable("inode_hash_block").commit()
             self.__vacuum_datatable("inode_hash_block")
             return "Cleaned up %i unused index entr%s in %%s." % (count, count != 1 and 'ies' or 'y')
         return

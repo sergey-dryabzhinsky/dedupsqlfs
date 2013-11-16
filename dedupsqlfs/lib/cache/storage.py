@@ -5,7 +5,7 @@ import heapq
 
 __author__ = 'sergey'
 
-class StorageTTLseconds(object):
+class StorageTimeSize(object):
 
     # Maximum seconds after that cache is expired for writed blocks
     _max_write_ttl = 5
@@ -118,20 +118,22 @@ class StorageTTLseconds(object):
         inode = str(inode)
         block_number = str(block_number)
 
+        now = time()
 
         inode_data = self._inodes.get(inode, {})
 
-        block_data = inode_data.get(block_number, {})
+        block_data = inode_data.get(block_number, {
+            "time" : now
+        })
 
         if not block_data:
             return default
 
-        now = time()
+        val = block_data.get("block", default)
+
         t = block_data["time"]
         if now - t > self._max_write_ttl:
-            return default
-
-        val = block_data.get("block", default)
+            return val
 
         # update last request time
         block_data["time"] = time()
@@ -161,6 +163,11 @@ class StorageTTLseconds(object):
         max_fill = 100 + self._max_size_trsh
         return filled > max_fill
 
+    def forget(self, inode):
+        if inode in self._inodes:
+            del self._inodes[inode]
+        return
+
     def expired(self, writed=False):
         now = time()
 
@@ -172,7 +179,6 @@ class StorageTTLseconds(object):
         for inode in tuple(self._inodes.keys()):
 
             inode_data = self._inodes[inode]
-            updated = False
 
             for bn in tuple(inode_data.keys()):
                 block_data = inode_data[bn]
@@ -194,12 +200,9 @@ class StorageTTLseconds(object):
                         self._cur_read_cache_size -= block_data["size"]
 
                     del inode_data[bn]
-                    updated = True
 
             if not inode_data and inode in self._inodes:
                 del self._inodes[inode]
-            elif updated:
-                self._inodes[inode] = inode_data
 
         return old_inodes
 

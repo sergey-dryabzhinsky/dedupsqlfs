@@ -395,7 +395,7 @@ def main(): # {{{1
     msg += ". Defaults to %r." % constants.COMPRESSION_TYPE_NONE
     if len(compression_methods) > 1:
         msg += " %r will try all compression methods and choose one with smaller result data." % constants.COMPRESSION_TYPE_BEST
-        msg += " %r will try selected compression methods (--custom-compress) and choose one with smaller result data." % constants
+        msg += " %r will try selected compression methods (--custom-compress) and choose one with smaller result data." % constants.COMPRESSION_TYPE_CUSTOM
 
     data.add_argument('--compress-method', dest='compression_method', metavar='METHOD', choices=compression_methods, default=constants.COMPRESSION_TYPE_NONE, help=msg)
     data.add_argument('--recompress', dest='recompress_path', metavar='PATH', help="Compress file or entire directory with new compression method")

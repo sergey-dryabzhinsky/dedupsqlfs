@@ -21,10 +21,11 @@ class TableOption( Table ):
         return
 
     def insert( self, name, value ):
+        self.startTimer()
         cur = self.getCursor()
         cur.execute("INSERT INTO `%s`(name, value) VALUES (?, ?)" % self._table_name, (name, value))
         item = cur.lastrowid
-        self.commit()
+        self.stopTimer('insert')
         return item
 
     def update( self, name, value ):
@@ -32,13 +33,15 @@ class TableOption( Table ):
         @return: count updated rows
         @rtype: int
         """
+        self.startTimer()
         cur = self.getCursor()
         cur.execute("UPDATE `%s` SET value=? WHERE name=?" % self._table_name, (value, name))
         count = cur.rowcount
-        self.commit()
+        self.stopTimer('update')
         return count
 
     def get( self, name ):
+        self.startTimer()
         cur = self.getCursor()
         cur.execute("SELECT value FROM `%s` WHERE name=:name" % self._table_name,
                 {"name": name}
@@ -46,15 +49,18 @@ class TableOption( Table ):
         item = cur.fetchone()
         if item:
             item = item["value"].decode()
+        self.stopTimer('get')
         return item
 
     def getAll( self ):
+        self.startTimer()
         cur = self.getCursor()
         cur.execute("SELECT * FROM `%s`" % self._table_name)
         items = cur.fetchall()
         opts = {}
         for item in items:
             opts[ item["name"].decode() ] = item["value"].decode()
+        self.stopTimer('getAll')
         return opts
 
     pass

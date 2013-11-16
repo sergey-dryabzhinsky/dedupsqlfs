@@ -168,13 +168,13 @@ class Subvolume(object):
             subvol_name = b'@' + subvol_name
 
         try:
+            tableInode = self.getTable('inode')
+            tableTree = self.getTable('tree')
+
             attr = self.getManager().lookup(llfuse.ROOT_INODE, subvol_name)
-            node = self.getTable('tree').find_by_inode(attr.st_ino)
+            node = tableTree.find_by_inode(attr.st_ino)
 
-            curTree = self.getTable("tree").getCursor()
-            curInode = self.getTable("inode").getCursor()
-
-            count_to_do = self.getTable('tree').count_subvolume_inodes(node["id"])
+            count_to_do = tableTree.count_subvolume_inodes(node["id"])
             count_done = 0
             count_proc = 0
             if count_to_do:
@@ -189,27 +189,53 @@ class Subvolume(object):
 
             compMethods = {}
 
+            hashCount = {}
+            hashCT = {}
+            hashBS = {}
+
+            curTree = tableTree.getCursor()
             curTree.execute("SELECT inode_id FROM tree WHERE subvol_id=?", (node['id'],))
+
+            tableIndex = self.getTable('inode_hash_block')
+            tableHCT = self.getTable('hash_compression_type')
+            tableHBS = self.getTable('hash_block_size')
 
             while True:
                 treeItem = curTree.fetchone()
                 if not treeItem:
                     break
 
-                curInode.execute("SELECT `size` FROM `inode` WHERE id=?", (treeItem["inode_id"],))
-                apparent_size += curInode.fetchone()["size"]
+                apparent_size += tableInode.get_size(treeItem["inode_id"])
 
-                hashes = self.getTable('inode_hash_block').get_hashes_by_inode(treeItem["inode_id"])
-                for indexItem in hashes:
-                    cnt = self.getTable('inode_hash_block').get_count_hash(indexItem["hash_id"])
+                hashes = set(( item["hash_id"] for item in tableIndex.get_hashes_by_inode(treeItem["inode_id"])))
 
-                    blockItem = self.getTable("block").get(indexItem["hash_id"])
-                    method = self.getManager().getCompressionTypeName(blockItem["compression_type_id"])
+                for hash_id in hashes:
+
+                    if hash_id in hashCount:
+                        cnt = hashCount[hash_id]
+                    else:
+                        cnt = tableIndex.get_count_hash(hash_id)
+                        hashCount[hash_id] = cnt
+
+                    if hash_id in hashCT:
+                        method = hashCT[hash_id]
+                    else:
+                        hctItem = tableHCT.get(hash_id)
+                        method = self.getManager().getCompressionTypeName(hctItem["compression_type_id"])
+                        hashCT[hash_id] = method
+
                     compMethods[ method ] = compMethods.get(method, 0) + 1
 
                     if cnt == 1:
-                        unique_size += indexItem['block_size']
-                        compressed_size += len(blockItem["data"])
+
+                        if hash_id in hashBS:
+                            hbsItem = hashBS[ hash_id ]
+                        else:
+                            hbsItem = tableHBS.get(hash_id)
+                            hashBS[ hash_id ] = hbsItem
+
+                        unique_size += hbsItem['real_size']
+                        compressed_size += hbsItem['comp_size']
 
                 count_done += 1
 

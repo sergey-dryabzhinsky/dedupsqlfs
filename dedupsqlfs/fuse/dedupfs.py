@@ -212,6 +212,8 @@ class DedupFS(object): # {{{1
         # Configure logging of messages to a file.
         if self.getOption("log_file"):
             handler = logging.StreamHandler(open(self.getOption("log_file"), 'w'))
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
             self.getLogger().addHandler(handler)
         # Convert verbosity argument to logging level?
         if self.getOption("verbosity") > 0:
@@ -227,6 +229,7 @@ class DedupFS(object): # {{{1
         disk_usage = manager.getFileSize()
 
         indexTable = manager.getTable("inode_hash_block")
+        hbsTable = manager.getTable("hash_block_size")
 
         apparent_size = self.operations.getApparentSize(False)
 
@@ -243,14 +246,16 @@ class DedupFS(object): # {{{1
 
             curIndex = indexTable.getCursor()
 
-            curIndex.execute("SELECT COUNT(hash_id)-1 AS cnt,block_size FROM `inode_hash_block` GROUP BY hash_id HAVING cnt>0")
+            curIndex.execute("SELECT COUNT(hash_id) AS cnt,hash_id FROM `inode_hash_block` GROUP BY hash_id")
 
             dedup_size = 0
             while True:
                 indexItem = curIndex.fetchone()
                 if not indexItem:
                     break
-                dedup_size += indexItem["cnt"] * indexItem["block_size"]
+                if indexItem["cnt"] > 1:
+                    hashBS = hbsTable.get(indexItem["hash_id"])
+                    dedup_size += (indexItem["cnt"]-1) * hashBS["real_size"]
 
             self.getLogger().info("Deduped size is %s (ratio is %.2f%%).",
                              format_size(dedup_size),
@@ -271,9 +276,9 @@ class DedupFS(object): # {{{1
         count_all = 0
         comp_types = {}
 
-        blockTable = manager.getTable("block")
+        hctTable = manager.getTable("hash_compression_type")
 
-        for item in blockTable.count_compression_type():
+        for item in hctTable.count_compression_type():
             count_all += item["cnt"]
             comp_types[ item["cnt"] ] = self.operations.getCompressionTypeName( item["compression_type_id"] )
 

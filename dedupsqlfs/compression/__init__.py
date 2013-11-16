@@ -55,7 +55,7 @@ class BaseCompression:
         """
         @rtype: dict or tuple or bool
         """
-        opts = {}
+        opts = False
         if level == constants.COMPRESSION_LEVEL_FAST:
             opts = self.getFastCompressionOptions()
         if level == constants.COMPRESSION_LEVEL_NORM:
@@ -84,10 +84,13 @@ class BaseCompression:
         func = self._get_comp_func()
         if self.hasCompressionLevelOptions():
             opts = self.getCompressionLevelOptions(comp_level)
-            if opts is dict and opts:
-                return func(data, **opts)
-            if opts is tuple and opts:
-                return func(data, *opts)
+            if opts:
+                if type(opts) is dict:
+                    return func(data, **opts)
+                elif type(opts) is tuple:
+                    return func(data, *opts)
+                else:
+                    return func(data)
             else:
                 return func(data)
         else:

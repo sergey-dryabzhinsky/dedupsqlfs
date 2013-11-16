@@ -15,7 +15,7 @@ class TableLink( Table ):
         # Create table
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
-                "inode_id INTEGER UNIQUE, "+
+                "inode_id INTEGER PRIMARY KEY, "+
                 "target BLOB NOT NULL"+
             ");"
         )
@@ -26,6 +26,7 @@ class TableLink( Table ):
         :param target: bytes
         :return: int
         """
+        self.startTimer()
         cur = self.getCursor()
 
         btarget = sqlite3.Binary(target)
@@ -34,7 +35,7 @@ class TableLink( Table ):
             inode, btarget,
         ))
         item = cur.lastrowid
-        self.commit()
+        self.stopTimer('insert')
         return item
 
     def find_by_inode( self, inode):
@@ -42,6 +43,7 @@ class TableLink( Table ):
         :param inode: int
         :return: int
         """
+        self.startTimer()
         cur = self.getCursor()
         cur.execute("SELECT target FROM `%s` WHERE inode_id=?" % self._table_name, (
             inode,
@@ -49,6 +51,7 @@ class TableLink( Table ):
         item = cur.fetchone()
         if item:
             item = item["target"]
+        self.stopTimer('find_by_inode')
         return item
 
     pass

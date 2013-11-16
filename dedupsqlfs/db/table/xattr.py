@@ -16,7 +16,7 @@ class TableInodeXattr( Table ):
         # Create table
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
-                "inode_id INTEGER NOT NULL UNIQUE, "+
+                "inode_id INTEGER PRIMARY KEY, "+
                 "data BLOB NOT NULL"+
             ");"
         )
@@ -27,6 +27,7 @@ class TableInodeXattr( Table ):
         :param values: dict | None
         :return: int
         """
+        self.startTimer()
         cur = self.getCursor()
 
         if values:
@@ -38,7 +39,7 @@ class TableInodeXattr( Table ):
         ))
 
         item = cur.lastrowid
-        self.commit()
+        self.stopTimer('insert')
         return item
 
     def update( self, inode, values):
@@ -46,6 +47,7 @@ class TableInodeXattr( Table ):
         :param target: bytes
         :return: int
         """
+        self.startTimer()
         cur = self.getCursor()
 
         bvalues = sqlite3.Binary(pickle.dumps(values))
@@ -54,7 +56,7 @@ class TableInodeXattr( Table ):
             bvalues, inode,
         ))
         item = cur.rowcount
-        self.commit()
+        self.stopTimer('update')
         return item
 
     def find_by_inode( self, inode):
@@ -62,6 +64,7 @@ class TableInodeXattr( Table ):
         :param inode: int
         :return: int
         """
+        self.startTimer()
         cur = self.getCursor()
         cur.execute("SELECT `data` FROM `%s` WHERE `inode_id`=?" % self._table_name, (
             inode,
@@ -69,6 +72,7 @@ class TableInodeXattr( Table ):
         item = cur.fetchone()
         if item:
             item = pickle.loads(item["data"])
+        self.stopTimer('find_by_inode')
         return item
 
     pass

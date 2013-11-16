@@ -21,6 +21,8 @@ class DbManager( object ):
         "xattr",
         "compression_type",
         "hash",
+        "hash_compression_type",
+        "hash_block_size",
         "inode_hash_block",
         "subvolume",
     )
@@ -87,6 +89,12 @@ class DbManager( object ):
             elif name == "compression_type":
                 from dedupsqlfs.db.table.compression_type import TableCompressionType
                 self._table[ name ] = TableCompressionType(self)
+            elif name == "hash_compression_type":
+                from dedupsqlfs.db.table.hash_compression_type import TableHashCompressionType
+                self._table[ name ] = TableHashCompressionType(self)
+            elif name == "hash_block_size":
+                from dedupsqlfs.db.table.hash_block_size import TableHashBlockSize
+                self._table[ name ] = TableHashBlockSize(self)
             elif name == "hash":
                 from dedupsqlfs.db.table.hash import TableHash
                 self._table[ name ] = TableHash(self)
@@ -100,6 +108,11 @@ class DbManager( object ):
                 raise ValueError("Unknown database %r" % name)
         return self._table[ name ]
 
+
+    def begin(self):
+        for name, t in self._table.items():
+            t.begin()
+        return self
 
     def commit(self):
         for name, t in self._table.items():
@@ -132,6 +145,20 @@ class DbManager( object ):
         for name in self.tables:
             t = self.getTable(name)
             s += t.getFileSize()
+        return s
+
+    def getOperationsCount(self):
+        s = 0
+        for name in self.tables:
+            t = self.getTable(name)
+            s += t.getAllOperationsCount()
+        return s
+
+    def getTimeSpent(self):
+        s = 0
+        for name in self.tables:
+            t = self.getTable(name)
+            s += t.getAllTimeSpent()
         return s
 
     def create(self):

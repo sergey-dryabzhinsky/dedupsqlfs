@@ -16,23 +16,33 @@ class TableName( Table ):
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
-                "value BLOB NOT NULL UNIQUE"+
+                "value BLOB NOT NULL, "+
+                "UNIQUE(value) "
             ");"
         )
         return
+
+    def getRowSize(self, value):
+        """
+        :param value: bytes
+        :return: int
+        """
+        bvalue = sqlite3.Binary(value)
+        return 8 + len(bvalue)*2+12
 
     def insert(self, value):
         """
         :param value: bytes
         :return: int
         """
+        self.startTimer()
         cur = self.getCursor()
 
         bvalue = sqlite3.Binary(value)
 
         cur.execute("INSERT INTO `%s`(value) VALUES (?)" % self._table_name, (bvalue,))
         item = cur.lastrowid
-        self.commit()
+        self.stopTimer('insert')
         return item
 
     def find(self, value):
@@ -40,6 +50,7 @@ class TableName( Table ):
         :param value: bytes
         :return: int
         """
+        self.startTimer()
         cur = self.getCursor()
 
         bvalue = sqlite3.Binary(value)
@@ -48,6 +59,7 @@ class TableName( Table ):
         item = cur.fetchone()
         if item:
             item = item["id"]
+        self.stopTimer('find')
         return item
 
     def get(self, name_id):
@@ -55,22 +67,14 @@ class TableName( Table ):
         :param name_id: int
         :return: bytes
         """
+        self.startTimer()
         cur = self.getCursor()
 
         cur.execute("SELECT value FROM `%s` WHERE id=?" % self._table_name, (name_id,))
         item = cur.fetchone()
         if item:
             item = item["value"]
+        self.stopTimer('get')
         return item
-
-    def remove_by_ids(self, ids_list, _not_=False):
-        cur = self.getCursor()
-        if not _not_:
-            cur.execute("DELETE FROM `%s` WHERE id IN (%s)" % (self._table_name, ",".join(ids_list,)))
-        else:
-            cur.execute("DELETE FROM `%s` WHERE id NOT IN (%s)" % (self._table_name, ",".join(ids_list,)))
-        count = cur.rowcount
-        self.commit()
-        return count
 
     pass

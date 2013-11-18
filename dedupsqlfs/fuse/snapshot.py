@@ -106,8 +106,7 @@ class Snapshot(Subvolume):
                         self.getTable("inode_hash_block").insert(
                             inode_to,
                             indexItem["block_number"],
-                            indexItem["hash_id"],
-                            indexItem["block_size"]
+                            indexItem["hash_id"]
                         )
 
                 if stat.S_ISDIR(attr_from.st_mode):

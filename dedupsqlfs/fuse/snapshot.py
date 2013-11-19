@@ -119,11 +119,13 @@ class Snapshot(Subvolume):
                     proc = "%6.2f" % (count_done * 100.0 / count_to_do,)
                     if proc != count_proc:
                         count_proc = proc
-                        self.getManager().flushCaches()
+                        if not self.getManager().flushCaches():
+                            self.getManager().getManager().commit()
                         self.print_msg("\r%s %%" % count_proc)
 
             self.print_msg("\n")
-            self.getManager().flushCaches()
+            if not self.getManager().flushCaches():
+                self.getManager().getManager().commit()
 
             # Copy attrs from subvolume table
             subvol_from = self.getTable("subvolume").get(root_node_from["id"])

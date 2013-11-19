@@ -162,9 +162,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         return self.getApplication().getLogger()
 
     def flushCaches(self):
-        self.__cache_meta_hook()
-        self.__cache_block_hook()
-        return self
+        return self.__cache_meta_hook() + self.__cache_block_hook()
 
 
     def getCompressionTypeName(self, comp_id):
@@ -1826,7 +1824,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.__timing_report_hook()
 
-        return
+        return flushed_readed_blocks + flushed_writed_blocks
 
 
     def __flush_expired_inodes(self, inodes):
@@ -1869,7 +1867,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.__timing_report_hook()
 
-        return
+        return flushed_attrs + flushed_names + flushed_nodes
 
     def forced_vacuum(self): # {{{3
         if not self.isReadonly():

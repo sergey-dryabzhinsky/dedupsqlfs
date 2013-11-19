@@ -61,6 +61,7 @@ def create_subvolume(options, _fuse):
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
+    _fuse.setOption("cache_enabled", False)
     _fuse.setReadonly(False)
 
     _fuse.operations.init()

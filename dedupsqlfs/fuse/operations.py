@@ -161,6 +161,11 @@ class DedupOperations(llfuse.Operations): # {{{1
     def getLogger(self):
         return self.getApplication().getLogger()
 
+    def flushCaches(self):
+        self.__cache_meta_hook()
+        self.__cache_block_hook()
+        return self
+
 
     def getCompressionTypeName(self, comp_id):
         if not self._compression_types:

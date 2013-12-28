@@ -66,43 +66,43 @@ class DbManager( object ):
     def getTable(self, name):
         if name not in self._table:
             if name == "option":
-                from dedupsqlfs.db.table.option import TableOption
+                from dedupsqlfs.db.sqlite.table.option import TableOption
                 self._table[ name ] = TableOption(self)
             elif name == "tree":
-                from dedupsqlfs.db.table.tree import TableTree
+                from dedupsqlfs.db.sqlite.table.tree import TableTree
                 self._table[ name ] = TableTree(self)
             elif name == "name":
-                from dedupsqlfs.db.table.name import TableName
+                from dedupsqlfs.db.sqlite.table.name import TableName
                 self._table[ name ] = TableName(self)
             elif name == "inode":
-                from dedupsqlfs.db.table.inode import TableInode
+                from dedupsqlfs.db.sqlite.table.inode import TableInode
                 self._table[ name ] = TableInode(self)
             elif name == "link":
-                from dedupsqlfs.db.table.link import TableLink
+                from dedupsqlfs.db.sqlite.table.link import TableLink
                 self._table[ name ] = TableLink(self)
             elif name == "block":
-                from dedupsqlfs.db.table.block import TableBlock
+                from dedupsqlfs.db.sqlite.table.block import TableBlock
                 self._table[ name ] = TableBlock(self)
             elif name == "xattr":
-                from dedupsqlfs.db.table.xattr import TableInodeXattr
+                from dedupsqlfs.db.sqlite.table.xattr import TableInodeXattr
                 self._table[ name ] = TableInodeXattr(self)
             elif name == "compression_type":
-                from dedupsqlfs.db.table.compression_type import TableCompressionType
+                from dedupsqlfs.db.sqlite.table.compression_type import TableCompressionType
                 self._table[ name ] = TableCompressionType(self)
             elif name == "hash_compression_type":
-                from dedupsqlfs.db.table.hash_compression_type import TableHashCompressionType
+                from dedupsqlfs.db.sqlite.table.hash_compression_type import TableHashCompressionType
                 self._table[ name ] = TableHashCompressionType(self)
             elif name == "hash_block_size":
-                from dedupsqlfs.db.table.hash_block_size import TableHashBlockSize
+                from dedupsqlfs.db.sqlite.table.hash_block_size import TableHashBlockSize
                 self._table[ name ] = TableHashBlockSize(self)
             elif name == "hash":
-                from dedupsqlfs.db.table.hash import TableHash
+                from dedupsqlfs.db.sqlite.table.hash import TableHash
                 self._table[ name ] = TableHash(self)
             elif name == "inode_hash_block":
-                from dedupsqlfs.db.table.inode_hash_block import TableInodeHashBlock
+                from dedupsqlfs.db.sqlite.table.inode_hash_block import TableInodeHashBlock
                 self._table[ name ] = TableInodeHashBlock(self)
             elif name == "subvolume":
-                from dedupsqlfs.db.table.subvolume import TableSubvolume
+                from dedupsqlfs.db.sqlite.table.subvolume import TableSubvolume
                 self._table[ name ] = TableSubvolume(self)
             else:
                 raise ValueError("Unknown database %r" % name)

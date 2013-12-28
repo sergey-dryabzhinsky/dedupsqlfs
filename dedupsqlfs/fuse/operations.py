@@ -134,7 +134,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def getManager(self):
         if not self.manager:
-            from dedupsqlfs.db.manager import DbManager
+            from dedupsqlfs.db.sqlite.manager import DbManager
             self.manager = DbManager(dbname=self.getOption("name"))
             self.manager.setSynchronous(self.getOption("synchronous"))
             self.manager.setAutocommit(self.getOption("use_transactions"))

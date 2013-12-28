@@ -3,7 +3,7 @@
 __author__ = 'sergey'
 
 from time import time
-from dedupsqlfs.db.table import Table
+from dedupsqlfs.db.sqlite.table import Table
 
 class TableSubvolume( Table ):
 

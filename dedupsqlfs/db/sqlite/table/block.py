@@ -2,11 +2,12 @@
 
 __author__ = 'sergey'
 
-from dedupsqlfs.db.table import Table
+import sqlite3
+from dedupsqlfs.db.sqlite.table import Table
 
-class TableHashBlockSize( Table ):
+class TableBlock( Table ):
 
-    _table_name = "hash_block_size"
+    _table_name = "block"
 
     def create( self ):
         c = self.getCursor()
@@ -15,34 +16,39 @@ class TableHashBlockSize( Table ):
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
                 "hash_id INTEGER PRIMARY KEY, "+
-                "real_size INTEGER NOT NULL, "+
-                "comp_size INTEGER NOT NULL "+
+                "data BLOB NOT NULL"+
             ");"
         )
         return
 
-    def insert( self, hash_id, real_size, comp_size):
+    def insert( self, hash_id, data):
         """
+        :param data: bytes
         :return: int
         """
         self.startTimer()
         cur = self.getCursor()
 
-        cur.execute("INSERT INTO `%s`(hash_id, real_size, comp_size) VALUES (?,?,?)" % self._table_name,
-                    (hash_id, real_size, comp_size,))
+        bdata = sqlite3.Binary(data)
+
+        cur.execute("INSERT INTO `%s`(hash_id, data) VALUES (?,?)" % self._table_name,
+                    (hash_id, bdata,))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
 
-    def update( self, hash_id, real_size, comp_size):
+    def update( self, hash_id, data):
         """
+        :param data: bytes
         :return: int
         """
         self.startTimer()
         cur = self.getCursor()
 
-        cur.execute("UPDATE `%s` SET real_size=?, comp_size=? WHERE hash_id=?" % self._table_name,
-                    (real_size, comp_size, hash_id,))
+        bdata = sqlite3.Binary(data)
+
+        cur.execute("UPDATE `%s` SET data=? WHERE hash_id=?" % self._table_name,
+                    (bdata, hash_id,))
         count = cur.rowcount
         self.stopTimer('update')
         return count

@@ -2,7 +2,7 @@
 
 __author__ = 'sergey'
 
-from dedupsqlfs.db.table import Table
+from dedupsqlfs.db.sqlite.table import Table
 
 class TableInodeHashBlock( Table ):
 

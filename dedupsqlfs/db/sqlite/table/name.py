@@ -3,7 +3,7 @@
 __author__ = 'sergey'
 
 import sqlite3
-from dedupsqlfs.db.table import Table
+from dedupsqlfs.db.sqlite.table import Table
 
 class TableName( Table ):
 

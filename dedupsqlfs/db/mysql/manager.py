@@ -2,6 +2,7 @@
 
 __author__ = 'sergey'
 
+import os
 from time import sleep
 import subprocess
 import pymysql
@@ -142,18 +143,31 @@ class DbManager( object ):
         if self._mysqld_proc is None:
 
             logfile = self.getBasePath() + "/error.log"
+            slowlogfile = self.getBasePath() + "/slow.log"
             pidfile = self.getBasePath() + "/mysql.pid"
             self._socket = self.getBasePath() + "/mysql.sock"
 
+            tmpdir = self.getBasePath() + "/tmp"
+            if not os.path.isdir(tmpdir):
+                os.makedirs(tmpdir, 0o0750)
+
+            datadir = self.getBasePath() + "/mysql-db-data"
+            if not os.path.isdir(datadir):
+                os.makedirs(datadir, 0o0750)
+
             cmd = [
                 "mysqld",
-                "--area=OFF",
                 "--basedir=/usr",
-                "--datadir=%s" % self.getBasePath(),
-                "--plugin-dir=/usr/lib/mysql/plugin",
+                "--datadir=%s" % datadir,
+                "--tmpdir=%s" % tmpdir,
+                "--plugin-dir=/var/lib/mysql/plugin",
                 "--log-error=%s" % logfile,
+                "--slow-query-log",
+                "--slow-query-log-file=%s" % slowlogfile,
                 "--pid-file=%s" % pidfile,
                 "--skip-grant-tables",
+                "--skip-bind-address",
+                "--skip-networking",
                 "--socket=%s" % self.getSocket(),
                 "--default-storage-engine=InnoDB"
             ]

@@ -14,7 +14,7 @@ class TableCompressionType( Table ):
         # Create table
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
-                "id INT UNSIGNED PRIMARY KEY AUTOINCREMENT, "+
+                "id INT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
                 "value VARCHAR(255) NOT NULL"+
             ")"
         )

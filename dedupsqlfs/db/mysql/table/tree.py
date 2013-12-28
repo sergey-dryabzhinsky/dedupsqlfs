@@ -16,7 +16,7 @@ class TableTree( Table ):
         # Create table
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
-                "id BIGINT UNSIGNED PRIMARY KEY AUTOINCREMENT, "+
+                "id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
                 "subvol_id BIGINT UNSIGNED, "+
                 "parent_id BIGINT UNSIGNED, "+
                 "name_id BIGINT UNSIGNED NOT NULL, "+

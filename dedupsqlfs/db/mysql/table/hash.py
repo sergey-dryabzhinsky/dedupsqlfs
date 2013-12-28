@@ -14,7 +14,7 @@ class TableHash( Table ):
         # Create table
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
-                "id BIGINT UNSIGNED PRIMARY KEY AUTOINCREMENT, "+
+                "id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
                 "hash TINYBLOB NOT NULL "+
             ")"
         )

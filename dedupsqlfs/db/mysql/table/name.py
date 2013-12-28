@@ -71,7 +71,7 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        cur.execute("SELECT `value` FROM `%s` WHERE `id`=%%d" % self._table_name, (name_id,))
+        cur.execute("SELECT `value` FROM `%s` WHERE `id`=%%s" % self._table_name, (name_id,))
         item = cur.fetchone()
         if item:
             item = item["value"]

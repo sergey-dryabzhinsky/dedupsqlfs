@@ -83,7 +83,7 @@ class TableHashBlockSize( Table ):
     def get_real_size( self, hash_id):
         """
         :param hash_id: int
-        :return: Row
+        :return: int
         """
         self.startTimer()
         cur = self.getCursor()
@@ -102,10 +102,34 @@ class TableHashBlockSize( Table ):
         self.stopTimer('get_real_size')
         return item
 
+    def sum_real_size( self, hash_ids):
+        """
+        :param hash_ids: list|tuple
+        :return: int
+        """
+        self.startTimer()
+
+        hids = ",".join((str(hid) for hid in hash_ids))
+        if not hids:
+            return 0
+
+        cur = self.getCursor()
+        cur.execute(
+            "SELECT SUM(`real_size`) as `s` FROM `%s` " % self.getName()+
+            " WHERE `hash_id` IN (%s)" % hids
+        )
+        item = cur.fetchone()
+        if item:
+            item = item["s"]
+        else:
+            item = 0
+        self.stopTimer('sum_real_size')
+        return item
+
     def get_comp_size( self, hash_id):
         """
         :param hash_id: int
-        :return: Row
+        :return: int
         """
         self.startTimer()
         cur = self.getCursor()
@@ -122,6 +146,30 @@ class TableHashBlockSize( Table ):
         else:
             item = 0
         self.stopTimer('get_comp_size')
+        return item
+
+    def sum_comp_size( self, hash_ids):
+        """
+        :param hash_ids: list|tuple
+        :return: int
+        """
+        self.startTimer()
+
+        hids = ",".join((str(hid) for hid in hash_ids))
+        if not hids:
+            return 0
+
+        cur = self.getCursor()
+        cur.execute(
+            "SELECT SUM(`comp_size`) as `s` FROM `%s` " % self.getName()+
+            " WHERE `hash_id` IN (%s)" % hids
+        )
+        item = cur.fetchone()
+        if item:
+            item = item["s"]
+        else:
+            item = 0
+        self.stopTimer('sum_comp_size')
         return item
 
     pass

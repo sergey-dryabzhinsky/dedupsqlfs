@@ -179,7 +179,11 @@ class DbManager( object ):
                 "--skip-networking",
                 "--skip-name-resolve",
                 "--socket=%s" % self.getSocket(),
-                "--default-storage-engine=InnoDB"
+                "--default-storage-engine=InnoDB",
+                # TODO: options
+                "--connect-timeout=10",
+                "--interactive-timeout=3600",
+                "--wait-timeout=3600",
             ]
             if self.getAutocommit():
                 cmd_opts.append("--autocommit")
@@ -204,7 +208,7 @@ class DbManager( object ):
                 "--innodb-log-buffer-size=1M",
 
                 "--query-cache-min-res-unit=1k",
-                "--query-cache-limit=8M",
+                "--query-cache-limit=1M",
                 "--query-cache-size=32M"
             ])
 

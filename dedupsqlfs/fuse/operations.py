@@ -935,8 +935,17 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not treeItem:
                 break
 
+            #attr = self.cached_attrs.get(treeItem["inode_id"])
+            #apparent_size += attr["size"]
+
             # Do not trust inode info - we not done block writing and writed size not changed?
-            inodeHashes = indexTable.get_hashes_by_inode( treeItem["inode_id"] )
+            inodeHashes = (item["hash_id"] for item in indexTable.get_hashes_by_inode( treeItem["inode_id"] ))
+
+            apparent_size += hbsTable.sum_real_size(inodeHashes)
+            compressed_size += hbsTable.sum_comp_size(inodeHashes)
+
+            continue
+
             for indexItem in inodeHashes:
                 hbs = hbsTable.get(indexItem["hash_id"])
                 apparent_size += hbs["real_size"]

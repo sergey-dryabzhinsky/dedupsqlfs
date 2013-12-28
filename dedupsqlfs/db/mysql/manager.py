@@ -266,7 +266,10 @@ class DbManager( object ):
                     t -= 0.1
 
             if self._mysqld_proc.poll() is None:
+                print("Can't :'(")
                 return False
+
+            print("Done")
 
             self._mysqld_proc = None
             self._socket = None

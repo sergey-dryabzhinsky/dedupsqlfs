@@ -186,7 +186,8 @@ class DbManager( object ):
 
             cmd_opts.extend([
                 "--big-tables",
-                "--large-pages",
+                # TODO: warn about hugetlbfs mount and sysctl setup
+                #"--large-pages",
                 "--innodb-file-per-table",
                 "--innodb-flush-method=O_DIRECT",
                 "--skip-innodb-doublewrite",

@@ -1883,7 +1883,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             flushed_nodes = self.cached_nodes.clear()
             flushed_names = self.cached_names.clear()
-            flushed_indexes = self.cached_indexes.clear()
+            flushed_indexes = self.cached_indexes.expired()
 
             # Just readed...
             flushed_attrs += self.cached_attrs.expired(False)

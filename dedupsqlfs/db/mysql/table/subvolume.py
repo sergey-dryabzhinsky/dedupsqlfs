@@ -3,7 +3,7 @@
 __author__ = 'sergey'
 
 from time import time
-from dedupsqlfs.db.sqlite.table import Table
+from dedupsqlfs.db.mysql.table import Table
 
 class TableSubvolume( Table ):
 
@@ -14,11 +14,11 @@ class TableSubvolume( Table ):
 
         # Create table
         c.execute(
-            "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
-                "node_id INTEGER PRIMARY KEY, "+
-                "created_at INTEGER NOT NULL, "+
-                "mounted_at INTEGER, "+
-                "updated_at INTEGER"+
+            "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
+                "node_id BIGINT UNSIGNED PRIMARY KEY, "+
+                "created_at INT UNSIGNED NOT NULL, "+
+                "mounted_at INT UNSIGNED, "+
+                "updated_at INT UNSIGNED"+
             ");"
         )
         return
@@ -34,8 +34,17 @@ class TableSubvolume( Table ):
         """
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("INSERT INTO `%s`(node_id, created_at, mounted_at, updated_at) " % self._table_name+
-                    "VALUES (?, ?, ?, ?)", (node_id, created_at, mounted_at, updated_at))
+        cur.execute(
+            "INSERT INTO %(table_name)s (node_id, created_at, mounted_at, updated_at) "+
+            "VALUES (%(node)s, %(created)s, %(mounted)s, %(updated)s)",
+            {
+                "table_name": self.getName(),
+                "node": node_id,
+                "created": created_at,
+                "mounted": mounted_at,
+                "updated": updated_at
+            }
+        )
         self.stopTimer('insert')
         return node_id
 
@@ -44,8 +53,14 @@ class TableSubvolume( Table ):
         if mtime is None:
             mtime = int(time())
         cur = self.getCursor()
-        cur.execute("UPDATE `%s` SET mounted_at=? WHERE node_id=? " % self._table_name,
-                    (mtime, node_id,))
+        cur.execute(
+            "UPDATE %(table_name)s SET mounted_at=%(mounted)s WHERE node_id=%(node)s",
+            {
+                "table_name": self.getName(),
+                "mounted": mtime,
+                "node": node_id
+            }
+        )
         self.stopTimer('mount_time')
         return cur.rowcount
 
@@ -54,15 +69,27 @@ class TableSubvolume( Table ):
         if utime is None:
             utime = int(time())
         cur = self.getCursor()
-        cur.execute("UPDATE `%s` SET updated_at=? WHERE node_id=? " % self._table_name,
-                    (utime, node_id,))
+        cur.execute(
+            "UPDATE %(table_name)s SET updated_at=%(updated)s WHERE node_id=%(node)s",
+            {
+                "table_name": self.getName(),
+                "updated": utime,
+                "node": node_id
+            }
+        )
         self.stopTimer('update_time')
         return cur.rowcount
 
     def delete(self, node_id):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("DELETE FROM `%s` WHERE node_id=?" % self._table_name, (node_id,))
+        cur.execute(
+            "DELETE FROM %(table_name)s WHERE node_id=%(node)s",
+            {
+                "table_name": self.getName(),
+                "node": node_id
+            }
+        )
         item = cur.rowcount
         self.stopTimer('delete')
         return item
@@ -70,7 +97,13 @@ class TableSubvolume( Table ):
     def get(self, node_id):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT * FROM `%s` WHERE node_id=?" % self._table_name, (node_id,))
+        cur.execute(
+            "SELECT * FROM %(table_name)s WHERE node_id=%(node)s",
+            {
+                "table_name": self.getName(),
+                "node": node_id
+            }
+        )
         item = cur.fetchone()
         self.stopTimer('get')
         return item

@@ -4,6 +4,7 @@ __author__ = 'sergey'
 
 from time import time
 import pymysql
+import pymysql.cursors
 
 class Table( object ):
 
@@ -112,7 +113,7 @@ class Table( object ):
         cursor_type = pymysql.cursors.DictCursor
         conn = self.getManager().getConnection(True)
         cur = conn.cursor(cursor_type)
-        cur.execute("SELECT sum( data_length + index_length ) / 1024 / 1024 AS 'size' FROM information_schema.TABLES WHERE table_schema='%s' AND table_name='%s' GROUP BY table_name;" % (self.getManager().getDbName(), self.getName()))
+        cur.execute("SELECT sum( data_length + index_length ) / 1024 / 1024 AS 'size' FROM information_schema.TABLES WHERE table_schema=%s AND table_name=%s GROUP BY table_name;" % (self.getManager().getDbName(), self.getName()))
         row = cur.fetchone()
         cur.close()
         conn.close()

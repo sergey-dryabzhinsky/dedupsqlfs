@@ -2,9 +2,8 @@
 
 __author__ = 'sergey'
 
-import sqlite3
 import pickle
-from dedupsqlfs.db.sqlite.table import Table
+from dedupsqlfs.db.mysql.table import Table
 
 class TableInodeXattr( Table ):
 
@@ -15,7 +14,7 @@ class TableInodeXattr( Table ):
 
         # Create table
         c.execute(
-            "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
+            "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "inode_id INTEGER PRIMARY KEY, "+
                 "data BLOB NOT NULL"+
             ");"
@@ -31,12 +30,18 @@ class TableInodeXattr( Table ):
         cur = self.getCursor()
 
         if values:
-            bvalues = sqlite3.Binary(pickle.dumps(values))
+            bvalues = pickle.dumps(values)
         else:
             bvalues = values
-        cur.execute("INSERT INTO `%s`(inode_id, data) VALUES (?, ?)" % self._table_name, (
-            inode, bvalues
-        ))
+
+        cur.execute(
+            "INSERT INTO %(table_name)s (inode_id, data) VALUES (%(inode)s, %(data)s)",
+            {
+                "table_name": self.getName(),
+                "inode": inode,
+                "data": bvalues
+            }
+        )
 
         item = cur.lastrowid
         self.stopTimer('insert')
@@ -44,17 +49,25 @@ class TableInodeXattr( Table ):
 
     def update( self, inode, values):
         """
-        :param target: bytes
+        :param target: bytes|None
         :return: int
         """
         self.startTimer()
         cur = self.getCursor()
 
-        bvalues = sqlite3.Binary(pickle.dumps(values))
+        if values:
+            bvalues = pickle.dumps(values)
+        else:
+            bvalues = values
 
-        cur.execute("UPDATE `%s` SET `data`=? WHERE `inode_id`=?" % self._table_name, (
-            bvalues, inode,
-        ))
+        cur.execute(
+            "UPDATE %(table_name)s SET `data`=%(data)s WHERE `inode_id`=%(inode)s",
+            {
+                "table_name": self.getName(),
+                "date": bvalues,
+                "inode": inode
+            }
+        )
         item = cur.rowcount
         self.stopTimer('update')
         return item
@@ -66,9 +79,13 @@ class TableInodeXattr( Table ):
         """
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT `data` FROM `%s` WHERE `inode_id`=?" % self._table_name, (
-            inode,
-        ))
+        cur.execute(
+            "SELECT `data` FROM %(table_name)s WHERE `inode_id`=%(inode)s",
+            {
+                "table_name": self.getName(),
+                "inode": inode
+            }
+        )
         item = cur.fetchone()
         if item:
             item = pickle.loads(item["data"])

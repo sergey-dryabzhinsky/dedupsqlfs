@@ -2,42 +2,47 @@
 
 __author__ = 'sergey'
 
-from dedupsqlfs.db.sqlite.table import Table
+from dedupsqlfs.db.mysql.table import Table
 
 class TableInode( Table ):
 
     _table_name = "inode"
 
     def create( self ):
-        c = self.getCursor()
+        cur = self.getCursor()
 
         # Create table
-        c.execute(
-            "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
-                "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
-                "nlinks INTEGER NOT NULL, "+
-                "mode INTEGER NOT NULL, "+
-                "uid INTEGER NOT NULL, "+
-                "gid INTEGER NOT NULL, "+
-                "rdev INTEGER NOT NULL, "+
-                "size INTEGER NOT NULL, "+
-                "atime INTEGER NOT NULL, "+
-                "mtime INTEGER NOT NULL, "+
-                "ctime INTEGER NOT NULL, "+
-                "atime_ns INTEGER NOT NULL DEFAULT 0, "+
-                "mtime_ns INTEGER NOT NULL DEFAULT 0, "+
-                "ctime_ns INTEGER NOT NULL DEFAULT 0"+
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
+                "id BIGINT UNSIGNED PRIMARY KEY AUTOINCREMENT, "+
+                "nlinks INT UNSIGNED NOT NULL, "+
+                "mode SMALLINT UNSIGNED NOT NULL, "+
+                "uid SMALLINT UNSIGNED NOT NULL, "+
+                "gid SMALLINT UNSIGNED NOT NULL, "+
+                "rdev INT UNSIGNED NOT NULL, "+
+                "size BIGINT UNSIGNED NOT NULL, "+
+                "atime INT UNSIGNED NOT NULL, "+
+                "mtime INT UNSIGNED NOT NULL, "+
+                "ctime INT UNSIGNED NOT NULL, "+
+                "atime_ns INT UNSIGNED NOT NULL DEFAULT 0, "+
+                "mtime_ns INT UNSIGNED NOT NULL DEFAULT 0, "+
+                "ctime_ns INT UNSIGNED NOT NULL DEFAULT 0"+
             ");"
         )
-        c.execute(
-            "CREATE INDEX IF NOT EXISTS inode_id_nlinks ON `%s` (" % self._table_name+
-                "id,nlinks"+
-            ");"
-        )
+        try:
+            cur.execute(
+                "ALTER TABLE %(table_name)s ADD UNIQUE INDEX %(index_name)s (id,nlinks)",
+                {
+                    "table_name": self.getName(),
+                    "index_name": self.getName() + "_id_nlinks"
+                }
+            )
+        except:
+            pass
         return
 
     def getRowSize(self):
-        return 8 * 13
+        return 8 + 4 + 2 + 2 + 2 + 4 + 8 + 6 * 4
 
     def insert( self, nlinks, mode,
                 uid=-1, gid=-1, rdev=0, size=0, atime=0, mtime=0, ctime=0,
@@ -49,7 +54,9 @@ class TableInode( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        cur.execute("INSERT INTO `%s`(nlinks, mode, uid, gid, rdev, size, atime, mtime, ctime, atime_ns, mtime_ns, ctime_ns) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)" % self._table_name, (
+        cur.execute("INSERT INTO `%s`" % self.getName() +
+                    "(nlinks, mode, uid, gid, rdev, size, atime, mtime, ctime, atime_ns, mtime_ns, ctime_ns) " +
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (
             nlinks, mode, uid, gid, rdev, size, atime, mtime, ctime, atime_ns, mtime_ns, ctime_ns
         ))
         item = cur.lastrowid
@@ -67,20 +74,20 @@ class TableInode( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        query = "UPDATE `%s` SET " % self._table_name
+        query = "UPDATE `%s` SET " % self.getName()
         params = ()
         values = ()
         for key in row_data.keys():
             if key == "id":
                 continue
-            params += ("%s=?" % key,)
+            params += ("%s=%%s" % key,)
             values += (row_data[key],)
 
         if not values:
             return 0
 
         query += ", ".join(params)
-        query += " WHERE id=?"
+        query += " WHERE id=%s"
 
         values += (inode_id,)
 
@@ -92,7 +99,14 @@ class TableInode( Table ):
     def set_size(self, inode, size):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("UPDATE `%s` SET size=? WHERE id=?" % self._table_name, (size, inode,))
+        cur.execute(
+            "UPDATE %(table_name)s SET size=%(size)s WHERE id=%(id)s",
+            {
+                "table_name": self.getName(),
+                "size": size,
+                "id": inode
+            }
+        )
         count = cur.rowcount
         self.stopTimer('set_size')
         return count
@@ -100,7 +114,13 @@ class TableInode( Table ):
     def get(self, inode):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT * FROM `%s` WHERE id=?" % self._table_name, (inode,))
+        cur.execute(
+            "SELECT * FROM %(table_name)s WHERE id=%(id)s",
+            {
+                "table_name": self.getName(),
+                "id": inode
+            }
+        )
         item = cur.fetchone()
         self.stopTimer('get')
         return item
@@ -108,7 +128,13 @@ class TableInode( Table ):
     def get_mode(self, inode):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT mode FROM `%s` WHERE id=?" % self._table_name, (inode,))
+        cur.execute(
+            "SELECT mode FROM %(table_name)s WHERE id=%(id)s",
+            {
+                "table_name": self.getName(),
+                "id": inode
+            }
+        )
         item = int(cur.fetchone()["mode"])
         self.stopTimer('get_mode')
         return item
@@ -116,7 +142,13 @@ class TableInode( Table ):
     def get_size(self, inode):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT size FROM `%s` WHERE id=?" % self._table_name, (inode,))
+        cur.execute(
+            "SELECT size FROM %(table_name)s WHERE id=%(id)s",
+            {
+                "table_name": self.getName(),
+                "id": inode
+            }
+        )
         item = int(cur.fetchone()["size"])
         self.stopTimer('get_size')
         return item
@@ -124,7 +156,13 @@ class TableInode( Table ):
     def inc_nlinks(self, inode):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("UPDATE `%s` SET nlinks = nlinks + 1 WHERE id = ?" % self._table_name, (inode,))
+        cur.execute(
+            "UPDATE %(table_name)s SET nlinks=nlinks+1 WHERE id=%(id)s",
+            {
+                "table_name": self.getName(),
+                "id": inode
+            }
+        )
         count = cur.rowcount
         self.stopTimer('inc_nlinks')
         return count
@@ -132,7 +170,13 @@ class TableInode( Table ):
     def dec_nlinks(self, inode):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("UPDATE `%s` SET nlinks = nlinks - 1 WHERE id = ?" % self._table_name, (inode,))
+        cur.execute(
+            "UPDATE %(table_name)s SET nlinks=nlinks-1 WHERE id=%(id)s",
+            {
+                "table_name": self.getName(),
+                "id": inode
+            }
+        )
         count = cur.rowcount
         self.stopTimer('dec_nlinks')
         return count
@@ -140,7 +184,8 @@ class TableInode( Table ):
     def count_nlinks_by_ids(self, id_list):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT COUNT(1) as cnt FROM `%s` WHERE id IN (%s) AND nlinks>0" % (
+        cur.execute(
+            "SELECT COUNT(1) as cnt FROM `%s` WHERE id IN (%s) AND nlinks>0" % (
             self._table_name, ",".join(id_list),)
         )
         result = cur.fetchone()["cnt"]
@@ -150,7 +195,7 @@ class TableInode( Table ):
     def get_count(self):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT COUNT(1) as cnt FROM `%s`" % self._table_name)
+        cur.execute("SELECT COUNT(1) as cnt FROM `%s`" % self.getName())
         item = cur.fetchone()
         self.stopTimer('get_count')
         return item["cnt"]

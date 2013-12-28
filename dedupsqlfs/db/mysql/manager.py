@@ -167,13 +167,13 @@ class DbManager( object ):
                 cmd.append("--innodb-flush-log-at-trx-commit=1")
             else:
                 cmd.append("--innodb-flush-log-at-trx-commit=2")
-                cmd.append("--skip-innodb-doublewrite")
 
             cmd.extend([
                 "--big-tables",
                 "--large-pages",
                 "--innodb-file-per-table",
                 "--innodb-flush-method=O_DIRECT",
+                "--skip-innodb-doublewrite",
                 "--innodb-buffer-pool-size=%dM" % (self._buffer_size/1024/1024),
                 "--innodb-log-file-size=32M",
                 "--innodb-log-buffer-size=1M",
@@ -194,6 +194,12 @@ class DbManager( object ):
             self.createDb()
 
         return True
+
+
+    def __del__(self):
+        self.startMysqld()
+        pass
+
 
     def stopMysqld(self):
         if self._mysqld_proc is not None:
@@ -237,6 +243,7 @@ class DbManager( object ):
                 user=self.getUser(),
                 passwd=self.getPassword(),
                 db=self.getDbName())
+        conn.autocommit(self.getAutocommit())
         return conn
 
 

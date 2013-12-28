@@ -2,7 +2,7 @@
 
 __author__ = 'sergey'
 
-from dedupsqlfs.db.sqlite.table import Table
+from dedupsqlfs.db.mysql.table import Table
 
 class TableTree( Table ):
 
@@ -11,48 +11,89 @@ class TableTree( Table ):
     _selected_subvol = None
 
     def create( self ):
-        c = self.getCursor()
+        cur = self.getCursor()
 
         # Create table
-        c.execute(
+        cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
-                "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
-                "subvol_id INTEGER, "+
-                "parent_id INTEGER, "+
-                "name_id INTEGER NOT NULL, "+
-                "inode_id INTEGER NOT NULL, "+
-                "UNIQUE (subvol_id, parent_id, name_id)"+
+                "id BIGINT UNSIGNED PRIMARY KEY AUTOINCREMENT, "+
+                "subvol_id BIGINT UNSIGNED, "+
+                "parent_id BIGINT UNSIGNED, "+
+                "name_id BIGINT UNSIGNED NOT NULL, "+
+                "inode_id BIGINT UNSIGNED NOT NULL"+
             ");"
         )
-        c.execute(
-            "CREATE INDEX IF NOT EXISTS tree_inode ON `%s` (" % self._table_name+
-                "inode_id"+
-            ");"
-        )
-        c.execute(
-            "CREATE INDEX IF NOT EXISTS tree_parent ON `%s` (" % self._table_name+
-                "parent_id"+
-            ");"
-        )
-        c.execute(
-            "CREATE INDEX IF NOT EXISTS tree_parent_name ON `%s` (" % self._table_name+
-                "parent_id,name_id"+
-            ");"
-        )
-        c.execute(
-            "CREATE INDEX IF NOT EXISTS tree_subvol ON `%s` (" % self._table_name+
-                "subvol_id"+
-            ");"
-        )
-        c.execute(
-            "CREATE INDEX IF NOT EXISTS tree_name ON `%s` (" % self._table_name+
-                "name_id"+
-            ");"
-        )
+
+        try:
+            cur.execute(
+                "ALTER TABLE %(table_name)s ADD UNIQUE INDEX %(index_name)s (subvol_id, parent_id, name_id)",
+                {
+                    "table_name": self.getName(),
+                    "index_name": self.getName() + "_spn"
+                }
+            )
+        except:
+            pass
+
+        try:
+            cur.execute(
+                "ALTER TABLE %(table_name)s ADD INDEX %(index_name)s (inode_id)",
+                {
+                    "table_name": self.getName(),
+                    "index_name": self.getName() + "_inode"
+                }
+            )
+        except:
+            pass
+
+        try:
+            cur.execute(
+                "ALTER TABLE %(table_name)s ADD INDEX %(index_name)s (parent_id)",
+                {
+                    "table_name": self.getName(),
+                    "index_name": self.getName() + "_parent"
+                }
+            )
+        except:
+            pass
+
+        try:
+            cur.execute(
+                "ALTER TABLE %(table_name)s ADD INDEX %(index_name)s (parent_id, name_id)",
+                {
+                    "table_name": self.getName(),
+                    "index_name": self.getName() + "_parent_name"
+                }
+            )
+        except:
+            pass
+
+        try:
+            cur.execute(
+                "ALTER TABLE %(table_name)s ADD INDEX %(index_name)s (subvol_id)",
+                {
+                    "table_name": self.getName(),
+                    "index_name": self.getName() + "_subvol"
+                }
+            )
+        except:
+            pass
+
+        try:
+            cur.execute(
+                "ALTER TABLE %(table_name)s ADD INDEX %(index_name)s (name_id)",
+                {
+                    "table_name": self.getName(),
+                    "index_name": self.getName() + "_name"
+                }
+            )
+        except:
+            pass
+
         return
 
     def getRowSize(self):
-        return 5 * 13
+        return 5 * 8
 
     def selectSubvolume(self, node_id):
         self._selected_subvol = node_id
@@ -70,8 +111,17 @@ class TableTree( Table ):
         """
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("INSERT INTO `%s`(subvol_id, parent_id, name_id, inode_id) " % self._table_name+
-                    "VALUES (?, ?, ?, ?)", (self._selected_subvol, parent_id, name_id, inode_id))
+        cur.execute(
+            "INSERT INTO %(table_name)s (subvol_id, parent_id, name_id, inode_id) "+
+            "VALUES (%(subvol)s, %(parent)s, %(name)s, %(inode)s)",
+            {
+                "table_name": self.getName(),
+                "subvol": self._selected_subvol,
+                "parent": parent_id,
+                "name": name_id,
+                "inode": inode_id
+            }
+        )
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
@@ -79,7 +129,13 @@ class TableTree( Table ):
     def delete(self, node_id):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("DELETE FROM `%s` WHERE id=?" % self._table_name, (node_id,))
+        cur.execute(
+            "DELETE FROM %(table_name)s WHERE id=%(id)s",
+            {
+                "table_name": self.getName(),
+                "id": node_id
+            }
+        )
         item = cur.rowcount
         self.stopTimer('delete')
         return item
@@ -87,7 +143,13 @@ class TableTree( Table ):
     def delete_subvolume(self, subvol_id):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("DELETE FROM `%s` WHERE subvol_id=?" % self._table_name, (subvol_id,))
+        cur.execute(
+            "DELETE FROM %(table_name)s WHERE subvol_id=%(subvol)s",
+            {
+                "table_name": self.getName(),
+                "subvol": subvol_id
+            }
+        )
         item = cur.rowcount + self.delete(subvol_id)
         self.stopTimer('delete_subvolume')
         return item
@@ -95,7 +157,13 @@ class TableTree( Table ):
     def count_subvolume_inodes(self, subvol_id):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT DISTINCT COUNT(inode_id) AS cnt FROM `%s` WHERE subvol_id=?" % self._table_name, (subvol_id,))
+        cur.execute(
+            "SELECT DISTINCT COUNT(inode_id) AS cnt FROM %(table_name)s WHERE subvol_id=%(subvol)s",
+            {
+                "table_name": self.getName(),
+                "subvol": subvol_id
+            }
+        )
         item = cur.fetchone()
         if item:
             item = item["cnt"]
@@ -107,7 +175,13 @@ class TableTree( Table ):
     def count_subvolume_names(self, subvol_id):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT DISTINCT COUNT(name_id) AS cnt FROM `%s` WHERE subvol_id=?" % self._table_name, (subvol_id,))
+        cur.execute(
+            "SELECT DISTINCT COUNT(name_id) AS cnt FROM %(table_name)s WHERE subvol_id=%(subvol)s",
+            {
+                "table_name": self.getName(),
+                "subvol": subvol_id
+            }
+        )
         item = cur.fetchone()
         if item:
             item = item["cnt"]
@@ -119,7 +193,13 @@ class TableTree( Table ):
     def count_subvolume_nodes(self, subvol_id):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT COUNT(1) AS cnt FROM `%s` WHERE subvol_id=?" % self._table_name, (subvol_id,))
+        cur.execute(
+            "SELECT COUNT(1) AS cnt FROM %(table_name)s WHERE subvol_id=%(subvol)s",
+            {
+                "table_name": self.getName(),
+                "subvol": subvol_id
+            }
+        )
         item = cur.fetchone()
         if item:
             item = item["cnt"]
@@ -131,7 +211,14 @@ class TableTree( Table ):
     def find_by_parent_name(self, parent_id, name_id):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT id, inode_id FROM `%s` WHERE parent_id=? AND name_id=?" % self._table_name, (parent_id, name_id,))
+        cur.execute(
+            "SELECT id, inode_id FROM %(table_name)s WHERE parent_id=%(parent)s AND name_id=%(name)s",
+            {
+                "table_name": self.getName(),
+                "parent": parent_id,
+                "name": name_id
+            }
+        )
         item = cur.fetchone()
         self.stopTimer('find_by_parent_name')
         return item
@@ -139,7 +226,13 @@ class TableTree( Table ):
     def find_by_inode(self, inode_id):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT * FROM `%s` WHERE inode_id=?" % self._table_name, (inode_id, ))
+        cur.execute(
+            "SELECT * FROM %(table_name)s WHERE inode_id=%(inode)s",
+            {
+                "table_name": self.getName(),
+                "inode": inode_id
+            }
+        )
         item = cur.fetchone()
         self.stopTimer('find_by_inode')
         return item
@@ -147,7 +240,13 @@ class TableTree( Table ):
     def get(self, node_id):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT * FROM `%s` WHERE id=?" % self._table_name, (node_id,))
+        cur.execute(
+            "SELECT * FROM %(table_name)s WHERE id=%(node)s",
+            {
+                "table_name": self.getName(),
+                "node": node_id
+            }
+        )
         item = cur.fetchone()
         self.stopTimer('get')
         return item
@@ -155,7 +254,13 @@ class TableTree( Table ):
     def get_children_inodes(self, parent_id):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT inode_id FROM `%s` WHERE parent_id=?" % self._table_name, (parent_id, ))
+        cur.execute(
+            "SELECT inode_id FROM %(table_name)s WHERE parent_id=%(parent)s",
+            {
+                "table_name": self.getName(),
+                "parent": parent_id
+            }
+        )
         _items = cur.fetchall()
         items = ("%i" % _i["inode_id"] for _i in _items)
         self.stopTimer('get_children_inodes')
@@ -164,7 +269,13 @@ class TableTree( Table ):
     def get_children(self, parent_id):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT * FROM `%s` WHERE parent_id=?" % self._table_name, (parent_id, ))
+        cur.execute(
+            "SELECT * FROM %(table_name)s WHERE parent_id=%(parent)s",
+            {
+                "table_name": self.getName(),
+                "parent": parent_id
+            }
+        )
         items = cur.fetchall()
         self.stopTimer('get_children')
         return items

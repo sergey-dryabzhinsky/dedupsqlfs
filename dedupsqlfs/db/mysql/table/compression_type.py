@@ -2,29 +2,44 @@
 
 __author__ = 'sergey'
 
-from dedupsqlfs.db.sqlite.table import Table
+from dedupsqlfs.db.mysql.table import Table
 
 class TableCompressionType( Table ):
 
     _table_name = "compression_type"
 
     def create( self ):
-        c = self.getCursor()
+        cur = self.getCursor()
 
         # Create table
-        c.execute(
-            "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
-                "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
-                "value TEXT NOT NULL, "+
-                "UNIQUE(value) "
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
+                "id INT UNSIGNED PRIMARY KEY AUTOINCREMENT, "+
+                "value VARCHAR(255) NOT NULL"+
             ")"
         )
+        try:
+            cur.execute(
+                "ALTER TABLE %(table_name)s ADD UNIQUE INDEX %(index_name)s (`value`)",
+                {
+                    "table_name": self.getName(),
+                    "index_name": self.getName() + "_value"
+                }
+            )
+        except:
+            pass
         return
 
     def insert( self, value ):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("INSERT INTO `%s`(value) VALUES (?)" % self._table_name, (value,))
+        cur.execute(
+            "INSERT INTO %(table_name)s (value) VALUES (%(value)s)",
+            {
+                'table_name': self.getName(),
+                'value': value,
+            }
+        )
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
@@ -36,7 +51,14 @@ class TableCompressionType( Table ):
         """
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("UPDATE `%s` SET value=? WHERE id=?" % self._table_name, (value, item_id))
+        cur.execute(
+            "UPDATE %(table_name)s SET value=%(value)s WHERE id=%(id)s",
+            {
+                'table_name': self.getName(),
+                'value': value,
+                'id': item_id
+            }
+        )
         count = cur.rowcount
         self.stopTimer('update')
         return count
@@ -44,7 +66,13 @@ class TableCompressionType( Table ):
     def get( self, item_id ):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT value FROM `%s` WHERE id=?" % self._table_name, (item_id,))
+        cur.execute(
+            "SELECT value FROM %(table_name)s WHERE id=%(id)s",
+            {
+                'table_name': self.getName(),
+                'id': item_id,
+            }
+        )
         item = cur.fetchone()
         if item:
             item = item["value"].decode()
@@ -54,7 +82,13 @@ class TableCompressionType( Table ):
     def find( self, value ):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT id FROM `%s` WHERE value=?" % self._table_name, (value,))
+        cur.execute(
+            "SELECT id FROM %(table_name)s WHERE value=%(value)s",
+            {
+                'table_name': self.getName(),
+                'value': value,
+            }
+        )
         item = cur.fetchone()
         if item:
             item = item["id"]
@@ -64,7 +98,7 @@ class TableCompressionType( Table ):
     def getAll( self ):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT * FROM `%s`" % self._table_name)
+        cur.execute("SELECT * FROM %s", self.getName())
         items = cur.fetchall()
         opts = {}
         for item in items:
@@ -75,7 +109,7 @@ class TableCompressionType( Table ):
     def getAllRevert( self ):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT * FROM `%s`" % self._table_name)
+        cur.execute("SELECT * FROM %s", self.getName())
         items = cur.fetchall()
         opts = {}
         for item in items:

@@ -13,9 +13,9 @@ class TableBlock( Table ):
 
         # Create table
         c.execute(
-            "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
-                "hash_id INTEGER PRIMARY KEY, "+
-                "data BLOB NOT NULL"+
+            "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
+                "hash_id BIGINT UNSIGNED PRIMARY KEY, "+
+                "data MEDIUMBLOB NOT NULL"+
             ");"
         )
         return
@@ -28,8 +28,14 @@ class TableBlock( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        cur.execute("INSERT INTO `%s`(hash_id, data) VALUES (%%s,%%s)" % self._table_name,
-                    (hash_id, data,))
+        cur.execute(
+            "INSERT INTO %(table_name)s (hash_id, data) VALUES (%(hash_id)s, %(data)s)",
+            {
+                'table_name': self.getName(),
+                'hash_id': hash_id,
+                'data': data,
+            }
+        )
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
@@ -42,8 +48,14 @@ class TableBlock( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        cur.execute("UPDATE `%s` SET data=%%s WHERE hash_id=%%s" % self._table_name,
-                    (data, hash_id,))
+        cur.execute(
+            "UPDATE %(table_name)s SET data=%(data)s WHERE hash_id=%(hash_id)s",
+            {
+                'table_name': self.getName(),
+                'data': data,
+                'hash_id': hash_id,
+            }
+        )
         count = cur.rowcount
         self.stopTimer('update')
         return count
@@ -55,7 +67,13 @@ class TableBlock( Table ):
         """
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT * FROM `%s` WHERE hash_id=%%s" % self._table_name, (hash_id,))
+        cur.execute(
+            "SELECT * FROM %(table_name)s WHERE hash_id=%(hash_id)s",
+            {
+                'table_name': self.getName(),
+                'hash_id': hash_id,
+            }
+        )
         item = cur.fetchone()
         self.stopTimer('get')
         return item

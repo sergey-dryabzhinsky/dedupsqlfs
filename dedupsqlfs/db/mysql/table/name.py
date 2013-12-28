@@ -2,24 +2,32 @@
 
 __author__ = 'sergey'
 
-import sqlite3
-from dedupsqlfs.db.sqlite.table import Table
+from dedupsqlfs.db.mysql.table import Table
 
 class TableName( Table ):
 
     _table_name = "name"
 
     def create(self):
-        c = self.getCursor()
+        cur = self.getCursor()
 
         # Create table
-        c.execute(
-            "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
-                "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
-                "value BLOB NOT NULL, "+
-                "UNIQUE(value) "
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
+                "id BIGINT UNSIGNED PRIMARY KEY AUTOINCREMENT, "+
+                "value BLOB NOT NULL"+
             ");"
         )
+        try:
+            cur.execute(
+                "ALTER TABLE %(table_name)s ADD UNIQUE INDEX %(index_name)s (`value`)",
+                {
+                    "table_name": self.getName(),
+                    "index_name": self.getName() + "_value"
+                }
+            )
+        except:
+            pass
         return
 
     def getRowSize(self, value):
@@ -27,8 +35,7 @@ class TableName( Table ):
         :param value: bytes
         :return: int
         """
-        bvalue = sqlite3.Binary(value)
-        return 8 + len(bvalue)*2+12
+        return 8 + len(value)+2
 
     def insert(self, value):
         """
@@ -38,9 +45,7 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        bvalue = sqlite3.Binary(value)
-
-        cur.execute("INSERT INTO `%s`(value) VALUES (?)" % self._table_name, (bvalue,))
+        cur.execute("INSERT INTO `%s`(value) VALUES (%%s)" % self._table_name, (value,))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
@@ -53,9 +58,7 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        bvalue = sqlite3.Binary(value)
-
-        cur.execute("SELECT id FROM `%s` WHERE value=?" % self._table_name, (bvalue,))
+        cur.execute("SELECT id FROM `%s` WHERE value=%%s" % self._table_name, (value,))
         item = cur.fetchone()
         if item:
             item = item["id"]
@@ -70,7 +73,7 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        cur.execute("SELECT value FROM `%s` WHERE id=?" % self._table_name, (name_id,))
+        cur.execute("SELECT value FROM `%s` WHERE id=%%d" % self._table_name, (name_id,))
         item = cur.fetchone()
         if item:
             item = item["value"]

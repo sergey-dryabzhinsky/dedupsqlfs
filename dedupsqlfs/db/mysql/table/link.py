@@ -2,8 +2,7 @@
 
 __author__ = 'sergey'
 
-import sqlite3
-from dedupsqlfs.db.sqlite.table import Table
+from dedupsqlfs.db.mysql.table import Table
 
 class TableLink( Table ):
 
@@ -14,8 +13,8 @@ class TableLink( Table ):
 
         # Create table
         c.execute(
-            "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
-                "inode_id INTEGER PRIMARY KEY, "+
+            "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
+                "inode_id BIGINT UNSIGNED PRIMARY KEY, "+
                 "target BLOB NOT NULL"+
             ");"
         )
@@ -29,11 +28,14 @@ class TableLink( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        btarget = sqlite3.Binary(target)
-
-        cur.execute("INSERT INTO `%s`(inode_id, target) VALUES (?, ?)" % self._table_name, (
-            inode, btarget,
-        ))
+        cur.execute(
+            "INSERT INTO %(table_name)s (inode_id, target) VALUES (%(inode)s, %(target)s)",
+            {
+                "table_name": self.getName(),
+                "inode": inode,
+                "target": target
+            }
+        )
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
@@ -45,9 +47,13 @@ class TableLink( Table ):
         """
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT target FROM `%s` WHERE inode_id=?" % self._table_name, (
-            inode,
-        ))
+        cur.execute(
+            "SELECT target FROM %(table_name)s WHERE inode_id=%(inode)s",
+            {
+                "table_name": self.getName(),
+                "inode": inode
+            }
+        )
         item = cur.fetchone()
         if item:
             item = item["target"]

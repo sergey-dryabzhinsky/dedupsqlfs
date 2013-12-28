@@ -2,7 +2,7 @@
 
 __author__ = 'sergey'
 
-from dedupsqlfs.db.sqlite.table import Table
+from dedupsqlfs.db.mysql.table import Table
 
 class TableHashBlockSize( Table ):
 
@@ -13,10 +13,10 @@ class TableHashBlockSize( Table ):
 
         # Create table
         c.execute(
-            "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
-                "hash_id INTEGER PRIMARY KEY, "+
-                "real_size INTEGER NOT NULL, "+
-                "comp_size INTEGER NOT NULL "+
+            "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
+                "hash_id BIGINT UNSIGNED PRIMARY KEY, "+
+                "real_size INT UNSIGNED NOT NULL, "+
+                "comp_size INT UNSIGNED NOT NULL "+
             ");"
         )
         return
@@ -28,8 +28,16 @@ class TableHashBlockSize( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        cur.execute("INSERT INTO `%s`(hash_id, real_size, comp_size) VALUES (?,?,?)" % self._table_name,
-                    (hash_id, real_size, comp_size,))
+        cur.execute(
+            "INSERT INTO %(table_name)s (hash_id, real_size, comp_size) "+
+            "VALUES (%(hash_id)s, %(real_size)s, %(comp_size)s)",
+            {
+                "table_name": self.getName(),
+                "hash_id": hash_id,
+                "real_size": real_size,
+                "comp_size": comp_size
+            }
+        )
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
@@ -41,8 +49,15 @@ class TableHashBlockSize( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        cur.execute("UPDATE `%s` SET real_size=?, comp_size=? WHERE hash_id=?" % self._table_name,
-                    (real_size, comp_size, hash_id,))
+        cur.execute(
+            "UPDATE %(table_name)s SET real_size=%(real_size)s, comp_size=%(comp_size)s WHERE hash_id=%(id)s",
+            {
+                "table_name": self.getName(),
+                "real_size": real_size,
+                "comp_size": comp_size,
+                "id": hash_id
+            }
+        )
         count = cur.rowcount
         self.stopTimer('update')
         return count
@@ -54,7 +69,13 @@ class TableHashBlockSize( Table ):
         """
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT * FROM `%s` WHERE hash_id=?" % self._table_name, (hash_id,))
+        cur.execute(
+            "SELECT * FROM %(table_name)s WHERE hash_id=%(id)s",
+            {
+                "table_name": self.getName(),
+                "id": hash_id
+            }
+        )
         item = cur.fetchone()
         self.stopTimer('get')
         return item

@@ -27,6 +27,9 @@ class DbManager( object ):
     """
 
     _buffer_size = 256*1024*1024
+    """
+    @ivar _buffer_size: InnoDB pool buffer size
+    """
 
     tables = (
         "option",

@@ -16,10 +16,18 @@ class TableInodeHashBlock( Table ):
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`inode_id` BIGINT UNSIGNED NOT NULL, "+
                 "`block_number` BIGINT UNSIGNED NOT NULL, "+
-                "`hash_id` BIGINT UNSIGNED NOT NULL, "+
-                "PRIMARY KEY (`inode_id`, `block_number`)"+
+                "`hash_id` BIGINT UNSIGNED NOT NULL"+
             ")"
         )
+        try:
+            cur.execute(
+                "ALTER TABLE `%s` " % self.getName()+
+                " ADD UNIQUE INDEX `%s` " % (self.getName() + "_inode_block")+
+                " (`inode_id`, `block_number`)"
+            )
+        except Exception as e:
+            print("ERROR in %s: %s" % (self.getName(), e))
+            pass
         try:
             cur.execute(
                 "ALTER TABLE `%s` " % self.getName()+

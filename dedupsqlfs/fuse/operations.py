@@ -1035,8 +1035,8 @@ class DedupOperations(llfuse.Operations): # {{{1
     def __fill_attr_inode_row(self, row): # {{{3
         result = llfuse.EntryAttributes()
 
-        result.entry_timeout = self.getOption("cache_timeout")
-        result.attr_timeout = self.getOption("cache_timeout")
+        result.entry_timeout = self.getOption("cache_meta_timeout")
+        result.attr_timeout = self.getOption("cache_meta_timeout")
         result.st_ino       = int(row["id"])
         # http://stackoverflow.com/questions/11071996/what-are-inode-generation-numbers
         result.generation   = 0

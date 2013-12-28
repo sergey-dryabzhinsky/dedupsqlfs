@@ -166,7 +166,8 @@ class DbManager( object ):
                 cmd.append("--flush")
                 cmd.append("--innodb-flush-log-at-trx-commit=1")
             else:
-                cmd.append("--innodb-flush-log-at-trx-commit=0")
+                cmd.append("--innodb-flush-log-at-trx-commit=2")
+                cmd.append("--skip-innodb-doublewrite")
 
             cmd.extend([
                 "--big-tables",

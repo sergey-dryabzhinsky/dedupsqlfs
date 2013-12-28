@@ -61,9 +61,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.cache_gc_meta_last_run = time.time()
         self.cache_gc_block_write_last_run = time.time()
         self.cache_gc_block_read_last_run = time.time()
-        self.cache_timeout = 10
         self.cache_meta_timeout = 20
-        self.cache_block_write_timeout = 5
+        self.cache_block_write_timeout = 10
         self.cache_block_read_timeout = 10
         self.cache_block_write_size = 256*1024*1024
         self.cache_block_read_size = 256*1024*1024
@@ -322,8 +321,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             if self.getOption("use_cache") is not None:
                 self.cache_enabled = self.getOption("use_cache")
-            if self.getOption("cache_timeout") is not None:
-                self.cache_timeout = self.getOption("cache_timeout")
             if self.getOption("cache_block_write_timeout") is not None:
                 self.cache_block_write_timeout = self.getOption("cache_block_write_timeout")
             if self.getOption("cache_block_read_timeout") is not None:

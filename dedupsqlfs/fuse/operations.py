@@ -816,7 +816,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             # host_fs = os.statvfs(self.getOption("data"))
             stats = llfuse.StatvfsData()
 
-            apparent_size = self.getApparentSize()
+            apparent_size, compressed_size = self.getDataSize()
 
             # The total number of free blocks available to a non privileged process.
             # stats.f_bavail = host_fs.f_bsize * host_fs.f_bavail / self.block_size
@@ -907,11 +907,13 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     # ---------------------------- Miscellaneous methods: {{{2
 
-    def getApparentSize(self, use_subvol=True):
+    def getDataSize(self, use_subvol=True):
         manager = self.getManager()
 
         curTree = manager.getTable("tree").getCursor()
-        curInode = manager.getTable("inode").getCursor()
+
+        indexTable = manager.getTable("inode_hash_block")
+        hbsTable = manager.getTable("hash_block_size")
 
         if use_subvol:
             curTree.execute("SELECT `inode_id` FROM `tree` WHERE `subvol_id`=%s", (manager.getTable("tree").getSelectedSubvolume(),))
@@ -919,14 +921,20 @@ class DedupOperations(llfuse.Operations): # {{{1
             curTree.execute("SELECT `inode_id` FROM `tree`")
 
         apparent_size = 0
+        compressed_size = 0
         while True:
             treeItem = curTree.fetchone()
             if not treeItem:
                 break
 
-            curInode.execute("SELECT `size` FROM `inode` WHERE `id`=%s", (treeItem["inode_id"],))
-            apparent_size += curInode.fetchone()["size"]
-        return apparent_size
+            # Do not trust inode info - we not done block writing and writed size not changed?
+            inodeHashes = indexTable.get_hashes_by_inode( treeItem["inode_id"] )
+            for indexItem in inodeHashes:
+                hbs = hbsTable.get(indexItem["hash_id"])
+                apparent_size += hbs["real_size"]
+                compressed_size += hbs["comp_size"]
+
+        return apparent_size, compressed_size
 
     def __fix_inode_if_requested_root(self, inode):
         if inode == llfuse.ROOT_INODE and not self.getOption("disable_subvolumes"):

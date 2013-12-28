@@ -80,4 +80,48 @@ class TableHashBlockSize( Table ):
         self.stopTimer('get')
         return item
 
+    def get_real_size( self, hash_id):
+        """
+        :param hash_id: int
+        :return: Row
+        """
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute(
+            "SELECT `real_size` FROM `%s` " % self.getName()+
+            " WHERE `hash_id`=%(id)s",
+            {
+                "id": hash_id
+            }
+        )
+        item = cur.fetchone()
+        if item:
+            item = item["real_size"]
+        else:
+            item = 0
+        self.stopTimer('get_real_size')
+        return item
+
+    def get_comp_size( self, hash_id):
+        """
+        :param hash_id: int
+        :return: Row
+        """
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute(
+            "SELECT `comp_size` FROM `%s` " % self.getName()+
+            " WHERE `hash_id`=%(id)s",
+            {
+                "id": hash_id
+            }
+        )
+        item = cur.fetchone()
+        if item:
+            item = item["comp_size"]
+        else:
+            item = 0
+        self.stopTimer('get_comp_size')
+        return item
+
     pass

@@ -231,12 +231,12 @@ class DedupFS(object): # {{{1
         indexTable = manager.getTable("inode_hash_block")
         hbsTable = manager.getTable("hash_block_size")
 
-        apparent_size = self.operations.getApparentSize(False)
+        apparent_size, compressed_size = self.operations.getDataSize(False)
 
         self.getLogger().info("--" * 79)
 
-        print("disk_usage: %r" % disk_usage)
-        print("apparent_size: %r" % apparent_size)
+        #print("disk_usage: %r" % disk_usage)
+        #print("apparent_size: %r" % apparent_size)
 
         if apparent_size:
             self.getLogger().info("Apparent size is %s.",
@@ -244,7 +244,16 @@ class DedupFS(object): # {{{1
             )
             self.getLogger().info("Databases take up %s (ratio is %.2f%%).",
                              format_size(disk_usage),
-                             100.0 * disk_usage / apparent_size
+                             100.0 * disk_usage / apparent_size)
+            self.getLogger().info("Compressed data take up %s (ratioA is %.2f%%, ratioD is %.2f%%).",
+                             format_size(compressed_size),
+                             100.0 * (apparent_size - compressed_size) / apparent_size,
+                             100.0 * compressed_size / disk_usage,
+            )
+            self.getLogger().info("System data take up %s (ratioA is %.2f%%, rationD is %.2f%%).",
+                             format_size(disk_usage - compressed_size),
+                             100.0 * (disk_usage - compressed_size) / apparent_size,
+                             100.0 * (disk_usage - compressed_size) / disk_usage,
             )
 
             curIndex = indexTable.getCursor()
@@ -263,36 +272,37 @@ class DedupFS(object): # {{{1
             self.getLogger().info("Deduped size is %s (ratio is %.2f%%).",
                              format_size(dedup_size),
                              100.0 * dedup_size / apparent_size)
-            self.getLogger().info("Compressed size is %s (ratio is %.2f%%).",
-                             format_size(apparent_size - dedup_size),
-                             100.0 - 100.0 * disk_usage / (apparent_size - dedup_size))
         else:
             self.getLogger().info("Apparent size is %s.",
                              format_size(apparent_size)
+            )
+            self.getLogger().info("Compressed size is %s.",
+                             format_size(compressed_size)
             )
             self.getLogger().info("Databases take up %s.",
                              format_size(disk_usage)
             )
 
-        self.getLogger().info("--" * 79)
-        self.getLogger().info("Compression by types:")
-        count_all = 0
-        comp_types = {}
+        if compressed_size:
+            self.getLogger().info("--" * 79)
+            self.getLogger().info("Compression by types:")
+            count_all = 0
+            comp_types = {}
 
-        hctTable = manager.getTable("hash_compression_type")
+            hctTable = manager.getTable("hash_compression_type")
 
-        for item in hctTable.count_compression_type():
-            count_all += item["cnt"]
-            comp_types[ item["cnt"] ] = self.operations.getCompressionTypeName( item["compression_type_id"] )
+            for item in hctTable.count_compression_type():
+                count_all += item["cnt"]
+                comp_types[ item["cnt"] ] = self.operations.getCompressionTypeName( item["compression_type_id"] )
 
-        keys = list(comp_types.keys())
-        keys.sort(reverse=True)
+            keys = list(comp_types.keys())
+            keys.sort(reverse=True)
 
-        for key in keys:
-            compression = comp_types[key]
-            self.getLogger().info(" %8s used by %.2f%% blocks",
-                compression, 100.0 * key / count_all
-            )
+            for key in keys:
+                compression = comp_types[key]
+                self.getLogger().info(" %8s used by %.2f%% blocks",
+                    compression, 100.0 * key / count_all
+                )
 
         return
 

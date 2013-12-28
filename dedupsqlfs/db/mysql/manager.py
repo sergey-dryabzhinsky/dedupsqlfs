@@ -16,6 +16,7 @@ class DbManager( object ):
     _synchronous = True
 
     _socket = None
+    _notmeStarted = False
     _user = "root"
     _pass = ""
 
@@ -147,6 +148,10 @@ class DbManager( object ):
             pidfile = self.getBasePath() + "/mysql.pid"
             self._socket = self.getBasePath() + "/mysql.sock"
 
+            if os.path.exists(self._socket):
+                self._notmeStarted = True
+                return True
+
             tmpdir = self.getBasePath() + "/tmp"
             if not os.path.isdir(tmpdir):
                 os.makedirs(tmpdir, 0o0750)
@@ -238,6 +243,10 @@ class DbManager( object ):
 
     def stopMysqld(self):
         if self._mysqld_proc is not None:
+
+            if self._notmeStarted:
+                self._notmeStarted = False
+                return True
 
             cmd = [
                 "mysqladmin",

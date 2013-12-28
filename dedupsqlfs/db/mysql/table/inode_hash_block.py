@@ -23,18 +23,20 @@ class TableInodeHashBlock( Table ):
         try:
             cur.execute(
                 "ALTER TABLE `%s` " % self.getName()+
-                " ADD UNIQUE INDEX `%s` " % (self.getName() + "_hash")+
+                " ADD INDEX `%s` " % (self.getName() + "_hash")+
                 " (`hash_id`)"
             )
-        except:
+        except Exception as e:
+            print("ERROR in %s: %s" % (self.getName(), e))
             pass
         try:
             cur.execute(
                 "ALTER TABLE `%s` " % self.getName()+
-                " ADD UNIQUE INDEX `%s` " % (self.getName() + "_inode")+
+                " ADD INDEX `%s` " % (self.getName() + "_inode")+
                 " (`inode_id`)"
             )
-        except:
+        except Exception as e:
+            print("ERROR in %s: %s" % (self.getName(), e))
             pass
         return
 

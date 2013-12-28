@@ -23,7 +23,8 @@ class TableCompressionType( Table ):
                 "ALTER TABLE `%s` " % self.getName()+
                 "ADD UNIQUE INDEX `%s` " % (self.getName() + "_value")+
                 "(`value`)")
-        except:
+        except Exception as e:
+            print("ERROR in %s: %s" % (self.getName(), e))
             pass
         return
 
@@ -72,7 +73,7 @@ class TableCompressionType( Table ):
         )
         item = cur.fetchone()
         if item:
-            item = item["value"].decode()
+            item = item["value"]
         self.stopTimer('get')
         return item
 
@@ -95,22 +96,22 @@ class TableCompressionType( Table ):
     def getAll( self ):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT * FROM `%s`", self.getName())
+        cur.execute("SELECT * FROM `%s`" % self.getName())
         items = cur.fetchall()
         opts = {}
         for item in items:
-            opts[ item["id"] ] = item["value"].decode()
+            opts[ item["id"] ] = item["value"]
         self.stopTimer('getAll')
         return opts
 
     def getAllRevert( self ):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT * FROM `%s`", self.getName())
+        cur.execute("SELECT * FROM `%s`" % self.getName())
         items = cur.fetchall()
         opts = {}
         for item in items:
-            opts[ item["value"].decode() ] = item["id"]
+            opts[ item["value"] ] = item["id"]
         self.stopTimer('getAllRevert')
         return opts
 

@@ -15,7 +15,7 @@ class TableHash( Table ):
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`id` BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
-                "`hash` TINYBLOB NOT NULL "+
+                "`hash` VARBINARY(255) NOT NULL "+
             ")"
         )
         try:
@@ -24,7 +24,8 @@ class TableHash( Table ):
                 " ADD UNIQUE INDEX `%s` " % (self.getName()+"_hash")+
                 " (`hash`)"
             )
-        except:
+        except Exception as e:
+            print("ERROR in %s: %s" % (self.getName(), e))
             pass
         return
 

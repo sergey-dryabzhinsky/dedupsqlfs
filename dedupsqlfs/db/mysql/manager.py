@@ -293,6 +293,10 @@ class DbManager( object ):
                 passwd=self.getPassword(),
                 db=self.getDbName())
         conn.autocommit(self.getAutocommit())
+        if not self.getAutocommit():
+            cur = conn.cursor()
+            cur.execute("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED")
+            cur.close()
         return conn
 
 

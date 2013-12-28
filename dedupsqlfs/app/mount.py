@@ -39,7 +39,6 @@ def fuse_mount(options, compression_methods=None, hash_functions=None):
 
         ret = _fuse.main()
     except Exception as e:
-        print(e)
         import traceback
         print(traceback.format_exc())
         ret = -1

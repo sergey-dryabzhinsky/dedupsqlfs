@@ -30,7 +30,8 @@ class TableTree( Table ):
                 " ADD UNIQUE INDEX `%s` " % (self.getName() + "_spn")+
                 " (`subvol_id`, `parent_id`, `name_id`)"
             )
-        except:
+        except Exception as e:
+            print("ERROR in %s: %s" % (self.getName(), e))
             pass
 
         try:
@@ -39,7 +40,8 @@ class TableTree( Table ):
                 " ADD INDEX `%s` " % (self.getName() + "_inode")+
                 " (`inode_id`)"
             )
-        except:
+        except Exception as e:
+            print("ERROR in %s: %s" % (self.getName(), e))
             pass
 
         try:
@@ -48,7 +50,8 @@ class TableTree( Table ):
                 " ADD INDEX `%s` " % (self.getName() + "_parent")+
                 " (`parent_id`)"
             )
-        except:
+        except Exception as e:
+            print("ERROR in %s: %s" % (self.getName(), e))
             pass
 
         try:
@@ -57,7 +60,8 @@ class TableTree( Table ):
                 " ADD INDEX `%s` " % (self.getName() + "_parent_name")+
                 " (`parent_id`, `name_id`)"
             )
-        except:
+        except Exception as e:
+            print("ERROR in %s: %s" % (self.getName(), e))
             pass
 
         try:
@@ -66,7 +70,8 @@ class TableTree( Table ):
                 " ADD INDEX `%s` " % (self.getName() + "_subvol")+
                 " (`subvol_id`)"
             )
-        except:
+        except Exception as e:
+            print("ERROR in %s: %s" % (self.getName(), e))
             pass
 
         try:
@@ -75,7 +80,8 @@ class TableTree( Table ):
                 " ADD INDEX `%s` " % (self.getName() + "_name")+
                 " (`name_id`)"
             )
-        except:
+        except Exception as e:
+            print("ERROR in %s: %s" % (self.getName(), e))
             pass
 
         return

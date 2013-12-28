@@ -32,10 +32,11 @@ class TableInode( Table ):
         try:
             cur.execute(
                 "ALTER TABLE `%s` " % self.getName()+
-                " ADD UNIQUE INDEX `%s` " % (self.getName() + "_id_nlinks")+
+                " ADD INDEX `%s` " % (self.getName() + "_id_nlinks")+
                 " (`id`, `nlinks`)"
             )
-        except:
+        except Exception as e:
+            print("ERROR in %s: %s" % (self.getName(), e))
             pass
         return
 

@@ -24,7 +24,8 @@ class TableHashCompressionType( Table ):
                 "ADD INDEX `%s` " % (self.getName() + "_compression_type")+
                 " (`compression_type_id`)"
             )
-        except:
+        except Exception as e:
+            print("ERROR in %s: %s" % (self.getName(), e))
             pass
         return
 

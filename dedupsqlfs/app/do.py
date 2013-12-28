@@ -334,7 +334,6 @@ def do(options, compression_methods=None):
 
         ret = 0
     except Exception as e:
-        print(e)
         import traceback
         traceback.print_exc()
         ret = 1

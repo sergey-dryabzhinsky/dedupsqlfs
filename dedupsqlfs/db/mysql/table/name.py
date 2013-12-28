@@ -22,9 +22,10 @@ class TableName( Table ):
             cur.execute(
                 "ALTER TABLE `%s` " % self.getName()+
                 " ADD UNIQUE INDEX `%s` " % (self.getName() + "_value")+
-                " (`value`)"
+                " (`value`(255))"
             )
-        except:
+        except Exception as e:
+            print("ERROR in %s: %s" % (self.getName(), e))
             pass
         return
 
@@ -43,7 +44,9 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        cur.execute("INSERT INTO `%s` (`value`) VALUES (%%s)" % self._table_name, (value,))
+        cur.execute(
+            "INSERT INTO `%s` " % self.getName()+
+            " (`value`) VALUES (%s)", (value,))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
@@ -56,7 +59,9 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        cur.execute("SELECT `id` FROM `%s` WHERE `value`=%%s" % self._table_name, (value,))
+        cur.execute(
+            "SELECT `id` FROM `%s` " % self.getName()+
+            " WHERE `value`=%s", (value,))
         item = cur.fetchone()
         if item:
             item = item["id"]
@@ -71,7 +76,8 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        cur.execute("SELECT `value` FROM `%s` WHERE `id`=%%s" % self._table_name, (name_id,))
+        cur.execute("SELECT `value` FROM `%s` " % self.getName()+
+                    " WHERE `id`=%s", (name_id,))
         item = cur.fetchone()
         if item:
             item = item["value"]

@@ -14,8 +14,8 @@ class TableBlock( Table ):
         # Create table
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
-                "hash_id BIGINT UNSIGNED PRIMARY KEY, "+
-                "data MEDIUMBLOB NOT NULL"+
+                "`hash_id` BIGINT UNSIGNED PRIMARY KEY, "+
+                "`data` MEDIUMBLOB NOT NULL"+
             ");"
         )
         return
@@ -29,9 +29,9 @@ class TableBlock( Table ):
         cur = self.getCursor()
 
         cur.execute(
-            "INSERT INTO %(table_name)s (hash_id, data) VALUES (%(hash_id)s, %(data)s)",
+            "INSERT INTO `%s` " % self.getName()+
+            " (`hash_id`, `data`) VALUES (%(hash_id)s, %(data)s)",
             {
-                'table_name': self.getName(),
                 'hash_id': hash_id,
                 'data': data,
             }
@@ -49,9 +49,9 @@ class TableBlock( Table ):
         cur = self.getCursor()
 
         cur.execute(
-            "UPDATE %(table_name)s SET data=%(data)s WHERE hash_id=%(hash_id)s",
+            "UPDATE `%s` " % self.getName()+
+            " SET `data`=%(data)s WHERE `hash_id`=%(hash_id)s",
             {
-                'table_name': self.getName(),
                 'data': data,
                 'hash_id': hash_id,
             }
@@ -68,9 +68,9 @@ class TableBlock( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT * FROM %(table_name)s WHERE hash_id=%(hash_id)s",
+            "SELECT * FROM `%s` " % self.getName()+
+            " WHERE `hash_id`=%(hash_id)s",
             {
-                'table_name': self.getName(),
                 'hash_id': hash_id,
             }
         )

@@ -14,28 +14,26 @@ class TableInode( Table ):
         # Create table
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
-                "id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
-                "nlinks INT UNSIGNED NOT NULL, "+
-                "mode SMALLINT UNSIGNED NOT NULL, "+
-                "uid SMALLINT UNSIGNED NOT NULL, "+
-                "gid SMALLINT UNSIGNED NOT NULL, "+
-                "rdev INT UNSIGNED NOT NULL, "+
-                "size BIGINT UNSIGNED NOT NULL, "+
-                "atime INT UNSIGNED NOT NULL, "+
-                "mtime INT UNSIGNED NOT NULL, "+
-                "ctime INT UNSIGNED NOT NULL, "+
-                "atime_ns INT UNSIGNED NOT NULL DEFAULT 0, "+
-                "mtime_ns INT UNSIGNED NOT NULL DEFAULT 0, "+
-                "ctime_ns INT UNSIGNED NOT NULL DEFAULT 0"+
+                "`id` BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
+                "`nlinks` INT UNSIGNED NOT NULL, "+
+                "`mode` SMALLINT UNSIGNED NOT NULL, "+
+                "`uid` SMALLINT UNSIGNED NOT NULL, "+
+                "`gid` SMALLINT UNSIGNED NOT NULL, "+
+                "`rdev` INT UNSIGNED NOT NULL, "+
+                "`size` BIGINT UNSIGNED NOT NULL, "+
+                "`atime` INT UNSIGNED NOT NULL, "+
+                "`mtime` INT UNSIGNED NOT NULL, "+
+                "`ctime` INT UNSIGNED NOT NULL, "+
+                "`atime_ns` INT UNSIGNED NOT NULL DEFAULT 0, "+
+                "`mtime_ns` INT UNSIGNED NOT NULL DEFAULT 0, "+
+                "`ctime_ns` INT UNSIGNED NOT NULL DEFAULT 0"+
             ");"
         )
         try:
             cur.execute(
-                "ALTER TABLE %(table_name)s ADD UNIQUE INDEX %(index_name)s (id,nlinks)",
-                {
-                    "table_name": self.getName(),
-                    "index_name": self.getName() + "_id_nlinks"
-                }
+                "ALTER TABLE `%s` " % self.getName()+
+                " ADD UNIQUE INDEX `%s` " % (self.getName() + "_id_nlinks")+
+                " (`id`, `nlinks`)"
             )
         except:
             pass
@@ -55,7 +53,7 @@ class TableInode( Table ):
         cur = self.getCursor()
 
         cur.execute("INSERT INTO `%s`" % self.getName() +
-                    "(nlinks, mode, uid, gid, rdev, size, atime, mtime, ctime, atime_ns, mtime_ns, ctime_ns) " +
+                    "(`nlinks`, `mode`, `uid`, `gid`, `rdev`, `size`, `atime`, `mtime`, `ctime`, `atime_ns`, `mtime_ns`, `ctime_ns`) " +
                     "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (
             nlinks, mode, uid, gid, rdev, size, atime, mtime, ctime, atime_ns, mtime_ns, ctime_ns
         ))
@@ -80,7 +78,7 @@ class TableInode( Table ):
         for key in row_data.keys():
             if key == "id":
                 continue
-            params += ("%s=%%s" % key,)
+            params += ("`%s`=%%s" % key,)
             values += (row_data[key],)
 
         if not values:
@@ -100,9 +98,9 @@ class TableInode( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "UPDATE %(table_name)s SET size=%(size)s WHERE id=%(id)s",
+            "UPDATE `%s` " % self.getName()+
+            " SET `size`=%(size)s WHERE `id`=%(id)s",
             {
-                "table_name": self.getName(),
                 "size": size,
                 "id": inode
             }
@@ -115,9 +113,9 @@ class TableInode( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT * FROM %(table_name)s WHERE id=%(id)s",
+            "SELECT * FROM `%s` " % self.getName()+
+            " WHERE `id`=%(id)s",
             {
-                "table_name": self.getName(),
                 "id": inode
             }
         )
@@ -129,9 +127,9 @@ class TableInode( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT mode FROM %(table_name)s WHERE id=%(id)s",
+            "SELECT `mode` FROM `%s` " % self.getName()+
+            " WHERE `id`=%(id)s",
             {
-                "table_name": self.getName(),
                 "id": inode
             }
         )
@@ -143,9 +141,9 @@ class TableInode( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT size FROM %(table_name)s WHERE id=%(id)s",
+            "SELECT `size` FROM `%s` " % self.getName()+
+            " WHERE `id`=%(id)s",
             {
-                "table_name": self.getName(),
                 "id": inode
             }
         )
@@ -157,9 +155,9 @@ class TableInode( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "UPDATE %(table_name)s SET nlinks=nlinks+1 WHERE id=%(id)s",
+            "UPDATE `%s` " % self.getName()+
+            " SET `nlinks`=`nlinks`+1 WHERE `id`=%(id)s",
             {
-                "table_name": self.getName(),
                 "id": inode
             }
         )
@@ -171,9 +169,9 @@ class TableInode( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "UPDATE %(table_name)s SET nlinks=nlinks-1 WHERE id=%(id)s",
+            "UPDATE `%s` " % self.getName()+
+            " SET `nlinks`=`nlinks`-1 WHERE `id`=%(id)s",
             {
-                "table_name": self.getName(),
                 "id": inode
             }
         )
@@ -185,7 +183,7 @@ class TableInode( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT COUNT(1) as cnt FROM `%s` WHERE id IN (%s) AND nlinks>0" % (
+            "SELECT COUNT(1) as `cnt` FROM `%s` WHERE `id` IN (%s) AND nlinks>0" % (
             self._table_name, ",".join(id_list),)
         )
         result = cur.fetchone()["cnt"]
@@ -195,7 +193,7 @@ class TableInode( Table ):
     def get_count(self):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT COUNT(1) as cnt FROM `%s`" % self.getName())
+        cur.execute("SELECT COUNT(1) as `cnt` FROM `%s`" % self.getName())
         item = cur.fetchone()
         self.stopTimer('get_count')
         return item["cnt"]

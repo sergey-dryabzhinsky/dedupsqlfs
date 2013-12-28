@@ -15,8 +15,8 @@ class TableInodeXattr( Table ):
         # Create table
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
-                "inode_id INTEGER PRIMARY KEY, "+
-                "data BLOB NOT NULL"+
+                "`inode_id` INTEGER PRIMARY KEY, "+
+                "`data` BLOB NOT NULL"+
             ");"
         )
         return
@@ -35,9 +35,9 @@ class TableInodeXattr( Table ):
             bvalues = values
 
         cur.execute(
-            "INSERT INTO %(table_name)s (inode_id, data) VALUES (%(inode)s, %(data)s)",
+            "INSERT INTO `%s` " % self.getName()+
+            " (`inode_id`, `data`) VALUES (%(inode)s, %(data)s)",
             {
-                "table_name": self.getName(),
                 "inode": inode,
                 "data": bvalues
             }
@@ -61,9 +61,9 @@ class TableInodeXattr( Table ):
             bvalues = values
 
         cur.execute(
-            "UPDATE %(table_name)s SET `data`=%(data)s WHERE `inode_id`=%(inode)s",
+            "UPDATE `%s` " % self.getName()+
+            " SET `data`=%(data)s WHERE `inode_id`=%(inode)s",
             {
-                "table_name": self.getName(),
                 "date": bvalues,
                 "inode": inode
             }
@@ -80,9 +80,9 @@ class TableInodeXattr( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT `data` FROM %(table_name)s WHERE `inode_id`=%(inode)s",
+            "SELECT `data` FROM `%s` " % self.getName()+
+            " WHERE `inode_id`=%(inode)s",
             {
-                "table_name": self.getName(),
                 "inode": inode
             }
         )

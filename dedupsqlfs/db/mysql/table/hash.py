@@ -14,17 +14,15 @@ class TableHash( Table ):
         # Create table
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
-                "id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
-                "hash TINYBLOB NOT NULL "+
+                "`id` BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
+                "`hash` TINYBLOB NOT NULL "+
             ")"
         )
         try:
             cur.execute(
-                "ALTER TABLE %(table_name)s ADD UNIQUE INDEX %(index_name)s (`hash`)",
-                {
-                    "table_name": self.getName(),
-                    "index_name": self.getName() + "_hash"
-                }
+                "ALTER TABLE `%s` " % self.getName()+
+                " ADD UNIQUE INDEX `%s` " % (self.getName()+"_hash")+
+                " (`hash`)"
             )
         except:
             pass
@@ -34,9 +32,9 @@ class TableHash( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "INSERT INTO %(table_name)s (hash) VALUES (%(value)s)",
+            "INSERT INTO `%s` " %self.getName()+
+            " (`hash`) VALUES (%(value)s)",
             {
-                'table_name': self.getName(),
                 'value': value
             }
         )
@@ -52,9 +50,9 @@ class TableHash( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "UPDATE %(table_name)s SET hash=%(value)s WHERE id=%(id)s",
+            "UPDATE `%s` " %self.getName()+
+            " SET `hash`=%(value)s WHERE `id`=%(id)s",
             {
-                'table_name': self.getName(),
                 'value': value,
                 'id': item_id
             }
@@ -67,9 +65,9 @@ class TableHash( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT hash FROM %(table_name)s WHERE id=%(id)s",
+            "SELECT `hash` FROM `%s` " % self.getName()+
+            " WHERE `id`=%(id)s",
             {
-                'table_name': self.getName(),
                 'id': item_id
             }
         )
@@ -83,9 +81,9 @@ class TableHash( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT id FROM %(table_name)s WHERE hash=%(value)s",
+            "SELECT `id` FROM `%s` " %self.getName()+
+            " WHERE `hash`=%(value)s",
             {
-                'table_name': self.getName(),
                 'value': value
             }
         )

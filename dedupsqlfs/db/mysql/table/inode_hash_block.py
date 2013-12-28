@@ -14,29 +14,25 @@ class TableInodeHashBlock( Table ):
         # Create table
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
-                "inode_id BIGINT UNSIGNED NOT NULL, "+
-                "block_number BIGINT UNSIGNED NOT NULL, "+
-                "hash_id BIGINT UNSIGNED NOT NULL, "+
-                "PRIMARY KEY (inode_id, block_number)"+
+                "`inode_id` BIGINT UNSIGNED NOT NULL, "+
+                "`block_number` BIGINT UNSIGNED NOT NULL, "+
+                "`hash_id` BIGINT UNSIGNED NOT NULL, "+
+                "PRIMARY KEY (`inode_id`, `block_number`)"+
             ")"
         )
         try:
             cur.execute(
-                "ALTER TABLE %(table_name)s ADD UNIQUE INDEX %(index_name)s (`hash_id`)",
-                {
-                    "table_name": self.getName(),
-                    "index_name": self.getName() + "_hash"
-                }
+                "ALTER TABLE `%s` " % self.getName()+
+                " ADD UNIQUE INDEX `%s` " % (self.getName() + "_hash")+
+                " (`hash_id`)"
             )
         except:
             pass
         try:
             cur.execute(
-                "ALTER TABLE %(table_name)s ADD UNIQUE INDEX %(index_name)s (`inode_id`)",
-                {
-                    "table_name": self.getName(),
-                    "index_name": self.getName() + "_inode"
-                }
+                "ALTER TABLE `%s` " % self.getName()+
+                " ADD UNIQUE INDEX `%s` " % (self.getName() + "_inode")+
+                " (`inode_id`)"
             )
         except:
             pass
@@ -46,9 +42,9 @@ class TableInodeHashBlock( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "INSERT INTO %(table_name)s (inode_id, block_number, hash_id) VALUES (%(inode)s, %(block)s, %(hash)s)",
+            "INSERT INTO `%s` " % self.getName()+
+            " (`inode_id`, `block_number`, `hash_id`) VALUES (%(inode)s, %(block)s, %(hash)s)",
             {
-                "table_name": self.getName(),
                 "inode": inode,
                 "block": block_number,
                 "hash": hash_id
@@ -62,9 +58,9 @@ class TableInodeHashBlock( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "UPDATE %(table_name)s SET hash_id=%(hash)s WHERE inode_id=%(inode)s AND block_number=%(block)s",
+            "UPDATE `%s` " % self.getName()+
+            " SET `hash_id`=%(hash)s WHERE `inode_id`=%(inode)s AND `block_number`=%(block)s",
             {
-                "table_name": self.getName(),
                 "hash": new_hash_id,
                 "inode": inode,
                 "block": block_number
@@ -78,9 +74,9 @@ class TableInodeHashBlock( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "DELETE FROM %(table_name)s WHERE inode_id=%(inode)s",
+            "DELETE FROM `%s` " % self.getName()+
+            " WHERE `inode_id`=%(inode)s",
             {
-                "table_name": self.getName(),
                 "inode": inode
             }
         )
@@ -92,9 +88,9 @@ class TableInodeHashBlock( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT * FROM %(table_name)s WHERE inode_id=%(inode)s AND block_number=%(block)s",
+            "SELECT * FROM `%s` " % self.getName()+
+            " WHERE `inode_id`=%(inode)s AND `block_number`=%(block)s",
             {
-                "table_name": self.getName(),
                 "inode": inode,
                 "block": block_number
             }
@@ -107,9 +103,9 @@ class TableInodeHashBlock( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "DELETE FROM %(table_name)s WHERE inode_id=%(inode)s AND block_number=%(block)s",
+            "DELETE FROM `%s` " % self.getName()+
+            " WHERE `inode_id`=%(inode)s AND `block_number`=%(block)s",
             {
-                "table_name": self.getName(),
                 "inode": inode,
                 "block": block_number
             }
@@ -122,9 +118,9 @@ class TableInodeHashBlock( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT hash_id FROM %(table_name)s WHERE inode_id=%(inode)s",
+            "SELECT `hash_id` FROM `%s` " % self.getName()+
+            " WHERE `inode_id`=%(inode)s",
             {
-                "table_name": self.getName(),
                 "inode": inode
             }
         )
@@ -136,9 +132,9 @@ class TableInodeHashBlock( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT * FROM %(table_name)s WHERE inode_id=%(inode)s",
+            "SELECT * FROM `%s` " % self.getName()+
+            " WHERE `inode_id`=%(inode)s",
             {
-                "table_name": self.getName(),
                 "inode": inode
             }
         )
@@ -150,9 +146,9 @@ class TableInodeHashBlock( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT COUNT(1) as cnt FROM %(table_name)s WHERE hash_id=%(hash)s",
+            "SELECT COUNT(1) as `cnt` FROM `%s` " % self.getName()+
+            " WHERE `hash_id`=%(hash)s",
             {
-                "table_name": self.getName(),
                 "hash": hash_id
             }
         )

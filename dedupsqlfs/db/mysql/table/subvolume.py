@@ -15,10 +15,10 @@ class TableSubvolume( Table ):
         # Create table
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
-                "node_id BIGINT UNSIGNED PRIMARY KEY, "+
-                "created_at INT UNSIGNED NOT NULL, "+
-                "mounted_at INT UNSIGNED, "+
-                "updated_at INT UNSIGNED"+
+                "`node_id` BIGINT UNSIGNED PRIMARY KEY, "+
+                "`created_at` INT UNSIGNED NOT NULL, "+
+                "`mounted_at` INT UNSIGNED, "+
+                "`updated_at` INT UNSIGNED"+
             ");"
         )
         return
@@ -35,10 +35,10 @@ class TableSubvolume( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "INSERT INTO %(table_name)s (node_id, created_at, mounted_at, updated_at) "+
+            "INSERT INTO `%s` " % self.getName()+
+            " (`node_id`, `created_at`, `mounted_at`, `updated_at`) "+
             "VALUES (%(node)s, %(created)s, %(mounted)s, %(updated)s)",
             {
-                "table_name": self.getName(),
                 "node": node_id,
                 "created": created_at,
                 "mounted": mounted_at,
@@ -54,9 +54,9 @@ class TableSubvolume( Table ):
             mtime = int(time())
         cur = self.getCursor()
         cur.execute(
-            "UPDATE %(table_name)s SET mounted_at=%(mounted)s WHERE node_id=%(node)s",
+            "UPDATE `%s` " % self.getName()+
+            " SET `mounted_at`=%(mounted)s WHERE `node_id`=%(node)s",
             {
-                "table_name": self.getName(),
                 "mounted": mtime,
                 "node": node_id
             }
@@ -70,9 +70,9 @@ class TableSubvolume( Table ):
             utime = int(time())
         cur = self.getCursor()
         cur.execute(
-            "UPDATE %(table_name)s SET updated_at=%(updated)s WHERE node_id=%(node)s",
+            "UPDATE `%s` " % self.getName()+
+            " SET `updated_at`=%(updated)s WHERE `node_id`=%(node)s",
             {
-                "table_name": self.getName(),
                 "updated": utime,
                 "node": node_id
             }
@@ -84,9 +84,9 @@ class TableSubvolume( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "DELETE FROM %(table_name)s WHERE node_id=%(node)s",
+            "DELETE FROM `%s` " % self.getName()+
+            " WHERE `node_id`=%(node)s",
             {
-                "table_name": self.getName(),
                 "node": node_id
             }
         )
@@ -98,9 +98,9 @@ class TableSubvolume( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT * FROM %(table_name)s WHERE node_id=%(node)s",
+            "SELECT * FROM `%s` " % self.getName()+
+            " WHERE `node_id`=%(node)s",
             {
-                "table_name": self.getName(),
                 "node": node_id
             }
         )

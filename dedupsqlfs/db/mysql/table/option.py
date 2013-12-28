@@ -14,8 +14,8 @@ class TableOption( Table ):
         # Create table
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
-                "name TEXT NOT NULL PRIMARY KEY, "+
-                "value TEXT NULL"+
+                "`name` VARCHAR(255) NOT NULL PRIMARY KEY, "+
+                "`value` TEXT NULL"+
             ")"
         )
         return
@@ -24,9 +24,9 @@ class TableOption( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "INSERT INTO %(table_name)s (name, value) VALUES (%(name)s, %(name)s)",
+            "INSERT INTO `%s` " % self.getName()+
+            "(`name`, `value`) VALUES (%(name)s, %(value)s)",
             {
-                "table_name": self.getName(),
                 "name": name,
                 "value": value
             }
@@ -43,9 +43,9 @@ class TableOption( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "UPDATE %(table_name)s SET value=%(value)s WHERE name=%(name)s",
+            "UPDATE `%s` " % self.getName()+
+            " SET `value`=%(value)s WHERE `name`=%(name)s",
             {
-                "table_name": self.getName(),
                 "value": value,
                 "name": name
             }
@@ -58,9 +58,9 @@ class TableOption( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT value FROM %(table_name)s WHERE name=%(name)s",
+            "SELECT `value` FROM `%s` " % self.getName()+
+            " WHERE `name`=%(name)s",
             {
-                "table_name": self.getName(),
                 "name": name
             }
         )

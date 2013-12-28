@@ -16,76 +16,64 @@ class TableTree( Table ):
         # Create table
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
-                "id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
-                "subvol_id BIGINT UNSIGNED, "+
-                "parent_id BIGINT UNSIGNED, "+
-                "name_id BIGINT UNSIGNED NOT NULL, "+
-                "inode_id BIGINT UNSIGNED NOT NULL"+
+                "`id` BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
+                "`subvol_id` BIGINT UNSIGNED, "+
+                "`parent_id` BIGINT UNSIGNED, "+
+                "`name_id` BIGINT UNSIGNED NOT NULL, "+
+                "`inode_id` BIGINT UNSIGNED NOT NULL"+
             ");"
         )
 
         try:
             cur.execute(
-                "ALTER TABLE %(table_name)s ADD UNIQUE INDEX %(index_name)s (subvol_id, parent_id, name_id)",
-                {
-                    "table_name": self.getName(),
-                    "index_name": self.getName() + "_spn"
-                }
+                "ALTER TABLE `%s` " % self.getName()+
+                " ADD UNIQUE INDEX `%s` " % (self.getName() + "_spn")+
+                " (`subvol_id`, `parent_id`, `name_id`)"
             )
         except:
             pass
 
         try:
             cur.execute(
-                "ALTER TABLE %(table_name)s ADD INDEX %(index_name)s (inode_id)",
-                {
-                    "table_name": self.getName(),
-                    "index_name": self.getName() + "_inode"
-                }
+                "ALTER TABLE `%s` " % self.getName()+
+                " ADD INDEX `%s` " % (self.getName() + "_inode")+
+                " (`inode_id`)"
             )
         except:
             pass
 
         try:
             cur.execute(
-                "ALTER TABLE %(table_name)s ADD INDEX %(index_name)s (parent_id)",
-                {
-                    "table_name": self.getName(),
-                    "index_name": self.getName() + "_parent"
-                }
+                "ALTER TABLE `%s` " % self.getName()+
+                " ADD INDEX `%s` " % (self.getName() + "_parent")+
+                " (`parent_id`)"
             )
         except:
             pass
 
         try:
             cur.execute(
-                "ALTER TABLE %(table_name)s ADD INDEX %(index_name)s (parent_id, name_id)",
-                {
-                    "table_name": self.getName(),
-                    "index_name": self.getName() + "_parent_name"
-                }
+                "ALTER TABLE `%s` " % self.getName()+
+                " ADD INDEX `%s` " % (self.getName() + "_parent_name")+
+                " (`parent_id`, `name_id`)"
             )
         except:
             pass
 
         try:
             cur.execute(
-                "ALTER TABLE %(table_name)s ADD INDEX %(index_name)s (subvol_id)",
-                {
-                    "table_name": self.getName(),
-                    "index_name": self.getName() + "_subvol"
-                }
+                "ALTER TABLE `%s` " % self.getName()+
+                " ADD INDEX `%s` " % (self.getName() + "_subvol")+
+                " (`subvol_id`)"
             )
         except:
             pass
 
         try:
             cur.execute(
-                "ALTER TABLE %(table_name)s ADD INDEX %(index_name)s (name_id)",
-                {
-                    "table_name": self.getName(),
-                    "index_name": self.getName() + "_name"
-                }
+                "ALTER TABLE `%s` " % self.getName()+
+                " ADD INDEX `%s` " % (self.getName() + "_name")+
+                " (`name_id`)"
             )
         except:
             pass
@@ -112,10 +100,10 @@ class TableTree( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "INSERT INTO %(table_name)s (subvol_id, parent_id, name_id, inode_id) "+
+            "INSERT INTO `%s` " % self.getName()+
+            " (`subvol_id`, `parent_id`, `name_id`, `inode_id`) "+
             "VALUES (%(subvol)s, %(parent)s, %(name)s, %(inode)s)",
             {
-                "table_name": self.getName(),
                 "subvol": self._selected_subvol,
                 "parent": parent_id,
                 "name": name_id,
@@ -130,9 +118,9 @@ class TableTree( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "DELETE FROM %(table_name)s WHERE id=%(id)s",
+            "DELETE FROM `%s` " % self.getName()+
+            " WHERE `id`=%(id)s",
             {
-                "table_name": self.getName(),
                 "id": node_id
             }
         )
@@ -144,9 +132,9 @@ class TableTree( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "DELETE FROM %(table_name)s WHERE subvol_id=%(subvol)s",
+            "DELETE FROM `%s` " % self.getName()+
+            " WHERE `subvol_id`=%(subvol)s",
             {
-                "table_name": self.getName(),
                 "subvol": subvol_id
             }
         )
@@ -158,9 +146,9 @@ class TableTree( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT DISTINCT COUNT(inode_id) AS cnt FROM %(table_name)s WHERE subvol_id=%(subvol)s",
+            "SELECT DISTINCT COUNT(`inode_id`) AS `cnt` FROM `%s` " % self.getName()+
+            " WHERE `subvol_id`=%(subvol)s",
             {
-                "table_name": self.getName(),
                 "subvol": subvol_id
             }
         )
@@ -176,9 +164,9 @@ class TableTree( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT DISTINCT COUNT(name_id) AS cnt FROM %(table_name)s WHERE subvol_id=%(subvol)s",
+            "SELECT DISTINCT COUNT(`name_id`) AS `cnt` FROM `%s` " % self.getName()+
+            " WHERE `subvol_id`=%(subvol)s",
             {
-                "table_name": self.getName(),
                 "subvol": subvol_id
             }
         )
@@ -194,9 +182,9 @@ class TableTree( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT COUNT(1) AS cnt FROM %(table_name)s WHERE subvol_id=%(subvol)s",
+            "SELECT COUNT(1) AS `cnt` FROM `%s` " % self.getName()+
+            " WHERE `subvol_id`=%(subvol)s",
             {
-                "table_name": self.getName(),
                 "subvol": subvol_id
             }
         )
@@ -212,9 +200,9 @@ class TableTree( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT id, inode_id FROM %(table_name)s WHERE parent_id=%(parent)s AND name_id=%(name)s",
+            "SELECT `id`, `inode_id` FROM `%s` " % self.getName()+
+            " WHERE `parent_id`=%(parent)s AND `name_id`=%(name)s",
             {
-                "table_name": self.getName(),
                 "parent": parent_id,
                 "name": name_id
             }
@@ -227,9 +215,9 @@ class TableTree( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT * FROM %(table_name)s WHERE inode_id=%(inode)s",
+            "SELECT * FROM `%s` " % self.getName()+
+            " WHERE `inode_id`=%(inode)s",
             {
-                "table_name": self.getName(),
                 "inode": inode_id
             }
         )
@@ -241,9 +229,9 @@ class TableTree( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT * FROM %(table_name)s WHERE id=%(node)s",
+            "SELECT * FROM `%s` " % self.getName()+
+            " WHERE `id`=%(node)s",
             {
-                "table_name": self.getName(),
                 "node": node_id
             }
         )
@@ -255,9 +243,9 @@ class TableTree( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT inode_id FROM %(table_name)s WHERE parent_id=%(parent)s",
+            "SELECT `inode_id` FROM `%s` " % self.getName()+
+            " WHERE `parent_id`=%(parent)s",
             {
-                "table_name": self.getName(),
                 "parent": parent_id
             }
         )
@@ -270,9 +258,9 @@ class TableTree( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT * FROM %(table_name)s WHERE parent_id=%(parent)s",
+            "SELECT * FROM `%s` " % self.getName()+
+            " WHERE `parent_id`=%(parent)s",
             {
-                "table_name": self.getName(),
                 "parent": parent_id
             }
         )

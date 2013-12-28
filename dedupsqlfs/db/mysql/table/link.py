@@ -14,8 +14,8 @@ class TableLink( Table ):
         # Create table
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
-                "inode_id BIGINT UNSIGNED PRIMARY KEY, "+
-                "target BLOB NOT NULL"+
+                "`inode_id` BIGINT UNSIGNED PRIMARY KEY, "+
+                "`target` BLOB NOT NULL"+
             ");"
         )
         return
@@ -29,9 +29,9 @@ class TableLink( Table ):
         cur = self.getCursor()
 
         cur.execute(
-            "INSERT INTO %(table_name)s (inode_id, target) VALUES (%(inode)s, %(target)s)",
+            "INSERT INTO `%s` " % self.getName()+
+            " (`inode_id`, `target`) VALUES (%(inode)s, %(target)s)",
             {
-                "table_name": self.getName(),
                 "inode": inode,
                 "target": target
             }
@@ -48,9 +48,9 @@ class TableLink( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT target FROM %(table_name)s WHERE inode_id=%(inode)s",
+            "SELECT `target` FROM `%s` " % self.getName()+
+            " WHERE `inode_id`=%(inode)s",
             {
-                "table_name": self.getName(),
                 "inode": inode
             }
         )

@@ -14,17 +14,15 @@ class TableHashCompressionType( Table ):
         # Create table
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
-                "hash_id BIGINT UNSIGNED PRIMARY KEY, "+
-                "compression_type_id INT UNSIGNED NOT NULL "+
+                "`hash_id` BIGINT UNSIGNED PRIMARY KEY, "+
+                "`compression_type_id` INT UNSIGNED NOT NULL "+
             ");"
         )
         try:
             cur.execute(
-                "ALTER TABLE %(table_name)s ADD INDEX %(index_name)s (`compression_type_id`)",
-                {
-                    "table_name": self.getName(),
-                    "index_name": self.getName() + "_compression_type"
-                }
+                "ALTER TABLE `%s` " % self.getName()+
+                "ADD INDEX `%s` " % (self.getName() + "_compression_type")+
+                " (`compression_type_id`)"
             )
         except:
             pass
@@ -38,9 +36,9 @@ class TableHashCompressionType( Table ):
         cur = self.getCursor()
 
         cur.execute(
-            "INSERT INTO %(table_name)s (hash_id, compression_type_id) VALUES (%(id)s, %(type)s)",
+            "INSERT INTO `%s` " % self.getName()+
+            " (`hash_id`, `compression_type_id`) VALUES (%(id)s, %(type)s)",
             {
-                "table_name": self.getName(),
                 "id": hash_id,
                 "type": compression_type_id
             }
@@ -57,9 +55,9 @@ class TableHashCompressionType( Table ):
         cur = self.getCursor()
 
         cur.execute(
-            "UPDATE %(table_name)s SET compression_type_id=%(type)s WHERE hash_id=%(id)s",
+            "UPDATE `%s` " % self.getName() +
+            " SET `compression_type_id`=%(type)s WHERE `hash_id`=%(id)s",
             {
-                "table_name": self.getName(),
                 "type": compression_type_id,
                 "id": hash_id
             }
@@ -77,9 +75,9 @@ class TableHashCompressionType( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT * FROM %(table_name)s WHERE hash_id=%(id)s",
+            "SELECT * FROM `%s` " % self.getName()+
+            " WHERE `hash_id`=%(id)s",
             {
-                "table_name": self.getName(),
                 "id": hash_id
             }
         )
@@ -91,7 +89,7 @@ class TableHashCompressionType( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT COUNT(compression_type_id) AS cnt,compression_type_id FROM `%s` GROUP BY compression_type_id" % self.getName()
+            "SELECT COUNT(`compression_type_id`) AS `cnt`, `compression_type_id` FROM `%s` GROUP BY `compression_type_id`" % self.getName()
         )
         items = cur.fetchall()
         self.stopTimer('count_compression_type')

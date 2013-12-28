@@ -151,12 +151,13 @@ class DbManager( object ):
             if not os.path.isdir(tmpdir):
                 os.makedirs(tmpdir, 0o0750)
 
+            is_new = False
             datadir = self.getBasePath() + "/mysql-db-data"
             if not os.path.isdir(datadir):
+                is_new = True
                 os.makedirs(datadir, 0o0750)
 
-            cmd = [
-                "mysqld",
+            cmd_opts = [
                 "--basedir=/usr",
                 "--datadir=%s" % datadir,
                 "--tmpdir=%s" % tmpdir,
@@ -168,21 +169,22 @@ class DbManager( object ):
                 "--skip-grant-tables",
                 "--skip-bind-address",
                 "--skip-networking",
+                "--skip-name-resolve",
                 "--socket=%s" % self.getSocket(),
                 "--default-storage-engine=InnoDB"
             ]
             if self.getAutocommit():
-                cmd.append("--autocommit")
+                cmd_opts.append("--autocommit")
             else:
-                cmd.append("--skip-autocommit")
+                cmd_opts.append("--skip-autocommit")
 
             if self.getSynchronous():
-                cmd.append("--flush")
-                cmd.append("--innodb-flush-log-at-trx-commit=1")
+                cmd_opts.append("--flush")
+                cmd_opts.append("--innodb-flush-log-at-trx-commit=1")
             else:
-                cmd.append("--innodb-flush-log-at-trx-commit=2")
+                cmd_opts.append("--innodb-flush-log-at-trx-commit=2")
 
-            cmd.extend([
+            cmd_opts.extend([
                 "--big-tables",
                 "--large-pages",
                 "--innodb-file-per-table",
@@ -197,6 +199,14 @@ class DbManager( object ):
                 "--query-cache-size=32M"
             ])
 
+            if is_new:
+                cmd = ["mysql_install_db"]
+                cmd.extend(cmd_opts)
+                subprocess.Popen(cmd, cwd=self.getBasePath()).wait()
+
+            cmd = ["mysqld"]
+            cmd.extend(cmd_opts)
+
             self._mysqld_proc = subprocess.Popen(cmd, cwd=self.getBasePath())
 
             sleep(5)
@@ -208,11 +218,6 @@ class DbManager( object ):
             self.createDb()
 
         return True
-
-
-    def __del__(self):
-        self.startMysqld()
-        pass
 
 
     def stopMysqld(self):
@@ -327,5 +332,3 @@ class DbManager( object ):
         for t in self.tables:
             self.getTable(t).create()
         return self
-
-    pass

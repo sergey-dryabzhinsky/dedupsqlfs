@@ -23,19 +23,30 @@ def fuse_mount(options, compression_methods=None, hash_functions=None):
     from dedupsqlfs.fuse.dedupfs import DedupFS
     from dedupsqlfs.fuse.operations import DedupOperations
 
+    ops = None
+    try:
+        ops = DedupOperations()
 
-    ops = DedupOperations()
-    _fuse = DedupFS(
-        ops, options.mountpoint,
-        options,
-        fsname="dedupsqlfs", allow_root=True)
+        _fuse = DedupFS(
+            ops, options.mountpoint,
+            options,
+            fsname="dedupsqlfs", allow_root=True)
 
-    _fuse.saveCompressionMethods(compression_methods)
+        _fuse.saveCompressionMethods(compression_methods)
 
-    for modname in compression_methods:
-        _fuse.appendCompression(modname)
+        for modname in compression_methods:
+            _fuse.appendCompression(modname)
 
-    return _fuse.main()
+        ret = _fuse.main()
+    except Exception as e:
+        print(e)
+        import traceback
+        print(traceback.format_exc())
+        if ops:
+            ops.getManager().stopMysqld()
+        ret = -1
+
+    return ret
 
 def main(): # {{{1
     """

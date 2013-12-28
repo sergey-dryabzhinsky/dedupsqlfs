@@ -14,18 +14,15 @@ class TableCompressionType( Table ):
         # Create table
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
-                "id INT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
-                "value VARCHAR(255) NOT NULL"+
+                "`id` INT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
+                "`value` VARCHAR(255) NOT NULL"+
             ")"
         )
         try:
             cur.execute(
-                "ALTER TABLE %(table_name)s ADD UNIQUE INDEX %(index_name)s (`value`)",
-                {
-                    "table_name": self.getName(),
-                    "index_name": self.getName() + "_value"
-                }
-            )
+                "ALTER TABLE `%s` " % self.getName()+
+                "ADD UNIQUE INDEX `%s` " % (self.getName() + "_value")+
+                "(`value`)")
         except:
             pass
         return
@@ -34,9 +31,9 @@ class TableCompressionType( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "INSERT INTO %(table_name)s (value) VALUES (%(value)s)",
+            "INSERT INTO `%s` " % self.getName()+
+            "(`value`) VALUES (%(value)s)",
             {
-                'table_name': self.getName(),
                 'value': value,
             }
         )
@@ -52,9 +49,9 @@ class TableCompressionType( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "UPDATE %(table_name)s SET value=%(value)s WHERE id=%(id)s",
+            "UPDATE `%s` " % self.getName()+
+            "SET `value`=%(value)s WHERE `id`=%(id)s",
             {
-                'table_name': self.getName(),
                 'value': value,
                 'id': item_id
             }
@@ -67,9 +64,9 @@ class TableCompressionType( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT value FROM %(table_name)s WHERE id=%(id)s",
+            "SELECT `value` FROM `%s` " % self.getName()+
+            "WHERE `id`=%(id)s",
             {
-                'table_name': self.getName(),
                 'id': item_id,
             }
         )
@@ -83,9 +80,9 @@ class TableCompressionType( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT id FROM %(table_name)s WHERE value=%(value)s",
+            "SELECT `id` FROM `%s`" % self.getName() +
+            " WHERE `value`=%(value)s",
             {
-                'table_name': self.getName(),
                 'value': value,
             }
         )
@@ -98,7 +95,7 @@ class TableCompressionType( Table ):
     def getAll( self ):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT * FROM %s", self.getName())
+        cur.execute("SELECT * FROM `%s`", self.getName())
         items = cur.fetchall()
         opts = {}
         for item in items:
@@ -109,7 +106,7 @@ class TableCompressionType( Table ):
     def getAllRevert( self ):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT * FROM %s", self.getName())
+        cur.execute("SELECT * FROM `%s`", self.getName())
         items = cur.fetchall()
         opts = {}
         for item in items:

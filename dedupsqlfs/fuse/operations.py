@@ -416,7 +416,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             # Bug fix: Break the mount point when initialization failed with an
             # exception, because self.conn might not be valid, which results in
             # an internal error message for every FUSE API call...
-            os._exit(1)
+            raise e
 
     def link(self, inode, new_parent_inode, new_name): # {{{3
         self.__log_call('link', 'link(inode=%r, parent_inode=%r, new_name=%r)', inode, new_parent_inode, new_name)
@@ -1284,6 +1284,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __get_opts_from_db(self): # {{{3
         options = self.getTable("option").getAll()
+        print(options)
         self.getLogger().debug("Options in DB: %r", options)
 
         block_size = options.get("block_size")

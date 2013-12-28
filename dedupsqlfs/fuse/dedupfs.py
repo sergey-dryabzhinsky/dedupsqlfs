@@ -246,7 +246,7 @@ class DedupFS(object): # {{{1
 
             curIndex = indexTable.getCursor()
 
-            curIndex.execute("SELECT COUNT(hash_id) AS cnt,hash_id FROM `inode_hash_block` GROUP BY hash_id")
+            curIndex.execute("SELECT COUNT(`hash_id`) AS `cnt`, `hash_id` FROM `inode_hash_block` GROUP BY `hash_id`")
 
             dedup_size = 0
             while True:

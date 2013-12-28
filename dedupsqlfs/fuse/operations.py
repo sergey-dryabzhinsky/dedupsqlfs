@@ -1907,7 +1907,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.getLogger().info("Clean unused path segments...")
 
-        curName.execute("SELECT COUNT(id) as cnt FROM `name`")
+        curName.execute("SELECT COUNT(`id`) as `cnt` FROM `name`")
 
         countNames = curName.fetchone()["cnt"]
         self.getLogger().info(" path segments: %d" % countNames)
@@ -1924,7 +1924,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if current == countNames:
                 break
 
-            curName.execute("SELECT id FROM `name` WHERE id>=? AND id<?", (curBlock, curBlock+maxCnt))
+            curName.execute("SELECT `id` FROM `name` WHERE `id`>=%s AND `id`<%s", (curBlock, curBlock+maxCnt))
 
             nameIds = tuple("%s" % nameItem["id"] for nameItem in curName.fetchmany(maxCnt))
             current += len(nameIds)
@@ -1933,7 +1933,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not nameIds:
                 continue
 
-            curTree.execute("SELECT name_id FROM `tree` WHERE name_id IN (%s)" % (",".join(nameIds),))
+            curTree.execute("SELECT `name_id` FROM `tree` WHERE `name_id` IN (%s)" % (",".join(nameIds),))
             treeNames = curTree.fetchall()
             treeNameIds = tuple("%s" % nameItem["name_id"] for nameItem in treeNames)
 
@@ -1943,7 +1943,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                     to_delete += (name_id,)
 
             if to_delete:
-                curName2.execute("DELETE FROM `name` WHERE id IN (%s)" % (",".join(to_delete),))
+                curName2.execute("DELETE FROM `name` WHERE `id` IN (%s)" % (",".join(to_delete),))
                 count += curName2.rowcount
 
             p = "%6.2f%%" % (100.0 * current / countNames)
@@ -1965,7 +1965,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.getLogger().info("Clean unused inodes (all)...")
 
-        curInode.execute("SELECT COUNT(id) as cnt FROM `inode`")
+        curInode.execute("SELECT COUNT(`id`) as `cnt` FROM `inode`")
 
         countInodes = curInode.fetchone()["cnt"]
         self.getLogger().info(" inodes: %d" % countInodes)
@@ -1982,7 +1982,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if current == countInodes:
                 break
 
-            curInode.execute("SELECT id FROM `inode` WHERE id>=? AND id<?", (curBlock, curBlock+maxCnt))
+            curInode.execute("SELECT `id` FROM `inode` WHERE `id`>=%s AND `id`<%s", (curBlock, curBlock+maxCnt))
 
             inodeIds = tuple("%s" % inodeItem["id"] for inodeItem in curInode.fetchmany(maxCnt))
             current += len(inodeIds)
@@ -1991,7 +1991,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not inodeIds:
                 continue
 
-            curTree.execute("SELECT inode_id FROM `tree` WHERE inode_id IN (%s)" % (",".join(inodeIds),))
+            curTree.execute("SELECT `inode_id` FROM `tree` WHERE `inode_id` IN (%s)" % (",".join(inodeIds),))
             treeInodes = curTree.fetchall()
             treeInodeIds = tuple("%s" % inodeItem["inode_id"] for inodeItem in treeInodes)
 
@@ -2001,7 +2001,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                     to_delete += (inode_id,)
 
             if to_delete:
-                curInode2.execute("DELETE FROM `inode` WHERE id IN (%s)" % (",".join(to_delete),))
+                curInode2.execute("DELETE FROM `inode` WHERE `id` IN (%s)" % (",".join(to_delete),))
                 count += curInode2.rowcount
 
             p = "%6.2f%%" % (100.0 * current / countInodes)
@@ -2024,7 +2024,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.getLogger().info("Clean unused xattrs...")
 
-        curXattr.execute("SELECT COUNT(inode_id) as cnt FROM `xattr`")
+        curXattr.execute("SELECT COUNT(`inode_id`) as `cnt` FROM `xattr`")
 
         countXattrs = curXattr.fetchone()["cnt"]
         self.getLogger().info(" xattrs: %d" % countXattrs)
@@ -2041,7 +2041,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if current == countXattrs:
                 break
 
-            curXattr.execute("SELECT inode_id FROM `xattr` WHERE inode_id>=? AND inode_id<?", (curBlock, curBlock+maxCnt))
+            curXattr.execute("SELECT `inode_id` FROM `xattr` WHERE `inode_id`>=%s AND `inode_id`<%s", (curBlock, curBlock+maxCnt))
 
             inodeIds = tuple("%s" % xattrItem["inode_id"] for xattrItem in curXattr.fetchmany(maxCnt))
             current += len(inodeIds)
@@ -2050,7 +2050,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not inodeIds:
                 continue
 
-            curInode.execute("SELECT id FROM `inode` WHERE id IN (%s)" % (",".join(inodeIds),))
+            curInode.execute("SELECT `id` FROM `inode` WHERE `id` IN (%s)" % (",".join(inodeIds),))
             xattrInodes = curInode.fetchall()
             xattrInodeIds = tuple("%s" % inodeItem["id"] for inodeItem in xattrInodes)
 
@@ -2060,7 +2060,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                     to_delete += (inode_id,)
 
             if to_delete:
-                curXattr2.execute("DELETE FROM `xattr` WHERE inode_id IN (%s)" % (",".join(to_delete),))
+                curXattr2.execute("DELETE FROM `xattr` WHERE `inode_id` IN (%s)" % (",".join(to_delete),))
                 count += curXattr2.rowcount
 
             p = "%6.2f%%" % (100.0 * current / countXattrs)
@@ -2082,7 +2082,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.getLogger().info("Clean unused links...")
 
-        curLink.execute("SELECT COUNT(inode_id) as cnt FROM `link`")
+        curLink.execute("SELECT COUNT(`inode_id`) as `cnt` FROM `link`")
 
         countLinks = curLink.fetchone()["cnt"]
         self.getLogger().info(" links: %d" % countLinks)
@@ -2099,7 +2099,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if current == countLinks:
                 break
 
-            curLink.execute("SELECT inode_id FROM `link` WHERE inode_id>=? AND inode_id<?", (curBlock, curBlock+maxCnt))
+            curLink.execute("SELECT `inode_id` FROM `link` WHERE `inode_id`>=%s AND `inode_id`<%s", (curBlock, curBlock+maxCnt))
 
             inodeIds = tuple("%s" % linkItem["inode_id"] for linkItem in curLink.fetchmany(maxCnt))
             current += len(inodeIds)
@@ -2108,7 +2108,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not inodeIds:
                 continue
 
-            curInode.execute("SELECT id FROM `inode` WHERE id IN (%s)" % (",".join(inodeIds),))
+            curInode.execute("SELECT `id` FROM `inode` WHERE `id` IN (%s)" % (",".join(inodeIds),))
             linkInodes = curInode.fetchall()
             linkInodeIds = tuple("%s" % inodeItem["id"] for inodeItem in linkInodes)
 
@@ -2118,7 +2118,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                     to_delete += (inode_id,)
 
             if to_delete:
-                curLink2.execute("DELETE FROM `link` WHERE inode_id IN (%s)" % (",".join(to_delete),))
+                curLink2.execute("DELETE FROM `link` WHERE `inode_id` IN (%s)" % (",".join(to_delete),))
                 count += curLink2.rowcount
 
             p = "%6.2f%%" % (100.0 * current / countLinks)
@@ -2140,7 +2140,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.getLogger().info("Clean unused block indexes...")
 
-        curIndex.execute("SELECT COUNT(inode_id) as cnt FROM (SELECT inode_id FROM `inode_hash_block` GROUP BY inode_id) as _")
+        curIndex.execute("SELECT COUNT(`inode_id`) as `cnt` FROM (SELECT `inode_id` FROM `inode_hash_block` GROUP BY `inode_id`) as _")
 
         countInodes = curIndex.fetchone()["cnt"]
         self.getLogger().info(" block inodes: %d" % countInodes)
@@ -2157,7 +2157,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if current == countInodes:
                 break
 
-            curIndex.execute("SELECT inode_id FROM `inode_hash_block` WHERE inode_id>=? AND inode_id<? GROUP BY inode_id", (
+            curIndex.execute("SELECT `inode_id` FROM `inode_hash_block` WHERE `inode_id`>=%s AND `inode_id`<%s GROUP BY `inode_id`", (
                 curBlock, curBlock+maxCnt
             ))
 
@@ -2168,7 +2168,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not inodeIds:
                 continue
 
-            curInode.execute("SELECT id FROM `inode` WHERE id IN (%s)" % (",".join(inodeIds),))
+            curInode.execute("SELECT `id` FROM `inode` WHERE `id` IN (%s)" % (",".join(inodeIds),))
             indexInodes = curInode.fetchall()
             indexInodeIds = tuple("%s" % inodeItem["id"] for inodeItem in indexInodes)
 
@@ -2178,7 +2178,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                     to_delete += (inode_id,)
 
             if to_delete:
-                curIndex2.execute("DELETE FROM `inode_hash_block` WHERE inode_id IN (%s)" % (",".join(to_delete),))
+                curIndex2.execute("DELETE FROM `inode_hash_block` WHERE `inode_id` IN (%s)" % (",".join(to_delete),))
                 count += curIndex2.rowcount
 
             p = "%6.2f%%" % (100.0 * current / countInodes)
@@ -2201,7 +2201,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.getLogger().info("Clean unused data blocks and hashes...")
 
-        curHash.execute("SELECT COUNT(id) AS cnt FROM `hash`")
+        curHash.execute("SELECT COUNT(`id`) AS `cnt` FROM `hash`")
 
         countHashes = curHash.fetchone()["cnt"]
         self.getLogger().info(" hashes: %d" % countHashes)
@@ -2218,7 +2218,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if current == countHashes:
                 break
 
-            curHash.execute("SELECT id FROM `hash` WHERE id>=? AND id<?", (_curBlock, _curBlock+maxCnt))
+            curHash.execute("SELECT `id` FROM `hash` WHERE `id`>=? AND `id`<?", (_curBlock, _curBlock+maxCnt))
 
             hashIds = tuple("%s" % hashItem["id"] for hashItem in curHash.fetchmany(maxCnt))
             current += len(hashIds)
@@ -2227,7 +2227,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not hashIds:
                 continue
 
-            curIndex.execute("SELECT hash_id FROM `inode_hash_block` WHERE hash_id IN (%s) GROUP BY hash_id" % (",".join(hashIds),))
+            curIndex.execute("SELECT `hash_id` FROM `inode_hash_block` WHERE `hash_id` IN (%s) GROUP BY `hash_id`" % (",".join(hashIds),))
             indexHashes = curIndex.fetchall()
             indexHashIds = tuple("%s" % hashItem["hash_id"] for hashItem in indexHashes)
 
@@ -2237,8 +2237,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                     to_delete += (hash_id,)
 
             if to_delete:
-                curBlock.execute("DELETE FROM `block` WHERE hash_id IN (%s)" % (",".join(to_delete),))
-                curHash2.execute("DELETE FROM `hash` WHERE id IN (%s)" % (",".join(to_delete),))
+                curBlock.execute("DELETE FROM `block` WHERE `hash_id` IN (%s)" % (",".join(to_delete),))
+                curHash2.execute("DELETE FROM `hash` WHERE `id` IN (%s)" % (",".join(to_delete),))
                 count += curHash2.rowcount
 
             p = "%6.2f%%" % (100.0 * current / countHashes)

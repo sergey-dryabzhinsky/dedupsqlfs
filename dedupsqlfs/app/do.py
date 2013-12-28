@@ -281,56 +281,68 @@ def do(options, compression_methods=None):
     from dedupsqlfs.fuse.operations import DedupOperations
 
 
-    ops = DedupOperations()
-    _fuse = DedupFS(
-        ops, "",
-        options,
-        use_ino=True, default_permissions=True, fsname="dedupsqlfs")
+    ops = None
+    try:
+        ops = DedupOperations()
+        _fuse = DedupFS(
+            ops, "",
+            options,
+            use_ino=True, default_permissions=True, fsname="dedupsqlfs")
 
-    _fuse.saveCompressionMethods(compression_methods)
+        _fuse.saveCompressionMethods(compression_methods)
 
-    for modname in compression_methods:
-        _fuse.appendCompression(modname)
+        for modname in compression_methods:
+            _fuse.appendCompression(modname)
 
-    # Actions
+        # Actions
 
-    if options.subvol_create:
-        return create_subvolume(options, _fuse)
+        if options.subvol_create:
+            return create_subvolume(options, _fuse)
 
-    if options.subvol_list:
-        return list_subvolume(options, _fuse)
+        if options.subvol_list:
+            return list_subvolume(options, _fuse)
 
-    if options.subvol_remove:
-        return remove_subvolume(options, _fuse)
+        if options.subvol_remove:
+            return remove_subvolume(options, _fuse)
 
-    if options.subvol_stats:
-        return print_subvol_stats(options, _fuse)
+        if options.subvol_stats:
+            return print_subvol_stats(options, _fuse)
 
-    if options.snapshot_create:
-        return create_snapshot(options, _fuse)
+        if options.snapshot_create:
+            return create_snapshot(options, _fuse)
 
-    if options.snapshot_list:
-        return list_subvolume(options, _fuse)
+        if options.snapshot_list:
+            return list_subvolume(options, _fuse)
 
-    if options.snapshot_remove:
-        return remove_snapshot(options, _fuse)
+        if options.snapshot_remove:
+            return remove_snapshot(options, _fuse)
 
-    if options.snapshot_remove_older:
-        return remove_snapshot_older(options, _fuse)
+        if options.snapshot_remove_older:
+            return remove_snapshot_older(options, _fuse)
 
-    if options.snapshot_stats:
-        return print_snapshot_stats(options, _fuse)
+        if options.snapshot_stats:
+            return print_snapshot_stats(options, _fuse)
 
-    if options.vacuum:
-        return data_vacuum(options, _fuse)
+        if options.vacuum:
+            return data_vacuum(options, _fuse)
 
-    if options.defragment:
-        return data_defragment(options, _fuse)
+        if options.defragment:
+            return data_defragment(options, _fuse)
 
-    if options.print_stats:
-        return print_fs_stats(options, _fuse)
+        if options.print_stats:
+            return print_fs_stats(options, _fuse)
 
-    return 0
+        ret = 0
+    except Exception as e:
+        print(e)
+        import traceback
+        traceback.print_exc()
+        ret = 1
+
+    if ops:
+        ops.getManager().stopMysqld()
+
+    return ret
 
 def main(): # {{{1
     """

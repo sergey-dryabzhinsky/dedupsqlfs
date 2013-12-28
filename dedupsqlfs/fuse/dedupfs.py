@@ -235,6 +235,9 @@ class DedupFS(object): # {{{1
 
         self.getLogger().info("--" * 79)
 
+        print("disk_usage: %r" % disk_usage)
+        print("apparent_size: %r" % apparent_size)
+
         if apparent_size:
             self.getLogger().info("Apparent size is %s.",
                              format_size(apparent_size)

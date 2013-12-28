@@ -200,6 +200,9 @@ class DbManager( object ):
             ])
 
             if is_new:
+
+                print("Setup new MySQL system databases")
+
                 cmd = ["mysql_install_db"]
                 cmd.extend(cmd_opts)
                 subprocess.Popen(cmd, cwd=self.getBasePath()).wait()
@@ -207,13 +210,25 @@ class DbManager( object ):
             cmd = ["mysqld"]
             cmd.extend(cmd_opts)
 
+            print("Starting up MySQLd...")
+
             self._mysqld_proc = subprocess.Popen(cmd, cwd=self.getBasePath())
 
-            sleep(5)
+            t = 5
+            while (t>0):
+                sleep(0.1)
+
+                if self._mysqld_proc.poll() is not None:
+                    break
+
+                t-= 0.1
+
 
             if self._mysqld_proc.poll() is not None:
                 self._mysqld_proc = None
                 return False
+
+            print("Done")
 
             self.createDb()
 
@@ -229,14 +244,26 @@ class DbManager( object ):
                 "shutdown"
             ]
 
+            print("Call MySQLd shutdown")
             subprocess.Popen(cmd).wait()
 
-            sleep(5)
+            t = 10
+            while (t>0):
+                sleep(0.1)
+                if self._mysqld_proc.poll() is not None:
+                    break
+                t -= 0.1
 
             if self._mysqld_proc.poll() is None:
+                print("Terminate MySQLd")
                 self._mysqld_proc.terminate()
 
-            sleep(5)
+                t = 5
+                while (t>0):
+                    sleep(0.1)
+                    if self._mysqld_proc.poll() is not None:
+                        break
+                    t -= 0.1
 
             if self._mysqld_proc.poll() is None:
                 return False

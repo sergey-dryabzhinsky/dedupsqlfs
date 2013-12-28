@@ -1284,7 +1284,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __get_opts_from_db(self): # {{{3
         options = self.getTable("option").getAll()
-        print(options)
         self.getLogger().debug("Options in DB: %r", options)
 
         block_size = options.get("block_size")

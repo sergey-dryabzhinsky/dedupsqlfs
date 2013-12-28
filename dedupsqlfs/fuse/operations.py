@@ -917,9 +917,9 @@ class DedupOperations(llfuse.Operations): # {{{1
         curInode = manager.getTable("inode").getCursor()
 
         if use_subvol:
-            curTree.execute("SELECT inode_id FROM tree WHERE subvol_id=?", (manager.getTable("tree").getSelectedSubvolume(),))
+            curTree.execute("SELECT `inode_id` FROM `tree` WHERE `subvol_id`=%s", (manager.getTable("tree").getSelectedSubvolume(),))
         else:
-            curTree.execute("SELECT inode_id FROM tree")
+            curTree.execute("SELECT `inode_id` FROM `tree`")
 
         apparent_size = 0
         while True:
@@ -927,7 +927,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not treeItem:
                 break
 
-            curInode.execute("SELECT `size` FROM `inode` WHERE id=?", (treeItem["inode_id"],))
+            curInode.execute("SELECT `size` FROM `inode` WHERE `id`=%s", (treeItem["inode_id"],))
             apparent_size += curInode.fetchone()["size"]
         return apparent_size
 

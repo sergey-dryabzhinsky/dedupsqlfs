@@ -94,11 +94,11 @@ class TableInodeHashBlock( Table ):
         self.stopTimer('delete')
         return count
 
-    def get_by_inode_number( self, inode, block_number ):
+    def hash_by_inode_number( self, inode, block_number ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT * FROM `%s` " % self.getName()+
+            "SELECT `hash_id` FROM `%s` " % self.getName()+
             " WHERE `inode_id`=%(inode)s AND `block_number`=%(block)s",
             {
                 "inode": inode,
@@ -106,7 +106,9 @@ class TableInodeHashBlock( Table ):
             }
         )
         item = cur.fetchone()
-        self.stopTimer('get_by_inode_number')
+        if item:
+            item = item["hash_id"]
+        self.stopTimer('hash_by_inode_number')
         return item
 
     def delete_by_inode_number( self, inode, block_number ):

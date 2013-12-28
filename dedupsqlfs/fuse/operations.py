@@ -36,6 +36,7 @@ from dedupsqlfs.my_formats import format_size, format_timespan
 from dedupsqlfs.get_memory_usage import get_real_memory_usage, get_memory_usage
 from dedupsqlfs.lib.cache.simple import CacheTTLseconds
 from dedupsqlfs.lib.cache.storage import StorageTimeSize
+from dedupsqlfs.lib.cache.index import IndexTime
 from dedupsqlfs.lib.cache.inodes import InodesTime
 from dedupsqlfs.fuse.subvolume import Subvolume
 
@@ -74,6 +75,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.cached_attrs = InodesTime()
 
         self.cached_blocks = StorageTimeSize()
+        self.cached_indexes = IndexTime()
 
         self.calls_log_filter = []
 
@@ -224,6 +226,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.__flush_expired_inodes(self.cached_attrs.clear())
                 self.getLogger().info("Flush remaining blocks.")
                 self.__flush_old_cached_blocks(self.cached_blocks.clear())
+                self.cached_indexes.clear()
 
                 self.getLogger().info("Committing outstanding changes.")
                 self.getManager().commit()
@@ -251,6 +254,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.__log_call('flush', '-- inode(%i) zero sized! remove all blocks', fh)
                 self.getTable("inode_hash_block").delete(fh)
                 self.cached_blocks.forget(fh)
+                self.cached_indexes.forget(fh)
 
             self.__cache_meta_hook()
             self.__cache_block_hook()
@@ -344,6 +348,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not self.cache_enabled:
                 self.cached_blocks.setMaxReadTtl(0)
                 self.cached_blocks.setMaxWriteTtl(0)
+                self.cached_indexes.setMaxTtl(0)
                 self.cached_nodes.set_max_ttl(0)
                 self.cached_names.set_max_ttl(0)
                 self.cached_attrs.set_max_ttl(0)
@@ -352,6 +357,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                     self.cached_blocks.setBlockSize(self.block_size)
                 self.cached_blocks.setMaxWriteTtl(self.cache_block_write_timeout)
                 self.cached_blocks.setMaxReadTtl(self.cache_block_read_timeout)
+
                 if self.cache_block_write_size:
                     if self.getOption("memory_limit") and not self.getOption("cache_block_write_size"):
                         if self.cache_block_write_size > 256*self.block_size:
@@ -367,6 +373,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.cached_nodes.set_max_ttl(self.cache_meta_timeout)
                 self.cached_names.set_max_ttl(self.cache_meta_timeout)
                 self.cached_attrs.set_max_ttl(self.cache_meta_timeout)
+                self.cached_indexes.setMaxTtl(self.cache_meta_timeout)
+
 
             if self.getOption("synchronous") is not None:
                 self.synchronous = self.getOption("synchronous")
@@ -1051,6 +1059,23 @@ class DedupOperations(llfuse.Operations): # {{{1
         return self.__fill_attr_inode_row(row)
 
 
+    def __get_hash_index_from_cache(self, inode, block_number):
+
+        hash_id = self.cached_indexes.get(inode, block_number)
+
+        if hash_id is None:
+
+            self.getLogger().debug("get index from DB: inode=%i, number=%i", inode, block_number)
+
+            tableIndex = self.getTable("inode_hash_block")
+
+            hash_id = tableIndex.hash_by_inode_number(inode, block_number)
+            if not hash_id:
+                self.getLogger().debug("-- new index")
+
+            self.cached_indexes.set(inode, block_number, hash_id)
+        return hash_id
+
     def __get_block_from_cache(self, inode, block_number):
 
         block = self.cached_blocks.get(inode, block_number)
@@ -1059,18 +1084,16 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.getLogger().debug("get block from DB: inode=%i, number=%i", inode, block_number)
 
-            tableIndex = self.getTable("inode_hash_block")
-
-            block_index = tableIndex.get_by_inode_number(inode, block_number)
-            if not block_index:
+            hash_id = self.__get_hash_index_from_cache(inode, block_number)
+            if not hash_id:
                 self.getLogger().debug("-- new block")
                 block = BytesIO()
             else:
                 tableBlock = self.getTable("block")
                 tableHCT = self.getTable("hash_compression_type")
 
-                item = tableBlock.get(block_index["hash_id"])
-                compType = tableHCT.get(block_index["hash_id"])
+                item = tableBlock.get(hash_id)
+                compType = tableHCT.get(hash_id)
 
                 self.getLogger().debug("-- decompress block")
                 self.getLogger().debug("-- db size: %s" % len(item["data"]))
@@ -1380,11 +1403,13 @@ class DedupOperations(llfuse.Operations): # {{{1
             inodeTable.dec_nlinks(par_node["inode_id"])
             self.cached_attrs.unset(parent_inode)
             self.cached_nodes.unset(parent_inode)
+            self.cached_indexes.forget(parent_inode)
 
         self.cached_attrs.unset(cur_node["inode_id"])
         self.cached_nodes.unset((parent_inode, name))
         self.cached_nodes.unset(cur_node["inode_id"])
         self.cached_names.unset(name)
+        self.cached_indexes.forget(cur_node["inode_id"])
 
         self.__cache_meta_hook()
         return
@@ -1660,13 +1685,14 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         block_length = len(data_block)
 
-        block_index = tableIndex.get_by_inode_number(inode, block_number)
+        index_hash_id = self.__get_hash_index_from_cache(inode, block_number)
 
         self.getLogger().debug("write block: inode=%s, block number=%s, data length=%s" % (inode, block_number, block_length))
 
-        if block_length == 0 and block_index:
+        if block_length == 0 and index_hash_id:
             self.getLogger().debug("write block: remove empty block")
             tableIndex.delete_by_inode_number(inode, block_number)
+            self.cached_indexes.unset(inode, block_number)
 
             self.time_spent_writing_blocks += time.time() - start_time
             return
@@ -1685,8 +1711,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             cdata, cmethod = self.__compress(data_block)
 
             hash_count = 0
-            if block_index:
-                hash_count = tableIndex.get_count_hash(block_index["hash_id"])
+            if index_hash_id:
+                hash_count = tableIndex.get_count_hash(index_hash_id)
 
             cdata_length = len(cdata)
 
@@ -1695,7 +1721,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if hash_count == 1:
                 self.getLogger().debug("-- update one block data")
 
-                hash_id = block_index["hash_id"]
+                hash_id = index_hash_id
                 hash_CT = tableHCT.get(hash_id)
                 hash_BS = tableHBS.get(hash_id)
 
@@ -1731,10 +1757,12 @@ class DedupOperations(llfuse.Operations): # {{{1
             # Old hash found
             self.bytes_deduped += block_length
 
-        if not block_index:
+        if not index_hash_id:
             tableIndex.insert(inode, block_number, hash_id)
-        elif block_index["hash_id"] != hash_id:
+            self.cached_indexes.set(inode, block_number, hash_id)
+        elif index_hash_id != hash_id:
             tableIndex.update(inode, block_number, hash_id)
+            self.cached_indexes.set(inode, block_number, hash_id)
 
         self.time_spent_writing_blocks += time.time() - start_time
         return
@@ -1849,11 +1877,13 @@ class DedupOperations(llfuse.Operations): # {{{1
         flushed_nodes = 0
         flushed_names = 0
         flushed_attrs = 0
+        flushed_indexes = 0
 
         if time.time() - self.cache_gc_meta_last_run >= self.cache_meta_timeout:
 
             flushed_nodes = self.cached_nodes.clear()
             flushed_names = self.cached_names.clear()
+            flushed_indexes = self.cached_indexes.clear()
 
             # Just readed...
             flushed_attrs += self.cached_attrs.expired(False)
@@ -1864,10 +1894,10 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.cache_gc_meta_last_run = time.time()
 
-        if flushed_attrs + flushed_nodes + flushed_names > 0:
+        if flushed_attrs + flushed_nodes + flushed_names + flushed_indexes > 0:
             elapsed_time = time.time() - start_time
-            self.getLogger().info("Meta cache cleanup: flushed %i nodes, %i attrs, %i names in %s.",
-                                  flushed_nodes, flushed_attrs, flushed_names,
+            self.getLogger().info("Meta cache cleanup: flushed %i nodes, %i attrs, %i names, %i indexes in %s.",
+                                  flushed_nodes, flushed_attrs, flushed_names, flushed_indexes,
                                   format_timespan(elapsed_time))
 
         self.__timing_report_hook()
@@ -2222,7 +2252,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if current == countHashes:
                 break
 
-            curHash.execute("SELECT `id` FROM `hash` WHERE `id`>=? AND `id`<?", (_curBlock, _curBlock+maxCnt))
+            curHash.execute("SELECT `id` FROM `hash` WHERE `id`>=%s AND `id`<%s", (_curBlock, _curBlock+maxCnt))
 
             hashIds = tuple("%s" % hashItem["id"] for hashItem in curHash.fetchmany(maxCnt))
             current += len(hashIds)

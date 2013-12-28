@@ -4,7 +4,6 @@
 import sys
 
 # Try to load the required modules from Python's standard library.
-from dedupsqlfs.lib import constants
 
 try:
     from io import BytesIO
@@ -32,6 +31,7 @@ except ImportError:
     sys.exit(1)
 
 # Local modules that are mostly useful for debugging.
+from dedupsqlfs.lib import constants
 from dedupsqlfs.my_formats import format_size, format_timespan
 from dedupsqlfs.get_memory_usage import get_real_memory_usage, get_memory_usage
 from dedupsqlfs.lib.cache.simple import CacheTTLseconds
@@ -134,7 +134,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def getManager(self):
         if not self.manager:
-            from dedupsqlfs.db.sqlite.manager import DbManager
+            from dedupsqlfs.db.mysql.manager import DbManager
             self.manager = DbManager(dbname=self.getOption("name"))
             self.manager.setSynchronous(self.getOption("synchronous"))
             self.manager.setAutocommit(self.getOption("use_transactions"))

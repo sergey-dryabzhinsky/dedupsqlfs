@@ -257,6 +257,8 @@ class DbManager( object ):
             print("Done")
 
             self.createDb()
+            if is_new:
+                self.create()
 
         return True
 

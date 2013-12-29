@@ -207,7 +207,7 @@ class Table( object ):
     def vacuum(self):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("OPTIMIZE")
+        cur.execute("OPTIMIZE TABLE `%s`" % self.getName())
         self.stopTimer("vacuum")
         return self
 

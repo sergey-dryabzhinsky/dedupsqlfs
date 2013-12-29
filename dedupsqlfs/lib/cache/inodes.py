@@ -59,14 +59,7 @@ class InodesTime(object):
             "time" : now
         })
 
-        if not inode_data:
-            return default
-
         val = inode_data.get("data", default)
-
-        t = inode_data["time"]
-        if now - t > self._max_ttl:
-            return val
 
         # update last request time
         inode_data["time"] = time()

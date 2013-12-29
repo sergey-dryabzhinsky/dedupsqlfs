@@ -963,7 +963,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             #apparent_size += attr["size"]
 
             # Do not trust inode info - we not done block writing and writed size not changed?
-            inodeHashes = (item["hash_id"] for item in indexTable.get_hashes_by_inode( treeItem["inode_id"] ))
+            inodeHashes = tuple(item["hash_id"] for item in indexTable.get_hashes_by_inode( treeItem["inode_id"] ))
 
             apparent_size += hbsTable.sum_real_size(inodeHashes)
             compressed_size += hbsTable.sum_comp_size(inodeHashes)

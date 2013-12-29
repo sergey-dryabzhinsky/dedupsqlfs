@@ -23,7 +23,6 @@ class DbManager( object ):
     _pass = ""
 
     _conn = None
-    _cur = None
 
     _mysqld_proc = None
     """
@@ -384,9 +383,6 @@ class DbManager( object ):
         return self
 
     def close(self):
-        if self._cur:
-            self._cur.close()
-            self._cur = None
         if self._conn:
             self._conn.close()
             self._conn = None

@@ -849,6 +849,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             apparent_size, compressed_size = self.getDataSize()
 
+            system_size = self.getManager().getFileSize() - compressed_size
+
             # The total number of free blocks available to a non privileged process.
             # stats.f_bavail = host_fs.f_bsize * host_fs.f_bavail / self.block_size
             stats.f_bavail = int(math.floor(1.0*(apparent_size - self.getManager().getFileSize()) / self.block_size))
@@ -859,7 +861,9 @@ class DedupOperations(llfuse.Operations): # {{{1
             stats.f_bfree = stats.f_bavail
             # The total number of blocks in the file system in terms of f_frsize.
             # stats.f_blocks = host_fs.f_frsize * host_fs.f_blocks / self.block_size
-            stats.f_blocks = int(math.ceil(1.0*apparent_size / self.block_size))
+            stats.f_blocks = int(math.ceil(1.0*(apparent_size+system_size) / self.block_size))
+            if stats.f_blocks < 0:
+                stats.f_blocks = 0
             # stats.f_blocks = self.getTable("block").count()
             stats.f_bsize = self.block_size # The file system block size in bytes.
             stats.f_favail = 0 # The number of free file serial numbers available to a non privileged process.

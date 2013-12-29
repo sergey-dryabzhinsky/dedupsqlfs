@@ -1106,9 +1106,11 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             hash_id = tableIndex.hash_by_inode_number(inode, block_number)
             if not hash_id:
+                # Do hack here... store False to prevent table reread until it stored in cache or deleted
                 self.getLogger().debug("-- new index")
-
-            self.cached_indexes.set(inode, block_number, hash_id)
+                self.cached_indexes.set(inode, block_number, False)
+            else:
+                self.cached_indexes.set(inode, block_number, hash_id)
         return hash_id
 
     def __get_block_from_cache(self, inode, block_number):

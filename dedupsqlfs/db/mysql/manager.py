@@ -7,6 +7,8 @@ from time import sleep
 import subprocess
 import pymysql
 
+cursor_type = pymysql.cursors.DictCursor
+
 class DbManager( object ):
 
     _table = None
@@ -19,6 +21,9 @@ class DbManager( object ):
     _notmeStarted = False
     _user = "root"
     _pass = ""
+
+    _conn = None
+    _cur = None
 
     _mysqld_proc = None
     """
@@ -304,18 +309,40 @@ class DbManager( object ):
         if nodb:
             conn = pymysql.connect(unix_socket=self.getSocket(), user=self.getUser(), passwd=self.getPassword())
         else:
-            conn = pymysql.connect(
+
+            if self._conn:
+                return self._conn
+
+            conn = self._conn = pymysql.connect(
                 unix_socket=self.getSocket(),
                 user=self.getUser(),
                 passwd=self.getPassword(),
                 db=self.getDbName())
-        conn.autocommit(self.getAutocommit())
-        if not self.getAutocommit():
-            cur = conn.cursor()
-            cur.execute("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED")
-            cur.close()
+            self._conn.autocommit(self.getAutocommit())
+            if not self.getAutocommit():
+                cur = conn.cursor()
+                cur.execute("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED")
+                cur.close()
         return conn
 
+    def getCursor(self, new=False):
+        if new:
+            cur = self.getConnection().cursor(cursor_type)
+        else:
+            if self._cur:
+                return self._cur
+            cur = self._cur = self.getConnection().cursor(cursor_type)
+        cur = self._cur = self.pingDb(cur)
+        return cur
+
+    def pingDb(self, cursor):
+        try:
+            cursor.execute('SELECT 1')
+        except BrokenPipeError:
+            self.close()
+            cursor = self.getConnection().cursor(cursor_type)
+            pass
+        return cursor
 
     def createDb(self):
 
@@ -348,8 +375,12 @@ class DbManager( object ):
         return self
 
     def close(self):
-        for name, t in self._table.items():
-            t.close()
+        if self._cur:
+            self._cur.close()
+            self._cur = None
+        if self._conn:
+            self._conn.close()
+            self._conn = None
         return self
 
     def getSize(self):

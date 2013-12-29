@@ -78,8 +78,7 @@ class Table( object ):
         return self._manager
 
     def connect( self ):
-        self._conn = self.getManager().getConnection()
-        cur = self._conn.cursor()
+        cur = self.getCursor()
         cur.execute("SHOW TABLES LIKE '%s'" % self.getName())
         row = cur.fetchone()
         cur.close()
@@ -88,17 +87,10 @@ class Table( object ):
         return
 
     def getConnection(self):
-        if self._conn is None:
-            self.connect()
-        return self._conn
+        return self.getManager().getConnection()
 
     def getCursor(self, new=False):
-        cursor_type = pymysql.cursors.DictCursor
-        if new:
-            return self.getConnection().cursor(cursor_type)
-        if not self._curr:
-            self._curr = self.getConnection().cursor(cursor_type)
-        return self._curr
+        return self.getManager().getCursor(new)
 
     def getPageSize(self):
         return 0

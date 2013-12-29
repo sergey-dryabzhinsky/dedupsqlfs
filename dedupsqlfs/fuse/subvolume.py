@@ -221,7 +221,7 @@ class Subvolume(object):
                         method = hashCT[hash_id]
                     else:
                         hctItem = tableHCT.get(hash_id)
-                        method = self.getManager().getCompressionTypeName(hctItem["compression_type_id"])
+                        method = self.getManager().getCompressionTypeName(hctItem["type_id"])
                         hashCT[hash_id] = method
 
                     compMethods[ method ] = compMethods.get(method, 0) + 1

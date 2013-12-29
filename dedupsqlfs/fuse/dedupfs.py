@@ -293,7 +293,7 @@ class DedupFS(object): # {{{1
 
             for item in hctTable.count_compression_type():
                 count_all += item["cnt"]
-                comp_types[ item["cnt"] ] = self.operations.getCompressionTypeName( item["compression_type_id"] )
+                comp_types[ item["cnt"] ] = self.operations.getCompressionTypeName( item["type_id"] )
 
             keys = list(comp_types.keys())
             keys.sort(reverse=True)

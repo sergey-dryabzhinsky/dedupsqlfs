@@ -1107,7 +1107,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().debug("-- decompress block")
                 self.getLogger().debug("-- db size: %s" % len(item["data"]))
 
-                block = self.__decompress(item["data"], compType["compression_type_id"])
+                block = self.__decompress(item["data"], compType["type_id"])
 
                 self.getLogger().debug("-- decomp size: %s" % len(block.getvalue()))
 
@@ -1735,7 +1735,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 hash_BS = tableHBS.get(hash_id)
 
                 tableHash.update(hash_id, hash_value)
-                if hash_CT["compression_type_id"] != self.getCompressionTypeId(cmethod):
+                if hash_CT["type_id"] != self.getCompressionTypeId(cmethod):
                     tableHCT.update(hash_id, self.getCompressionTypeId(cmethod))
                 if hash_BS["real_size"] != block_length or hash_BS["comp_size"] != cdata_length:
                     tableHBS.update(hash_id, block_length, cdata_length)

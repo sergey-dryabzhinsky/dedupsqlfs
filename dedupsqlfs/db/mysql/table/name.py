@@ -18,15 +18,8 @@ class TableName( Table ):
                 "`value` BLOB NOT NULL"+
             ");"
         )
-        try:
-            cur.execute(
-                "ALTER TABLE `%s` " % self.getName()+
-                " ADD UNIQUE INDEX `%s` " % (self.getName() + "_value")+
-                " (`value`(255))"
-            )
-        except Exception as e:
-            print("ERROR in %s: %s" % (self.getName(), e))
-            pass
+
+        self.createIndexIfNotExists("value", ('value',), unique=True)
         return
 
     def getRowSize(self, value):

@@ -24,65 +24,12 @@ class TableTree( Table ):
             ");"
         )
 
-        try:
-            cur.execute(
-                "ALTER TABLE `%s` " % self.getName()+
-                " ADD UNIQUE INDEX `%s` " % (self.getName() + "_spn")+
-                " (`subvol_id`, `parent_id`, `name_id`)"
-            )
-        except Exception as e:
-            print("ERROR in %s: %s" % (self.getName(), e))
-            pass
-
-        try:
-            cur.execute(
-                "ALTER TABLE `%s` " % self.getName()+
-                " ADD INDEX `%s` " % (self.getName() + "_inode")+
-                " (`inode_id`)"
-            )
-        except Exception as e:
-            print("ERROR in %s: %s" % (self.getName(), e))
-            pass
-
-        try:
-            cur.execute(
-                "ALTER TABLE `%s` " % self.getName()+
-                " ADD INDEX `%s` " % (self.getName() + "_parent")+
-                " (`parent_id`)"
-            )
-        except Exception as e:
-            print("ERROR in %s: %s" % (self.getName(), e))
-            pass
-
-        try:
-            cur.execute(
-                "ALTER TABLE `%s` " % self.getName()+
-                " ADD INDEX `%s` " % (self.getName() + "_parent_name")+
-                " (`parent_id`, `name_id`)"
-            )
-        except Exception as e:
-            print("ERROR in %s: %s" % (self.getName(), e))
-            pass
-
-        try:
-            cur.execute(
-                "ALTER TABLE `%s` " % self.getName()+
-                " ADD INDEX `%s` " % (self.getName() + "_subvol")+
-                " (`subvol_id`)"
-            )
-        except Exception as e:
-            print("ERROR in %s: %s" % (self.getName(), e))
-            pass
-
-        try:
-            cur.execute(
-                "ALTER TABLE `%s` " % self.getName()+
-                " ADD INDEX `%s` " % (self.getName() + "_name")+
-                " (`name_id`)"
-            )
-        except Exception as e:
-            print("ERROR in %s: %s" % (self.getName(), e))
-            pass
+        self.createIndexIfNotExists("spn", ('subvol_id', 'parent_id', 'name_id',), unique=True)
+        self.createIndexIfNotExists("inode", ('inode_id',))
+        self.createIndexIfNotExists("parent", ('parent_id',))
+        self.createIndexIfNotExists("parent_name", ('parent_id', 'name_id',))
+        self.createIndexIfNotExists("subvol", ('subvol_id',))
+        self.createIndexIfNotExists("name", ('name_id',))
 
         return
 

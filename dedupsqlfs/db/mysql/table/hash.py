@@ -18,15 +18,8 @@ class TableHash( Table ):
                 "`hash` VARBINARY(255) NOT NULL "+
             ")"
         )
-        try:
-            cur.execute(
-                "ALTER TABLE `%s` " % self.getName()+
-                " ADD UNIQUE INDEX `%s` " % (self.getName()+"_hash")+
-                " (`hash`)"
-            )
-        except Exception as e:
-            print("ERROR in %s: %s" % (self.getName(), e))
-            pass
+
+        self.createIndexIfNotExists("hash", ("hash",), unique=True)
         return
 
     def insert( self, value):

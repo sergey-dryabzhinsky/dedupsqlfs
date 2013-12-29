@@ -18,14 +18,8 @@ class TableCompressionType( Table ):
                 "`value` VARCHAR(255) NOT NULL"+
             ")"
         )
-        try:
-            cur.execute(
-                "ALTER TABLE `%s` " % self.getName()+
-                "ADD UNIQUE INDEX `%s` " % (self.getName() + "_value")+
-                "(`value`)")
-        except Exception as e:
-            print("ERROR in %s: %s" % (self.getName(), e))
-            pass
+
+        self.createIndexIfNotExists("value", ("value",), unique=True)
         return
 
     def insert( self, value ):

@@ -29,15 +29,8 @@ class TableInode( Table ):
                 "`ctime_ns` INT UNSIGNED NOT NULL DEFAULT 0"+
             ");"
         )
-        try:
-            cur.execute(
-                "ALTER TABLE `%s` " % self.getName()+
-                " ADD INDEX `%s` " % (self.getName() + "_id_nlinks")+
-                " (`id`, `nlinks`)"
-            )
-        except Exception as e:
-            print("ERROR in %s: %s" % (self.getName(), e))
-            pass
+
+        self.createIndexIfNotExists("id_nlinks", ('id', 'nlinks',))
         return
 
     def getRowSize(self):

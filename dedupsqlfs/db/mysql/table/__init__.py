@@ -112,6 +112,42 @@ class Table( object ):
             return int(row["size"])
         return 0
 
+    def createIndexIfNotExists(self, indexName, fieldList, unique=False):
+        if not len(fieldList):
+            raise ValueError("Define table field list for index!")
+
+        cur = self.getCursor()
+
+        cur.execute(
+            "SELECT COUNT(1) INTO `IndexIsThere` "+
+            "FROM `INFORMATION_SCHEMA`.`STATISTICS` "+
+            "WHERE `table_schema` = %s "+
+            "AND   `table_name`   = %s "+
+            "AND   `index_name`   = %s;",
+            (self.getManager().getDbName(), self.getName(), self.getName()+"_" + indexName)
+        )
+        row = cur.fetchone()
+
+        exists = not row or not int(row["IndexIsThere"])
+
+        if exists:
+            _u = ""
+            if unique:
+                _u = "UNIQUE"
+
+            _f = ()
+            for field in fieldList:
+                _f += "`%s`" % field
+
+            _f = ",".join(_f)
+
+            cur.execute(
+                "ALTER TABLE `%s` " % self.getName()+
+                "ADD "+_u+" INDEX `%s` " % (self.getName() + "_" + indexName)+
+                "("+_f+")")
+
+        return exists
+
     def clean( self ):
         self.startTimer()
         cur = self.getCursor()

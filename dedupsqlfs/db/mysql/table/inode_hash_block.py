@@ -19,33 +19,10 @@ class TableInodeHashBlock( Table ):
                 "`hash_id` BIGINT UNSIGNED NOT NULL"+
             ")"
         )
-        try:
-            cur.execute(
-                "ALTER TABLE `%s` " % self.getName()+
-                " ADD UNIQUE INDEX `%s` " % (self.getName() + "_inode_block")+
-                " (`inode_id`, `block_number`)"
-            )
-        except Exception as e:
-            print("ERROR in %s: %s" % (self.getName(), e))
-            pass
-        try:
-            cur.execute(
-                "ALTER TABLE `%s` " % self.getName()+
-                " ADD INDEX `%s` " % (self.getName() + "_hash")+
-                " (`hash_id`)"
-            )
-        except Exception as e:
-            print("ERROR in %s: %s" % (self.getName(), e))
-            pass
-        try:
-            cur.execute(
-                "ALTER TABLE `%s` " % self.getName()+
-                " ADD INDEX `%s` " % (self.getName() + "_inode")+
-                " (`inode_id`)"
-            )
-        except Exception as e:
-            print("ERROR in %s: %s" % (self.getName(), e))
-            pass
+
+        self.createIndexIfNotExists("inode_block", ('inode_id', 'block_number',), unique=True)
+        self.createIndexIfNotExists("hash", ('hash_id',))
+        self.createIndexIfNotExists("inode", ('inode_id',))
         return
 
     def insert( self, inode, block_number, hash_id):

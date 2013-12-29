@@ -263,7 +263,6 @@ class DbManager( object ):
 
 
     def stopMysqld(self):
-        print("MySqlDbManager: stopMysqld")
         if self._mysqld_proc is not None:
 
             if self._notmeStarted:

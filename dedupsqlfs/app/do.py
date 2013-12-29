@@ -343,7 +343,7 @@ def do(options, compression_methods=None):
         ret = 1
 
     if ops:
-        ops.getManager().stopMysqld()
+        ops.getManager().close()
 
     return ret
 

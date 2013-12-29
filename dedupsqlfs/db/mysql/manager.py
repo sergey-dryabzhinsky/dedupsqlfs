@@ -263,6 +263,7 @@ class DbManager( object ):
 
 
     def stopMysqld(self):
+        print("MySqlDbManager: stopMysqld")
         if self._mysqld_proc is not None:
 
             if self._notmeStarted:
@@ -305,7 +306,9 @@ class DbManager( object ):
             self._mysqld_proc = None
             self._socket = None
 
-        return True
+            return True
+
+        return False
 
 
     def getConnection(self, nodb=False):
@@ -346,7 +349,7 @@ class DbManager( object ):
         try:
             cursor.execute('SELECT 1')
         except BrokenPipeError:
-            self.close()
+            self.closeConn()
             cursor = self.getConnection().cursor(cursor_type)
             pass
         return cursor
@@ -382,10 +385,16 @@ class DbManager( object ):
             t.vacuum()
         return self
 
-    def close(self):
+    def closeConn(self):
         if self._conn:
             self._conn.close()
             self._conn = None
+        return self
+
+    def close(self):
+        self.closeConn()
+        if self._mysqld_proc is not None:
+            self.stopMysqld()
         return self
 
     def getSize(self):

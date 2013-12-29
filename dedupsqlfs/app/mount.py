@@ -43,7 +43,7 @@ def fuse_mount(options, compression_methods=None, hash_functions=None):
         print(traceback.format_exc())
         ret = -1
     if ops:
-        ops.getManager().stopMysqld()
+        ops.getManager().close()
 
     return ret
 

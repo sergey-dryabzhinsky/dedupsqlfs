@@ -289,6 +289,10 @@ def do(options, compression_methods=None):
             options,
             use_ino=True, default_permissions=True, fsname="dedupsqlfs")
 
+        basePath = os.path.expanduser(_fuse.getOption("data"))
+        if os.path.exists(basePath):
+            _fuse.setOption("storage_engine", "auto")
+
         _fuse.saveCompressionMethods(compression_methods)
 
         for modname in compression_methods:
@@ -371,7 +375,6 @@ def main(): # {{{1
     generic.add_argument('--verify-writes', dest='verify_writes', action='store_true', help="After writing a new data block to the database, check that the block was written correctly by reading it back again and checking for differences.")
 
     generic.add_argument('--memory-limit', dest='memory_limit', action='store_true', help="Use some lower values for less memory consumption.")
-
 
     data = parser.add_argument_group('Data')
     data.add_argument('--print-stats', dest='print_stats', action='store_true', help="print the total apparent size and the actual disk usage of the file system and exit")

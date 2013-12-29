@@ -15,38 +15,38 @@ class TableHashCompressionType( Table ):
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
                 "hash_id INTEGER PRIMARY KEY, "+
-                "compression_type_id INTEGER NOT NULL "+
+                "type_id INTEGER NOT NULL "+
             ");"
         )
         c.execute(
-            "CREATE INDEX IF NOT EXISTS hct_compression_type ON `%s` (" % self._table_name+
-                "compression_type_id"+
+            "CREATE INDEX IF NOT EXISTS hct_type ON `%s` (" % self._table_name+
+                "type_id"+
             ");"
         )
         return
 
-    def insert( self, hash_id, compression_type_id):
+    def insert( self, hash_id, type_id):
         """
         :return: int
         """
         self.startTimer()
         cur = self.getCursor()
 
-        cur.execute("INSERT INTO `%s`(hash_id, compression_type_id) VALUES (?,?)" % self._table_name,
-                    (hash_id, compression_type_id,))
+        cur.execute("INSERT INTO `%s`(hash_id, type_id) VALUES (?,?)" % self._table_name,
+                    (hash_id, type_id,))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
 
-    def update( self, hash_id, compression_type_id):
+    def update( self, hash_id, type_id):
         """
         :return: int
         """
         self.startTimer()
         cur = self.getCursor()
 
-        cur.execute("UPDATE `%s` SET compression_type_id=? WHERE hash_id=?" % self._table_name,
-                    (compression_type_id, hash_id,))
+        cur.execute("UPDATE `%s` SET type_id=? WHERE hash_id=?" % self._table_name,
+                    (type_id, hash_id,))
         count = cur.rowcount
         self.stopTimer('update')
         return count
@@ -66,7 +66,7 @@ class TableHashCompressionType( Table ):
     def count_compression_type( self ):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT COUNT(compression_type_id) AS cnt,compression_type_id FROM `%s` GROUP BY compression_type_id" % self._table_name)
+        cur.execute("SELECT COUNT(type_id) AS cnt, type_id FROM `%s` GROUP BY type_id" % self._table_name)
         items = cur.fetchall()
         self.stopTimer('count_compression_type')
         return items

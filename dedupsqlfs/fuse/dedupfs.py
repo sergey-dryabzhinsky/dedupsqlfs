@@ -103,6 +103,20 @@ class DedupFS(object): # {{{1
     def isReadonly(self):
         return self._readonly
 
+    def hasFsStorageOnPath(self, basePath):
+        has = True
+        from dedupsqlfs.db.sqlite.manager import DbManager as SqliteManager
+        manager = SqliteManager(dbname=self.getOption("name"))
+        manager.setBasepath(basePath)
+        if not manager.isSupportedStorage():
+            from dedupsqlfs.db.mysql.manager import DbManager as MysqlManager
+            manager = MysqlManager(dbname=self.getOption("name"))
+            manager.setBasepath(os.path.expanduser(self.getOption("data")))
+            if not manager.isSupportedStorage():
+                has = False
+        return has
+
+
     def appendCompression(self, name):
         if name == "none":
             from dedupsqlfs.compression.none import NoneCompression

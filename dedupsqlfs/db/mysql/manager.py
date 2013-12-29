@@ -148,6 +148,14 @@ class DbManager( object ):
         return self._table[ name ]
 
 
+    def isSupportedStorage(self):
+        s = False
+        datadir = self.getBasePath() + "/mysql-db-data"
+        if os.path.isdir(datadir):
+            s = True
+        return s
+
+
     def startMysqld(self):
         if self._mysqld_proc is None:
 

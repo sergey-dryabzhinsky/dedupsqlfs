@@ -135,8 +135,31 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def getManager(self):
         if not self.manager:
-            from dedupsqlfs.db.mysql.manager import DbManager
-            self.manager = DbManager(dbname=self.getOption("name"))
+            engine = self.getOption('storage_engine')
+            if not engine:
+                engine = 'mysql'
+
+            if engine == 'mysql':
+                from dedupsqlfs.db.mysql.manager import DbManager
+                self.manager = DbManager(dbname=self.getOption("name"))
+            elif engine == 'sqlite':
+                from dedupsqlfs.db.sqlite.manager import DbManager
+                self.manager = DbManager(dbname=self.getOption("name"))
+            elif engine == 'auto':
+                # Only for tools and for existing fs
+                from dedupsqlfs.db.sqlite.manager import DbManager
+                self.manager = DbManager(dbname=self.getOption("name"))
+                self.manager.setBasepath(os.path.expanduser(self.getOption("data")))
+                if not self.manager.isSupportedStorage():
+                    from dedupsqlfs.db.mysql.manager import DbManager
+                    self.manager = DbManager(dbname=self.getOption("name"))
+                    self.manager.setBasepath(os.path.expanduser(self.getOption("data")))
+                    if not self.manager.isSupportedStorage():
+                        raise RuntimeError("Unsupported storage on %r" % self.getOption("data"))
+
+            else:
+                raise ValueError("Unknown storage engine: %r" % engine)
+
             self.manager.setSynchronous(self.getOption("synchronous"))
             self.manager.setAutocommit(self.getOption("use_transactions"))
             self.manager.setBasepath(os.path.expanduser(self.getOption("data")))

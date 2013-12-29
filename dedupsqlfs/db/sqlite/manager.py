@@ -2,6 +2,7 @@
 
 __author__ = 'sergey'
 
+import os
 
 class DbManager( object ):
 
@@ -138,6 +139,15 @@ class DbManager( object ):
         s = 0
         for name, t in self._table.items():
             s += t.getSize()
+        return s
+
+    def isSupportedStorage(self):
+        s = False
+        for name in self.tables:
+            t = self.getTable(name)
+            f = t.getDbFilePath()
+            if os.path.isfile(f):
+                s = True
         return s
 
     def getFileSize(self):

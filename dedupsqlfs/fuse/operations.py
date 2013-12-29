@@ -940,7 +940,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     # ---------------------------- Miscellaneous methods: {{{2
 
-    def getDataSize(self, use_subvol=True):
+    def getDataSize(self, use_subvol=True, unique=False):
         manager = self.getManager()
 
         curTree = manager.getTable("tree").getCursor()
@@ -970,7 +970,13 @@ class DedupOperations(llfuse.Operations): # {{{1
                 apparent_size += inodeItem["size"]
 
             # Do not trust inode info - we not done block writing and writed size not changed?
-            inodeHashes = tuple(item["hash_id"] for item in indexTable.get_hashes_by_inode( treeItem["inode_id"] ))
+            if not unique:
+                inodeHashes = tuple(item["hash_id"] for item in indexTable.get_hashes_by_inode( treeItem["inode_id"] ))
+            else:
+                inodeHashes = {}
+                for item in indexTable.get_hashes_by_inode( treeItem["inode_id"] ):
+                    inodeHashes[ item["hash_id"] ] = 1
+                inodeHashes = tuple(inodeHashes.keys())
 
             apparent_size += hbsTable.sum_real_size(inodeHashes)
             compressed_size += hbsTable.sum_comp_size(inodeHashes)

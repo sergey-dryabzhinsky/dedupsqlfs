@@ -245,7 +245,8 @@ class DedupFS(object): # {{{1
         indexTable = manager.getTable("inode_hash_block")
         hbsTable = manager.getTable("hash_block_size")
 
-        apparent_size, compressed_size = self.operations.getDataSize(False)
+        apparent_size, compressed_size = self.operations.getDataSize(use_subvol=False)
+        apparent_size_u, compressed_size_u = self.operations.getDataSize(use_subvol=False, unique=True)
 
         self.getLogger().info("--" * 79)
 
@@ -253,21 +254,21 @@ class DedupFS(object): # {{{1
         #print("apparent_size: %r" % apparent_size)
 
         if apparent_size:
-            self.getLogger().info("Apparent size is %s.",
-                             format_size(apparent_size)
+            self.getLogger().info("Apparent size is %s (unique %s).",
+                             format_size(apparent_size), format_size(apparent_size_u)
             )
             self.getLogger().info("Databases take up %s (ratio is %.2f%%).",
                              format_size(disk_usage),
-                             100.0 * disk_usage / apparent_size)
-            self.getLogger().info("Compressed data take up %s (ratioA is %.2f%%, ratioD is %.2f%%).",
-                             format_size(compressed_size),
+                             100.0 * disk_usage / apparent_size_u)
+            self.getLogger().info("Compressed data take up %s (unique %s, ratioA is %.2f%%, ratioD is %.2f%%).",
+                             format_size(compressed_size), format_size(compressed_size_u),
                              100.0 * (apparent_size - compressed_size) / apparent_size,
-                             100.0 * compressed_size / disk_usage,
+                             100.0 * compressed_size_u / disk_usage,
             )
             self.getLogger().info("Meta data and indexes take up %s (ratioA is %.2f%%, rationD is %.2f%%).",
-                             format_size(disk_usage - compressed_size),
-                             100.0 * (disk_usage - compressed_size) / apparent_size,
-                             100.0 * (disk_usage - compressed_size) / disk_usage,
+                             format_size(disk_usage - compressed_size_u),
+                             100.0 * (disk_usage - compressed_size_u) / apparent_size_u,
+                             100.0 * (disk_usage - compressed_size_u) / disk_usage,
             )
 
             curIndex = indexTable.getCursor()

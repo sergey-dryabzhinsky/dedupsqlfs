@@ -32,7 +32,7 @@ class DbManager( object ):
     @type _mysqld_proc: L{subprocess.Popen}
     """
 
-    _buffer_size = 256*1024*1024
+    _buffer_size = 512*1024*1024
     """
     @ivar _buffer_size: InnoDB pool buffer size
     """
@@ -223,7 +223,8 @@ class DbManager( object ):
 
                 "--query-cache-min-res-unit=1k",
                 "--query-cache-limit=1M",
-                "--query-cache-size=32M"
+                "--query-cache-size=64M",
+                "--max-allowed-packet=32M"
             ])
 
             if is_new:

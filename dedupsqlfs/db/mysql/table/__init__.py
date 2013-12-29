@@ -119,7 +119,7 @@ class Table( object ):
         cur = self.getCursor()
 
         cur.execute(
-            "SELECT COUNT(1) INTO `IndexIsThere` "+
+            "SELECT COUNT(1) AS `IndexIsThere` "+
             "FROM `INFORMATION_SCHEMA`.`STATISTICS` "+
             "WHERE `table_schema` = %s "+
             "AND   `table_name`   = %s "+

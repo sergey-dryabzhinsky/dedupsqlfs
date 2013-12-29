@@ -947,7 +947,6 @@ class DedupOperations(llfuse.Operations): # {{{1
         hbsTable = manager.getTable("hash_block_size")
 
         if use_subvol:
-            print("subvol: %r" % manager.getTable("tree").getSelectedSubvolume())
             curTree.execute("SELECT `inode_id` FROM `tree` WHERE `subvol_id`=%s", (manager.getTable("tree").getSelectedSubvolume(),))
         else:
             curTree.execute("SELECT `inode_id` FROM `tree`")
@@ -958,9 +957,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             treeItem = curTree.fetchone()
             if not treeItem:
                 break
-
-            #attr = self.cached_attrs.get(treeItem["inode_id"])
-            #apparent_size += attr["size"]
 
             # Do not trust inode info - we not done block writing and writed size not changed?
             inodeHashes = tuple(item["hash_id"] for item in indexTable.get_hashes_by_inode( treeItem["inode_id"] ))

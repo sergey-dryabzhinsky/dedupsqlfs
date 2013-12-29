@@ -81,7 +81,6 @@ class Table( object ):
         cur = self.getCursor()
         cur.execute("SHOW TABLES LIKE '%s'" % self.getName())
         row = cur.fetchone()
-        cur.close()
         if not row:
             self.create()
         return
@@ -155,12 +154,6 @@ class Table( object ):
         return self
 
     def close(self):
-        if self._curr:
-            self._curr.close()
-            self._curr = None
-        if self._conn:
-            self._conn.close()
-            self._conn = None
         return self
 
     pass

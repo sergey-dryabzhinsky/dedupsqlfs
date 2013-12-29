@@ -350,6 +350,7 @@ class DbManager( object ):
 
         cur = conn.cursor()
         cur.execute("CREATE DATABASE IF NOT EXISTS `%s` COLLATE utf8_bin;" % self.getDbName())
+        cur.close()
 
         conn.close()
         return True

@@ -139,11 +139,16 @@ class TableInode( Table ):
 
     def count_nlinks_by_ids(self, id_list):
         self.startTimer()
-        cur = self.getCursor()
-        cur.execute("SELECT COUNT(1) as cnt FROM `%s` WHERE id IN (%s) AND nlinks>0" % (
-            self._table_name, ",".join(id_list),)
-        )
-        result = cur.fetchone()["cnt"]
+
+        result = 0
+        id_str = ",".join(id_list)
+        if id_str:
+            cur = self.getCursor()
+            cur.execute("SELECT COUNT(1) as cnt FROM `%s` WHERE id IN (%s) AND nlinks>0" % (
+                self._table_name, id_str,)
+            )
+            result = cur.fetchone()["cnt"]
+
         self.stopTimer('count_nlinks_by_ids')
         return result
 

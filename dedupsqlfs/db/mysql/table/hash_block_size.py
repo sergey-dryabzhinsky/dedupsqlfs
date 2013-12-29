@@ -109,20 +109,19 @@ class TableHashBlockSize( Table ):
         """
         self.startTimer()
 
+        item = 0
         hids = ",".join((str(hid) for hid in hash_ids))
-        if not hids:
-            return 0
-
-        cur = self.getCursor()
-        cur.execute(
-            "SELECT SUM(`real_size`) as `s` FROM `%s` " % self.getName()+
-            " WHERE `hash_id` IN (%s)" % hids
-        )
-        item = cur.fetchone()
-        if item:
-            item = item["s"]
-        else:
-            item = 0
+        if hids:
+            cur = self.getCursor()
+            cur.execute(
+                "SELECT SUM(`real_size`) as `s` FROM `%s` " % self.getName()+
+                " WHERE `hash_id` IN (%s)" % hids
+            )
+            item = cur.fetchone()
+            if item:
+                item = item["s"]
+            else:
+                item = 0
         self.stopTimer('sum_real_size')
         return item
 
@@ -155,20 +154,19 @@ class TableHashBlockSize( Table ):
         """
         self.startTimer()
 
+        item = 0
         hids = ",".join((str(hid) for hid in hash_ids))
-        if not hids:
-            return 0
-
-        cur = self.getCursor()
-        cur.execute(
-            "SELECT SUM(`comp_size`) as `s` FROM `%s` " % self.getName()+
-            " WHERE `hash_id` IN (%s)" % hids
-        )
-        item = cur.fetchone()
-        if item:
-            item = item["s"]
-        else:
-            item = 0
+        if hids:
+            cur = self.getCursor()
+            cur.execute(
+                "SELECT SUM(`comp_size`) as `s` FROM `%s` " % self.getName()+
+                " WHERE `hash_id` IN (%s)" % hids
+            )
+            item = cur.fetchone()
+            if item:
+                item = item["s"]
+            else:
+                item = 0
         self.stopTimer('sum_comp_size')
         return item
 

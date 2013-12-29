@@ -6,6 +6,8 @@ import os
 from time import sleep
 import subprocess
 import pymysql
+import pymysql.err
+import pymysql.cursors
 
 cursor_type = pymysql.cursors.DictCursor
 
@@ -230,26 +232,37 @@ class DbManager( object ):
 
                 cmd = ["mysql_install_db"]
                 cmd.extend(cmd_opts)
-                subprocess.Popen(cmd, cwd=self.getBasePath()).wait()
+                subprocess.Popen(cmd,
+                                 cwd=self.getBasePath(),
+                                 stdout=open(os.devnull, 'w'),
+                                 stderr=open(os.devnull, 'w')
+                ).wait()
 
             cmd = ["mysqld"]
             cmd.extend(cmd_opts)
 
             print("Starting up MySQLd...")
 
-            self._mysqld_proc = subprocess.Popen(cmd, cwd=self.getBasePath())
+            self._mysqld_proc = subprocess.Popen(cmd,
+                                                 cwd=self.getBasePath(),
+                                                 stdout=open(os.devnull, 'w'),
+                                                 stderr=open(os.devnull, 'w')
+            )
 
-            t = 5
+            print("Wait up 10 sec for it to start...")
+
+            t = 10
             while (t>0):
                 sleep(0.1)
 
-                if self._mysqld_proc.poll() is not None:
+                if self.pingServer():
                     break
 
                 t-= 0.1
 
 
             if self._mysqld_proc.poll() is not None:
+                print("Something wrong? mysqld exited with: %s" % self._mysqld_proc.poll() )
                 self._mysqld_proc = None
                 return False
 
@@ -343,6 +356,18 @@ class DbManager( object ):
             cur = self.getConnection().cursor(cursor_type)
         cur = self.pingDb(cur)
         return cur
+
+    def pingServer(self):
+        result = True
+        try:
+            conn = self.getConnection(True)
+            cursor = conn.cursor()
+            cursor.execute('SELECT 1')
+            cursor.close()
+            conn.close()
+        except pymysql.err.OperationalError:
+            result = False
+        return result
 
     def pingDb(self, cursor):
         try:

@@ -851,7 +851,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             # The total number of free blocks available to a non privileged process.
             # stats.f_bavail = host_fs.f_bsize * host_fs.f_bavail / self.block_size
-            stats.f_bavail = (apparent_size - self.getManager().getFileSize()) / self.block_size
+            stats.f_bavail = int(math.floor(1.0*(apparent_size - self.getManager().getFileSize()) / self.block_size))
             if stats.f_bavail < 0:
                 stats.f_bavail = 0
             # The total number of free blocks in the file system.
@@ -859,7 +859,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             stats.f_bfree = stats.f_bavail
             # The total number of blocks in the file system in terms of f_frsize.
             # stats.f_blocks = host_fs.f_frsize * host_fs.f_blocks / self.block_size
-            stats.f_blocks = apparent_size / self.block_size
+            stats.f_blocks = int(math.ceil(1.0*apparent_size / self.block_size))
             # stats.f_blocks = self.getTable("block").count()
             stats.f_bsize = self.block_size # The file system block size in bytes.
             stats.f_favail = 0 # The number of free file serial numbers available to a non privileged process.
@@ -943,11 +943,14 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         curTree = manager.getTable("tree").getCursor()
 
+        curInode = manager.getTable("inode").getCursor()
+
         indexTable = manager.getTable("inode_hash_block")
         hbsTable = manager.getTable("hash_block_size")
 
         if use_subvol:
-            curTree.execute("SELECT `inode_id` FROM `tree` WHERE `subvol_id`=%s", (manager.getTable("tree").getSelectedSubvolume(),))
+            subvol_id = manager.getTable("tree").getSelectedSubvolume()
+            curTree.execute("SELECT `inode_id` FROM `tree` WHERE `subvol_id`=%s OR `id`=%s", (subvol_id, subvol_id,))
         else:
             curTree.execute("SELECT `inode_id` FROM `tree`")
 
@@ -957,6 +960,12 @@ class DedupOperations(llfuse.Operations): # {{{1
             treeItem = curTree.fetchone()
             if not treeItem:
                 break
+
+            curInode.execute("SELECT `size` FROM `inode` WHERE `id`=%s AND `nlinks`>1", (treeItem["inode_id"],))
+            inodeItem = curInode.fetchone()
+            if inodeItem:
+                # Add directory inode size
+                apparent_size += inodeItem["size"]
 
             # Do not trust inode info - we not done block writing and writed size not changed?
             inodeHashes = tuple(item["hash_id"] for item in indexTable.get_hashes_by_inode( treeItem["inode_id"] ))

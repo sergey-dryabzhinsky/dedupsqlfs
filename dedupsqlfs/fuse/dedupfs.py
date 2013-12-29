@@ -276,8 +276,6 @@ class DedupFS(object): # {{{1
 
             dedup_size = 0
             while True:
-                if not curIndex.nextset():
-                    break
                 indexItem = curIndex.fetchone()
                 if not indexItem:
                     break

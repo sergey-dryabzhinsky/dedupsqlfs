@@ -119,7 +119,7 @@ class TableHashBlockSize( Table ):
             )
             item = cur.fetchone()
             if item:
-                item = item["s"]
+                item = int(item["s"])
             else:
                 item = 0
         self.stopTimer('sum_real_size')
@@ -164,7 +164,7 @@ class TableHashBlockSize( Table ):
             )
             item = cur.fetchone()
             if item:
-                item = item["s"]
+                item = int(item["s"])
             else:
                 item = 0
         self.stopTimer('sum_comp_size')

@@ -339,10 +339,8 @@ class DbManager( object ):
         if new:
             cur = self.getConnection().cursor(cursor_type)
         else:
-            if self._cur:
-                return self._cur
-            cur = self._cur = self.getConnection().cursor(cursor_type)
-        cur = self._cur = self.pingDb(cur)
+            cur = self.getConnection().cursor(cursor_type)
+        cur = self.pingDb(cur)
         return cur
 
     def pingDb(self, cursor):

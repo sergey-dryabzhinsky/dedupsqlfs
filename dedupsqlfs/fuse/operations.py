@@ -947,6 +947,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         hbsTable = manager.getTable("hash_block_size")
 
         if use_subvol:
+            print("subvol: %r" % manager.getTable("tree").getSelectedSubvolume())
             curTree.execute("SELECT `inode_id` FROM `tree` WHERE `subvol_id`=%s", (manager.getTable("tree").getSelectedSubvolume(),))
         else:
             curTree.execute("SELECT `inode_id` FROM `tree`")
@@ -954,10 +955,6 @@ class DedupOperations(llfuse.Operations): # {{{1
         apparent_size = 0
         compressed_size = 0
         while True:
-
-            if not curTree.nextset():
-                break
-
             treeItem = curTree.fetchone()
             if not treeItem:
                 break

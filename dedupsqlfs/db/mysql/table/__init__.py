@@ -137,7 +137,7 @@ class Table( object ):
 
             _f = ()
             for field in fieldList:
-                _f += "`%s`" % field
+                _f += ("`%s`" % field,)
 
             _f = ",".join(_f)
 

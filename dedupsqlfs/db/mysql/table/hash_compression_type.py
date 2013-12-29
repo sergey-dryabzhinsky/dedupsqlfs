@@ -15,7 +15,7 @@ class TableHashCompressionType( Table ):
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`hash_id` BIGINT UNSIGNED PRIMARY KEY, "+
-                "`type_id` INT UNSIGNED NOT NULL "+
+                "`type_id` SMALLINT UNSIGNED NOT NULL "+
             ");"
         )
 

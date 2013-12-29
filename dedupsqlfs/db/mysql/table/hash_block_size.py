@@ -80,6 +80,25 @@ class TableHashBlockSize( Table ):
         self.stopTimer('get')
         return item
 
+    def get_real_sizes( self, hash_ids):
+        """
+        :param hash_ids: list|tuple
+        :return: int
+        """
+        self.startTimer()
+
+        items = ()
+        hids = ",".join((str(hid) for hid in hash_ids))
+        if hids:
+            cur = self.getCursor()
+            cur.execute(
+                "SELECT `real_size`,`hash_id` FROM `%s` " % self.getName()+
+                " WHERE `hash_id` IN (%s)" % hids
+            )
+            items = cur.fetchall()
+        self.stopTimer('get_real_sizes')
+        return items
+
     def sum_real_size( self, hash_ids):
         """
         :param hash_ids: list|tuple
@@ -103,6 +122,23 @@ class TableHashBlockSize( Table ):
         self.stopTimer('sum_real_size')
         return item
 
+    def sum_real_size_all( self ):
+        """
+        :param hash_ids: list|tuple
+        :return: int
+        """
+        self.startTimer()
+
+        cur = self.getCursor()
+        cur.execute("SELECT SUM(`real_size`) as `s` FROM `%s` " % self.getName())
+        item = cur.fetchone()
+        if item:
+            item = int(item["s"])
+        else:
+            item = 0
+        self.stopTimer('sum_real_size_all')
+        return item
+
     def sum_comp_size( self, hash_ids):
         """
         :param hash_ids: list|tuple
@@ -124,6 +160,23 @@ class TableHashBlockSize( Table ):
             else:
                 item = 0
         self.stopTimer('sum_comp_size')
+        return item
+
+    def sum_comp_size_all( self ):
+        """
+        :param hash_ids: list|tuple
+        :return: int
+        """
+        self.startTimer()
+
+        cur = self.getCursor()
+        cur.execute("SELECT SUM(`comp_size`) as `s` FROM `%s` " % self.getName())
+        item = cur.fetchone()
+        if item:
+            item = int(item["s"])
+        else:
+            item = 0
+        self.stopTimer('sum_comp_size_all')
         return item
 
     pass

@@ -277,12 +277,22 @@ class DedupFS(object): # {{{1
 
             dedup_size = 0
             while True:
-                indexItem = curIndex.fetchone()
-                if not indexItem:
+                indexItems = curIndex.fetchmany(1024)
+                if not indexItems:
                     break
-                if indexItem["cnt"] > 1:
-                    hashBS = hbsTable.get(indexItem["hash_id"])
-                    dedup_size += (indexItem["cnt"]-1) * hashBS["real_size"]
+
+                hids = ()
+                cnts = {}
+                for item in indexItems:
+                    if item["cnt"] > 1:
+                        hids += (item["hash_id"],)
+                        cnts[ item["hash_id"] ] = item["cnt"]-1
+
+                if hids:
+                    rsizes = hbsTable.get_real_sizes(hids)
+                    for item in rsizes:
+                        cnt = cnts[ item["hash_id"] ]
+                        dedup_size += cnt * item["real_size"]
 
             self.getLogger().info("Deduped size is %s (ratio is %.2f%%).",
                              format_size(dedup_size),

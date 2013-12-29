@@ -956,6 +956,11 @@ class DedupOperations(llfuse.Operations): # {{{1
         else:
             curTree.execute("SELECT `inode_id` FROM `tree`")
 
+        if unique:
+            apparent_size = hbsTable.sum_real_size_all()
+            compressed_size = hbsTable.sum_comp_size_all()
+            return apparent_size, compressed_size
+
         apparent_size = 0
         compressed_size = 0
         while True:
@@ -970,13 +975,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 apparent_size += inodeItem["size"]
 
             # Do not trust inode info - we not done block writing and writed size not changed?
-            if not unique:
-                inodeHashes = tuple(item["hash_id"] for item in indexTable.get_hashes_by_inode( treeItem["inode_id"] ))
-            else:
-                inodeHashes = {}
-                for item in indexTable.get_hashes_by_inode( treeItem["inode_id"] ):
-                    inodeHashes[ item["hash_id"] ] = 1
-                inodeHashes = tuple(inodeHashes.keys())
+            inodeHashes = tuple(item["hash_id"] for item in indexTable.get_hashes_by_inode( treeItem["inode_id"] ))
 
             apparent_size += hbsTable.sum_real_size(inodeHashes)
             compressed_size += hbsTable.sum_comp_size(inodeHashes)

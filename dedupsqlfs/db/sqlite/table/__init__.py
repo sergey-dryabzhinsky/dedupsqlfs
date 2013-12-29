@@ -147,12 +147,21 @@ class Table( object ):
             self.connect()
         return self._conn
 
+    def nextset(self):
+        """
+        emulate pymysql cursor
+        """
+        return True
+
     def getCursor(self, new=False):
+        cur = self._curr
         if new:
-            return self.getConnection().cursor()
+            cur = self.getConnection().cursor()
         if not self._curr:
-            self._curr = self.getConnection().cursor()
-        return self._curr
+            cur = self._curr = self.getConnection().cursor()
+
+        cur.nextset = self.nextset
+        return cur
 
     def getPageSize(self):
         result = self.getConnection().execute('PRAGMA page_size').fetchone()

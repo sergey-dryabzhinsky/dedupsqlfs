@@ -954,6 +954,10 @@ class DedupOperations(llfuse.Operations): # {{{1
         apparent_size = 0
         compressed_size = 0
         while True:
+
+            if not curTree.nextset():
+                break
+
             treeItem = curTree.fetchone()
             if not treeItem:
                 break
@@ -966,13 +970,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             apparent_size += hbsTable.sum_real_size(inodeHashes)
             compressed_size += hbsTable.sum_comp_size(inodeHashes)
-
-            continue
-
-            for indexItem in inodeHashes:
-                hbs = hbsTable.get(indexItem["hash_id"])
-                apparent_size += hbs["real_size"]
-                compressed_size += hbs["comp_size"]
 
         return apparent_size, compressed_size
 

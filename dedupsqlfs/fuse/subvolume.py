@@ -201,6 +201,8 @@ class Subvolume(object):
             tableHBS = self.getTable('hash_block_size')
 
             while True:
+                if not curTree.nextset():
+                    break
                 treeItem = curTree.fetchone()
                 if not treeItem:
                     break

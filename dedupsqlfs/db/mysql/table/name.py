@@ -19,7 +19,7 @@ class TableName( Table ):
             ");"
         )
 
-        self.createIndexIfNotExists("value", ('value',), unique=True)
+        self.createIndexIfNotExists("value", ('value',), unique=True, indexSizes={'value':255})
         return
 
     def getRowSize(self, value):

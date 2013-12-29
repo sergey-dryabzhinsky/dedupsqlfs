@@ -2,6 +2,7 @@
 
 __author__ = 'sergey'
 
+import types
 from time import time
 import pymysql
 import pymysql.cursors
@@ -112,7 +113,18 @@ class Table( object ):
             return int(row["size"])
         return 0
 
-    def createIndexIfNotExists(self, indexName, fieldList, unique=False):
+    def createIndexIfNotExists(self, indexName, fieldList, unique=False, indexSizes=None):
+        """
+        @param indexName: Index name
+        @param fieldList: List of table fields for index
+        @param unique: Is index unique?
+        @param indexSizes: Sizes for CHAR/BINARY/BLOB/TEXT indexes. How many starting symbols to index
+
+        @type indexName: str
+        @type fieldList: list|tuple
+        @type unique: bool
+        @type indexSizes: dict
+        """
         if not len(fieldList):
             raise ValueError("Define table field list for index!")
 
@@ -128,16 +140,26 @@ class Table( object ):
         )
         row = cur.fetchone()
 
-        exists = not row or not int(row["IndexIsThere"])
+        exists = (row is not None) and int(row["IndexIsThere"]) > 0
 
-        if exists:
+        if not exists:
             _u = ""
             if unique:
                 _u = "UNIQUE"
 
             _f = ()
+
+            if not indexSizes or type(indexSizes) is not dict:
+                indexSizes = {}
+
             for field in fieldList:
-                _f += ("`%s`" % field,)
+
+                _isz = ""
+                sz = indexSizes.get(field, 0)
+                if sz > 0:
+                    _isz = "(%d)" % sz
+
+                _f += ("`%s`%s" % (field, _isz,),)
 
             _f = ",".join(_f)
 

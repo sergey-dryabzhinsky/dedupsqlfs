@@ -264,7 +264,7 @@ class DedupFS(object): # {{{1
                              100.0 * (apparent_size - compressed_size) / apparent_size,
                              100.0 * compressed_size / disk_usage,
             )
-            self.getLogger().info("System data take up %s (ratioA is %.2f%%, rationD is %.2f%%).",
+            self.getLogger().info("Meta data and indexes take up %s (ratioA is %.2f%%, rationD is %.2f%%).",
                              format_size(disk_usage - compressed_size),
                              100.0 * (disk_usage - compressed_size) / apparent_size,
                              100.0 * (disk_usage - compressed_size) / disk_usage,

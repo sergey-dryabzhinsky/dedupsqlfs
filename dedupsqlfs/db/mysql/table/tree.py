@@ -223,4 +223,11 @@ class TableTree( Table ):
         self.stopTimer('get_children')
         return items
 
+
+    def getCursorForSelectNodeInodes(self, node_id):
+        cursor = self.getCursor()
+        cursor.execute("SELECT `inode_id` FROM `tree` WHERE `subvol_id`=%s", (node_id,))
+        return cursor
+
+
     pass

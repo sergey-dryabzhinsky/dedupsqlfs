@@ -2080,8 +2080,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __collect_xattrs(self): # {{{4
 
-        tableXattr = self.getTable("xattr").getCursor()
-        tableInode = self.getTable("inode").getCursor()
+        tableXattr = self.getTable("xattr")
+        tableInode = self.getTable("inode")
 
         self.getLogger().info("Clean unused xattrs...")
 

@@ -197,4 +197,17 @@ class TableInode( Table ):
         self.stopTimer('get_count')
         return item["cnt"]
 
+    def get_size_by_id_nlinks(self, inode_id):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT `size` FROM `%s` " % self.getName()+
+                    " WHERE `id`=%s AND `nlinks`>1", (inode_id,))
+        item = cur.fetchone()
+        if item:
+            item = item["size"]
+        else:
+            item = 0
+        self.stopTimer('get_size_by_id_nlinks')
+        return item
+
     pass

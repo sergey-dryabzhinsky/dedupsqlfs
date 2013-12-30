@@ -224,9 +224,25 @@ class TableTree( Table ):
         return items
 
 
+    def getCursorForSelectInodes(self):
+        cursor = self.getCursor()
+        cursor.execute("SELECT `inode_id` FROM `%s` " % self.getName())
+        return cursor
+
     def getCursorForSelectNodeInodes(self, node_id):
         cursor = self.getCursor()
-        cursor.execute("SELECT `inode_id` FROM `tree` WHERE `subvol_id`=%s", (node_id,))
+        cursor.execute(
+            "SELECT `inode_id` FROM `%s` " % self.getName()+
+            " WHERE `subvol_id`=%s", (node_id,))
+        return cursor
+
+    def getCursorForSelectCurrentSubvolInodes(self):
+        cursor = self.getCursor()
+        cursor.execute(
+            "SELECT `inode_id` FROM `%s` " % self.getName()+
+            " WHERE `subvol_id`=%s OR `id`=%s",
+            (self.getSelectedSubvolume(), self.getSelectedSubvolume(),)
+        )
         return cursor
 
 

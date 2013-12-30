@@ -943,18 +943,15 @@ class DedupOperations(llfuse.Operations): # {{{1
     def getDataSize(self, use_subvol=True, unique=False):
         manager = self.getManager()
 
-        curTree = manager.getTable("tree").getCursor()
-
-        curInode = manager.getTable("inode").getCursor()
+        treeInode = manager.getTable("inode")
 
         indexTable = manager.getTable("inode_hash_block")
         hbsTable = manager.getTable("hash_block_size")
 
         if use_subvol:
-            subvol_id = manager.getTable("tree").getSelectedSubvolume()
-            curTree.execute("SELECT `inode_id` FROM `tree` WHERE `subvol_id`=%s OR `id`=%s", (subvol_id, subvol_id,))
+            curTree = manager.getTable("tree").getCursorForSelectCurrentSubvolInodes()
         else:
-            curTree.execute("SELECT `inode_id` FROM `tree`")
+            curTree = manager.getTable("tree").getCursorForSelectInodes()
 
         if unique:
             apparent_size = hbsTable.sum_real_size_all()
@@ -968,11 +965,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not treeItem:
                 break
 
-            curInode.execute("SELECT `size` FROM `inode` WHERE `id`=%s AND `nlinks`>1", (treeItem["inode_id"],))
-            inodeItem = curInode.fetchone()
-            if inodeItem:
-                # Add directory inode size
-                apparent_size += inodeItem["size"]
+            apparent_size += treeInode.get_size_by_id_nlinks( treeItem["inode_id"] )
 
             # Do not trust inode info - we not done block writing and writed size not changed?
             inodeHashes = tuple(item["hash_id"] for item in indexTable.get_hashes_by_inode( treeItem["inode_id"] ))

@@ -33,8 +33,9 @@ class CacheTTLseconds(object):
         val = self._values.get(key, default)
         now = time()
 
-        # update time
-        self._keys[ key ] = now
+        # update time only if value was set
+        if key in self._keys:
+            self._keys[ key ] = now
 
         return val
 

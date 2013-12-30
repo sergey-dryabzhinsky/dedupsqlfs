@@ -41,14 +41,6 @@ except ImportError as e:
     sys.exit(1)
 
 
-def get_db_manager(options):
-    from dedupsqlfs.db.sqlite.manager import DbManager
-    manager = DbManager(options.name, options.data)
-    manager.setSynchronous(options.synchronous)
-    manager.setAutocommit(not options.use_transactions)
-    return manager
-
-
 def create_subvolume(options, _fuse):
     """
     @param options: Commandline options

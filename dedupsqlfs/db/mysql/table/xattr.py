@@ -96,7 +96,7 @@ class TableInodeXattr( Table ):
     def get_count(self):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT COUNT(`inode_id`) as `cnt` FROM `%s`" % self.getName())
+        cur.execute("SELECT COUNT(1) as `cnt` FROM `%s`" % self.getName())
         item = cur.fetchone()
         if item:
             item = item["cnt"]

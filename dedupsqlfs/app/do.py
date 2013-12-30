@@ -35,19 +35,11 @@ try:
     import hashlib
     import logging
     from dedupsqlfs.lib import constants
+    from dedupsqlfs.db import check_engines
 except ImportError as e:
     msg = "Error: Failed to load one of the required Python modules! (%s)\n"
     sys.stderr.write(msg % str(e))
     sys.exit(1)
-
-
-def get_db_manager(options):
-    from dedupsqlfs.db.manager import DbManager
-    manager = DbManager(options.name, options.data)
-    manager.setSynchronous(options.synchronous)
-    manager.setAutocommit(not options.use_transactions)
-    return manager
-
 
 def create_subvolume(options, _fuse):
     """
@@ -281,56 +273,71 @@ def do(options, compression_methods=None):
     from dedupsqlfs.fuse.operations import DedupOperations
 
 
-    ops = DedupOperations()
-    _fuse = DedupFS(
-        ops, "",
-        options,
-        use_ino=True, default_permissions=True, fsname="dedupsqlfs")
+    ops = None
+    try:
+        ops = DedupOperations()
+        _fuse = DedupFS(
+            ops, "",
+            options,
+            use_ino=True, default_permissions=True, fsname="dedupsqlfs")
 
-    _fuse.saveCompressionMethods(compression_methods)
+        basePath = os.path.expanduser(_fuse.getOption("data"))
+        if os.path.exists(basePath):
+            _fuse.setOption("storage_engine", "auto")
 
-    for modname in compression_methods:
-        _fuse.appendCompression(modname)
+        _fuse.saveCompressionMethods(compression_methods)
 
-    # Actions
+        for modname in compression_methods:
+            _fuse.appendCompression(modname)
 
-    if options.subvol_create:
-        return create_subvolume(options, _fuse)
+        # Actions
 
-    if options.subvol_list:
-        return list_subvolume(options, _fuse)
+        if options.subvol_create:
+            return create_subvolume(options, _fuse)
 
-    if options.subvol_remove:
-        return remove_subvolume(options, _fuse)
+        if options.subvol_list:
+            return list_subvolume(options, _fuse)
 
-    if options.subvol_stats:
-        return print_subvol_stats(options, _fuse)
+        if options.subvol_remove:
+            return remove_subvolume(options, _fuse)
 
-    if options.snapshot_create:
-        return create_snapshot(options, _fuse)
+        if options.subvol_stats:
+            return print_subvol_stats(options, _fuse)
 
-    if options.snapshot_list:
-        return list_subvolume(options, _fuse)
+        if options.snapshot_create:
+            return create_snapshot(options, _fuse)
 
-    if options.snapshot_remove:
-        return remove_snapshot(options, _fuse)
+        if options.snapshot_list:
+            return list_subvolume(options, _fuse)
 
-    if options.snapshot_remove_older:
-        return remove_snapshot_older(options, _fuse)
+        if options.snapshot_remove:
+            return remove_snapshot(options, _fuse)
 
-    if options.snapshot_stats:
-        return print_snapshot_stats(options, _fuse)
+        if options.snapshot_remove_older:
+            return remove_snapshot_older(options, _fuse)
 
-    if options.vacuum:
-        return data_vacuum(options, _fuse)
+        if options.snapshot_stats:
+            return print_snapshot_stats(options, _fuse)
 
-    if options.defragment:
-        return data_defragment(options, _fuse)
+        if options.vacuum:
+            return data_vacuum(options, _fuse)
 
-    if options.print_stats:
-        return print_fs_stats(options, _fuse)
+        if options.defragment:
+            return data_defragment(options, _fuse)
 
-    return 0
+        if options.print_stats:
+            return print_fs_stats(options, _fuse)
+
+        ret = 0
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        ret = 1
+
+    if ops:
+        ops.getManager().close()
+
+    return ret
 
 def main(): # {{{1
     """
@@ -361,6 +368,10 @@ def main(): # {{{1
 
     generic.add_argument('--memory-limit', dest='memory_limit', action='store_true', help="Use some lower values for less memory consumption.")
 
+    engines, msg = check_engines()
+    if not engines:
+        logger.error("No storage engines available! Please install sqlite or pymysql python module!")
+        return 1
 
     data = parser.add_argument_group('Data')
     data.add_argument('--print-stats', dest='print_stats', action='store_true', help="print the total apparent size and the actual disk usage of the file system and exit")

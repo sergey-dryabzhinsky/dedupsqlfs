@@ -8,7 +8,7 @@ import os
 # Too slow =(
 # import inspect
 
-from dedupsqlfs.db import dict_factory
+from dedupsqlfs.db.sqlite import dict_factory
 
 class Table( object ):
 
@@ -120,7 +120,7 @@ class Table( object ):
         conn.row_factory = dict_factory
         conn.text_factory = bytes
 
-        conn.execute('PRAGMA locking_mode=EXCLUSIVE')
+        conn.execute('PRAGMA locking_mode=NORMAL')
         if not self.getManager().getSynchronous():
             conn.execute("PRAGMA synchronous=OFF")
 
@@ -148,11 +148,12 @@ class Table( object ):
         return self._conn
 
     def getCursor(self, new=False):
+        cur = self._curr
         if new:
-            return self.getConnection().cursor()
+            cur = self.getConnection().cursor()
         if not self._curr:
-            self._curr = self.getConnection().cursor()
-        return self._curr
+            cur = self._curr = self.getConnection().cursor()
+        return cur
 
     def getPageSize(self):
         result = self.getConnection().execute('PRAGMA page_size').fetchone()

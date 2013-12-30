@@ -35,3 +35,7 @@ try:
     sys.exit( main( ) )
 except KeyboardInterrupt:
     raise SystemExit
+except Exception as e:
+    print(e)
+    import traceback
+    traceback.print_exc()

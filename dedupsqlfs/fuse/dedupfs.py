@@ -103,6 +103,20 @@ class DedupFS(object): # {{{1
     def isReadonly(self):
         return self._readonly
 
+    def hasFsStorageOnPath(self, basePath):
+        has = True
+        from dedupsqlfs.db.sqlite.manager import DbManager as SqliteManager
+        manager = SqliteManager(dbname=self.getOption("name"))
+        manager.setBasepath(basePath)
+        if not manager.isSupportedStorage():
+            from dedupsqlfs.db.mysql.manager import DbManager as MysqlManager
+            manager = MysqlManager(dbname=self.getOption("name"))
+            manager.setBasepath(os.path.expanduser(self.getOption("data")))
+            if not manager.isSupportedStorage():
+                has = False
+        return has
+
+
     def appendCompression(self, name):
         if name == "none":
             from dedupsqlfs.compression.none import NoneCompression
@@ -231,65 +245,89 @@ class DedupFS(object): # {{{1
         indexTable = manager.getTable("inode_hash_block")
         hbsTable = manager.getTable("hash_block_size")
 
-        apparent_size = self.operations.getApparentSize(False)
+        apparent_size, compressed_size = self.operations.getDataSize(use_subvol=False)
+        apparent_size_u, compressed_size_u = self.operations.getDataSize(use_subvol=False, unique=True)
 
         self.getLogger().info("--" * 79)
 
+        #print("disk_usage: %r" % disk_usage)
+        #print("apparent_size: %r" % apparent_size)
+
         if apparent_size:
-            self.getLogger().info("Apparent size is %s.",
-                             format_size(apparent_size)
+            self.getLogger().info("Apparent size is %s (unique %s).",
+                             format_size(apparent_size), format_size(apparent_size_u)
             )
             self.getLogger().info("Databases take up %s (ratio is %.2f%%).",
                              format_size(disk_usage),
-                             100.0 * disk_usage / apparent_size
+                             100.0 * disk_usage / apparent_size_u)
+            self.getLogger().info("Compressed data take up %s (unique %s, ratioA is %.2f%%, ratioD is %.2f%%).",
+                             format_size(compressed_size), format_size(compressed_size_u),
+                             100.0 * (apparent_size - compressed_size) / apparent_size,
+                             100.0 * compressed_size_u / disk_usage,
+            )
+            self.getLogger().info("Meta data and indexes take up %s (ratioA is %.2f%%, rationD is %.2f%%).",
+                             format_size(disk_usage - compressed_size_u),
+                             100.0 * (disk_usage - compressed_size_u) / apparent_size_u,
+                             100.0 * (disk_usage - compressed_size_u) / disk_usage,
             )
 
             curIndex = indexTable.getCursor()
 
-            curIndex.execute("SELECT COUNT(hash_id) AS cnt,hash_id FROM `inode_hash_block` GROUP BY hash_id")
+            curIndex.execute("SELECT COUNT(`hash_id`) AS `cnt`, `hash_id` FROM `inode_hash_block` GROUP BY `hash_id`")
 
             dedup_size = 0
             while True:
-                indexItem = curIndex.fetchone()
-                if not indexItem:
+                indexItems = curIndex.fetchmany(1024)
+                if not indexItems:
                     break
-                if indexItem["cnt"] > 1:
-                    hashBS = hbsTable.get(indexItem["hash_id"])
-                    dedup_size += (indexItem["cnt"]-1) * hashBS["real_size"]
+
+                hids = ()
+                cnts = {}
+                for item in indexItems:
+                    if item["cnt"] > 1:
+                        hids += (item["hash_id"],)
+                        cnts[ item["hash_id"] ] = item["cnt"]-1
+
+                if hids:
+                    rsizes = hbsTable.get_real_sizes(hids)
+                    for item in rsizes:
+                        cnt = cnts[ item["hash_id"] ]
+                        dedup_size += cnt * item["real_size"]
 
             self.getLogger().info("Deduped size is %s (ratio is %.2f%%).",
                              format_size(dedup_size),
                              100.0 * dedup_size / apparent_size)
-            self.getLogger().info("Compressed size is %s (ratio is %.2f%%).",
-                             format_size(apparent_size - dedup_size),
-                             100.0 - 100.0 * disk_usage / (apparent_size - dedup_size))
         else:
             self.getLogger().info("Apparent size is %s.",
                              format_size(apparent_size)
+            )
+            self.getLogger().info("Compressed size is %s.",
+                             format_size(compressed_size)
             )
             self.getLogger().info("Databases take up %s.",
                              format_size(disk_usage)
             )
 
-        self.getLogger().info("--" * 79)
-        self.getLogger().info("Compression by types:")
-        count_all = 0
-        comp_types = {}
+        if compressed_size:
+            self.getLogger().info("--" * 79)
+            self.getLogger().info("Compression by types:")
+            count_all = 0
+            comp_types = {}
 
-        hctTable = manager.getTable("hash_compression_type")
+            hctTable = manager.getTable("hash_compression_type")
 
-        for item in hctTable.count_compression_type():
-            count_all += item["cnt"]
-            comp_types[ item["cnt"] ] = self.operations.getCompressionTypeName( item["compression_type_id"] )
+            for item in hctTable.count_compression_type():
+                count_all += item["cnt"]
+                comp_types[ item["cnt"] ] = self.operations.getCompressionTypeName( item["type_id"] )
 
-        keys = list(comp_types.keys())
-        keys.sort(reverse=True)
+            keys = list(comp_types.keys())
+            keys.sort(reverse=True)
 
-        for key in keys:
-            compression = comp_types[key]
-            self.getLogger().info(" %8s used by %.2f%% blocks",
-                compression, 100.0 * key / count_all
-            )
+            for key in keys:
+                compression = comp_types[key]
+                self.getLogger().info(" %8s used by %.2f%% blocks",
+                    compression, 100.0 * key / count_all
+                )
 
         return
 

@@ -2,17 +2,25 @@
 #
 # Misc DB functions
 #
-
 __author__ = 'sergey'
 
-def dict_factory(cursor, row):
-    d = {}
-    for idx, col in enumerate(cursor.description):
-        d[col[0]] = row[idx]
-    return d
+def check_engines():
+    engines = ()
+    try:
+        import sqlite3
+        engines += ('sqlite',)
+    except:
+        pass
+    try:
+        import pymysql
+        engines += ('mysql',)
+    except:
+        pass
 
-def tuple_factory(cursor, row):
-    t = ()
-    for idx, col in enumerate(cursor.description):
-        t += (row[idx],)
-    return t
+    msg = ""
+    if engines:
+        msg = "Use selected storage engine. One of "+",".join(engines)+". Default is "+engines[0]+"."
+        if 'sqlite' in engines:
+            msg += " Note: 'sqlite' use less disk space, but work slowly on large data."
+
+    return engines, msg

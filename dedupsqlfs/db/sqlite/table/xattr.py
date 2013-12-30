@@ -4,7 +4,7 @@ __author__ = 'sergey'
 
 import sqlite3
 import pickle
-from dedupsqlfs.db.table import Table
+from dedupsqlfs.db.sqlite.table import Table
 
 class TableInodeXattr( Table ):
 
@@ -15,7 +15,7 @@ class TableInodeXattr( Table ):
 
         # Create table
         c.execute(
-            "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
+            "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "inode_id INTEGER PRIMARY KEY, "+
                 "data BLOB NOT NULL"+
             ");"
@@ -34,7 +34,7 @@ class TableInodeXattr( Table ):
             bvalues = sqlite3.Binary(pickle.dumps(values))
         else:
             bvalues = values
-        cur.execute("INSERT INTO `%s`(inode_id, data) VALUES (?, ?)" % self._table_name, (
+        cur.execute("INSERT INTO `%s`(inode_id, data) VALUES (?, ?)" % self.getName(), (
             inode, bvalues
         ))
 
@@ -52,7 +52,7 @@ class TableInodeXattr( Table ):
 
         bvalues = sqlite3.Binary(pickle.dumps(values))
 
-        cur.execute("UPDATE `%s` SET `data`=? WHERE `inode_id`=?" % self._table_name, (
+        cur.execute("UPDATE `%s` SET `data`=? WHERE `inode_id`=?" % self.getName(), (
             bvalues, inode,
         ))
         item = cur.rowcount
@@ -66,7 +66,7 @@ class TableInodeXattr( Table ):
         """
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT `data` FROM `%s` WHERE `inode_id`=?" % self._table_name, (
+        cur.execute("SELECT `data` FROM `%s` WHERE `inode_id`=?" % self.getName(), (
             inode,
         ))
         item = cur.fetchone()
@@ -74,5 +74,38 @@ class TableInodeXattr( Table ):
             item = pickle.loads(item["data"])
         self.stopTimer('find_by_inode')
         return item
+
+    def get_count(self):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT COUNT(1) as `cnt` FROM `%s`" % self.getName())
+        item = cur.fetchone()
+        if item:
+            item = item["cnt"]
+        else:
+            item = 0
+        self.stopTimer('get_count')
+        return item
+
+    def get_inode_ids(self, start_id, end_id):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT `inode_id` FROM `%s` " % self.getName()+
+                    " WHERE `inode_id`>=? AND `inode_id`<?", (start_id, end_id,))
+        nameIds = tuple(str(item["inode_id"]) for item in iter(cur.fetchone,None))
+        self.stopTimer('get_inode_ids')
+        return nameIds
+
+    def remove_by_ids(self, inode_ids):
+        self.startTimer()
+        count = 0
+        id_str = ",".join(inode_ids)
+        if id_str:
+            cur = self.getCursor()
+            cur.execute("DELETE FROM `%s` WHERE `inode_id` IN (%s)" % (self.getName(), id_str,))
+            count = cur.rowcount
+        self.stopTimer('remove_by_ids')
+        return count
+
 
     pass

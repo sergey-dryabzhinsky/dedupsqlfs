@@ -2,7 +2,7 @@
 
 __author__ = 'sergey'
 
-from dedupsqlfs.db.table import Table
+from dedupsqlfs.db.mysql.table import Table
 
 class TableOption( Table ):
 
@@ -13,17 +13,25 @@ class TableOption( Table ):
 
         # Create table
         c.execute(
-            "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
-                "name TEXT NOT NULL PRIMARY KEY, "+
-                "value TEXT NULL"+
-            ")"
+            "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
+                "`name` VARCHAR(64) NOT NULL PRIMARY KEY, "+
+                "`value` TEXT NULL"+
+            ")" +
+            self._getCreationAppendString()
         )
         return
 
     def insert( self, name, value ):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("INSERT INTO `%s`(name, value) VALUES (?, ?)" % self._table_name, (name, value))
+        cur.execute(
+            "INSERT INTO `%s` " % self.getName()+
+            "(`name`, `value`) VALUES (%(name)s, %(value)s)",
+            {
+                "name": name,
+                "value": value
+            }
+        )
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
@@ -35,7 +43,14 @@ class TableOption( Table ):
         """
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("UPDATE `%s` SET value=? WHERE name=?" % self._table_name, (value, name))
+        cur.execute(
+            "UPDATE `%s` " % self.getName()+
+            " SET `value`=%(value)s WHERE `name`=%(name)s",
+            {
+                "value": value,
+                "name": name
+            }
+        )
         count = cur.rowcount
         self.stopTimer('update')
         return count
@@ -43,12 +58,16 @@ class TableOption( Table ):
     def get( self, name ):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT value FROM `%s` WHERE name=:name" % self._table_name,
-                {"name": name}
+        cur.execute(
+            "SELECT `value` FROM `%s` " % self.getName()+
+            " WHERE `name`=%(name)s",
+            {
+                "name": name
+            }
         )
         item = cur.fetchone()
         if item:
-            item = item["value"].decode()
+            item = item["value"]
         self.stopTimer('get')
         return item
 
@@ -59,7 +78,7 @@ class TableOption( Table ):
         items = cur.fetchall()
         opts = {}
         for item in items:
-            opts[ item["name"].decode() ] = item["value"].decode()
+            opts[ item["name"] ] = item["value"]
         self.stopTimer('getAll')
         return opts
 

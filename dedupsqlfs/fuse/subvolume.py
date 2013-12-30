@@ -193,8 +193,7 @@ class Subvolume(object):
             hashCT = {}
             hashBS = {}
 
-            curTree = tableTree.getCursor()
-            curTree.execute("SELECT inode_id FROM tree WHERE subvol_id=?", (node['id'],))
+            curTree = tableTree.getCursorForSelectNodeInodes(node['id'])
 
             tableIndex = self.getTable('inode_hash_block')
             tableHCT = self.getTable('hash_compression_type')
@@ -221,7 +220,7 @@ class Subvolume(object):
                         method = hashCT[hash_id]
                     else:
                         hctItem = tableHCT.get(hash_id)
-                        method = self.getManager().getCompressionTypeName(hctItem["compression_type_id"])
+                        method = self.getManager().getCompressionTypeName(hctItem["type_id"])
                         hashCT[hash_id] = method
 
                     compMethods[ method ] = compMethods.get(method, 0) + 1

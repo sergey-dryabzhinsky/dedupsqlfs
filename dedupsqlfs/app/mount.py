@@ -74,8 +74,8 @@ def main(): # {{{1
 
     parser.add_argument('--memory-limit', dest='memory_limit', action='store_true', help="Use some lower values for less memory consumption.")
 
-    parser.add_argument('--storage-engine', dest='storage_engine', metavar='ENGINE', choices=('sqlite', 'mysql'), default='mysql',
-                        help="Use selected storage engine. One of 'sqlite', 'mysql'. Default is 'mysql'. Note: 'sqlite' use less disk space, but work slowly on large data.")
+    parser.add_argument('--storage-engine', dest='storage_engine', metavar='ENGINE', choices=('sqlite', 'mysql'), default='sqlite',
+                        help="Use selected storage engine. One of 'sqlite', 'mysql'. Default is 'sqlite'. Note: 'sqlite' use less disk space, but work slowly on large data.")
 
     parser.add_argument('--no-cache', dest='use_cache', action='store_false', help="Don't use cache in memory and delayed write to storage files.")
     parser.add_argument('--cache-meta-timeout', dest='cache_meta_timeout', metavar='NUMBER', type=int, default=20, help="Delay flush expired metadata for NUMBER of seconds. Defaults to 20 seconds.")

@@ -216,4 +216,18 @@ class TableInode( Table ):
         self.stopTimer('remove_by_ids')
         return count
 
+    def get_inodes_by_inodes(self, inode_ids):
+        self.startTimer()
+
+        iids = ()
+        id_str = ",".join(inode_ids)
+        if id_str:
+            cur = self.getCursor()
+            cur.execute("SELECT `id` FROM `%s` " % self.getName()+
+                            " WHERE `id` IN (%s)" % (id_str,))
+            iids = tuple(str(item["id"]) for item in cur.fetchall())
+
+        self.stopTimer('get_inodes_by_inodes')
+        return iids
+
     pass

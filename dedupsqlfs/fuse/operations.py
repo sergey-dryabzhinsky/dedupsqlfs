@@ -1983,7 +1983,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.getLogger().info("Clean unused path segments...")
 
-        countNames = tableName.get_names_count()
+        countNames = tableName.get_count()
         self.getLogger().info(" path segments: %d" % countNames)
 
         count = 0
@@ -2081,14 +2081,14 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __collect_xattrs(self): # {{{4
         curInode = self.getTable("inode").getCursor()
-        curXattr = self.getTable("xattr").getCursor()
         curXattr2 = self.getTable("xattr").getCursor(True)
+
+        tableXattr = self.getTable("xattr").getCursor()
+        tableInode = self.getTable("inode").getCursor()
 
         self.getLogger().info("Clean unused xattrs...")
 
-        curXattr.execute("SELECT COUNT(`inode_id`) as `cnt` FROM `xattr`")
-
-        countXattrs = curXattr.fetchone()["cnt"]
+        countXattrs = tableXattr.get_count()
         self.getLogger().info(" xattrs: %d" % countXattrs)
 
         count = 0
@@ -2103,27 +2103,21 @@ class DedupOperations(llfuse.Operations): # {{{1
             if current == countXattrs:
                 break
 
-            curXattr.execute("SELECT `inode_id` FROM `xattr` WHERE `inode_id`>=%s AND `inode_id`<%s", (curBlock, curBlock+maxCnt))
-
-            inodeIds = tuple("%s" % xattrItem["inode_id"] for xattrItem in curXattr.fetchmany(maxCnt))
+            inodeIds = tableXattr.get_inode_ids(curBlock, curBlock+maxCnt)
             current += len(inodeIds)
 
             curBlock += maxCnt
             if not inodeIds:
                 continue
 
-            curInode.execute("SELECT `id` FROM `inode` WHERE `id` IN (%s)" % (",".join(inodeIds),))
-            xattrInodes = curInode.fetchall()
-            xattrInodeIds = tuple("%s" % inodeItem["id"] for inodeItem in xattrInodes)
+            xattrInodeIds = tableInode.get_inodes_by_inodes(inodeIds)
 
             to_delete = ()
             for inode_id in inodeIds:
                 if inode_id not in xattrInodeIds:
                     to_delete += (inode_id,)
 
-            if to_delete:
-                curXattr2.execute("DELETE FROM `xattr` WHERE `inode_id` IN (%s)" % (",".join(to_delete),))
-                count += curXattr2.rowcount
+            count += tableXattr.remove_by_ids(to_delete)
 
             p = "%6.2f%%" % (100.0 * current / countXattrs)
             if p != proc:

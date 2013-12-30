@@ -79,7 +79,7 @@ class TableName( Table ):
         self.stopTimer('get')
         return item
 
-    def get_names_count(self):
+    def get_count(self):
         self.startTimer()
         cur = self.getCursor()
         cur.execute("SELECT COUNT(`id`) as `cnt` FROM `%s`" % self.getName())
@@ -88,7 +88,7 @@ class TableName( Table ):
             item = item["cnt"]
         else:
             item = 0
-        self.stopTimer('get_names_count')
+        self.stopTimer('get_count')
         return item
 
     def get_name_ids(self, start_id, end_id):

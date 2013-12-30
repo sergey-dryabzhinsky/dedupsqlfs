@@ -104,7 +104,7 @@ class TableName( Table ):
         id_str = ",".join(name_ids)
         if id_str:
             cur = self.getCursor()
-            cur.execute("DELETE FROM `name` WHERE `id` IN (%s)" % (id_str,))
+            cur.execute("DELETE FROM `%s` WHERE `id` IN (%s)" % (self.getName(), id_str,))
             count = cur.rowcount
         self.stopTimer('remove_by_ids')
         return count

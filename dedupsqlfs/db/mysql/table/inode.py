@@ -89,21 +89,6 @@ class TableInode( Table ):
         self.stopTimer('update_data')
         return item
 
-    def set_size(self, inode, size):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute(
-            "UPDATE `%s` " % self.getName()+
-            " SET `size`=%(size)s WHERE `id`=%(id)s",
-            {
-                "size": size,
-                "id": inode
-            }
-        )
-        count = cur.rowcount
-        self.stopTimer('set_size')
-        return count
-
     def get(self, inode):
         self.startTimer()
         cur = self.getCursor()
@@ -209,5 +194,26 @@ class TableInode( Table ):
             item = 0
         self.stopTimer('get_size_by_id_nlinks')
         return item
+
+    def get_inode_ids(self, start_id, end_id):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT `id` FROM `%s` " % self.getName()+
+                    " WHERE `id`>=%s AND `id`<%s", (start_id, end_id,))
+        nameIds = tuple(str(item["id"]) for item in cur.fetchall())
+        self.stopTimer('get_inode_ids')
+        return nameIds
+
+    def remove_by_ids(self, inode_ids):
+        self.startTimer()
+        count = 0
+        id_str = ",".join(inode_ids)
+        if id_str:
+            cur = self.getCursor()
+            cur.execute("DELETE FROM `%s` " % self.getName()+
+                        " WHERE `id` IN (%s)" % (id_str,))
+            count = cur.rowcount
+        self.stopTimer('remove_by_ids')
+        return count
 
     pass

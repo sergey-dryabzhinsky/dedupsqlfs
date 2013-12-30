@@ -459,10 +459,18 @@ class DedupOperations(llfuse.Operations): # {{{1
         treeTable = self.getTable("tree")
         inodeTable = self.getTable("inode")
 
+        attr = self.__get_inode_row(inode)
+
         treeTable.insert(parent_node["id"], string_id, inode)
         inodeTable.inc_nlinks(inode)
-        if inodeTable.get_mode(inode) & stat.S_IFDIR:
+        attr["nlinks"] += 1
+        self.cached_attrs.set(inode, attr)
+
+        if attr["mode"] & stat.S_IFDIR:
+            attr = self.__get_inode_row(parent_node["inode_id"])
             inodeTable.inc_nlinks(parent_node["inode_id"])
+            attr["nlinks"] += 1
+            self.cached_attrs.set(parent_node["inode_id"], attr)
 
         self.__cache_meta_hook()
 
@@ -1430,7 +1438,9 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         # Inodes with nlinks = 0 are purged periodically from __collect_garbage() so
         # we don't have to do that here.
-        if inodeTable.get_mode(cur_node["inode_id"]) & stat.S_IFDIR:
+        attr = self.__get_inode_row(cur_node["inode_id"])
+
+        if attr["mode"] & stat.S_IFDIR:
             par_node = self.__get_tree_node_by_inode(parent_inode)
             inodeTable.dec_nlinks(par_node["inode_id"])
             self.cached_attrs.unset(parent_inode)
@@ -2018,15 +2028,14 @@ class DedupOperations(llfuse.Operations): # {{{1
         return
 
     def __collect_inodes_all(self): # {{{4
-        curTree = self.getTable("tree").getCursor()
-        curInode = self.getTable("inode").getCursor()
         curInode2 = self.getTable("inode").getCursor(True)
+
+        tableInode = self.getTable("inode")
+        tableTree = self.getTable("tree")
 
         self.getLogger().info("Clean unused inodes (all)...")
 
-        curInode.execute("SELECT COUNT(`id`) as `cnt` FROM `inode`")
-
-        countInodes = curInode.fetchone()["cnt"]
+        countInodes = tableInode.get_count()
         self.getLogger().info(" inodes: %d" % countInodes)
 
         count = 0
@@ -2041,27 +2050,21 @@ class DedupOperations(llfuse.Operations): # {{{1
             if current == countInodes:
                 break
 
-            curInode.execute("SELECT `id` FROM `inode` WHERE `id`>=%s AND `id`<%s", (curBlock, curBlock+maxCnt))
-
-            inodeIds = tuple("%s" % inodeItem["id"] for inodeItem in curInode.fetchmany(maxCnt))
+            inodeIds = tableInode.get_inode_ids(curBlock, curBlock+maxCnt)
             current += len(inodeIds)
 
             curBlock += maxCnt
             if not inodeIds:
                 continue
 
-            curTree.execute("SELECT `inode_id` FROM `tree` WHERE `inode_id` IN (%s)" % (",".join(inodeIds),))
-            treeInodes = curTree.fetchall()
-            treeInodeIds = tuple("%s" % inodeItem["inode_id"] for inodeItem in treeInodes)
+            treeInodeIds = tableTree.get_inodes_by_inodes(inodeIds)
 
             to_delete = ()
             for inode_id in inodeIds:
                 if inode_id not in treeInodeIds:
                     to_delete += (inode_id,)
 
-            if to_delete:
-                curInode2.execute("DELETE FROM `inode` WHERE `id` IN (%s)" % (",".join(to_delete),))
-                count += curInode2.rowcount
+            count += tableInode.remove_by_ids(to_delete)
 
             p = "%6.2f%%" % (100.0 * current / countInodes)
             if p != proc:

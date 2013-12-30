@@ -259,4 +259,18 @@ class TableTree( Table ):
         self.stopTimer('get_names_by_names')
         return nids
 
+    def get_inodes_by_inodes(self, inode_ids):
+        self.startTimer()
+
+        iids = ()
+        id_str = ",".join(inode_ids)
+        if id_str:
+            cur = self.getCursor()
+            cur.execute("SELECT `inode_id` FROM `%s` " % self.getName()+
+                            " WHERE `inode_id` IN (%s)" % (id_str,))
+            iids = tuple(str(item["inode_id"]) for item in cur.fetchall())
+
+        self.stopTimer('get_inodes_by_inodes')
+        return iids
+
     pass

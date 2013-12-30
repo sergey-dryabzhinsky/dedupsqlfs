@@ -77,4 +77,36 @@ class TableName( Table ):
         self.stopTimer('get')
         return item
 
+    def get_names_count(self):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT COUNT(`id`) as `cnt` FROM `%s`" % self.getName())
+        item = cur.fetchone()
+        if item:
+            item = item["cnt"]
+        else:
+            item = 0
+        self.stopTimer('get_names_count')
+        return item
+
+    def get_name_ids(self, start_id, end_id):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT `id` FROM `%s` " % self.getName()+
+                    " WHERE `id`>=? AND `id`<?", (start_id, end_id,))
+        nameIds = tuple(str(item["id"]) for item in cur.fetchall())
+        self.stopTimer('get_name_ids')
+        return nameIds
+
+    def remove_by_ids(self, name_ids):
+        self.startTimer()
+        count = 0
+        id_str = ",".join(name_ids)
+        if id_str:
+            cur = self.getCursor()
+            cur.execute("DELETE FROM `name` WHERE `id` IN (%s)" % (id_str,))
+            count = cur.rowcount
+        self.stopTimer('remove_by_ids')
+        return count
+
     pass

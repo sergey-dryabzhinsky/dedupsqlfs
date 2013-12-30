@@ -1368,7 +1368,6 @@ class DedupOperations(llfuse.Operations): # {{{1
         nlinks = mode & stat.S_IFDIR and 2 or 1
 
         manager = self.getManager()
-        nameTable = manager.getTable("name")
         inodeTable = manager.getTable("inode")
         treeTable = manager.getTable("tree")
 
@@ -1968,15 +1967,13 @@ class DedupOperations(llfuse.Operations): # {{{1
         return
 
     def __collect_strings(self): # {{{4
-        curTree = self.getTable("tree").getCursor()
-        curName = self.getTable("name").getCursor()
-        curName2 = self.getTable("name").getCursor(True)
+
+        tableName = self.getTable("name")
+        tableTree = self.getTable("tree")
 
         self.getLogger().info("Clean unused path segments...")
 
-        curName.execute("SELECT COUNT(`id`) as `cnt` FROM `name`")
-
-        countNames = curName.fetchone()["cnt"]
+        countNames = tableName.get_names_count()
         self.getLogger().info(" path segments: %d" % countNames)
 
         count = 0
@@ -1991,27 +1988,22 @@ class DedupOperations(llfuse.Operations): # {{{1
             if current == countNames:
                 break
 
-            curName.execute("SELECT `id` FROM `name` WHERE `id`>=%s AND `id`<%s", (curBlock, curBlock+maxCnt))
+            nameIds = tableName.get_name_ids( curBlock, curBlock+maxCnt )
 
-            nameIds = tuple("%s" % nameItem["id"] for nameItem in curName.fetchmany(maxCnt))
             current += len(nameIds)
 
             curBlock += maxCnt
             if not nameIds:
                 continue
 
-            curTree.execute("SELECT `name_id` FROM `tree` WHERE `name_id` IN (%s)" % (",".join(nameIds),))
-            treeNames = curTree.fetchall()
-            treeNameIds = tuple("%s" % nameItem["name_id"] for nameItem in treeNames)
+            treeNameIds = tableTree.get_names_by_names(nameIds)
 
             to_delete = ()
             for name_id in nameIds:
                 if name_id not in treeNameIds:
                     to_delete += (name_id,)
 
-            if to_delete:
-                curName2.execute("DELETE FROM `name` WHERE `id` IN (%s)" % (",".join(to_delete),))
-                count += curName2.rowcount
+            count += tableName.remove_by_ids(to_delete)
 
             p = "%6.2f%%" % (100.0 * current / countNames)
             if p != proc:

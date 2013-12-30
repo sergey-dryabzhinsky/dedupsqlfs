@@ -189,5 +189,18 @@ class TableTree( Table ):
         )
         return cursor
 
+    def get_names_by_names(self, name_ids):
+        self.startTimer()
+
+        nids = ()
+        id_str = ",".join(name_ids)
+        if id_str:
+            cur = self.getCursor()
+            cur.execute("SELECT `name_id` FROM `%s` " % self.getName()+
+                            " WHERE `name_id` IN (%s)" % (id_str,))
+            nids = tuple(str(item["name_id"]) for item in cur.fetchall())
+
+        self.stopTimer('get_names_by_names')
+        return nids
 
     pass

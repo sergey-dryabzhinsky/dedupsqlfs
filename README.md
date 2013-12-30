@@ -41,6 +41,7 @@ The file system initially stored everything in a multiple [SQLite](http://www.sq
  * Use "stream"-like writes and read of data blocks, don't store complete files in memory.
  * Cached filesystem tree nodes, inodes and data blocks.
  * New compression methods (some ported for python3): lzo (ported), lz4 (ported), lzma, snappy.
+ * Support for data storage in localy started MySQL server.
 
 ### Limitations
 
@@ -49,6 +50,14 @@ In the current implementation a file's content DON'T needs to fit in a [cStringI
  drop caches more friquently, on massive reads.
 
 And there is limit of SQLite database size: about 2 TB with default settings of pages_count (2**31) * page_size (1024).
+
+Note: dynamic subvolume and snapshot creation available only with MySQL storage enagine.
+ SQLite is keeping database locked.
+ Thou dynamic working subvolume switching not available.
+ For now MySQL table engine hardcoded to MyISAM - it's fast and not bloated. InnoDB working strange
+ - I get about twice sized database: 2.8Gb data + ~1.6Gb something with indexes, while MyISAM working predictable:
+ 2.8Gb data + ~100Mb indexes.
+ MariaDB's Aria working slowly than MyISAM - doing too much logging...
 
 ## Dependencies
 

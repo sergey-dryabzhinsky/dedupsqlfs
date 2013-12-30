@@ -64,6 +64,9 @@ Additional compression modules can be builded with commands:
     $ python3 setup.py build
     # ... same for lz4, snappy
 
+Additional storage engine via MySQL can be accessed with commands:
+    $ suto pip install pymysql
+
 ## Contact
 
 If you have questions, bug reports, suggestions, etc. the author can be contacted at <sergey.dryabzhinsky@gmail.com> and

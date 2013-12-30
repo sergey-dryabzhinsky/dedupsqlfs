@@ -35,11 +35,11 @@ try:
     import hashlib
     import logging
     from dedupsqlfs.lib import constants
+    from dedupsqlfs.db import check_engines
 except ImportError as e:
     msg = "Error: Failed to load one of the required Python modules! (%s)\n"
     sys.stderr.write(msg % str(e))
     sys.exit(1)
-
 
 def create_subvolume(options, _fuse):
     """
@@ -367,6 +367,11 @@ def main(): # {{{1
     generic.add_argument('--verify-writes', dest='verify_writes', action='store_true', help="After writing a new data block to the database, check that the block was written correctly by reading it back again and checking for differences.")
 
     generic.add_argument('--memory-limit', dest='memory_limit', action='store_true', help="Use some lower values for less memory consumption.")
+
+    engines, msg = check_engines()
+    if not engines:
+        logger.error("No storage engines available! Please install sqlite or pymysql python module!")
+        return 1
 
     data = parser.add_argument_group('Data')
     data.add_argument('--print-stats', dest='print_stats', action='store_true', help="print the total apparent size and the actual disk usage of the file system and exit")

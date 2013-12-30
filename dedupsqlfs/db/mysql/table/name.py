@@ -96,7 +96,7 @@ class TableName( Table ):
         cur = self.getCursor()
         cur.execute("SELECT `id` FROM `%s` " % self.getName()+
                     " WHERE `id`>=%s AND `id`<%s", (start_id, end_id,))
-        nameIds = tuple(str(item["id"]) for item in cur.fetchall())
+        nameIds = tuple(str(item["id"]) for item in cur)
         self.stopTimer('get_name_ids')
         return nameIds
 
@@ -106,8 +106,7 @@ class TableName( Table ):
         id_str = ",".join(name_ids)
         if id_str:
             cur = self.getCursor()
-            cur.execute("DELETE FROM `%s` " % self.getName()+
-                        " WHERE `id` IN (%s)" % (id_str,))
+            cur.execute("DELETE FROM `%s` WHERE `id` IN (%s)" % (self.getName(), id_str,))
             count = cur.rowcount
         self.stopTimer('remove_by_ids')
         return count

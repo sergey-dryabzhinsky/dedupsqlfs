@@ -88,4 +88,37 @@ class TableHash( Table ):
         self.stopTimer('find')
         return item
 
+    def get_count(self):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT COUNT(1) as `cnt` FROM `%s`" % self.getName())
+        item = cur.fetchone()
+        if item:
+            item = item["cnt"]
+        else:
+            item = 0
+        self.stopTimer('get_count')
+        return item
+
+    def get_hash_ids(self, start_id, end_id):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT `id` FROM `%s` " % self.getName()+
+                    " WHERE `id`>=%s AND `id`<%s", (start_id, end_id,))
+        nameIds = tuple(str(item["id"]) for item in cur)
+        self.stopTimer('get_hash_ids')
+        return nameIds
+
+    def remove_by_ids(self, hash_ids):
+        self.startTimer()
+        count = 0
+        id_str = ",".join(hash_ids)
+        if id_str:
+            cur = self.getCursor()
+            cur.execute("DELETE FROM `%s` " % self.getName()+
+                        " WHERE `id` IN (%s)" % (id_str,))
+            count = cur.rowcount
+        self.stopTimer('remove_by_ids')
+        return count
+
     pass

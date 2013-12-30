@@ -14,7 +14,7 @@ class TableHash( Table ):
 
         # Create table
         c.execute(
-            "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
+            "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
                 "hash BLOB NOT NULL, "+
                 "UNIQUE(hash) " +
@@ -26,7 +26,7 @@ class TableHash( Table ):
         self.startTimer()
         cur = self.getCursor()
         bvalue = sqlite3.Binary(value)
-        cur.execute("INSERT INTO `%s`(hash) VALUES (?)" % self._table_name,
+        cur.execute("INSERT INTO `%s`(hash) VALUES (?)" % self.getName(),
                     (bvalue,))
         item = cur.lastrowid
         self.stopTimer('insert')
@@ -40,7 +40,7 @@ class TableHash( Table ):
         self.startTimer()
         cur = self.getCursor()
         bvalue = sqlite3.Binary(value)
-        cur.execute("UPDATE `%s` SET hash=? WHERE id=?" % self._table_name,
+        cur.execute("UPDATE `%s` SET hash=? WHERE id=?" % self.getName(),
                     (bvalue, item_id))
         count = cur.rowcount
         self.stopTimer('update')
@@ -49,7 +49,7 @@ class TableHash( Table ):
     def get( self, item_id ):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT hash FROM `%s` WHERE id=?" % self._table_name, (item_id,))
+        cur.execute("SELECT hash FROM `%s` WHERE id=?" % self.getName(), (item_id,))
         item = cur.fetchone()
         if item:
             item = item["hash"]
@@ -60,11 +60,44 @@ class TableHash( Table ):
         self.startTimer()
         cur = self.getCursor()
         bvalue = sqlite3.Binary(value)
-        cur.execute("SELECT id FROM `%s` WHERE hash=?" % self._table_name, (bvalue,))
+        cur.execute("SELECT id FROM `%s` WHERE hash=?" % self.getName(), (bvalue,))
         item = cur.fetchone()
         if item:
             item = item["id"]
         self.stopTimer('find')
         return item
+
+    def get_count(self):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT COUNT(1) as `cnt` FROM `%s`" % self.getName())
+        item = cur.fetchone()
+        if item:
+            item = item["cnt"]
+        else:
+            item = 0
+        self.stopTimer('get_count')
+        return item
+
+    def get_hash_ids(self, start_id, end_id):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT `id` FROM `%s` " % self.getName()+
+                    " WHERE `id`>=%s AND `id`<%s", (start_id, end_id,))
+        nameIds = tuple(str(item["id"]) for item in iter(cur.fetchone(), None))
+        self.stopTimer('get_hash_ids')
+        return nameIds
+
+    def remove_by_ids(self, hash_ids):
+        self.startTimer()
+        count = 0
+        id_str = ",".join(hash_ids)
+        if id_str:
+            cur = self.getCursor()
+            cur.execute("DELETE FROM `%s` " % self.getName()+
+                        " WHERE `id` IN (%s)" % (id_str,))
+            count = cur.rowcount
+        self.stopTimer('remove_by_ids')
+        return count
 
     pass

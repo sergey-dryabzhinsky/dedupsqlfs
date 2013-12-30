@@ -2231,16 +2231,14 @@ class DedupOperations(llfuse.Operations): # {{{1
         return
 
     def __collect_blocks(self): # {{{4
-        curHash = self.getTable("hash").getCursor()
-        curHash2 = self.getTable("hash").getCursor(True)
-        curBlock = self.getTable("block").getCursor()
-        curIndex = self.getTable("inode_hash_block").getCursor()
+
+        tableHash = self.getTable("hash")
+        tableBlock = self.getTable("block")
+        tableIndex = self.getTable("inode_hash_block")
 
         self.getLogger().info("Clean unused data blocks and hashes...")
 
-        curHash.execute("SELECT COUNT(`id`) AS `cnt` FROM `hash`")
-
-        countHashes = curHash.fetchone()["cnt"]
+        countHashes = tableHash.get_count()
         self.getLogger().info(" hashes: %d" % countHashes)
 
         count = 0
@@ -2255,28 +2253,23 @@ class DedupOperations(llfuse.Operations): # {{{1
             if current == countHashes:
                 break
 
-            curHash.execute("SELECT `id` FROM `hash` WHERE `id`>=%s AND `id`<%s", (_curBlock, _curBlock+maxCnt))
+            hashIds = tableHash.get_hash_ids(_curBlock, _curBlock+maxCnt)
 
-            hashIds = tuple("%s" % hashItem["id"] for hashItem in curHash.fetchmany(maxCnt))
             current += len(hashIds)
 
             _curBlock += maxCnt
             if not hashIds:
                 continue
 
-            curIndex.execute("SELECT `hash_id` FROM `inode_hash_block` WHERE `hash_id` IN (%s) GROUP BY `hash_id`" % (",".join(hashIds),))
-            indexHashes = curIndex.fetchall()
-            indexHashIds = tuple("%s" % hashItem["hash_id"] for hashItem in indexHashes)
+            indexHashIds = tableIndex.get_hashes_by_hashes(hashIds)
 
             to_delete = ()
             for hash_id in hashIds:
                 if hash_id not in indexHashIds:
                     to_delete += (hash_id,)
 
-            if to_delete:
-                curBlock.execute("DELETE FROM `block` WHERE `hash_id` IN (%s)" % (",".join(to_delete),))
-                curHash2.execute("DELETE FROM `hash` WHERE `id` IN (%s)" % (",".join(to_delete),))
-                count += curHash2.rowcount
+            count += tableHash.remove_by_ids(to_delete)
+            tableBlock.remove_by_ids(to_delete)
 
             p = "%6.2f%%" % (100.0 * current / countHashes)
             if p != proc:

@@ -167,7 +167,7 @@ class TableInodeHashBlock( Table ):
         cur = self.getCursor()
         cur.execute("SELECT `inode_id` FROM `%s` " % self.getName()+
                     " WHERE `inode_id`>=%s AND `inode_id`<%s", (start_id, end_id,))
-        nameIds = tuple(str(item["inode_id"]) for item in cur.fetchall())
+        nameIds = tuple(str(item["inode_id"]) for item in cur)
         self.stopTimer('get_inode_ids')
         return nameIds
 
@@ -182,5 +182,19 @@ class TableInodeHashBlock( Table ):
             count = cur.rowcount
         self.stopTimer('remove_by_inodes')
         return count
+
+    def get_hashes_by_hashes(self, hash_ids):
+        self.startTimer()
+
+        iids = ()
+        id_str = ",".join(hash_ids)
+        if id_str:
+            cur = self.getCursor()
+            cur.execute("SELECT DISTINCT `hash_id` FROM `%s` " % self.getName()+
+                            " WHERE `hash_id` IN (%s)" % (id_str,))
+            iids = tuple(str(item["hash_id"]) for item in cur)
+
+        self.stopTimer('get_hashes_by_hashes')
+        return iids
 
     pass

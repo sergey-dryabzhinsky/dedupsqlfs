@@ -254,7 +254,7 @@ class TableTree( Table ):
             cur = self.getCursor()
             cur.execute("SELECT `name_id` FROM `%s` " % self.getName()+
                             " WHERE `name_id` IN (%s)" % (id_str,))
-            nids = tuple(str(item["name_id"]) for item in cur.fetchall())
+            nids = tuple(str(item["name_id"]) for item in cur)
 
         self.stopTimer('get_names_by_names')
         return nids
@@ -268,7 +268,7 @@ class TableTree( Table ):
             cur = self.getCursor()
             cur.execute("SELECT `inode_id` FROM `%s` " % self.getName()+
                             " WHERE `inode_id` IN (%s)" % (id_str,))
-            iids = tuple(str(item["inode_id"]) for item in cur.fetchall())
+            iids = tuple(str(item["inode_id"]) for item in cur)
 
         self.stopTimer('get_inodes_by_inodes')
         return iids

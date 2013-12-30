@@ -120,7 +120,7 @@ class Table( object ):
         conn.row_factory = dict_factory
         conn.text_factory = bytes
 
-        conn.execute('PRAGMA locking_mode=EXCLUSIVE')
+        conn.execute('PRAGMA locking_mode=NORMAL')
         if not self.getManager().getSynchronous():
             conn.execute("PRAGMA synchronous=OFF")
 

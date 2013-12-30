@@ -123,9 +123,9 @@ class TableInodeHashBlock( Table ):
     def get_inode_ids(self, start_id, end_id):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT `inode_id` FROM `%s` " % self.getName()+
+        cur.execute("SELECT DISTINCT `inode_id` FROM `%s` " % self.getName()+
                     " WHERE `inode_id`>=? AND `inode_id`<?", (start_id, end_id,))
-        nameIds = tuple(str(item["inode_id"]) for item in iter(cur.fetchone(),None))
+        nameIds = tuple(str(item["inode_id"]) for item in iter(cur.fetchone,None))
         self.stopTimer('get_inode_ids')
         return nameIds
 
@@ -150,7 +150,7 @@ class TableInodeHashBlock( Table ):
             cur = self.getCursor()
             cur.execute("SELECT DISTINCT `hash_id` FROM `%s` " % self.getName()+
                             " WHERE `hash_id` IN (%s)" % (id_str,))
-            iids = tuple(str(item["hash_id"]) for item in iter(cur.fetchone(),None))
+            iids = tuple(str(item["hash_id"]) for item in iter(cur.fetchone,None))
 
         self.stopTimer('get_hashes_by_hashes')
         return iids

@@ -156,8 +156,7 @@ class TableTree( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute("SELECT inode_id FROM `%s` WHERE parent_id=?" % self.getName(), (parent_id, ))
-        _items = cur.fetchall()
-        items = ("%i" % _i["inode_id"] for _i in _items)
+        items = (str(_i["inode_id"]) for _i in iter(cur.fetchone, None))
         self.stopTimer('get_children_inodes')
         return items
 
@@ -198,9 +197,23 @@ class TableTree( Table ):
             cur = self.getCursor()
             cur.execute("SELECT `name_id` FROM `%s` " % self.getName()+
                             " WHERE `name_id` IN (%s)" % (id_str,))
-            nids = tuple(str(item["name_id"]) for item in iter(cur.fetchone(),None))
+            nids = tuple(str(item["name_id"]) for item in iter(cur.fetchone,None))
 
         self.stopTimer('get_names_by_names')
         return nids
+
+    def get_inodes_by_inodes(self, inode_ids):
+        self.startTimer()
+
+        iids = ()
+        id_str = ",".join(inode_ids)
+        if id_str:
+            cur = self.getCursor()
+            cur.execute("SELECT `inode_id` FROM `%s` " % self.getName()+
+                            " WHERE `inode_id` IN (%s)" % (id_str,))
+            iids = tuple(str(item["inode_id"]) for item in iter(cur.fetchone,None))
+
+        self.stopTimer('get_inodes_by_inodes')
+        return iids
 
     pass

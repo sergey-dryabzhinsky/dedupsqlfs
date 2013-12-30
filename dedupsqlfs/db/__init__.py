@@ -8,17 +8,19 @@ def check_engines():
     engines = ()
     try:
         import sqlite3
-        engines += ('sqlite')
+        engines += ('sqlite',)
     except:
         pass
     try:
         import pymysql
-        engines += ('mysql')
+        engines += ('mysql',)
     except:
         pass
 
-    msg = "Use selected storage engine. One of "+",".join(engines)+". Default is "+engines[0]+"."
-    if engines and 'sqlite' in engines:
-        msg += " Note: 'sqlite' use less disk space, but work slowly on large data."
+    msg = ""
+    if engines:
+        msg = "Use selected storage engine. One of "+",".join(engines)+". Default is "+engines[0]+"."
+        if 'sqlite' in engines:
+            msg += " Note: 'sqlite' use less disk space, but work slowly on large data."
 
     return engines, msg

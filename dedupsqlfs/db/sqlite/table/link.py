@@ -71,7 +71,7 @@ class TableLink( Table ):
         cur = self.getCursor()
         cur.execute("SELECT `inode_id` FROM `%s` " % self.getName()+
                     " WHERE `inode_id`>=%s AND `inode_id`<%s", (start_id, end_id,))
-        nameIds = tuple(str(item["inode_id"]) for item in iter(cur.fetchone(), None))
+        nameIds = tuple(str(item["inode_id"]) for item in iter(cur.fetchone, None))
         self.stopTimer('get_inode_ids')
         return nameIds
 

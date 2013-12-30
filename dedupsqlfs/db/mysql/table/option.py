@@ -14,9 +14,10 @@ class TableOption( Table ):
         # Create table
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
-                "`name` VARCHAR(255) NOT NULL PRIMARY KEY, "+
+                "`name` VARCHAR(64) NOT NULL PRIMARY KEY, "+
                 "`value` TEXT NULL"+
-            ")"
+            ")" +
+            self._getCreationAppendString()
         )
         return
 

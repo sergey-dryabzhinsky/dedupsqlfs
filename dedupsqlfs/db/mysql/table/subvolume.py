@@ -19,7 +19,8 @@ class TableSubvolume( Table ):
                 "`created_at` INT UNSIGNED NOT NULL, "+
                 "`mounted_at` INT UNSIGNED, "+
                 "`updated_at` INT UNSIGNED"+
-            ");"
+            ")"+
+            self._getCreationAppendString()
         )
         return
 

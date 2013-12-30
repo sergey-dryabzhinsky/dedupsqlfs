@@ -179,6 +179,11 @@ class DbManager( object ):
                 is_new = True
                 os.makedirs(datadir, 0o0750)
 
+            is_mariadb = False
+            output = subprocess.check_output(["mysqld", "--version"])
+            if output.find(b'MariaDB'):
+                is_mariadb = True
+
             cmd_opts = [
                 "--basedir=/usr",
                 "--datadir=%s" % datadir,
@@ -216,16 +221,28 @@ class DbManager( object ):
                 #"--large-pages",
                 "--innodb-file-per-table",
                 "--innodb-flush-method=O_DIRECT",
+                "--innodb-file-format=Barracuda",
                 "--skip-innodb-doublewrite",
+
+                "--key-buffer-size=%dM" % (self._buffer_size/1024/1024),
                 "--innodb-buffer-pool-size=%dM" % (self._buffer_size/1024/1024),
                 "--innodb-log-file-size=32M",
                 "--innodb-log-buffer-size=1M",
-
+                "--innodb-autoextend-increment=1",
                 "--query-cache-min-res-unit=1k",
                 "--query-cache-limit=1M",
                 "--query-cache-size=64M",
-                "--max-allowed-packet=32M"
+                "--max-allowed-packet=32M",
             ])
+
+            if is_mariadb:
+                cmd_opts.extend([
+                    # Only MariaDB
+                    "--aria-block-size=1k",
+                    "--aria-log-dir-path=%s" % self.getBasePath(),
+                    "--aria-log-file-size=32M",
+                    "--aria-pagecache-buffer-size=%dM" % (self._buffer_size/1024/1024),
+                ])
 
             if is_new:
 
@@ -233,11 +250,14 @@ class DbManager( object ):
 
                 cmd = ["mysql_install_db"]
                 cmd.extend(cmd_opts)
-                subprocess.Popen(cmd,
+                retcode = subprocess.Popen(cmd,
                                  cwd=self.getBasePath(),
                                  stdout=open(os.devnull, 'w'),
                                  stderr=open(os.devnull, 'w')
                 ).wait()
+                if retcode:
+                    print("Something wrong! Return code: %s" % retcode)
+                    return False
 
             cmd = ["mysqld"]
             cmd.extend(cmd_opts)
@@ -256,7 +276,10 @@ class DbManager( object ):
             while (t>0):
                 sleep(0.1)
 
-                if self.pingServer():
+                if os.path.exists(self.getSocket()):
+                    if self.pingServer():
+                        break
+                if self._mysqld_proc.poll() is not None:
                     break
 
                 t-= 0.1
@@ -270,8 +293,7 @@ class DbManager( object ):
             print("Done")
 
             self.createDb()
-            if is_new:
-                self.create()
+            self.create()
 
         return True
 
@@ -344,10 +366,12 @@ class DbManager( object ):
                 passwd=self.getPassword(),
                 db=self.getDbName())
             self._conn.autocommit(self.getAutocommit())
-            if not self.getAutocommit():
-                cur = conn.cursor()
-                cur.execute("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED")
-                cur.close()
+
+        cur = conn.cursor()
+        if not self.getAutocommit():
+            cur.execute("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED")
+        cur.close()
+
         return conn
 
     def getCursor(self, new=False):

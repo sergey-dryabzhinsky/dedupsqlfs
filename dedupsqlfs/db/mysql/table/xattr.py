@@ -17,7 +17,8 @@ class TableInodeXattr( Table ):
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`inode_id` BIGINT UNSIGNED PRIMARY KEY, "+
                 "`data` BLOB NOT NULL"+
-            ");"
+            ")"+
+            self._getCreationAppendString()
         )
         return
 

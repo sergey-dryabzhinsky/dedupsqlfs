@@ -16,7 +16,8 @@ class TableHashCompressionType( Table ):
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`hash_id` BIGINT UNSIGNED PRIMARY KEY, "+
                 "`type_id` SMALLINT UNSIGNED NOT NULL "+
-            ");"
+            ")"+
+            self._getCreationAppendString()
         )
 
         self.createIndexIfNotExists("type", ("type_id",))

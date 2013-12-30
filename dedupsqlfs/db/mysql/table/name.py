@@ -7,6 +7,7 @@ from dedupsqlfs.db.mysql.table import Table
 class TableName( Table ):
 
     _table_name = "name"
+    _key_block_size = 2
 
     def create(self):
         cur = self.getCursor()
@@ -16,10 +17,11 @@ class TableName( Table ):
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`id` BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
                 "`value` BLOB NOT NULL"+
-            ");"
+            ")"+
+            self._getCreationAppendString()
         )
 
-        self.createIndexIfNotExists("value", ('value',), unique=True, indexSizes={'value':255})
+        self.createIndexIfNotExists("value", ('value',), unique=True, indexSizes={'value':200})
         return
 
     def getRowSize(self, value):

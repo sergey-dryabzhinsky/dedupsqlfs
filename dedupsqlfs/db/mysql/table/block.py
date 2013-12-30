@@ -16,7 +16,8 @@ class TableBlock( Table ):
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`hash_id` BIGINT UNSIGNED PRIMARY KEY, "+
                 "`data` MEDIUMBLOB NOT NULL"+
-            ");"
+            ")"+
+            self._getCreationAppendString()
         )
         return
 

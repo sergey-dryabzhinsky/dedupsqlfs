@@ -15,8 +15,9 @@ class TableHash( Table ):
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`id` BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
-                "`hash` VARBINARY(255) NOT NULL "+
-            ")"
+                "`hash` VARBINARY(128) NOT NULL "+
+            ")"+
+            self._getCreationAppendString()
         )
 
         self.createIndexIfNotExists("hash", ("hash",), unique=True)

@@ -7,6 +7,7 @@ from dedupsqlfs.db.mysql.table import Table
 class TableTree( Table ):
 
     _table_name = "tree"
+    _key_block_size = 2
 
     _selected_subvol = None
 
@@ -21,7 +22,8 @@ class TableTree( Table ):
                 "`parent_id` BIGINT UNSIGNED, "+
                 "`name_id` BIGINT UNSIGNED NOT NULL, "+
                 "`inode_id` BIGINT UNSIGNED NOT NULL"+
-            ");"
+            ")"+
+            self._getCreationAppendString()
         )
 
         self.createIndexIfNotExists("spn", ('subvol_id', 'parent_id', 'name_id',), unique=True)

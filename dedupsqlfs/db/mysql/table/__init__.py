@@ -12,6 +12,12 @@ class Table( object ):
     _conn = None
     _curr = None
 
+    # InnoDB, MyISAM, Aria
+    _engine = "MyISAM"
+    # Only InnoDB
+    _compressed = False
+    _key_block_size = 1
+
     _table_name = None
     _manager = None
     _autocommit = True
@@ -27,6 +33,16 @@ class Table( object ):
         self._time_spent = {}
         self._op_count = {}
         pass
+
+    def _getCreationAppendString(self):
+        _cs = " Engine=" + self._engine
+        if self._engine == "InnoDB" and self._compressed:
+            _cs += " ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=%d;" % self._key_block_size
+        if self._engine == "Aria":
+            _cs += " ROW_FORMAT=DYNAMIC TRANSACTIONAL=0 PAGE_CHECKSUM=0 TABLE_CHECKSUM=0;"
+        if self._engine == "MyISAM":
+            _cs += " ROW_FORMAT=DYNAMIC;"
+        return _cs
 
     def getOperationsCount(self):
         return self._op_count

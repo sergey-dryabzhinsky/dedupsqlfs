@@ -194,7 +194,7 @@ class Subvolume(object):
             hashBS = {}
 
             curTree = tableTree.getCursor()
-            curTree.execute("SELECT `inode_id` FROM `tree` WHERE `subvol_id`=?", (node['id'],))
+            curTree.execute("SELECT `inode_id` FROM `tree` WHERE `subvol_id`=%s", (node['id'],))
 
             tableIndex = self.getTable('inode_hash_block')
             tableHCT = self.getTable('hash_compression_type')

@@ -17,7 +17,8 @@ class TableHashBlockSize( Table ):
                 "`hash_id` BIGINT UNSIGNED PRIMARY KEY, "+
                 "`real_size` INT UNSIGNED NOT NULL, "+
                 "`comp_size` INT UNSIGNED NOT NULL "+
-            ");"
+            ")"+
+            self._getCreationAppendString()
         )
         return
 

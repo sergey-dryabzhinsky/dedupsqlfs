@@ -7,6 +7,7 @@ from dedupsqlfs.db.mysql.table import Table
 class TableCompressionType( Table ):
 
     _table_name = "compression_type"
+    _key_block_size = 2
 
     def create( self ):
         cur = self.getCursor()
@@ -15,8 +16,9 @@ class TableCompressionType( Table ):
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`id` SMALLINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
-                "`value` VARCHAR(255) NOT NULL"+
-            ")"
+                "`value` VARCHAR(64) NOT NULL"+
+            ")"+
+            self._getCreationAppendString()
         )
 
         self.createIndexIfNotExists("value", ("value",), unique=True)

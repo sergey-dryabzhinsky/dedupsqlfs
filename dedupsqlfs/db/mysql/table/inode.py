@@ -27,7 +27,8 @@ class TableInode( Table ):
                 "`atime_ns` INT UNSIGNED NOT NULL DEFAULT 0, "+
                 "`mtime_ns` INT UNSIGNED NOT NULL DEFAULT 0, "+
                 "`ctime_ns` INT UNSIGNED NOT NULL DEFAULT 0"+
-            ");"
+            ")"+
+            self._getCreationAppendString()
         )
 
         self.createIndexIfNotExists("id_nlinks", ('id', 'nlinks',))

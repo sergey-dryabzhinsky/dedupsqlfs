@@ -17,7 +17,8 @@ class TableInodeHashBlock( Table ):
                 "`inode_id` BIGINT UNSIGNED NOT NULL, "+
                 "`block_number` BIGINT UNSIGNED NOT NULL, "+
                 "`hash_id` BIGINT UNSIGNED NOT NULL"+
-            ")"
+            ")"+
+            self._getCreationAppendString()
         )
 
         self.createIndexIfNotExists("inode_block", ('inode_id', 'block_number',), unique=True)

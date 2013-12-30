@@ -94,5 +94,4 @@ class TableLink( Table ):
         self.stopTimer('remove_by_ids')
         return count
 
-
     pass

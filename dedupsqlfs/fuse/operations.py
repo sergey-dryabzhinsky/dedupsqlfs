@@ -2180,15 +2180,13 @@ class DedupOperations(llfuse.Operations): # {{{1
         return
 
     def __collect_indexes(self): # {{{4
-        curInode = self.getTable("inode").getCursor()
-        curIndex = self.getTable("inode_hash_block").getCursor()
-        curIndex2 = self.getTable("inode_hash_block").getCursor(True)
+
+        tableIndex = self.getTable("inode_hash_block")
+        tableInode = self.getTable("inode")
 
         self.getLogger().info("Clean unused block indexes...")
 
-        curIndex.execute("SELECT COUNT(`inode_id`) as `cnt` FROM (SELECT `inode_id` FROM `inode_hash_block` GROUP BY `inode_id`) as _")
-
-        countInodes = curIndex.fetchone()["cnt"]
+        countInodes = tableIndex.get_count_uniq_inodes()
         self.getLogger().info(" block inodes: %d" % countInodes)
 
         count = 0
@@ -2203,29 +2201,22 @@ class DedupOperations(llfuse.Operations): # {{{1
             if current == countInodes:
                 break
 
-            curIndex.execute("SELECT `inode_id` FROM `inode_hash_block` WHERE `inode_id`>=%s AND `inode_id`<%s GROUP BY `inode_id`", (
-                curBlock, curBlock+maxCnt
-            ))
+            inodeIds = tableIndex.get_inode_ids(curBlock, curBlock+maxCnt)
 
-            inodeIds = tuple("%s" % indexItem["inode_id"] for indexItem in curIndex.fetchmany(maxCnt))
             current += len(inodeIds)
 
             curBlock += maxCnt
             if not inodeIds:
                 continue
 
-            curInode.execute("SELECT `id` FROM `inode` WHERE `id` IN (%s)" % (",".join(inodeIds),))
-            indexInodes = curInode.fetchall()
-            indexInodeIds = tuple("%s" % inodeItem["id"] for inodeItem in indexInodes)
+            indexInodeIds = tableInode.get_inodes_by_inodes(inodeIds)
 
             to_delete = ()
             for inode_id in inodeIds:
                 if inode_id not in indexInodeIds:
                     to_delete += (inode_id,)
 
-            if to_delete:
-                curIndex2.execute("DELETE FROM `inode_hash_block` WHERE `inode_id` IN (%s)" % (",".join(to_delete),))
-                count += curIndex2.rowcount
+            count += tableIndex.remove_by_inodes(to_delete)
 
             p = "%6.2f%%" % (100.0 * current / countInodes)
             if p != proc:

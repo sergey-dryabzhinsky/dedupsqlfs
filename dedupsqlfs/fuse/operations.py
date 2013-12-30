@@ -2028,7 +2028,6 @@ class DedupOperations(llfuse.Operations): # {{{1
         return
 
     def __collect_inodes_all(self): # {{{4
-        curInode2 = self.getTable("inode").getCursor(True)
 
         tableInode = self.getTable("inode")
         tableTree = self.getTable("tree")
@@ -2080,8 +2079,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
 
     def __collect_xattrs(self): # {{{4
-        curInode = self.getTable("inode").getCursor()
-        curXattr2 = self.getTable("xattr").getCursor(True)
 
         tableXattr = self.getTable("xattr").getCursor()
         tableInode = self.getTable("inode").getCursor()
@@ -2132,15 +2129,13 @@ class DedupOperations(llfuse.Operations): # {{{1
         return
 
     def __collect_links(self): # {{{4
-        curInode = self.getTable("inode").getCursor()
-        curLink = self.getTable("link").getCursor()
-        curLink2 = self.getTable("link").getCursor(True)
+
+        tableLink = self.getTable("link")
+        tableInode = self.getTable("inode")
 
         self.getLogger().info("Clean unused links...")
 
-        curLink.execute("SELECT COUNT(`inode_id`) as `cnt` FROM `link`")
-
-        countLinks = curLink.fetchone()["cnt"]
+        countLinks = tableLink.get_count()
         self.getLogger().info(" links: %d" % countLinks)
 
         count = 0
@@ -2155,27 +2150,22 @@ class DedupOperations(llfuse.Operations): # {{{1
             if current == countLinks:
                 break
 
-            curLink.execute("SELECT `inode_id` FROM `link` WHERE `inode_id`>=%s AND `inode_id`<%s", (curBlock, curBlock+maxCnt))
+            inodeIds = tableLink.get_inode_ids(curBlock, curBlock+maxCnt)
 
-            inodeIds = tuple("%s" % linkItem["inode_id"] for linkItem in curLink.fetchmany(maxCnt))
             current += len(inodeIds)
 
             curBlock += maxCnt
             if not inodeIds:
                 continue
 
-            curInode.execute("SELECT `id` FROM `inode` WHERE `id` IN (%s)" % (",".join(inodeIds),))
-            linkInodes = curInode.fetchall()
-            linkInodeIds = tuple("%s" % inodeItem["id"] for inodeItem in linkInodes)
+            linkInodeIds = tableInode.get_inodes_by_inodes(inodeIds)
 
             to_delete = ()
             for inode_id in inodeIds:
                 if inode_id not in linkInodeIds:
                     to_delete += (inode_id,)
 
-            if to_delete:
-                curLink2.execute("DELETE FROM `link` WHERE `inode_id` IN (%s)" % (",".join(to_delete),))
-                count += curLink2.rowcount
+            count += tableLink.remove_by_ids(to_delete)
 
             p = "%6.2f%%" % (100.0 * current / countLinks)
             if p != proc:

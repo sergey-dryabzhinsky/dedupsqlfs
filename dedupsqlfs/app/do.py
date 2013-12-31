@@ -319,17 +319,17 @@ def do(options, compression_methods=None):
         if options.snapshot_stats:
             return print_snapshot_stats(options, _fuse)
 
-        if options.vacuum:
-            return data_vacuum(options, _fuse)
-
         if options.defragment:
             return data_defragment(options, _fuse)
+
+        if options.vacuum:
+            return data_vacuum(options, _fuse)
 
         if options.print_stats:
             return print_fs_stats(options, _fuse)
 
         ret = 0
-    except Exception as e:
+    except Exception:
         import traceback
         traceback.print_exc()
         ret = 1

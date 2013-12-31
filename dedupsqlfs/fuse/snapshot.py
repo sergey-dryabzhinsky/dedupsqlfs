@@ -39,6 +39,8 @@ class Snapshot(Subvolume):
         self.getLogger().debug("Into subvolume: %r" % subvol_to)
 
         try:
+            self.getTable("tree").selectSubvolume(None)
+
             attr_from = self.getManager().lookup(llfuse.ROOT_INODE, subvol_from)
             root_node_from = node_from = self.getTable('tree').find_by_inode(attr_from.st_ino)
 
@@ -49,7 +51,7 @@ class Snapshot(Subvolume):
 
             self.getLogger().debug("-- into subvolume node: %r" % (root_node_to,))
 
-            count_to_do = self.getTable('tree').count_subvolume_inodes(root_node_from["id"])
+            count_to_do = self.getTable('tree').count_subvolume_nodes(root_node_from["id"])
             count_done = 0
             count_proc = 0
             if count_to_do:
@@ -58,68 +60,97 @@ class Snapshot(Subvolume):
             self.getLogger().info("Progress:")
             self.print_msg("\r%s %%" % count_proc)
 
-            inode_from = self.getTable("inode").get(attr_from.st_ino)
-            del inode_from["id"]
+            _inode_from = self.getTable("inode").get(attr_from.st_ino)
+            del _inode_from["id"]
 
-            self.getTable("inode").update_data(attr_to.st_ino, inode_from)
+            self.getTable("inode").update_data(attr_to.st_ino, _inode_from)
 
+            self.getTable("tree").selectSubvolume(root_node_from["id"])
 
             nodes = []
-            for name, attr, node in self.getManager().readdir(node_from["inode_id"], 0):
-                nodes.append((node, attr, name, node_to["id"]))
+            for name_from, attr_from, node_from_id in self.getManager().readdir(node_from["inode_id"], 0):
+                if attr_from.st_ino == node_from["inode_id"]:
+                    continue
+                if name_from in (b'.', b'..'):
+                    continue
+                nodes.append((node_from_id, attr_from, name_from, node_to["id"]))
 
+            self.getLogger().debug("Start copying subvol:")
             while len(nodes)>0:
 
-                node_from, attr_from, name_from, parent_to_id = nodes.pop()
+                node_from_id, attr_from, name_from, parent_node_to_id = nodes.pop()
 
-                inode_from = self.getTable("inode").get(attr_from.st_ino)
+                v = {}
+                for a in attr_from.__slots__:
+                    v[a] = getattr(attr_from, a)
 
-                inode_to = self.getTable("inode").insert(
-                    inode_from["nlinks"], inode_from["mode"],
-                    inode_from["uid"], inode_from["gid"], inode_from["rdev"], inode_from["size"],
-                    inode_from["atime"], inode_from["mtime"], inode_from["ctime"],
-                    inode_from["atime_ns"], inode_from["mtime_ns"], inode_from["ctime_ns"]
+                self.getLogger().debug("-- name_from: %r, attr_from: %r, node_from: %s; to parent node: %s" % (
+                    name_from, v, node_from_id, parent_node_to_id))
+
+                at, at_ns = self.get_time_tuple(attr_from.st_atime)
+                mt, mt_ns = self.get_time_tuple(attr_from.st_mtime)
+                ct, ct_ns = self.get_time_tuple(attr_from.st_ctime)
+                inode_to_id = self.getTable("inode").insert(
+                    attr_from.st_nlink, attr_from.st_mode,
+                    attr_from.st_uid, attr_from.st_gid, attr_from.st_rdev, attr_from.st_size,
+                    at, mt, ct,
+                    at_ns, mt_ns, ct_ns
                 )
 
-                treeItem_from = self.getTable("tree").get(node_from)
+                treeItem_from = self.getTable("tree").get(node_from_id)
+
+                self.getLogger().debug("---- node from: %r" % (node_from_id,))
+                self.getLogger().debug("---- tree item: %r" % (treeItem_from,))
 
                 self.getTable("tree").selectSubvolume(root_node_to["id"])
-                treeNode_to = self.getTable("tree").insert(
-                    parent_to_id,
+                treeNode_to_id = self.getTable("tree").insert(
+                    parent_node_to_id,
                     treeItem_from["name_id"],
-                    inode_to
+                    inode_to_id
                 )
-                self.getTable("tree").selectSubvolume(None)
+                self.getTable("tree").selectSubvolume(root_node_from["id"])
 
-                linkTarget_from = self.getTable("link").find_by_inode(inode_from["id"])
+                linkTarget_from = self.getTable("link").find_by_inode(attr_from.st_ino)
                 if linkTarget_from:
-                    self.getTable("link").insert(inode_to, linkTarget_from)
+                    self.getTable("link").insert(inode_to_id, linkTarget_from)
 
-                xattr_from = self.getTable("xattr").find_by_inode(inode_from["id"])
+                xattr_from = self.getTable("xattr").find_by_inode(attr_from.st_ino)
                 if xattr_from:
-                    self.getTable("xattr").insert(inode_to, xattr_from)
+                    self.getTable("xattr").insert(inode_to_id, xattr_from)
 
-                indexes_from = self.getTable("inode_hash_block").get_by_inode(inode_from["id"])
-                if len(indexes_from):
-                    for indexItem in indexes_from:
+                count_indexes_from = self.getTable("inode_hash_block").get_count_by_inode(attr_from.st_ino)
+                if count_indexes_from:
+                    dp = 1.0 / count_indexes_from
+                    for indexItem in self.getTable("inode_hash_block").get_by_inode(attr_from.st_ino):
                         self.getTable("inode_hash_block").insert(
-                            inode_to,
+                            inode_to_id,
                             indexItem["block_number"],
                             indexItem["hash_id"]
                         )
+                        count_done += dp
+                        if count_to_do:
+                            proc = "%6.4f" % (count_done * 100.0 / count_to_do,)
+                            if proc != count_proc:
+                                count_proc = proc
+                                if self.getManager().flushCaches():
+                                    self.getManager().getManager().commit()
+                                self.print_msg("\r%s %%" % count_proc)
+                else:
+                    count_done += 1
 
                 if stat.S_ISDIR(attr_from.st_mode):
-                    for name, attr, node in self.getManager().readdir(inode_from["id"], 0):
-                        nodes.append((node, attr, name, treeNode_to))
-
-
-                count_done += 1
+                    for name_from, attr_from, node_from_id in self.getManager().readdir(attr_from.st_ino, 0):
+                        if attr_from.st_ino == attr_from.st_ino:
+                            continue
+                        if name_from in (b'.', b'..'):
+                            continue
+                        nodes.append((node_from, attr_from, name_from, treeNode_to_id,))
 
                 if count_to_do:
                     proc = "%6.2f" % (count_done * 100.0 / count_to_do,)
                     if proc != count_proc:
                         count_proc = proc
-                        if not self.getManager().flushCaches():
+                        if self.getManager().flushCaches():
                             self.getManager().getManager().commit()
                         self.print_msg("\r%s %%" % count_proc)
 

@@ -385,10 +385,7 @@ class DbManager( object ):
         return conn
 
     def getCursor(self, new=False):
-        if new:
-            cur = self.getConnection().cursor(cursor_type)
-        else:
-            cur = self.getConnection().cursor(cursor_type)
+        cur = self.getConnection().cursor(cursor_type)
         cur = self.pingDb(cur)
         return cur
 

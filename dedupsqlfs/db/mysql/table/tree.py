@@ -93,8 +93,22 @@ class TableTree( Table ):
                 "subvol": subvol_id
             }
         )
-        item = cur.rowcount + self.delete(subvol_id)
+        item = cur.rowcount
         self.stopTimer('delete_subvolume')
+        item += self.delete(subvol_id)
+        return item
+
+    def count_subvolume_nodes(self, subvol_id):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT COUNT(`id`) AS `cnt` FROM `%s` " % self.getName()+
+                    " WHERE `subvol_id`=%s OR `id`=%s", (subvol_id, subvol_id))
+        item = cur.fetchone()
+        if item:
+            item = item["cnt"]
+        else:
+            item = 0
+        self.stopTimer('count_subvolume_nodes')
         return item
 
     def count_subvolume_inodes(self, subvol_id):
@@ -131,24 +145,6 @@ class TableTree( Table ):
         else:
             item = 0
         self.stopTimer('count_subvolume_names')
-        return item
-
-    def count_subvolume_nodes(self, subvol_id):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute(
-            "SELECT COUNT(1) AS `cnt` FROM `%s` " % self.getName()+
-            " WHERE `subvol_id`=%(subvol)s",
-            {
-                "subvol": subvol_id
-            }
-        )
-        item = cur.fetchone()
-        if item:
-            item = item["cnt"]
-        else:
-            item = 0
-        self.stopTimer('count_subvolume_nodes')
         return item
 
     def find_by_parent_name(self, parent_id, name_id):
@@ -191,6 +187,7 @@ class TableTree( Table ):
             }
         )
         item = cur.fetchone()
+        cur.close()
         self.stopTimer('get')
         return item
 
@@ -199,7 +196,7 @@ class TableTree( Table ):
         cur = self.getCursor()
         cur.execute(
             "SELECT `inode_id` FROM `%s` " % self.getName()+
-            " WHERE `parent_id`=%(parent)s",
+            " WHERE `parent_id`=%(parent)s ORDER BY `id` ASC",
             {
                 "parent": parent_id
             }
@@ -214,7 +211,7 @@ class TableTree( Table ):
         cur = self.getCursor()
         cur.execute(
             "SELECT * FROM `%s` " % self.getName()+
-            " WHERE `parent_id`=%(parent)s",
+            " WHERE `parent_id`=%(parent)s ORDER BY `id` ASC",
             {
                 "parent": parent_id
             }

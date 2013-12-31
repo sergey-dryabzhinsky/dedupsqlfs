@@ -5,6 +5,7 @@ __author__ = 'sergey'
 import os
 import stat
 import sys
+import math
 import llfuse
 import errno
 from datetime import datetime
@@ -44,6 +45,11 @@ class Subvolume(object):
         sys.stdout.write(msg)
         sys.stdout.flush()
         return self
+
+    def get_time_tuple(self, t):
+        t_ns, t_i = math.modf(t)
+        t_ns = int(t_ns * 10**9)
+        return int(t_i), t_ns
 
     # -----------------------------------------------
 
@@ -143,12 +149,19 @@ class Subvolume(object):
 
         try:
             attr = self.getManager().lookup(llfuse.ROOT_INODE, subvol_name)
+        except Exception:
+            self.getLogger().warn("Can't remove subvolume! Not found!")
+            return
+
+        try:
             node = self.getTable('tree').find_by_inode(attr.st_ino)
             self.getTable('tree').delete_subvolume(node["id"])
-
             self.getTable('subvolume').delete(node['id'])
-        except:
-            self.getLogger().warn("Can't remove subvolume! Not found!")
+        except Exception as e:
+            self.getLogger().warn("Can't remove subvolume!")
+            self.getLogger().error("E: %s" % e)
+            import traceback
+            self.getLogger().error(traceback.format_exc())
             return
 
         return

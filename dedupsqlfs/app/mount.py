@@ -114,7 +114,7 @@ def main(): # {{{1
     msg += ". Defaults to 'sha1'."
     parser.add_argument('--hash', dest='hash_function', metavar='FUNCTION', choices=hash_functions, default='sha1', help=msg)
 
-    parser.add_argument('--collision-check', dest='collision_check_enabled', action='store_true', help="Check for hash collision on writed data. (@todo)")
+    parser.add_argument('--collision-check', dest='collision_check_enabled', action='store_true', help="Check for hash collision on writed data.")
 
     # Dynamically check for supported compression methods.
     compression_methods = [constants.COMPRESSION_TYPE_NONE]

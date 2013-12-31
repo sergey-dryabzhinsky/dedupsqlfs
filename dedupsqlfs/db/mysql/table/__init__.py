@@ -32,6 +32,7 @@ class Table( object ):
         self._manager = manager
         self._time_spent = {}
         self._op_count = {}
+        self._engine = manager.getTableEngine()
         pass
 
     def _getCreationAppendString(self):

@@ -88,8 +88,21 @@ class TableTree( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute("DELETE FROM `%s` WHERE subvol_id=?" % self.getName(), (subvol_id,))
-        item = cur.rowcount + self.delete(subvol_id)
+        item = cur.rowcount
         self.stopTimer('delete_subvolume')
+        item += self.delete(subvol_id)
+        return item
+
+    def count_subvolume_nodes(self, subvol_id):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT COUNT(1) AS cnt FROM `%s` WHERE subvol_id=? OR id=?" % self.getName(), (subvol_id, subvol_id))
+        item = cur.fetchone()
+        if item:
+            item = item["cnt"]
+        else:
+            item = 0
+        self.stopTimer('count_subvolume_nodes')
         return item
 
     def count_subvolume_inodes(self, subvol_id):
@@ -114,18 +127,6 @@ class TableTree( Table ):
         else:
             item = 0
         self.stopTimer('count_subvolume_names')
-        return item
-
-    def count_subvolume_nodes(self, subvol_id):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute("SELECT COUNT(1) AS cnt FROM `%s` WHERE subvol_id=?" % self.getName(), (subvol_id,))
-        item = cur.fetchone()
-        if item:
-            item = item["cnt"]
-        else:
-            item = 0
-        self.stopTimer('count_subvolume_nodes')
         return item
 
     def find_by_parent_name(self, parent_id, name_id):
@@ -155,7 +156,7 @@ class TableTree( Table ):
     def get_children_inodes(self, parent_id):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT inode_id FROM `%s` WHERE parent_id=?" % self.getName(), (parent_id, ))
+        cur.execute("SELECT inode_id FROM `%s` WHERE parent_id=? ORDER BY `id` ASC" % self.getName(), (parent_id, ))
         items = (str(_i["inode_id"]) for _i in iter(cur.fetchone, None))
         self.stopTimer('get_children_inodes')
         return items
@@ -163,7 +164,7 @@ class TableTree( Table ):
     def get_children(self, parent_id):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT * FROM `%s` WHERE parent_id=?" % self.getName(), (parent_id, ))
+        cur.execute("SELECT * FROM `%s` WHERE parent_id=? ORDER BY `id` ASC" % self.getName(), (parent_id, ))
         items = cur.fetchall()
         self.stopTimer('get_children')
         return items

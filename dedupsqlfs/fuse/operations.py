@@ -609,9 +609,12 @@ class DedupOperations(llfuse.Operations): # {{{1
         @param fh: file handler number - inode.id
         @type  fh: int
         """
-        inode = fh
+        self.__log_call('readdir', 'readdir(fh=%r)', fh)
 
-        self.__log_call('readdir', 'readdir(%r, %i)', inode, offset)
+        inode = fh
+        inode = self.__fix_inode_if_requested_root(inode)
+
+        self.__log_call('readdir', 'readdir(inode=%r, %i)', inode, offset)
 
         cur_node = self.__get_tree_node_by_inode(inode)
 
@@ -1019,7 +1022,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 if name_id:
                     self.cached_names.set(name, name_id)
             if not name_id:
-                self.getLogger().debug("! No name %r found, cant get name_id" % name)
+                self.getLogger().debug("! No name %r found, cant find name.id" % name)
                 raise FUSEError(errno.ENOENT)
 
             par_node = self.__get_tree_node_by_inode(parent_inode)

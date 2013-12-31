@@ -113,7 +113,7 @@ class Table( object ):
         while pageSize < filePageSize:
             pageSize *= 2
 
-        cacheSize = 16*1024*1024 / pageSize
+        cacheSize = 64*1024*1024 / pageSize
 
         conn = sqlite3.connect(db_path)
 

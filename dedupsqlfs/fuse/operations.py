@@ -1786,19 +1786,24 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.bytes_written += block_length
             self.bytes_written_compressed += cdata_length
         else:
-            #hash_count = tableIndex.get_count_hash(hash_id)
-            #
-            #if block_index:
-            #    old_block = self.getTable("block").get(hash_id)
-            #    old_data = self.__decompress(old_block["data"], old_block["compression_type_id"]).getvalue()
-            #    old_hash = self.__hash(old_data)
-            #    if old_hash != hash_value:
-            #        self.getLogger().error("-- weird hashed data collision detected! old=%s, writing=%s" % (
-            #            old_hash,
-            #            hash_value
-            #        ))
-            #
-            #self.getLogger().debug("-- deduped by hash = %s, count in index db = %s" % (hash_id, hash_count,))
+#            hash_count = tableIndex.get_count_hash(hash_id)
+#            self.getLogger().debug("-- deduped by hash = %s, count in index db = %s" % (hash_id, hash_count,))
+
+            if self.getOption('collision_check_enabled'):
+
+                old_block = self.getTable("block").get(hash_id)
+                hash_CT = tableHCT.get(hash_id)
+                old_data = self.__decompress(old_block["data"], hash_CT["type_id"]).getvalue()
+                if old_data != data_block:
+                    self.getLogger().error("EEE: weird hashed data collision detected! hash id: %s, value: %r, inode: %s, block-number: %s" % (
+                        hash_id, hash_value, inode, block_number
+                    ))
+                    self.getLogger().warn("Use more strong hashing algo! I'm continue, but you are warned...")
+                old_hash = self.__hash(old_data)
+                if old_hash != hash_value:
+                    self.getLogger().error("Decompressed block data hash not equal with stored!")
+                    self.getLogger().error("FS data corruption? Something wrong with db layer? I'm done with that!")
+                    raise RuntimeError("Data corruption!")
 
             # Old hash found
             self.bytes_deduped += block_length

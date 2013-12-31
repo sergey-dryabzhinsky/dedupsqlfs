@@ -14,6 +14,7 @@ cursor_type = pymysql.cursors.DictCursor
 class DbManager( object ):
 
     _table = None
+    _table_engine = 'MyISAM'
     _db_name = "dedupsqlfs"
     _base_path = "/dev/shm/db"
     _autocommit = True
@@ -78,6 +79,15 @@ class DbManager( object ):
 
     def getAutocommit(self):
         return self._autocommit
+
+    def setTableEngine(self, engine):
+        if not engine:
+            engine = 'MyISAM'
+        self._table_engine = engine
+        return self
+
+    def getTableEngine(self):
+        return self._table_engine
 
     def setBasepath(self, base_path):
         self._base_path = base_path

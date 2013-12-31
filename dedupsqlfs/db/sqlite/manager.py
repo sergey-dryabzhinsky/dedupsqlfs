@@ -54,6 +54,12 @@ class DbManager( object ):
     def getAutocommit(self):
         return self._autocommit
 
+    def setTableEngine(self, engine):
+        return self
+
+    def getTableEngine(self):
+        return self
+
     def setBasepath(self, base_path):
         self._base_path = base_path
         return self

@@ -1796,6 +1796,11 @@ class DedupOperations(llfuse.Operations): # {{{1
                         hash_id, hash_value, inode, block_number
                     ))
                     self.getLogger().warn("Use more strong hashing algo! I'm continue, but you are warned...")
+                old_hash = self.__hash(old_data)
+                if old_hash != hash_value:
+                    self.getLogger().error("Decompressed block data hash not equal with stored!")
+                    self.getLogger().error("FS data corruption? Something wrong with db layer? I'm done with that!")
+                    raise RuntimeError("Data corruption!")
 
             # Old hash found
             self.bytes_deduped += block_length

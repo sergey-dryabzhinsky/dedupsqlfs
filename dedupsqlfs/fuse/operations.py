@@ -243,23 +243,23 @@ class DedupOperations(llfuse.Operations): # {{{1
     def destroy(self): # {{{3
         try:
             self.__log_call('destroy', 'destroy()')
-            self.getLogger().info("Umount file system in process...")
+            self.getLogger().debug("Umount file system in process...")
             if not self.getOption("readonly"):
                 # Flush all cached blocks
-                self.getLogger().info("Flush remaining inodes.")
+                self.getLogger().debug("Flush remaining inodes.")
                 self.__flush_expired_inodes(self.cached_attrs.clear())
-                self.getLogger().info("Flush remaining blocks.")
+                self.getLogger().debug("Flush remaining blocks.")
                 self.__flush_old_cached_blocks(self.cached_blocks.clear())
                 self.cached_indexes.clear()
 
-                self.getLogger().info("Committing outstanding changes.")
+                self.getLogger().debug("Committing outstanding changes.")
                 self.getManager().commit()
 
                 if self.getOption("gc_umount_enabled"):
                     # Force vacuum on umount
                     self.gc_enabled = True
                     self.__collect_garbage()
-            if self.getOption("verbosity"):
+            if self.getOption("verbosity") > 1:
                 self.__print_stats()
             self.getManager().close()
             return 0
@@ -1522,7 +1522,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
 
     def __print_stats(self): # {{{3
-        self.getLogger().info('-' * 79)
+        self.getLogger().debug('-' * 79)
         self.__report_memory_usage()
         self.__report_memory_usage_real()
         self.__report_deduped_usage()
@@ -1531,7 +1531,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.__report_timings()
         self.__report_database_timings()
         self.__report_database_operations()
-        self.getLogger().info(' ' * 79)
+        self.getLogger().debug(' ' * 79)
 
 
     def __report_timings(self): # {{{3

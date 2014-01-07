@@ -9,7 +9,6 @@ try:
     from io import BytesIO
     import errno
     import hashlib
-    import logging
     import math
     import os
     import sqlite3
@@ -25,6 +24,7 @@ except ImportError as e:
 try:
     import llfuse
     from llfuse import FUSEError
+    from dedupsqlfs.log import logging
 except ImportError:
     sys.stderr.write("Error: The Python FUSE binding isn't installed!\n" + \
                      "If you're on Ubuntu try running `sudo apt-get install python-fuse'.\n")
@@ -243,23 +243,23 @@ class DedupOperations(llfuse.Operations): # {{{1
     def destroy(self): # {{{3
         try:
             self.__log_call('destroy', 'destroy()')
-            self.getLogger().info("Umount file system in process...")
+            self.getLogger().debug("Umount file system in process...")
             if not self.getOption("readonly"):
                 # Flush all cached blocks
-                self.getLogger().info("Flush remaining inodes.")
+                self.getLogger().debug("Flush remaining inodes.")
                 self.__flush_expired_inodes(self.cached_attrs.clear())
-                self.getLogger().info("Flush remaining blocks.")
+                self.getLogger().debug("Flush remaining blocks.")
                 self.__flush_old_cached_blocks(self.cached_blocks.clear())
                 self.cached_indexes.clear()
 
-                self.getLogger().info("Committing outstanding changes.")
+                self.getLogger().debug("Committing outstanding changes.")
                 self.getManager().commit()
 
                 if self.getOption("gc_umount_enabled"):
                     # Force vacuum on umount
                     self.gc_enabled = True
                     self.__collect_garbage()
-            if self.getOption("verbosity"):
+            if self.getOption("verbosity") > 1:
                 self.__print_stats()
             self.getManager().close()
             return 0
@@ -740,7 +740,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             row = self.__get_inode_row(inode)
             self.getLogger().debug("-- current row: %r", row)
 
-            set_ctime = False
             update_db = False
             new_data = {}
 
@@ -748,47 +747,39 @@ class DedupOperations(llfuse.Operations): # {{{1
             if attr.st_size is not None:
                 if row["size"] != attr.st_size:
                     new_data["size"] = attr.st_size
-                    set_ctime = True
                     update_db = True
 
             if attr.st_mode is not None:
                 if row["mode"] != attr.st_mode:
                     new_data["mode"] = attr.st_mode
-                    set_ctime = True
                     update_db = True
 
             if attr.st_uid is not None:
                 if row["uid"] != attr.st_uid:
                     new_data["uid"] = attr.st_uid
-                    set_ctime = True
                     update_db = True
 
             if attr.st_gid is not None:
                 if row["gid"] != attr.st_gid:
                     new_data["gid"] = attr.st_gid
-                    set_ctime = True
                     update_db = True
 
             if attr.st_atime is not None:
                 atime_i, atime_ns = self.__get_time_tuple(attr.st_atime)
                 if row["atime"] != atime_i:
                     new_data["atime"] = atime_i
-                    set_ctime = True
                     update_db = True
                 if row["atime_ns"] != atime_ns:
                     new_data["atime_ns"] = atime_ns
-                    set_ctime = True
                     update_db = True
 
             if attr.st_mtime is not None:
                 mtime_i, mtime_ns = self.__get_time_tuple(attr.st_mtime)
                 if row["mtime"] != mtime_i:
                     new_data["mtime"] = mtime_i
-                    set_ctime = True
                     update_db = True
                 if row["mtime_ns"] != mtime_ns:
                     new_data["mtime_ns"] = mtime_ns
-                    set_ctime = True
                     update_db = True
 
             if attr.st_ctime is not None:
@@ -799,7 +790,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 if row["ctime_ns"] != ctime_ns:
                     new_data["ctime_ns"] = ctime_ns
                     update_db = True
-            elif set_ctime:
+            elif update_db:
                 ctime_i, ctime_ns = self.__newctime_tuple()
                 new_data["ctime"] = ctime_i
                 new_data["ctime_ns"] = ctime_ns
@@ -1352,7 +1343,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         # To re enable them:
         #  :%s/^\(\s\+\)#\(self\.__log_call\)/\1\2
         if self.calls_log_filter == [] or fun in self.calls_log_filter:
-            self.getLogger().debug(msg, *args)
+            self.getLogger().debugv(msg, *args)
 
 
     def __get_opts_from_db(self): # {{{3
@@ -1531,7 +1522,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
 
     def __print_stats(self): # {{{3
-        self.getLogger().info('-' * 79)
+        self.getLogger().debug('-' * 79)
         self.__report_memory_usage()
         self.__report_memory_usage_real()
         self.__report_deduped_usage()
@@ -1540,7 +1531,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.__report_timings()
         self.__report_database_timings()
         self.__report_database_operations()
-        self.getLogger().info(' ' * 79)
+        self.getLogger().debug(' ' * 79)
 
 
     def __report_timings(self): # {{{3
@@ -1570,16 +1561,16 @@ class DedupOperations(llfuse.Operations): # {{{1
             timings.sort(reverse=True)
 
             uptime = time.time() - self.fs_mounted_at
-            self.getLogger().info("Filesystem mounted: %s", format_timespan(uptime))
+            self.getLogger().debug("Filesystem mounted: %s", format_timespan(uptime))
 
             printed_heading = False
             for timespan, description in timings:
                 percentage = 100.0 * timespan / uptime
                 if percentage >= 0.1:
                     if not printed_heading:
-                        self.getLogger().info("Cumulative timings of slowest operations:")
+                        self.getLogger().debug("Cumulative timings of slowest operations:")
                         printed_heading = True
-                    self.getLogger().info(
+                    self.getLogger().debug(
                         " - %-*s%s (%.1f%%)" % (maxdescwidth, description + ':', format_timespan(timespan), percentage))
 
     def __report_database_timings(self): # {{{3
@@ -1596,16 +1587,16 @@ class DedupOperations(llfuse.Operations): # {{{1
             timings.sort(reverse=True)
 
             alltime = self.getManager().getTimeSpent()
-            self.getLogger().info("Database all operations timings: %s", format_timespan(alltime))
+            self.getLogger().debug("Database all operations timings: %s", format_timespan(alltime))
 
             printed_heading = False
             for timespan, description in timings:
                 percentage = 100.0 * timespan / alltime
                 if percentage >= 0.1:
                     if not printed_heading:
-                        self.getLogger().info("Cumulative timings of slowest tables:")
+                        self.getLogger().debug("Cumulative timings of slowest tables:")
                         printed_heading = True
-                    self.getLogger().info(
+                    self.getLogger().debug(
                         " - %-*s%s (%.1f%%)" % (maxdescwidth, description + ':', format_timespan(timespan), percentage))
 
     def __report_database_operations(self): # {{{3
@@ -1622,16 +1613,16 @@ class DedupOperations(llfuse.Operations): # {{{1
             counts.sort(reverse=True)
 
             allcount = self.getManager().getOperationsCount()
-            self.getLogger().info("Database all operations: %s", allcount)
+            self.getLogger().debug("Database all operations: %s", allcount)
 
             printed_heading = False
             for count, description in counts:
                 percentage = 100.0 * count / allcount
                 if percentage >= 0.1:
                     if not printed_heading:
-                        self.getLogger().info("Cumulative count of operations:")
+                        self.getLogger().debug("Cumulative count of operations:")
                         printed_heading = True
-                    self.getLogger().info(
+                    self.getLogger().debug(
                         " - %-*s%s (%.1f%%)" % (maxdescwidth, description + ':', count, percentage))
 
     def __report_memory_usage(self): # {{{3
@@ -1641,7 +1632,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         if self.memory_usage != 0 and difference:
             direction = self.memory_usage < memory_usage and 'up' or 'down'
             msg += " (%s by %s)" % (direction, format_size(difference))
-        self.getLogger().info(msg + '.')
+        self.getLogger().debug(msg + '.')
         self.memory_usage = memory_usage
 
     def __report_memory_usage_real(self): # {{{3
@@ -1651,7 +1642,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         if self.memory_usage_real != 0 and difference:
             direction = self.memory_usage_real < memory_usage and 'up' or 'down'
             msg += " (%s by %s)" % (direction, format_size(difference))
-        self.getLogger().info(msg + '.')
+        self.getLogger().debug(msg + '.')
         self.memory_usage_real = memory_usage
 
 
@@ -1661,7 +1652,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         if self.bytes_deduped_last != 0 and difference:
             direction = self.bytes_deduped_last < self.bytes_deduped and 'up' or 'down'
             msg += " (%s by %s)" % (direction, format_size(difference))
-        self.getLogger().info(msg + '.')
+        self.getLogger().debug(msg + '.')
         self.bytes_deduped_last = self.bytes_deduped
 
 
@@ -1676,7 +1667,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             direction = self.compressed_ratio < ratio and 'up' or 'down'
             msg += " (%s by %.2f%%)" % (direction, difference)
         msg += " (%s to %s)" % (format_size(self.bytes_written), format_size(self.bytes_written_compressed))
-        self.getLogger().info(msg + '.')
+        self.getLogger().debug(msg + '.')
         self.compressed_ratio = ratio
 
 
@@ -1689,7 +1680,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         else:
             if nbytes > 0:
                 average = format_size(nbytes / max(1, nseconds))
-                self.getLogger().info("Average %s stream speed is %s/s.", label, average)
+                self.getLogger().debug("Average %s stream speed is %s/s.", label, average)
                 # Decrease the influence of previous measurements over time?
                 #if nseconds > 60 and nbytes > 1024 ** 2:
                 #    return nbytes / 2, nseconds / 2
@@ -1901,7 +1892,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.time_spent_flushing_block_cache += elapsed_time
 
-            self.getLogger().info("Block cache cleanup: flushed %i writed (%i/t, %i/sz), %i readed (%i/t, %i/sz) blocks in %s",
+            self.getLogger().debug("Block cache cleanup: flushed %i writed (%i/t, %i/sz), %i readed (%i/t, %i/sz) blocks in %s",
                                   flushed_writed_blocks, flushed_writed_expiredByTime_blocks, flushed_writed_expiredBySize_blocks,
                                   flushed_readed_blocks, flushed_readed_expiredByTime_blocks, flushed_readed_expiredBySize_blocks,
                                   format_timespan(elapsed_time))
@@ -1947,7 +1938,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         if flushed_attrs + flushed_nodes + flushed_names + flushed_indexes > 0:
             elapsed_time = time.time() - start_time
-            self.getLogger().info("Meta cache cleanup: flushed %i nodes, %i attrs, %i names, %i indexes in %s.",
+            self.getLogger().debug("Meta cache cleanup: flushed %i nodes, %i attrs, %i names, %i indexes in %s.",
                                   flushed_nodes, flushed_attrs, flushed_names, flushed_indexes,
                                   format_timespan(elapsed_time))
 
@@ -1958,17 +1949,17 @@ class DedupOperations(llfuse.Operations): # {{{1
     def forced_vacuum(self): # {{{3
         if not self.isReadonly():
             start_time = time.time()
-            self.getLogger().info("Performing data vacuum (this might take a while) ..")
+            self.getLogger().debug("Performing data vacuum (this might take a while) ..")
             for table_name in self.getManager().tables:
                 self.__vacuum_datatable(table_name)
             elapsed_time = time.time() - start_time
-            self.getLogger().info("Finished data vacuum in %s.", format_timespan(elapsed_time))
+            self.getLogger().debug("Finished data vacuum in %s.", format_timespan(elapsed_time))
         return
 
     def __collect_garbage(self): # {{{3
         if self.gc_enabled and not self.isReadonly():
             start_time = time.time()
-            self.getLogger().info("Performing garbage collection (this might take a while) ..")
+            self.getLogger().debug("Performing garbage collection (this might take a while) ..")
             self.should_vacuum = False
             for method in self.__collect_strings, \
                           self.__collect_inodes_all, \
@@ -1982,7 +1973,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                     elapsed_time = time.time() - sub_start_time
                     self.getLogger().info(msg, format_timespan(elapsed_time))
             elapsed_time = time.time() - start_time
-            self.getLogger().info("Finished garbage collection in %s.", format_timespan(elapsed_time))
+            self.getLogger().debug("Finished garbage collection in %s.", format_timespan(elapsed_time))
         return
 
     def __collect_strings(self): # {{{4
@@ -1990,10 +1981,10 @@ class DedupOperations(llfuse.Operations): # {{{1
         tableName = self.getTable("name")
         tableTree = self.getTable("tree")
 
-        self.getLogger().info("Clean unused path segments...")
+        self.getLogger().debug("Clean unused path segments...")
 
         countNames = tableName.get_count()
-        self.getLogger().info(" path segments: %d" % countNames)
+        self.getLogger().debug(" path segments: %d" % countNames)
 
         count = 0
         current = 0
@@ -2027,7 +2018,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             p = "%6.2f%%" % (100.0 * current / countNames)
             if p != proc:
                 proc = p
-                self.getLogger().info("%s (count=%d)", proc, count)
+                self.getLogger().debug("%s (count=%d)", proc, count)
 
         if count > 0:
             self.should_vacuum = True
@@ -2041,10 +2032,10 @@ class DedupOperations(llfuse.Operations): # {{{1
         tableInode = self.getTable("inode")
         tableTree = self.getTable("tree")
 
-        self.getLogger().info("Clean unused inodes (all)...")
+        self.getLogger().debug("Clean unused inodes (all)...")
 
         countInodes = tableInode.get_count()
-        self.getLogger().info(" inodes: %d" % countInodes)
+        self.getLogger().debug(" inodes: %d" % countInodes)
 
         count = 0
         current = 0
@@ -2077,7 +2068,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             p = "%6.2f%%" % (100.0 * current / countInodes)
             if p != proc:
                 proc = p
-                self.getLogger().info("%s (count=%d)", proc, count)
+                self.getLogger().debug("%s (count=%d)", proc, count)
 
         if count > 0:
             self.should_vacuum = True
@@ -2092,10 +2083,10 @@ class DedupOperations(llfuse.Operations): # {{{1
         tableXattr = self.getTable("xattr")
         tableInode = self.getTable("inode")
 
-        self.getLogger().info("Clean unused xattrs...")
+        self.getLogger().debug("Clean unused xattrs...")
 
         countXattrs = tableXattr.get_count()
-        self.getLogger().info(" xattrs: %d" % countXattrs)
+        self.getLogger().debug(" xattrs: %d" % countXattrs)
 
         count = 0
         current = 0
@@ -2128,7 +2119,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             p = "%6.2f%%" % (100.0 * current / countXattrs)
             if p != proc:
                 proc = p
-                self.getLogger().info("%s (count=%d)", proc, count)
+                self.getLogger().debug("%s (count=%d)", proc, count)
 
         if count > 0:
             self.should_vacuum = True
@@ -2142,10 +2133,10 @@ class DedupOperations(llfuse.Operations): # {{{1
         tableLink = self.getTable("link")
         tableInode = self.getTable("inode")
 
-        self.getLogger().info("Clean unused links...")
+        self.getLogger().debug("Clean unused links...")
 
         countLinks = tableLink.get_count()
-        self.getLogger().info(" links: %d" % countLinks)
+        self.getLogger().debug(" links: %d" % countLinks)
 
         count = 0
         current = 0
@@ -2179,7 +2170,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             p = "%6.2f%%" % (100.0 * current / countLinks)
             if p != proc:
                 proc = p
-                self.getLogger().info("%s (count=%d)", proc, count)
+                self.getLogger().debug("%s (count=%d)", proc, count)
 
         if count > 0:
             self.should_vacuum = True
@@ -2193,10 +2184,10 @@ class DedupOperations(llfuse.Operations): # {{{1
         tableIndex = self.getTable("inode_hash_block")
         tableInode = self.getTable("inode")
 
-        self.getLogger().info("Clean unused block indexes...")
+        self.getLogger().debug("Clean unused block indexes...")
 
         countInodes = tableIndex.get_count_uniq_inodes()
-        self.getLogger().info(" block inodes: %d" % countInodes)
+        self.getLogger().debug(" block inodes: %d" % countInodes)
 
         count = 0
         current = 0
@@ -2230,7 +2221,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             p = "%6.2f%%" % (100.0 * current / countInodes)
             if p != proc:
                 proc = p
-                self.getLogger().info("%s (count=%d)", proc, count)
+                self.getLogger().debug("%s (count=%d)", proc, count)
 
         if count > 0:
             self.should_vacuum = True
@@ -2245,10 +2236,10 @@ class DedupOperations(llfuse.Operations): # {{{1
         tableBlock = self.getTable("block")
         tableIndex = self.getTable("inode_hash_block")
 
-        self.getLogger().info("Clean unused data blocks and hashes...")
+        self.getLogger().debug("Clean unused data blocks and hashes...")
 
         countHashes = tableHash.get_count()
-        self.getLogger().info(" hashes: %d" % countHashes)
+        self.getLogger().debug(" hashes: %d" % countHashes)
 
         count = 0
         current = 0
@@ -2283,7 +2274,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             p = "%6.2f%%" % (100.0 * current / countHashes)
             if p != proc:
                 proc = p
-                self.getLogger().info("%s (count=%d)", proc, count)
+                self.getLogger().debug("%s (count=%d)", proc, count)
 
         self.getManager().commit()
 
@@ -2303,12 +2294,12 @@ class DedupOperations(llfuse.Operations): # {{{1
         msg = ""
         sub_start_time = time.time()
         if self.should_vacuum and self.gc_vacuum_enabled:
-            self.getLogger().info(" vacuum %s table" % tableName)
+            self.getLogger().debug(" vacuum %s table" % tableName)
             self.getTable(tableName).vacuum()
             msg = "  vacuumed SQLite data store in %s."
         if msg:
             elapsed_time = time.time() - sub_start_time
-            self.getLogger().info(msg, format_timespan(elapsed_time))
+            self.getLogger().debug(msg, format_timespan(elapsed_time))
         return msg
 
     def __commit_changes(self): # {{{3
@@ -2319,7 +2310,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __rollback_changes(self): # {{{3
         if not self.use_transactions:
-            self.getLogger().info('Rolling back changes')
+            self.getLogger().note('Rolling back changes')
             self.getManager().rollback()
 
 

@@ -11,9 +11,9 @@ try:
     import argparse
     import time
     import hashlib
-    import logging
     from dedupsqlfs.lib import constants
     from dedupsqlfs.db import check_engines
+    from dedupsqlfs.log import logging
 except ImportError as e:
     msg = "Error: Failed to load one of the required Python modules! (%s)\n"
     sys.stderr.write(msg % str(e))

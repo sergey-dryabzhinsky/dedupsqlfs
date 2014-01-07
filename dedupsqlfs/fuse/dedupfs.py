@@ -7,7 +7,6 @@ import sys
 # Try to load the required modules from Python's standard library.
 try:
     import errno
-    import logging
     import os
     import stat
     import time
@@ -22,6 +21,7 @@ try:
     import llfuse as fuse
     from llfuse import FUSEError
     from dedupsqlfs.lib import constants
+    from dedupsqlfs.log import logging, DEBUG_VERBOSE
 except ImportError:
     sys.stderr.write("Error: The Python FUSE binding isn't installed!\n" + \
         "If you're on Ubuntu try running `sudo apt-get install python-fuse'.\n")
@@ -235,6 +235,8 @@ class DedupFS(object): # {{{1
                 self.getLogger().setLevel(logging.INFO)
             elif self.getOption("verbosity") <= 2:
                 self.getLogger().setLevel(logging.DEBUG)
+            elif self.getOption("verbosity") <= 3:
+                self.getLogger().setLevel(DEBUG_VERBOSE)
             else:
                 self.getLogger().setLevel(logging.NOTSET)
 

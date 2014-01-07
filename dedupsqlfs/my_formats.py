@@ -1,3 +1,5 @@
+# -*- coding: utf8 -*-
+
 from math import floor
 
 def format_timespan(seconds): # {{{1

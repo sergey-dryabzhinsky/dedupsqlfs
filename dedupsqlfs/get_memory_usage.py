@@ -1,4 +1,4 @@
-#!/usr/bin/python
+# -*- coding: utf8 -*-
 
 """
 The function in this Python module determines the current memory usage of the
@@ -10,7 +10,7 @@ http://code.activestate.com/recipes/286222/
 import os
 
 _units = { 'KB': 1024, 'MB': 1024**2, 'GB': 1024**3 }
-_handle = _handle = open('/proc/%d/status' % os.getpid())
+_handle = open('/proc/%d/status' % os.getpid())
 
 def get_memory_usage():
   global _proc_status, _units, _handle

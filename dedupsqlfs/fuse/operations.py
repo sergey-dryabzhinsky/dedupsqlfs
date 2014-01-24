@@ -222,6 +222,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             node = self.__get_tree_node_by_parent_inode_and_name(inode_parent, name)
         except FUSEError as e:
             node = None
+            self.__log_call('create', '->(node with that name not found, creating...)')
             if e.errno != errno.ENOENT:
                 raise
 
@@ -235,8 +236,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.__cache_meta_hook()
 
-        self.__log_call('create', '->(inode=%i, attrs=%r)',
-                        fh, attrs)
+        self.__log_call('create', '->(created inode=%i, attrs=%r)', fh, attrs)
 
         return (fh, attrs,)
 
@@ -769,6 +769,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                 if row["atime"] != atime_i:
                     new_data["atime"] = atime_i
                     update_db = True
+                if attr.st_atime_ns is not None:
+                    atime_ns = attr.st_atime_ns
                 if row["atime_ns"] != atime_ns:
                     new_data["atime_ns"] = atime_ns
                     update_db = True
@@ -778,6 +780,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                 if row["mtime"] != mtime_i:
                     new_data["mtime"] = mtime_i
                     update_db = True
+                if attr.st_mtime_ns is not None:
+                    mtime_ns = attr.st_mtime_ns
                 if row["mtime_ns"] != mtime_ns:
                     new_data["mtime_ns"] = mtime_ns
                     update_db = True
@@ -787,6 +791,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                 if row["ctime"] != ctime_i:
                     new_data["ctime"] = ctime_i
                     update_db = True
+                if attr.st_ctime_ns is not None:
+                    ctime_ns = attr.st_ctime_ns
                 if row["ctime_ns"] != ctime_ns:
                     new_data["ctime_ns"] = ctime_ns
                     update_db = True
@@ -799,8 +805,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             if update_db:
 
                 self.getLogger().debug("-- new attrs: %r", new_data)
-
-                # self.getTable("inode").update_data(inode, new_data)
 
                 row.update(new_data)
                 self.getLogger().debug("-- new row: %r", row)
@@ -979,10 +983,12 @@ class DedupOperations(llfuse.Operations): # {{{1
         return apparent_size, compressed_size
 
     def __fix_inode_if_requested_root(self, inode):
+        self.__log_call('__fix_inode_if_requested_root', '->(inode=%i)', inode)
         if inode == llfuse.ROOT_INODE and not self.getOption("disable_subvolumes"):
             if self.mounted_snapshot:
                 node = self.__get_tree_node_by_parent_inode_and_name(inode, self.mounted_snapshot)
                 if node:
+                    self.__log_call('__fix_inode_if_requested_root', '->fixed(inode=%i)', node["inode_id"])
                     return node["inode_id"]
         return inode
 
@@ -1000,6 +1006,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         return self
 
     def __get_tree_node_by_parent_inode_and_name(self, parent_inode, name):
+        self.__log_call('__get_tree_node_by_parent_inode_and_name', '->(parent_inode=%i, name=%r)', parent_inode, name)
 
         node = self.cached_nodes.get((parent_inode, name))
 
@@ -1033,6 +1040,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         return node
 
     def __get_tree_node_by_inode(self, inode):
+        self.__log_call('__get_tree_node_by_inode', '->(inode=%i)', inode)
+
         node = self.cached_nodes.get(inode)
 
         if not node:
@@ -1051,6 +1060,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         return node
 
     def __get_inode_row(self, inode_id):
+        self.__log_call('__get_inode_row', '->(inode=%i)', inode_id)
         row = self.cached_attrs.get(inode_id)
         if not row:
             start_time = time.time()
@@ -1067,6 +1077,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         return row
 
     def __fill_attr_inode_row(self, row): # {{{3
+        self.__log_call('__fill_attr_inode_row', '->(row=%r)', row)
+
         result = llfuse.EntryAttributes()
 
         result.entry_timeout = self.getOption("cache_meta_timeout")
@@ -1089,11 +1101,13 @@ class DedupOperations(llfuse.Operations): # {{{1
 
 
     def __getattr(self, inode_id): # {{{3
+        self.__log_call('__getattr', '->(inode=%i)', inode_id)
         row = self.__get_inode_row(inode_id)
         return self.__fill_attr_inode_row(row)
 
 
     def __get_hash_index_from_cache(self, inode, block_number):
+        self.__log_call('__get_hash_index_from_cache', '->(inode=%i, block_number=%i)', inode, block_number)
 
         hash_id = self.cached_indexes.get(inode, block_number)
 
@@ -1113,6 +1127,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         return hash_id
 
     def __get_block_from_cache(self, inode, block_number):
+        self.__log_call('__get_block_from_cache', '->(inode=%i, block_number=%i)', inode, block_number)
 
         block = self.cached_blocks.get(inode, block_number)
 
@@ -1368,6 +1383,9 @@ class DedupOperations(llfuse.Operations): # {{{1
 
 
     def __insert(self, parent_inode, name, mode, size, ctx, rdev=0): # {{{3
+
+        self.getLogger().debug("__insert->(parent_inode=%i,name=%r,mode=%o,size=%i)", parent_inode, name, mode, size)
+
         nlinks = mode & stat.S_IFDIR and 2 or 1
 
         manager = self.getManager()

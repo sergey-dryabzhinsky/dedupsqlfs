@@ -765,35 +765,38 @@ class DedupOperations(llfuse.Operations): # {{{1
                     new_data["gid"] = attr.st_gid
                     update_db = True
 
-            if attr.st_atime is not None:
-                atime_i, atime_ns = self.__get_time_tuple(attr.st_atime)
+            if attr.st_atime is not None or attr.st_atime_ns is not None:
+                if attr.st_atime_ns is not None:
+                    atime_i, atime_ns = self.__get_time_tuple(attr.st_atime_ns / 10**9)
+                else:
+                    atime_i, atime_ns = self.__get_time_tuple(attr.st_atime)
                 if row["atime"] != atime_i:
                     new_data["atime"] = atime_i
                     update_db = True
-                if attr.st_atime_ns is not None:
-                    atime_ns = attr.st_atime_ns
                 if row["atime_ns"] != atime_ns:
                     new_data["atime_ns"] = atime_ns
                     update_db = True
 
-            if attr.st_mtime is not None:
-                mtime_i, mtime_ns = self.__get_time_tuple(attr.st_mtime)
+            if attr.st_mtime is not None or attr.st_mtime_ns is not None:
+                if attr.st_mtime_ns is not None:
+                    mtime_i, mtime_ns = self.__get_time_tuple(attr.st_mtime_ns / 10**9)
+                else:
+                    mtime_i, mtime_ns = self.__get_time_tuple(attr.st_mtime)
                 if row["mtime"] != mtime_i:
                     new_data["mtime"] = mtime_i
                     update_db = True
-                if attr.st_mtime_ns is not None:
-                    mtime_ns = attr.st_mtime_ns
                 if row["mtime_ns"] != mtime_ns:
                     new_data["mtime_ns"] = mtime_ns
                     update_db = True
 
-            if attr.st_ctime is not None:
-                ctime_i, ctime_ns = self.__get_time_tuple(attr.st_ctime)
+            if attr.st_ctime is not None or attr.st_ctime_ns is not None:
+                if attr.st_ctime_ns is not None:
+                    ctime_i, ctime_ns = self.__get_time_tuple(attr.st_ctime_ns / 10**9)
+                else:
+                    ctime_i, ctime_ns = self.__get_time_tuple(attr.st_ctime)
                 if row["ctime"] != ctime_i:
                     new_data["ctime"] = ctime_i
                     update_db = True
-                if attr.st_ctime_ns is not None:
-                    ctime_ns = attr.st_ctime_ns
                 if row["ctime_ns"] != ctime_ns:
                     new_data["ctime_ns"] = ctime_ns
                     update_db = True

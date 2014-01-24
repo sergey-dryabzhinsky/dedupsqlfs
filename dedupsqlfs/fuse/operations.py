@@ -205,14 +205,14 @@ class DedupOperations(llfuse.Operations): # {{{1
     # --------------------------------------------------------------------------------------
 
     def access(self, inode, mode, ctx): # {{{3
-        self.__log_call('access', 'access(inode=%i, mode=%o, ctx=%r)', inode, mode, ctx)
+        self.__log_call('access', '->(inode=%i, mode=%o, ctx=%r)', inode, mode, ctx)
         inode = self.__fix_inode_if_requested_root(inode)
         if mode != os.F_OK and not self.__access(inode, mode, ctx):
             return False
         return True
 
     def create(self, inode_parent, name, mode, flags, ctx):
-        self.__log_call('create', 'create(inode_parent=%i, name=%r, mode=%o, flags=%o, ctx=%r)',
+        self.__log_call('create', '->(inode_parent=%i, name=%r, mode=%o, flags=%o, ctx=%r)',
                         inode_parent, name, mode, flags, ctx)
         if self.isReadonly(): return errno.EROFS
 
@@ -222,7 +222,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             node = self.__get_tree_node_by_parent_inode_and_name(inode_parent, name)
         except FUSEError as e:
             node = None
-            self.__log_call('create', '->(node with that name not found, creating...)')
+            self.__log_call('create', '-- node with that name not found, creating...')
             if e.errno != errno.ENOENT:
                 raise
 
@@ -236,13 +236,13 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.__cache_meta_hook()
 
-        self.__log_call('create', '->(created inode=%i, attrs=%r)', fh, attrs)
+        self.__log_call('create', '<-(created inode=%i, attrs=%r)', fh, attrs)
 
         return (fh, attrs,)
 
     def destroy(self): # {{{3
         try:
-            self.__log_call('destroy', 'destroy()')
+            self.__log_call('destroy', '->()')
             self.getLogger().debug("Umount file system in process...")
             if not self.getOption("readonly"):
                 # Flush all cached blocks
@@ -268,7 +268,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def flush(self, fh):
         try:
-            self.__log_call('flush', 'flush(fh=%i)', fh)
+            self.__log_call('flush', '->(fh=%i)', fh)
             if self.isReadonly(): raise FUSEError(errno.EROFS)
             #self.__flush_inode_cached_blocks(fh, clean=False)
 
@@ -288,7 +288,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def forget(self, inode_list):
         try:
-            self.__log_call('forget', 'forget(inode_list=%r)', inode_list)
+            self.__log_call('forget', '->(inode_list=%r)', inode_list)
             if self.isReadonly(): raise FUSEError(errno.EROFS)
             # clear block cache
             self.__cache_meta_hook()
@@ -301,7 +301,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def fsync(self, fh, datasync):
         try:
-            self.__log_call('fsync', 'fsync(fh=%i, datasync=%r)', fh, datasync)
+            self.__log_call('fsync', '->(fh=%i, datasync=%r)', fh, datasync)
             if self.isReadonly(): raise FUSEError(errno.EROFS)
         except Exception as e:
             self.__rollback_changes()
@@ -309,25 +309,25 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def fsyncdir(self, fh, datasync):
         try:
-            self.__log_call('fsyncdir', 'fsyncdir(fh=%i, datasync=%r)', fh, datasync)
+            self.__log_call('fsyncdir', '->(fh=%i, datasync=%r)', fh, datasync)
             if self.isReadonly(): raise FUSEError(errno.EROFS)
         except Exception as e:
             self.__rollback_changes()
             raise self.__except_to_status('fsyncdir', e, errno.EIO)
 
     def getattr(self, inode): # {{{3
-        self.__log_call('getattr', 'getattr(inode=%r)', inode)
+        self.__log_call('getattr', '->(inode=%r)', inode)
         inode = self.__fix_inode_if_requested_root(inode)
         attr = self.__getattr(inode)
         v = {}
         for a in attr.__slots__:
             v[a] = getattr(attr, a)
 
-        self.__log_call('getattr', '->(inode=%r, attr=%r)', inode, v)
+        self.__log_call('getattr', '<-(inode=%r, attr=%r)', inode, v)
         return attr
 
     def getxattr(self, inode, name): # {{{3
-        self.__log_call('getxattr', 'getxattr(inode=%r, name=%r)', inode, name)
+        self.__log_call('getxattr', '->(inode=%r, name=%r)', inode, name)
         inode = self.__fix_inode_if_requested_root(inode)
         xattrs = self.getTable("xattr").find_by_inode(inode)
         if not xattrs:
@@ -448,7 +448,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             raise e
 
     def link(self, inode, new_parent_inode, new_name): # {{{3
-        self.__log_call('link', 'link(inode=%r, parent_inode=%r, new_name=%r)', inode, new_parent_inode, new_name)
+        self.__log_call('link', '->(inode=%r, parent_inode=%r, new_name=%r)', inode, new_parent_inode, new_name)
         if self.isReadonly(): raise FUSEError(errno.EROFS)
 
         inode = self.__fix_inode_if_requested_root(inode)
@@ -479,7 +479,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def listxattr(self, inode):
         try:
-            self.__log_call('listxattr', 'listxattr(inode=%r)', inode)
+            self.__log_call('listxattr', '->(inode=%r)', inode)
             if self.isReadonly(): raise FUSEError(errno.EROFS)
             inode = self.__fix_inode_if_requested_root(inode)
             xattrs = self.getTable("xattr").find_by_inode(inode)
@@ -491,25 +491,26 @@ class DedupOperations(llfuse.Operations): # {{{1
             raise self.__except_to_status('listxattr', e, errno.EIO)
 
     def lookup(self, parent_inode, name):
-        self.__log_call('lookup', 'lookup(parent_inode=%r, name=%r)', parent_inode, name)
+        self.__log_call('lookup', '->(parent_inode=%r, name=%r)', parent_inode, name)
 
         parent_inode = self.__fix_inode_if_requested_root(parent_inode)
 
         node = self.__get_tree_node_by_parent_inode_and_name(parent_inode, name)
         attr = self.__getattr(node["inode_id"])
+        self.__log_call('lookup', '-- node=%r', node)
 
         v = {}
         for a in attr.__slots__:
             v[a] = getattr(attr, a)
 
-        self.__log_call('lookup', '->(node=%r, attr=%r)', node, v)
+        self.__log_call('lookup', '<-(attr=%r)', node, v)
 
         self.__cache_meta_hook()
         return attr
 
     def mkdir(self, parent_inode, name, mode, ctx): # {{{3
         try:
-            self.__log_call('mkdir', 'mkdir(parent_inode=%i, name=%r, mode=%o, ctx=%r)',
+            self.__log_call('mkdir', '->(parent_inode=%i, name=%r, mode=%o, ctx=%r)',
                             parent_inode, name, mode, ctx)
             if self.isReadonly(): raise FUSEError(errno.EROFS)
 
@@ -530,7 +531,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def mknod(self, parent_inode, name, mode, rdev, ctx): # {{{3
         try:
-            self.__log_call('mknod', 'mknod(parent_inode=%i, name=%r, mode=%o, rdev=%i, ctx=%r)',
+            self.__log_call('mknod', '->(parent_inode=%i, name=%r, mode=%o, rdev=%i, ctx=%r)',
                             parent_inode, name, mode, rdev, ctx)
             if self.isReadonly(): return -errno.EROFS
 
@@ -546,7 +547,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         """
         Return filehandler ID
         """
-        self.__log_call('open', 'open(inode=%i, flags=%o)', inode, flags)
+        self.__log_call('open', '->(inode=%i, flags=%o)', inode, flags)
         if self.isReadonly(): raise FUSEError(errno.EROFS)
         # Make sure the file exists?
 
@@ -588,7 +589,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         try:
             start_time = time.time()
 
-            self.__log_call('read', 'read(fh=%i, offset=%i, size=%i)', fh, offset, size, )
+            self.__log_call('read', '->(fh=%i, offset=%i, size=%i)', fh, offset, size, )
 
             data = self.__get_block_data_by_offset(fh, offset, size)
             self.bytes_read += len(data)
@@ -609,7 +610,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         @param fh: file handler number - inode.id
         @type  fh: int
         """
-        self.__log_call('readdir', 'readdir(fh=%r)', fh)
+        self.__log_call('readdir', '->(fh=%r)', fh)
 
         inode = fh
         inode = self.__fix_inode_if_requested_root(inode)
@@ -623,12 +624,12 @@ class DedupOperations(llfuse.Operations): # {{{1
                 continue
             name = self.getTable("name").get(node["name_id"])
             attrs = self.__getattr(node["inode_id"])
-            self.__log_call('readdir', '->(name=%r, attrs=%r, node=%i)', name, attrs, node["id"])
+            self.__log_call('readdir', '<-(name=%r, attrs=%r, node=%i)', name, attrs, node["id"])
             yield (name, attrs, node["id"],)
 
 
     def readlink(self, inode): # {{{3
-        self.__log_call('readlink', 'readlink(inode=%i)', inode)
+        self.__log_call('readlink', '->(inode=%i)', inode)
 
         inode = self.__fix_inode_if_requested_root(inode)
 
@@ -638,7 +639,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         return target
 
     def release(self, fh): # {{{3
-        self.__log_call('release', 'release(fh=%i)', fh)
+        self.__log_call('release', '->(fh=%i)', fh)
         #self.__flush_inode_cached_blocks(fh, clean=True)
         self.__cache_block_hook()
         self.__cache_meta_hook()
@@ -646,14 +647,14 @@ class DedupOperations(llfuse.Operations): # {{{1
         return 0
 
     def releasedir(self, fh):
-        self.__log_call('releasedir', 'releasedir(fh=%r)', fh)
+        self.__log_call('releasedir', '->(fh=%r)', fh)
         self.__cache_meta_hook()
         self.__gc_hook()
         return 0
 
     def removexattr(self, inode, name):
         try:
-            self.__log_call('removexattr', 'removexattr(inode=%i, name=%r)', inode, name)
+            self.__log_call('removexattr', '->(inode=%i, name=%r)', inode, name)
             if self.isReadonly():
                 raise FUSEError(errno.EROFS)
 
@@ -674,7 +675,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def rename(self, inode_parent_old, name_old, inode_parent_new, name_new): # {{{3
         try:
-            self.__log_call('rename', 'rename(inode_parent_old=%i, name_old=%r, inode_parent_new=%i, name_new=%r)',
+            self.__log_call('rename', '->(inode_parent_old=%i, name_old=%r, inode_parent_new=%i, name_new=%r)',
                             inode_parent_old, name_old, inode_parent_new, name_new)
             if self.isReadonly():
                 raise FUSEError(errno.EROFS)
@@ -707,7 +708,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def rmdir(self, inode_parent, name): # {{{3
         try:
-            self.__log_call('rmdir', 'rmdir(inode_parent=%i, name=%r)', inode_parent, name)
+            self.__log_call('rmdir', '->(inode_parent=%i, name=%r)', inode_parent, name)
             if self.isReadonly():
                 raise FUSEError(errno.EROFS)
 
@@ -732,7 +733,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             for a in attr.__slots__:
                 v[a] = getattr(attr, a)
 
-            self.__log_call('setattr', 'setattr(inode=%i, attr=%r)', inode, v)
+            self.__log_call('setattr', '->(inode=%i, attr=%r)', inode, v)
             if self.isReadonly(): return -errno.EROFS
 
             inode = self.__fix_inode_if_requested_root(inode)
@@ -820,7 +821,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def setxattr(self, inode, name, value):
         try:
-            self.__log_call('setxattr', 'setxattr(inode=%i, name=%r, value=%r)', inode, name, value)
+            self.__log_call('setxattr', '->(inode=%i, name=%r, value=%r)', inode, name, value)
             if self.isReadonly():
                 raise FUSEError(errno.EROFS)
 
@@ -845,11 +846,11 @@ class DedupOperations(llfuse.Operations): # {{{1
             raise self.__except_to_status('rmdir', e, errno.ENOENT)
 
     def stacktrace(self):
-        self.__log_call('stacktrace', 'stacktrace()')
+        self.__log_call('stacktrace', '->()')
 
     def statfs(self): # {{{3
         try:
-            self.__log_call('statfs', 'statfs()')
+            self.__log_call('statfs', '->()')
             # Use os.statvfs() to report the host file system's storage capacity.
             # host_fs = os.statvfs(self.getOption("data"))
             stats = llfuse.StatvfsData()
@@ -882,7 +883,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def symlink(self, inode_parent, name, target, ctx): # {{{3
         try:
-            self.__log_call('symlink', 'symlink(inode_parent=%i, name=%r, target=%r, ctx=%r)',
+            self.__log_call('symlink', '->(inode_parent=%i, name=%r, target=%r, ctx=%r)',
                             inode_parent, name, target, ctx)
             if self.isReadonly(): return -errno.EROFS
 
@@ -901,7 +902,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def unlink(self, parent_inode, name): # {{{3
         try:
-            self.__log_call('unlink', 'unlink(parent_inode=%i, name=%r)', parent_inode, name)
+            self.__log_call('unlink', '->(parent_inode=%i, name=%r)', parent_inode, name)
             if self.isReadonly():
                 raise FUSEError(errno.EROFS)
 
@@ -919,7 +920,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             # Too much output
             # self.__log_call('write', 'write(fh=%i, offset=%i, buf=%r)', fh, offset, buf)
-            self.__log_call('write', 'write(fh=%i, offset=%i)', fh, offset)
+            self.__log_call('write', '->(fh=%i, offset=%i)', fh, offset)
 
             #length = len(buf)
             #self.__log_call('write', 'length(buf)=%i', length)
@@ -1358,7 +1359,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         # To re enable them:
         #  :%s/^\(\s\+\)#\(self\.__log_call\)/\1\2
         if self.calls_log_filter == [] or fun in self.calls_log_filter:
-            self.getLogger().debugv(msg, *args)
+            self.getLogger().debugv("%s %s" % (fun, msg,), *args)
 
 
     def __get_opts_from_db(self): # {{{3

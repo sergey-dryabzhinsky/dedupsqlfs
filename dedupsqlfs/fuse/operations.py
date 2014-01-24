@@ -229,6 +229,10 @@ class DedupOperations(llfuse.Operations): # {{{1
         if not node:
             inode, parent_ino = self.__insert(inode_parent, name, mode, 0, ctx)
         else:
+            if flags & os.O_CREAT and flags & os.O_EXCL:
+                self.__log_call('open', '-- exception for existed file! cant create!')
+                raise FUSEError(errno.EIO)
+
             inode = node["inode_id"]
 
         fh = self.open(inode, flags)
@@ -555,10 +559,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         inode = self.__get_inode_row(inode)
         if not inode:
-            raise FUSEError(errno.ENOENT)
-
-        if flags & os.O_CREAT and flags & os.O_EXCL:
-            self.__log_call('open', '-- exception for existed file! cant create!')
             raise FUSEError(errno.ENOENT)
 
         if flags & os.O_TRUNC:

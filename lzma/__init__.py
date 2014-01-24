@@ -15,7 +15,7 @@ search_paths.append(currentdir)
 # Evil hack for import not local module
 imported = False
 try:
-    sys.path.pop(0)
+    path = sys.path.pop(0)
 
     fp, pathname, description = imp.find_module("lzma")
     module = imp.load_module("lzma", fp, pathname, description)
@@ -23,7 +23,7 @@ try:
     compress = module.compress
     decompress = module.decompress
 
-    sys.path.insert(0, '')
+    sys.path.insert(0, path)
 
     imported = True
 except:
@@ -32,6 +32,7 @@ except:
 if not imported:
     p1, p2 = sys.version_info[:2]
 
+    build_dir = None
     for d in search_paths:
         build_dir = os.path.abspath( os.path.join(d, "lzma", "build") )
         if not os.path.isdir(build_dir):
@@ -39,7 +40,7 @@ if not imported:
         if os.path.isdir(build_dir):
             break
 
-    if not os.path.isdir(build_dir):
+    if not build_dir or not os.path.isdir(build_dir):
         raise OSError("not found module build dir: lzma")
 
     dirs = os.listdir(build_dir)

@@ -23,4 +23,6 @@ for d in dirs:
         compress = module.compress
         decompress = module.decompress
 
+        sys.path.pop(0)
+
         break

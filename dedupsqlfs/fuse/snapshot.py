@@ -41,13 +41,13 @@ class Snapshot(Subvolume):
         try:
             self.getTable("tree").selectSubvolume(None)
 
-            attr_from = self.getManager().lookup(llfuse.ROOT_INODE, subvol_from)
-            root_node_from = node_from = self.getTable('tree').find_by_inode(attr_from.st_ino)
+            root_node_from = node_from = self.getManager().get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, subvol_from)
+            attr_from = self.getManager().getattr(root_node_from["inode_id"])
 
             self.getLogger().debug("-- use subvolume node: %r" % (root_node_from,))
 
-            attr_to = self.getManager().lookup(llfuse.ROOT_INODE, subvol_to)
-            root_node_to = node_to = self.getTable('tree').find_by_inode(attr_to.st_ino)
+            root_node_to = node_to = self.getManager().get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, subvol_to)
+            attr_to = self.getManager().getattr(root_node_to["inode_id"])
 
             self.getLogger().debug("-- into subvolume node: %r" % (root_node_to,))
 
@@ -108,7 +108,7 @@ class Snapshot(Subvolume):
                     treeItem_from["name_id"],
                     inode_to_id
                 )
-                self.getTable("tree").selectSubvolume(root_node_from["id"])
+                self.getTable("tree").selectSubvolume(None)
 
                 linkTarget_from = self.getTable("link").find_by_inode(attr_from.st_ino)
                 if linkTarget_from:
@@ -144,7 +144,7 @@ class Snapshot(Subvolume):
                             continue
                         if name_from in (b'.', b'..'):
                             continue
-                        nodes.append((node_from, attr_from, name_from, treeNode_to_id,))
+                        nodes.append((node_from_id, attr_from, name_from, treeNode_to_id,))
 
                 if count_to_do:
                     proc = "%6.2f" % (count_done * 100.0 / count_to_do,)

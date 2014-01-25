@@ -507,10 +507,20 @@ class DedupOperations(llfuse.Operations): # {{{1
         for a in attr.__slots__:
             v[a] = getattr(attr, a)
 
-        self.__log_call('lookup', '<-(attr=%r)', node, v)
+        self.__log_call('lookup', '<-(attr=%r)', v)
 
         self.__cache_meta_hook()
         return attr
+
+    def get_tree_node_by_parent_inode_and_name(self, parent_inode, name):
+        """
+        @TODO: mode to LowLevelOperations
+        """
+        self.__log_call('get_tree_node_by_parent_inode_and_name', '->(parent_inode=%r, name=%r)', parent_inode, name)
+        node = self.__get_tree_node_by_parent_inode_and_name(parent_inode, name)
+        self.__log_call('lookup', '<-(attr=%r)', node)
+        self.__cache_meta_hook()
+        return node
 
     def mkdir(self, parent_inode, name, mode, ctx): # {{{3
         try:

@@ -456,9 +456,6 @@ def main(): # {{{1
     compression_methods.pop()
     compression_methods.pop()
 
-    if args.verbosity <= 0:
-        args.verbosity = 1
-
     if args.profile:
         sys.stderr.write("Enabling profiling..\n")
         import cProfile, pstats

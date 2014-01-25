@@ -57,7 +57,7 @@ class Snapshot(Subvolume):
             if count_to_do:
                 count_proc = "%6.2f" % (count_done * 100.0 / count_to_do,)
 
-            self.getLogger().info("Progress:")
+            self.print_msg("Progress:")
             self.print_msg("\r%s %%" % count_proc)
 
             _inode_from = self.getTable("inode").get(attr_from.st_ino)
@@ -163,7 +163,7 @@ class Snapshot(Subvolume):
             self.getTable("subvolume").mount_time(root_node_to["id"], subvol_from["mounted_at"])
             self.getTable("subvolume").update_time(root_node_to["id"], subvol_from["updated_at"])
 
-            self.getManager().getLogger().info("Done")
+            self.print_msg("Done")
 
         except:
             self.print_msg("\n")
@@ -192,7 +192,7 @@ class Snapshot(Subvolume):
                 subvolDate = datetime.fromtimestamp(subvol["updated_at"])
 
             if subvolDate < oldDate:
-                self.getManager().getLogger().info("Remove %r subvolume", name)
+                self.print_msg("Remove %r subvolume" % name)
                 self.remove(name)
 
         self.getManager().releasedir(fh)

@@ -46,6 +46,11 @@ class Subvolume(object):
         sys.stdout.flush()
         return self
 
+    def print_out(self, msg):
+        sys.stdout.write(msg)
+        sys.stdout.flush()
+        return self
+
     def get_time_tuple(self, t):
         t_ns, t_i = math.modf(t)
         t_ns = int(t_ns * 10**9)
@@ -96,10 +101,10 @@ class Subvolume(object):
 
         fh = self.getManager().opendir(llfuse.ROOT_INODE)
 
-        print("Subvolumes:")
-        print("-"*(46+22+22+22+1))
-        print("%-46s| %-20s| %-20s| %-20s|" % ("Name", "Created", "Last mounted", "Last updated"))
-        print("-"*(46+22+22+22+1))
+        self.print_out("Subvolumes:\n")
+        self.print_out("-"*(46+22+22+22+1) + "\n")
+        self.print_out("%-46s| %-20s| %-20s| %-20s|\n" % ("Name", "Created", "Last mounted", "Last updated"))
+        self.print_out("-"*(46+22+22+22+1) + "\n")
 
         for name, attr, node in self.getManager().readdir(fh, 0):
 
@@ -119,14 +124,14 @@ class Subvolume(object):
             if subvol["updated_at"]:
                 utime = datetime.fromtimestamp(subvol["updated_at"])
 
-            print("%-46s| %-20s| %-20s| %-20s|" % (
+            self.print_out("%-46s| %-20s| %-20s| %-20s|\n" % (
                 name.decode("utf8"),
                 ctime,
                 mtime,
                 utime,
             ))
 
-        print("-"*(46+22+22+22+1))
+        self.print_out("-"*(46+22+22+22+1) + "\n")
 
         self.getManager().releasedir(fh)
 
@@ -193,7 +198,7 @@ class Subvolume(object):
             if count_to_do:
                 count_proc = "%6.2f" % (count_done * 100.0 / count_to_do,)
 
-            self.getLogger().info("Progress:")
+            self.print_msg("Progress:")
             self.print_msg("\r%s %%" % count_proc)
 
             apparent_size = 0
@@ -259,20 +264,15 @@ class Subvolume(object):
 
             self.print_msg("\n")
 
-            self.getLogger().info("Apparent size is %s.",
-                             format_size(apparent_size)
-            )
+            self.print_out("Apparent size is %s." % format_size(apparent_size) )
 
-            self.getLogger().info("Unique data size is %s.",
-                             format_size(unique_size)
-            )
+            self.print_out("Unique data size is %s." % format_size(unique_size) )
 
             if unique_size:
-                self.getLogger().info("Compressed data size is %s (%.2f %%).",
+                self.print_out("Compressed data size is %s (%.2f %%)." % (
                     format_size(compressed_size), compressed_size * 100.0 / unique_size
-                )
+                ))
 
-            self.getLogger().info("Compression by types:")
             count_all = 0
             comp_types = {}
 
@@ -283,11 +283,13 @@ class Subvolume(object):
             keys = list(comp_types.keys())
             keys.sort(reverse=True)
 
+            if keys:
+                self.print_out("Compression by types:")
             for key in keys:
                 compression = comp_types[key]
-                self.getLogger().info(" %8s used by %.2f%% blocks",
+                self.print_out(" %8s used by %.2f%% blocks" % (
                     compression, 100.0 * key / count_all
-                )
+                ))
 
         except Exception as e:
             self.getLogger().warn("Can't process subvolume! %s" % e)

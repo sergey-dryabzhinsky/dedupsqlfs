@@ -139,12 +139,12 @@ class Snapshot(Subvolume):
                     count_done += 1
 
                 if stat.S_ISDIR(attr_from.st_mode):
-                    for name_from, attr_from, node_from_id in self.getManager().readdir(attr_from.st_ino, 0):
-                        if attr_from.st_ino == attr_from.st_ino:
+                    for name_from, new_attr_from, node_from_id in self.getManager().readdir(attr_from.st_ino, 0):
+                        if attr_from.st_ino == new_attr_from.st_ino:
                             continue
                         if name_from in (b'.', b'..'):
                             continue
-                        nodes.append((node_from_id, attr_from, name_from, treeNode_to_id,))
+                        nodes.append((node_from_id, new_attr_from, name_from, treeNode_to_id,))
 
                 if count_to_do:
                     proc = "%6.2f" % (count_done * 100.0 / count_to_do,)

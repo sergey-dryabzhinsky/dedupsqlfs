@@ -93,12 +93,12 @@ class TableInodeHashBlock( Table ):
         cur = self.getCursor()
         cur.execute("SELECT * FROM `%s` WHERE inode_id=?" % self.getName(), (inode,))
         self.stopTimer('get_by_inode')
-        def fetchone():
+        while True:
             self.startTimer()
-            item = cur.fetchone()
+            row = cur.fetchone()
             self.stopTimer('get_by_inode')
-            return item
-        for row in iter(fetchone, None):
+            if row is None:
+                break
             yield row
         return
 

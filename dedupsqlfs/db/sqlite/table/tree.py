@@ -30,8 +30,8 @@ class TableTree( Table ):
             ");"
         )
         c.execute(
-            "CREATE INDEX IF NOT EXISTS tree_parent ON `%s` (" % self.getName()+
-                "parent_id"+
+            "CREATE INDEX IF NOT EXISTS tree_parent_id ON `%s` (" % self.getName()+
+                "parent_id,id"+
             ");"
         )
         c.execute(

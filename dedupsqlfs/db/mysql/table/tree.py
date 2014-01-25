@@ -28,7 +28,7 @@ class TableTree( Table ):
 
         self.createIndexIfNotExists("spn", ('subvol_id', 'parent_id', 'name_id',), unique=True)
         self.createIndexIfNotExists("inode", ('inode_id',))
-        self.createIndexIfNotExists("parent", ('parent_id',))
+        self.createIndexIfNotExists("parent_id", ('parent_id', 'id'))
         self.createIndexIfNotExists("parent_name", ('parent_id', 'name_id',))
         self.createIndexIfNotExists("subvol", ('subvol_id',))
         self.createIndexIfNotExists("name", ('name_id',))

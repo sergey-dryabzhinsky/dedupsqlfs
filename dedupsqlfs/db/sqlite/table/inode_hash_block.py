@@ -100,7 +100,7 @@ class TableInodeHashBlock( Table ):
             if row is None:
                 break
             yield row
-        return
+        raise StopIteration
 
     def get_count_by_inode( self, inode):
         self.startTimer()

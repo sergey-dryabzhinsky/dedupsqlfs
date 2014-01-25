@@ -136,7 +136,7 @@ class Snapshot(Subvolume):
                                     self.getManager().getManager().commit()
                                 self.print_msg("\r%s %%" % count_proc)
                     if check_cout != count_indexes_from:
-                        raise OSError("Count inode data blocks don't match to written count!")
+                        raise OSError("Count inode data blocks don't match to written count! inode=%s, count_db=%s, count_count=%s" % (attr_from.st_ino, count_indexes_from, check_cout,))
                 else:
                     count_done += 1
 
@@ -152,7 +152,7 @@ class Snapshot(Subvolume):
                         count_proc = proc
                         if self.getManager().flushCaches():
                             self.getManager().getManager().commit()
-                        self.print_msg("\r%s %%  " % count_proc)
+                        self.print_msg("\r%s %%    " % count_proc)
 
             self.print_msg("\n")
             if not self.getManager().flushCaches():

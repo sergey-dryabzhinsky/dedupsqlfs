@@ -38,8 +38,15 @@ class Snapshot(Subvolume):
         self.getLogger().debug("Use subvolume: %r" % subvol_from)
         self.getLogger().debug("Into subvolume: %r" % subvol_to)
 
+        tableTree = self.getTable("tree")
+        tableInode = self.getTable("inode")
+        tableLink = self.getTable("link")
+        tableXattr = self.getTable("xattr")
+        tableIndex = self.getTable("inode_hash_block")
+        tableSubvol = self.getTable("subvolume")
+
         try:
-            self.getTable("tree").selectSubvolume(None)
+            tableTree.selectSubvolume(None)
 
             root_node_from = node_from = self.getManager().get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, subvol_from)
             attr_from = self.getManager().getattr(root_node_from["inode_id"])
@@ -51,7 +58,7 @@ class Snapshot(Subvolume):
 
             self.getLogger().debug("-- into subvolume node: %r" % (root_node_to,))
 
-            count_to_do = self.getTable('tree').count_subvolume_nodes(root_node_from["id"])
+            count_to_do = tableTree.count_subvolume_nodes(root_node_from["id"])
             count_done = 0
             count_proc = 0
             if count_to_do:
@@ -60,12 +67,12 @@ class Snapshot(Subvolume):
             self.print_msg("Progress:\n")
             self.print_msg("\r%s %%  " % count_proc)
 
-            _inode_from = self.getTable("inode").get(attr_from.st_ino)
+            _inode_from = tableInode.get(attr_from.st_ino)
             del _inode_from["id"]
 
-            self.getTable("inode").update_data(attr_to.st_ino, _inode_from)
+            tableInode.update_data(attr_to.st_ino, _inode_from)
 
-            self.getTable("tree").selectSubvolume(root_node_from["id"])
+            tableTree.selectSubvolume(None)
 
             nodes = []
             for name_from, attr_from, node_from_id in self.getManager().readdir(node_from["inode_id"], 0):
@@ -88,45 +95,45 @@ class Snapshot(Subvolume):
                 at, at_ns = self.get_time_tuple(attr_from.st_atime)
                 mt, mt_ns = self.get_time_tuple(attr_from.st_mtime)
                 ct, ct_ns = self.get_time_tuple(attr_from.st_ctime)
-                inode_to_id = self.getTable("inode").insert(
+                inode_to_id = tableInode.insert(
                     attr_from.st_nlink, attr_from.st_mode,
                     attr_from.st_uid, attr_from.st_gid, attr_from.st_rdev, attr_from.st_size,
                     at, mt, ct,
                     at_ns, mt_ns, ct_ns
                 )
 
-                treeItem_from = self.getTable("tree").get(node_from_id)
+                treeItem_from = tableTree.get(node_from_id)
 
                 self.getLogger().debug("---- node from: %r" % (node_from_id,))
                 self.getLogger().debug("---- tree item: %r" % (treeItem_from,))
 
-                self.getTable("tree").selectSubvolume(root_node_to["id"])
-                treeNode_to_id = self.getTable("tree").insert(
+                tableTree.selectSubvolume(root_node_to["id"])
+                treeNode_to_id = tableTree.insert(
                     parent_node_to_id,
                     treeItem_from["name_id"],
                     inode_to_id
                 )
-                self.getTable("tree").selectSubvolume(None)
+                tableTree.selectSubvolume(None)
 
-                linkTarget_from = self.getTable("link").find_by_inode(attr_from.st_ino)
+                linkTarget_from = tableLink.find_by_inode(attr_from.st_ino)
                 if linkTarget_from:
-                    self.getTable("link").insert(inode_to_id, linkTarget_from)
+                    tableLink.insert(inode_to_id, linkTarget_from)
 
-                xattr_from = self.getTable("xattr").find_by_inode(attr_from.st_ino)
+                xattr_from = tableXattr.find_by_inode(attr_from.st_ino)
                 if xattr_from:
-                    self.getTable("xattr").insert(inode_to_id, xattr_from)
+                    tableXattr.insert(inode_to_id, xattr_from)
 
-                count_indexes_from = self.getTable("inode_hash_block").get_count_by_inode(attr_from.st_ino)
+                count_indexes_from = tableIndex.get_count_by_inode(attr_from.st_ino)
                 if count_indexes_from:
                     dp = 1.0 / count_indexes_from
-                    check_cout = 0
-                    for indexItem in self.getTable("inode_hash_block").get_by_inode(attr_from.st_ino):
-                        self.getTable("inode_hash_block").insert(
+                    check_count = 0
+                    for indexItem in tableIndex.get_by_inode(attr_from.st_ino):
+                        tableIndex.insert(
                             inode_to_id,
                             indexItem["block_number"],
                             indexItem["hash_id"]
                         )
-                        check_cout += 1
+                        check_count += 1
                         count_done += dp
                         if count_to_do:
                             proc = "%6.4f" % (count_done * 100.0 / count_to_do,)
@@ -135,8 +142,8 @@ class Snapshot(Subvolume):
                                 if self.getManager().flushCaches():
                                     self.getManager().getManager().commit()
                                 self.print_msg("\r%s %%" % count_proc)
-                    if check_cout != count_indexes_from:
-                        raise OSError("Count inode data blocks don't match to written count! inode=%s, count_db=%s, count_count=%s" % (attr_from.st_ino, count_indexes_from, check_cout,))
+                    if check_count != count_indexes_from:
+                        raise OSError("Count inode data blocks don't match to written count! inode=%s, count_db=%s, count_count=%s" % (attr_from.st_ino, count_indexes_from, check_count,))
                 else:
                     count_done += 1
 
@@ -159,9 +166,9 @@ class Snapshot(Subvolume):
                 self.getManager().getManager().commit()
 
             # Copy attrs from subvolume table
-            subvol_from = self.getTable("subvolume").get(root_node_from["id"])
-            self.getTable("subvolume").mount_time(root_node_to["id"], subvol_from["mounted_at"])
-            self.getTable("subvolume").update_time(root_node_to["id"], subvol_from["updated_at"])
+            subvol_from = tableSubvol.get(root_node_from["id"])
+            tableSubvol.mount_time(root_node_to["id"], subvol_from["mounted_at"])
+            tableSubvol.update_time(root_node_to["id"], subvol_from["updated_at"])
 
             self.print_msg("Done")
 

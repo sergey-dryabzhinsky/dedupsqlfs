@@ -57,8 +57,8 @@ class Snapshot(Subvolume):
             if count_to_do:
                 count_proc = "%6.2f" % (count_done * 100.0 / count_to_do,)
 
-            self.print_msg("Progress:")
-            self.print_msg("\r%s %%" % count_proc)
+            self.print_msg("Progress:\n")
+            self.print_msg("\r%s %%  " % count_proc)
 
             _inode_from = self.getTable("inode").get(attr_from.st_ino)
             del _inode_from["id"]
@@ -70,8 +70,6 @@ class Snapshot(Subvolume):
             nodes = []
             for name_from, attr_from, node_from_id in self.getManager().readdir(node_from["inode_id"], 0):
                 if attr_from.st_ino == node_from["inode_id"]:
-                    continue
-                if name_from in (b'.', b'..'):
                     continue
                 nodes.append((node_from_id, attr_from, name_from, node_to["id"]))
 
@@ -121,12 +119,14 @@ class Snapshot(Subvolume):
                 count_indexes_from = self.getTable("inode_hash_block").get_count_by_inode(attr_from.st_ino)
                 if count_indexes_from:
                     dp = 1.0 / count_indexes_from
+                    check_cout = 0
                     for indexItem in self.getTable("inode_hash_block").get_by_inode(attr_from.st_ino):
                         self.getTable("inode_hash_block").insert(
                             inode_to_id,
                             indexItem["block_number"],
                             indexItem["hash_id"]
                         )
+                        check_cout += 1
                         count_done += dp
                         if count_to_do:
                             proc = "%6.4f" % (count_done * 100.0 / count_to_do,)
@@ -135,14 +135,14 @@ class Snapshot(Subvolume):
                                 if self.getManager().flushCaches():
                                     self.getManager().getManager().commit()
                                 self.print_msg("\r%s %%" % count_proc)
+                    if check_cout != count_indexes_from:
+                        raise OSError("Count inode data blocks don't match to written count!")
                 else:
                     count_done += 1
 
                 if stat.S_ISDIR(attr_from.st_mode):
                     for name_from, new_attr_from, node_from_id in self.getManager().readdir(attr_from.st_ino, 0):
                         if attr_from.st_ino == new_attr_from.st_ino:
-                            continue
-                        if name_from in (b'.', b'..'):
                             continue
                         nodes.append((node_from_id, new_attr_from, name_from, treeNode_to_id,))
 
@@ -152,7 +152,7 @@ class Snapshot(Subvolume):
                         count_proc = proc
                         if self.getManager().flushCaches():
                             self.getManager().getManager().commit()
-                        self.print_msg("\r%s %%" % count_proc)
+                        self.print_msg("\r%s %%  " % count_proc)
 
             self.print_msg("\n")
             if not self.getManager().flushCaches():

@@ -84,7 +84,7 @@ class TableInodeHashBlock( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute("SELECT hash_id FROM `%s` WHERE inode_id=?" % self.getName(), (inode,))
-        items = cur.fetchall()
+        items = tuple(item for item in iter(cur.fetchone,None))
         self.stopTimer('get_hashes_by_inode')
         return items
 

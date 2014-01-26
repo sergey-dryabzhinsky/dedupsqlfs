@@ -137,7 +137,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         if not self.manager:
             engine = self.getOption('storage_engine')
             if not engine:
-                engine = 'mysql'
+                engine = 'sqlite'
 
             if engine == 'mysql':
                 from dedupsqlfs.db.mysql.manager import DbManager
@@ -323,10 +323,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.__log_call('getattr', '->(inode=%r)', inode)
         inode = self.__fix_inode_if_requested_root(inode)
         attr = self.__getattr(inode)
-        v = {}
-        for a in attr.__slots__:
-            v[a] = getattr(attr, a)
-
+        v = self.__get_inode_row(inode)
         self.__log_call('getattr', '<-(inode=%r, attr=%r)', inode, v)
         return attr
 
@@ -462,20 +459,17 @@ class DedupOperations(llfuse.Operations): # {{{1
         string_id = self.__intern(new_name)
 
         treeTable = self.getTable("tree")
-        inodeTable = self.getTable("inode")
 
         attr = self.__get_inode_row(inode)
 
         treeTable.insert(parent_node["id"], string_id, inode)
-        inodeTable.inc_nlinks(inode)
         attr["nlinks"] += 1
-        self.cached_attrs.set(inode, attr)
+        self.cached_attrs.set(inode, attr, writed=True)
 
         if attr["mode"] & stat.S_IFDIR:
-            attr = self.__get_inode_row(parent_node["inode_id"])
-            inodeTable.inc_nlinks(parent_node["inode_id"])
+            attr = self.__get_inode_row(new_parent_inode)
             attr["nlinks"] += 1
-            self.cached_attrs.set(parent_node["inode_id"], attr)
+            self.cached_attrs.set(new_parent_inode, attr, writed=True)
 
         self.__cache_meta_hook()
 
@@ -514,7 +508,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def get_tree_node_by_parent_inode_and_name(self, parent_inode, name):
         """
-        @TODO: mode to LowLevelOperations
+        @TODO: move to LowLevelOperations
         """
         self.__log_call('get_tree_node_by_parent_inode_and_name', '->(parent_inode=%r, name=%r)', parent_inode, name)
         node = self.__get_tree_node_by_parent_inode_and_name(parent_inode, name)
@@ -567,29 +561,22 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         inode = self.__fix_inode_if_requested_root(inode)
 
-        inode = self.__get_inode_row(inode)
-        if not inode:
-            raise FUSEError(errno.ENOENT)
-
         if flags & os.O_TRUNC:
             self.__log_call('open', '-- truncate file!')
-            inode["size"] = 0
-            self.cached_attrs.set(inode["id"], inode, writed=True)
+            row = self.__get_inode_row(inode)
+            row["size"] = 0
+            self.cached_attrs.set(inode, row, writed=True)
 
         # Make sure the file is readable and/or writable.
-        return inode["id"]
+        return inode
 
     def opendir(self, inode): # {{{3
         self.__log_call('opendir', 'opendir(inode=%i)', inode)
         # Make sure the file exists?
-
         inode = self.__fix_inode_if_requested_root(inode)
-
-        node = self.__get_tree_node_by_inode(inode)
-        if not node:
-            raise FUSEError(errno.ENOENT)
+        self.__get_tree_node_by_inode(inode)
         # Make sure the file is readable and/or writable.
-        return node["inode_id"]
+        return inode
 
     def read(self, fh, offset, size): # {{{3
         """
@@ -1768,6 +1755,12 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.time_spent_writing_blocks += time.time() - start_time
             return
 
+        # First sparce files variant
+        sparce_block = False
+        if data_block == chr(0)*block_length:
+            data_block = b''
+            sparce_block = True
+
         tableBlock = self.getTable("block")
         tableHash = self.getTable("hash")
         tableHCT = self.getTable("hash_compression_type")
@@ -1779,7 +1772,11 @@ class DedupOperations(llfuse.Operations): # {{{1
         # It is new block now?
         if not hash_id:
 
-            cdata, cmethod = self.__compress(data_block)
+            if not sparce_block:
+                cdata, cmethod = self.__compress(data_block)
+            else:
+                cdata = data_block
+                cmethod = constants.COMPRESSION_TYPE_NONE
 
             hash_count = 0
             if index_hash_id:

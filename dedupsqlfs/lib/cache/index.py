@@ -81,18 +81,21 @@ class IndexTime(object):
             inode_data = self._inodes.get(inode, {})
 
             if block_number in inode_data:
-                del inode_data[block_number]
+                block_data = inode_data[block_number]
+                block_data["time"] = 0
                 removed = True
 
             if not inode_data:
-                del self._inodes[inode]
                 removed = True
 
         return removed
 
     def forget(self, inode):
         if inode in self._inodes:
-            del self._inodes[inode]
+            inode_data = self._inodes[inode]
+            for bn in tuple(inode_data.keys()):
+                block_data = inode_data[bn]
+                block_data["time"] = 0
         return
 
     def expired(self):

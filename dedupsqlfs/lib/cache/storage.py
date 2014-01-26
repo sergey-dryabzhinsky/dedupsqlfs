@@ -168,6 +168,14 @@ class StorageTimeSize(object):
             del self._inodes[inode]
         return
 
+    def expire(self, inode):
+        if inode in self._inodes:
+            inode_data = self._inodes[inode]
+            for bn in tuple(inode_data.keys()):
+                block_data = inode_data[bn]
+                block_data["time"] = 0
+        return
+
     def expired(self, writed=False):
         now = time()
 

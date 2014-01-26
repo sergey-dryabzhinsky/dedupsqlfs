@@ -282,7 +282,9 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.__log_call('flush', '-- inode(%i) zero sized! remove all blocks', fh)
                 self.getTable("inode_hash_block").delete(fh)
                 self.cached_blocks.forget(fh)
-                self.cached_indexes.forget(fh)
+            else:
+                self.cached_blocks.expire(fh)
+            self.cached_indexes.forget(fh)
 
             self.__cache_meta_hook()
             self.__cache_block_hook()

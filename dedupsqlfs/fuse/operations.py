@@ -207,10 +207,16 @@ class DedupOperations(llfuse.Operations): # {{{1
     def access(self, inode, mode, ctx): # {{{3
         """
         Check inode access
-        @param inode:
-        @param mode:
+
+        @param  inode:
+        @type   inode: int
+
+        @param  mode:
+        @type   mode: int
+
         @param  ctx:
         @type   ctx: llfuse.RequestContext
+
         @return:
         @rtype: bool
         """
@@ -226,14 +232,25 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def create(self, inode_parent, name, mode, flags, ctx):
         """
-        Create file
-        @param inode_parent:
-        @param name:
-        @param mode:
-        @param flags:
+        Create file 'name' in 'inode_parent' directory with 'mode' by 'flags' and 'ctx'
+
+        @param  inode_parent:
+        @type   inode_parent: int
+
+        @param  name:
+        @type   name: bytes
+
+        @param  mode:
+        @type   mode: int
+
+        @param  flags:
+        @type   flags: int
+
         @param  ctx:
         @type   ctx: llfuse.RequestContext
+
         @return: @raise FUSEError:
+        @rtype: tuple
         """
         c = {}
         for name in ctx.__slots__:

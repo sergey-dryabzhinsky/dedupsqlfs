@@ -170,7 +170,7 @@ class Snapshot(Subvolume):
             tableSubvol.mount_time(root_node_to["id"], subvol_from["mounted_at"])
             tableSubvol.update_time(root_node_to["id"], subvol_from["updated_at"])
 
-            self.print_msg("Done")
+            self.print_msg("Done\n")
 
         except:
             self.print_msg("\n")

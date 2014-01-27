@@ -198,7 +198,7 @@ class Subvolume(object):
             if count_to_do:
                 count_proc = "%6.2f" % (count_done * 100.0 / count_to_do,)
 
-            self.print_msg("Progress:")
+            self.print_msg("Progress:\n")
             self.print_msg("\r%s %%" % count_proc)
 
             apparent_size = 0
@@ -264,12 +264,12 @@ class Subvolume(object):
 
             self.print_msg("\n")
 
-            self.print_out("Apparent size is %s." % format_size(apparent_size) )
+            self.print_out("Apparent size is %s.\n" % format_size(apparent_size) )
 
-            self.print_out("Unique data size is %s." % format_size(unique_size) )
+            self.print_out("Unique data size is %s.\n" % format_size(unique_size) )
 
             if unique_size:
-                self.print_out("Compressed data size is %s (%.2f %%)." % (
+                self.print_out("Compressed data size is %s (%.2f %%).\n" % (
                     format_size(compressed_size), compressed_size * 100.0 / unique_size
                 ))
 
@@ -284,10 +284,10 @@ class Subvolume(object):
             keys.sort(reverse=True)
 
             if keys:
-                self.print_out("Compression by types:")
+                self.print_out("Compression by types:\n")
             for key in keys:
                 compression = comp_types[key]
-                self.print_out(" %8s used by %.2f%% blocks" % (
+                self.print_out(" %8s used by %.2f%% blocks\n" % (
                     compression, 100.0 * key / count_all
                 ))
 

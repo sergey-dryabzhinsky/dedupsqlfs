@@ -221,8 +221,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         @rtype: bool
         """
         c = {}
-        for name in ctx.__slots__:
-            c[ name ] = getattr(ctx, name)
+        for key in ctx.__slots__:
+            c[ key ] = getattr(ctx, key)
 
         self.__log_call('access', '->(inode=%i, mode=%o, ctx=%r)', inode, mode, c)
         inode = self.__fix_inode_if_requested_root(inode)
@@ -253,8 +253,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         @rtype: tuple
         """
         c = {}
-        for name in ctx.__slots__:
-            c[ name ] = getattr(ctx, name)
+        for key in ctx.__slots__:
+            c[ key ] = getattr(ctx, key)
 
         self.__log_call('create', '->(inode_parent=%i, name=%r, mode=%o, flags=%o, ctx=%r)',
                         inode_parent, name, mode, flags, c)
@@ -564,8 +564,13 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def mkdir(self, parent_inode, name, mode, ctx): # {{{3
         try:
+            c = {}
+            for key in ctx.__slots__:
+                c[ key ] = getattr(ctx, key)
+
             self.__log_call('mkdir', '->(parent_inode=%i, name=%r, mode=%o, ctx=%r)',
-                            parent_inode, name, mode, ctx)
+                            parent_inode, name, mode, c)
+
             if self.isReadonly(): raise FUSEError(errno.EROFS)
 
             parent_inode = self.__fix_inode_if_requested_root(parent_inode)
@@ -585,8 +590,12 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def mknod(self, parent_inode, name, mode, rdev, ctx): # {{{3
         try:
+            c = {}
+            for key in ctx.__slots__:
+                c[ key ] = getattr(ctx, key)
+
             self.__log_call('mknod', '->(parent_inode=%i, name=%r, mode=%o, rdev=%i, ctx=%r)',
-                            parent_inode, name, mode, rdev, ctx)
+                            parent_inode, name, mode, rdev, c)
             if self.isReadonly(): return -errno.EROFS
 
             parent_inode = self.__fix_inode_if_requested_root(parent_inode)
@@ -931,8 +940,12 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def symlink(self, inode_parent, name, target, ctx): # {{{3
         try:
+            c = {}
+            for key in ctx.__slots__:
+                c[ key ] = getattr(ctx, key)
+
             self.__log_call('symlink', '->(inode_parent=%i, name=%r, target=%r, ctx=%r)',
-                            inode_parent, name, target, ctx)
+                            inode_parent, name, target, c)
             if self.isReadonly(): return -errno.EROFS
 
             inode_parent = self.__fix_inode_if_requested_root(inode_parent)
@@ -1432,7 +1445,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
 
     def __insert(self, parent_inode, name, mode, size, ctx, rdev=0): # {{{3
-
         self.getLogger().debug("__insert->(parent_inode=%i,name=%r,mode=%o,size=%i)", parent_inode, name, mode, size)
 
         nlinks = mode & stat.S_IFDIR and 2 or 1
@@ -1455,7 +1467,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         treeTable.insert(par_node["id"], name_id, inode_id)
 
-        self.getLogger().debug("__insert->(inode=%i,parent_inode=%i)", inode_id, par_node["inode_id"])
+        self.getLogger().debug("__insert<-(inode=%i,parent_inode=%i)", inode_id, par_node["inode_id"])
 
         return inode_id, par_node["inode_id"]
 
@@ -1480,6 +1492,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         @param  check_empty:    Check is this directory not empty
         @param  check_empty:    bool
         """
+        self.getLogger().debug("__remove->(parent_inode=%i,name=%r,check_empty=%r)" % (parent_inode, name, check_empty,))
 
         cur_node = self.__get_tree_node_by_parent_inode_and_name(parent_inode, name)
 

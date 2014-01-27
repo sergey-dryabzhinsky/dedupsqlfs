@@ -205,15 +205,42 @@ class DedupOperations(llfuse.Operations): # {{{1
     # --------------------------------------------------------------------------------------
 
     def access(self, inode, mode, ctx): # {{{3
-        self.__log_call('access', '->(inode=%i, mode=%o, ctx=%r)', inode, mode, ctx)
+        """
+        Check inode access
+        @param inode:
+        @param mode:
+        @param  ctx:
+        @type   ctx: llfuse.RequestContext
+        @return:
+        @rtype: bool
+        """
+        c = {}
+        for name in ctx.__slots__:
+            c[ name ] = getattr(ctx, name)
+
+        self.__log_call('access', '->(inode=%i, mode=%o, ctx=%r)', inode, mode, c)
         inode = self.__fix_inode_if_requested_root(inode)
         if mode != os.F_OK and not self.__access(inode, mode, ctx):
             return False
         return True
 
     def create(self, inode_parent, name, mode, flags, ctx):
+        """
+        Create file
+        @param inode_parent:
+        @param name:
+        @param mode:
+        @param flags:
+        @param  ctx:
+        @type   ctx: llfuse.RequestContext
+        @return: @raise FUSEError:
+        """
+        c = {}
+        for name in ctx.__slots__:
+            c[ name ] = getattr(ctx, name)
+
         self.__log_call('create', '->(inode_parent=%i, name=%r, mode=%o, flags=%o, ctx=%r)',
-                        inode_parent, name, mode, flags, ctx)
+                        inode_parent, name, mode, flags, c)
         if self.isReadonly(): return errno.EROFS
 
         inode_parent = self.__fix_inode_if_requested_root(inode_parent)

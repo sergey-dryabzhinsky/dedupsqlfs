@@ -91,11 +91,12 @@ class IndexTime(object):
         return removed
 
     def forget(self, inode):
+        inode = str(inode)
         if inode in self._inodes:
             inode_data = self._inodes[inode]
             for bn in tuple(inode_data.keys()):
-                block_data = inode_data[bn]
-                block_data["time"] = 0
+                inode_data[bn]["time"] = 0
+            self._inodes[inode] = inode_data
         return
 
     def expired(self):

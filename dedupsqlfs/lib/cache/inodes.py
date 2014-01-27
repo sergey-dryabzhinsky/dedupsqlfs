@@ -93,10 +93,11 @@ class InodesTime(object):
         return old_inodes
 
 
-    def unset(self, key):
+    def unset(self, inode):
         """
         Do not remove but expire
         """
+        key = str(inode)
         if key in self._inodes:
             self._inodes[ key ]["time"] = 0
         return self

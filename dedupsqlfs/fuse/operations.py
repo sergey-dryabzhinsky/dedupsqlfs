@@ -1752,21 +1752,21 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         index_hash_id = self.__get_hash_index_from_cache(inode, block_number)
 
-        self.getLogger().debug("write block: inode=%s, block number=%s, data length=%s" % (inode, block_number, block_length))
+        # First sparce files variant
+        sparse_block = False
+        if data_block == chr(0)*block_length:
+            data_block = b''
+            sparse_block = True
 
-        if block_length == 0 and index_hash_id:
-            self.getLogger().debug("write block: remove empty block")
+        self.getLogger().debug("write block: inode=%s, block number=%s, data length=%s, sparse=%r" % (inode, block_number, block_length, sparse_block,))
+
+        if (block_length == 0 and index_hash_id) or sparse_block:
+            self.getLogger().debug("write block: remove empty or zero-filled block")
             tableIndex.delete_by_inode_number(inode, block_number)
             self.cached_indexes.unset(inode, block_number)
 
             self.time_spent_writing_blocks += time.time() - start_time
             return
-
-        # First sparce files variant
-        sparce_block = False
-        if data_block == chr(0)*block_length:
-            data_block = b''
-            sparce_block = True
 
         tableBlock = self.getTable("block")
         tableHash = self.getTable("hash")
@@ -1779,7 +1779,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         # It is new block now?
         if not hash_id:
 
-            if not sparce_block:
+            if not sparse_block:
                 cdata, cmethod = self.__compress(data_block)
             else:
                 cdata = data_block
@@ -2272,6 +2272,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         tableHash = self.getTable("hash")
         tableBlock = self.getTable("block")
+        tableHBS = self.getTable("hash_block_size")
+        tableHCT = self.getTable("hash_compression_type")
         tableIndex = self.getTable("inode_hash_block")
 
         self.getLogger().debug("Clean unused data blocks and hashes...")
@@ -2308,6 +2310,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             count += tableHash.remove_by_ids(to_delete)
             tableBlock.remove_by_ids(to_delete)
+            tableHBS.remove_by_ids(to_delete)
+            tableHCT.remove_by_ids(to_delete)
 
             p = "%6.2f%%" % (100.0 * current / countHashes)
             if p != proc:

@@ -643,12 +643,20 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.__log_call('read', '->(fh=%i, offset=%i, size=%i)', fh, offset, size, )
 
-            data = self.__get_block_data_by_offset(fh, offset, size)
+            row = self.__get_inode_row(fh)
+            if row["size"] <= offset:
+                self.__log_call('read', '-- oversized! inode(size)=%i', row["size"] )
+                data = b''
+            else:
+                if row["size"] < offset + size:
+                    size = row["size"] - offset
+                    self.__log_call('read', '-- oversized! inode(size)=%i, corrected read size: %i', row["size"], size )
+                data = self.__get_block_data_by_offset(fh, offset, size)
             self.bytes_read += len(data)
 
             # Too much output
             # self.__log_call('read', 'readed: size=%s, data=%r', len(data), data, )
-            self.__log_call('read', 'readed: size=%s', len(data), )
+            self.__log_call('read', '<-readed: size=%s', len(data), )
 
             self.__cache_block_hook()
 

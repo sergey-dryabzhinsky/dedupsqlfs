@@ -742,6 +742,9 @@ class DedupOperations(llfuse.Operations): # {{{1
             # Try to remove the existing target path (if if exists).
             # NB: This also makes sure target directories are empty.
             try:
+                # Node exists?
+                self.__get_tree_node_by_parent_inode_and_name(inode_parent_new, name_new)
+                # Then unlink
                 self.unlink(inode_parent_new, name_new)
             except FUSEError as e:
                 # Ignore errno.ENOENT, re raise other exceptions.
@@ -1911,7 +1914,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             for block_number, block_data in inode_data.items():
                 if block_data["w"]:
                     block = block_data.get("block")
-                    self.__write_block_data(inode, block_number, block)
+                    self.__write_block_data(int(inode), int(block_number), block)
                     if writed:
                         count += 1
                 else:
@@ -2000,7 +2003,7 @@ class DedupOperations(llfuse.Operations): # {{{1
     def __flush_expired_inodes(self, inodes):
         count = 0
         for inode_id, update_data in inodes.items():
-            self.getLogger().debug("flush inode: %i = %r", inode_id, update_data)
+            self.getLogger().debug("flush inode: %i = %r", int(inode_id), update_data)
             count += self.getTable("inode").update_data(inode_id, update_data)
         return count
 

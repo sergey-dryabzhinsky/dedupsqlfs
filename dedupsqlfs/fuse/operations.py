@@ -1248,7 +1248,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         first_block_number = int(math.floor(1.0 * (offset - inblock_offset) / self.block_size))
         raw_data = BytesIO()
 
-        read_blocks = int(math.ceil(1.0 * size / self.block_size))
+        # if we in the middle of a block by offset and read blocksize - need to read more then one...
+        read_blocks = int(math.ceil(1.0 * (size + inblock_offset) / self.block_size))
         if not read_blocks:
             read_blocks = 1
 

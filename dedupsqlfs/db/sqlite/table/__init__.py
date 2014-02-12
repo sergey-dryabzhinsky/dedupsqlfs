@@ -4,11 +4,12 @@ __author__ = 'sergey'
 
 from time import time
 import os
-
-# Too slow =(
-# import inspect
+import sys
+import subprocess
+import gzip
 
 from dedupsqlfs.db.sqlite import dict_factory
+from dedupsqlfs.log import logging
 
 class Table( object ):
 
@@ -24,6 +25,8 @@ class Table( object ):
     _time_spent = None
     _op_count = None
 
+    _log = None
+
     def __init__(self, manager):
         if self._table_name is None:
             raise AttributeError("Define non-empty class variable '_table_name'")
@@ -31,6 +34,15 @@ class Table( object ):
         self._time_spent = {}
         self._op_count = {}
         pass
+
+    def getLogger(self):
+        if not self._log:
+            self._log = self.getManager().getLogger()
+        if not self._log:
+            self._log = logging.getLogger(self.__class__.__name__)
+            self._log.setLevel(logging.ERROR)
+            self._log.addHandler(logging.StreamHandler(sys.stderr))
+        return self._log
 
     def getOperationsCount(self):
         return self._op_count
@@ -210,8 +222,50 @@ class Table( object ):
 
     def vacuum(self):
         self.startTimer()
-        cur = self.getCursor()
-        cur.execute("VACUUM")
+        #cur = self.getCursor()
+        #cur.execute("VACUUM")
+        self.close()
+
+        # VACUUM breaks on huge DB
+        # Dump/Load DB
+        # Warning! Need 3+x space!
+
+        fn = self.getDbFilePath()
+        if not os.path.isfile(fn):
+            # Nothing to do
+            return self
+
+        oldSize = os.path.getsize(fn)
+
+        bkp_fn = fn + ".bkp"
+
+        os.rename(fn, bkp_fn)
+
+        p1 = subprocess.Popen(["sqlite3", bkp_fn, ".dump"], stdout=subprocess.PIPE)
+        p2 = subprocess.Popen(["sqlite3", fn], stdin=subprocess.PIPE)
+        while True:
+            data = p1.stdout.read(1024)
+            if not data:
+                break
+            p2.stdin.write(data)
+
+        p2.stdin.flush()
+        p2.stdin.close()
+
+        ret = p1.wait() > 0 or p2.wait() > 0
+        if ret:
+            if os.path.isfile(fn):
+                os.unlink(fn)
+            os.rename(bkp_fn, fn)
+            self.getLogger().error("Can't dump sqlite3 db: %s" % self.getName())
+            return self
+
+        os.unlink(bkp_fn)
+
+        newSize = os.path.getsize(fn)
+
+        self.getLogger().info("DB size change after vacuum: %.2f%%" % (oldSize-newSize)*100.0/oldSize)
+
         self.stopTimer("vacuum")
         return self
 

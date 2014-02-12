@@ -160,6 +160,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             else:
                 raise ValueError("Unknown storage engine: %r" % engine)
 
+            self.manager.setLogger(self.getLogger())
             self.manager.setTableEngine(self.getOption('table_engine'))
             self.manager.setSynchronous(self.getOption("synchronous"))
             self.manager.setAutocommit(self.getOption("use_transactions"))

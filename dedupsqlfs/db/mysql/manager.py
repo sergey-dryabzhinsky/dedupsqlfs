@@ -27,6 +27,8 @@ class DbManager( object ):
 
     _conn = None
 
+    _log = None
+
     _mysqld_proc = None
     """
     @ivar _mysqld_proc:
@@ -64,6 +66,14 @@ class DbManager( object ):
         if not (synchronous is None):
             self._synchronous = synchronous == True
         self._table = {}
+        pass
+
+    def setLogger(self, logger):
+        self._log = logger
+        return self
+
+    def getLogger(self):
+        return self._log
 
 
     def setSynchronous(self, flag=True):

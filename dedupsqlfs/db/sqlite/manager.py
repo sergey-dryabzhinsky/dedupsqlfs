@@ -12,6 +12,8 @@ class DbManager( object ):
     _autocommit = True
     _synchronous = True
 
+    _log = None
+
     tables = (
         "option",
         "tree",
@@ -38,7 +40,14 @@ class DbManager( object ):
         if not (synchronous is None):
             self._synchronous = synchronous == True
         self._table = {}
+        pass
 
+    def setLogger(self, logger):
+        self._log = logger
+        return self
+
+    def getLogger(self):
+        return self._log
 
     def setSynchronous(self, flag=True):
         self._synchronous = flag == True

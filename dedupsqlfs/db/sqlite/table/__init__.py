@@ -264,7 +264,7 @@ class Table( object ):
 
         newSize = os.path.getsize(fn)
 
-        self.getLogger().info("DB size change after vacuum: %.2f%%" % ((oldSize - newSize) * 100.0 / oldSize,))
+        self.getLogger().info("DB '%s' size change after vacuum: %.2f%%" % (self.getName(), (oldSize - newSize) * 100.0 / oldSize,))
 
         self.stopTimer("vacuum")
         return self

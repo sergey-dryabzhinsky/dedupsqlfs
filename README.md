@@ -27,7 +27,7 @@ The following shell commands show how to install and use the DedupFS file system
 
 ## Status
 
-Development on DedupFS began as a proof of concept to find out how much disk space the author could free by employing deduplication to store his daily backups. Since then it's become more or less usable as a way to archive old backups, i.e. for secondary storage deduplication. It's not recommended to use the file system for primary storage though, simply because the file system is too slow. I also wouldn't recommend depending on DedupFS just yet, at least until a proper set of automated tests has been written and successfully run to prove the correctness of the code.
+Development on DedupSqlFS began as a proof of concept to find out how much disk space the author could free by employing deduplication to store his daily backups. Since then it's become more or less usable as a way to archive old backups, i.e. for secondary storage deduplication. It's not recommended to use the file system for primary storage though, simply because the file system is too slow. I also wouldn't recommend depending on DedupFS just yet, at least until a proper set of automated tests has been written and successfully run to prove the correctness of the code.
 
 The file system initially stored everything in a multiple [SQLite](http://www.sqlite.org/) databases.
  It turned out that in single file database after the database grew beyond 8 GB the write speed would drop
@@ -77,18 +77,18 @@ Additional compression modules can be builded with commands:
 
 Additional storage engine via MySQL can be accessed with commands:
 
-    $ suto pip install pymysql
+    $ sudo pip3 install pymysql
 
 ## Contact
 
 If you have questions, bug reports, suggestions, etc. the author can be contacted at <sergey.dryabzhinsky@gmail.com> and
 github [issues list](https://github.com/sergey-dryabzhinsky/dedupsqlfs/issues).
-The latest version of DedupFS is available at <https://github.com/sergey-dryabzhinsky/dedupsqlfs>.
+The latest version of DedupSqlFS is available at <https://github.com/sergey-dryabzhinsky/dedupsqlfs>.
 
 ## License
 
 This software is licensed under the MIT license.
 
-© 2013 Sergey Dryabzhinsky &lt;<sergey.dryabzhinsky@gmail.com>&gt;.
+© 2013-2014 Sergey Dryabzhinsky &lt;<sergey.dryabzhinsky@gmail.com>&gt;.
 
 © 2010 Peter Odding &lt;<peter@peterodding.com>&gt;.

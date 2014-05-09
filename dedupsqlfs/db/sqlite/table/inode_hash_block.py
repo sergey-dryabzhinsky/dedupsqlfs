@@ -30,6 +30,11 @@ class TableInodeHashBlock( Table ):
                 "inode_id"+
             ");"
         )
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS ihb_hash_inode ON `%s` (" % self.getName()+
+                "hash_id, inode_id"+
+            ");"
+        )
         return
 
     def insert( self, inode, block_number, hash_id):

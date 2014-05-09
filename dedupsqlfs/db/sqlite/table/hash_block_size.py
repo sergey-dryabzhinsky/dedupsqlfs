@@ -93,9 +93,8 @@ class TableHashBlockSize( Table ):
                 "SELECT `real_size`,`hash_id` FROM `%s` " % self.getName()+
                 " WHERE `hash_id` IN (%s)" % hids
             )
-
             for item in cur.fetchall():
-                items[ item["hash_id"] ] = item["real_size"]
+                items[ str(item["hash_id"]) ] = item["real_size"]
         self.stopTimer('get_hashes_to_real_sizes')
         return items
 
@@ -114,9 +113,8 @@ class TableHashBlockSize( Table ):
                 "SELECT `comp_size`,`hash_id` FROM `%s` " % self.getName()+
                 " WHERE `hash_id` IN (%s)" % hids
             )
-
             for item in cur.fetchall():
-                items[ item["hash_id"] ] = item["comp_size"]
+                items[ str(item["hash_id"]) ] = item["comp_size"]
         self.stopTimer('get_hashes_to_comp_sizes')
         return items
 

@@ -60,6 +60,8 @@ class DedupFS(object): # {{{1
             else:
                 self._opts.append("%s=%s" % (key, value,))
 
+        self._fixCompressionOptions()
+
         pass
 
 
@@ -151,6 +153,25 @@ class DedupFS(object): # {{{1
 
         return self
 
+    def _fixCompressionOptions(self):
+
+        method = self.getOption("compression_method")
+        if method and method.find("=") != -1:
+            method, level = method.split("=")
+            self.setOption("compression_method", method)
+
+        methods = self.getOption("compression_custom")
+        if methods and type(methods) in (tuple, list,):
+            methods = list(methods)
+            for i in range(len(methods)):
+                method = methods[i]
+                if method and method.find("=") != -1:
+                    method, level = method.split("=")
+                    methods[i] = method
+            self.setOption("compression_custom", methods)
+
+        return
+
     def getCompressor(self, name):
         level = None
         if name and name.find("=") != -1:
@@ -228,6 +249,10 @@ class DedupFS(object): # {{{1
             manager = self.operations.getManager()
             table = manager.getTable("compression_type")
             for m in methods:
+
+                if m and m.find("=") != -1:
+                    m, level = m.split("=")
+
                 m_id = table.find(m)
                 if not m_id:
                     table.insert(m)

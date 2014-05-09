@@ -254,7 +254,15 @@ class Subvolume(object):
                         cnts = {}
                         for item in indexItems:
                             if item["cnt"] > 1:
-                                cnt = tableIndex.get_count_hash_by_inode(item["hash_id"], treeItem["inode_id"])
+
+                                key = "%s_%s" % (item["hash_id"], treeItem["inode_id"])
+
+                                if key in hashCount:
+                                    cnt = hashCount[key]
+                                else:
+                                    cnt = tableIndex.get_count_hash_by_inode(item["hash_id"], treeItem["inode_id"])
+                                    hashCount[key] = cnt
+
                                 hids += (item["hash_id"],)
                                 cnts[ item["hash_id"] ] = cnt
 
@@ -271,11 +279,13 @@ class Subvolume(object):
 
                 for hash_id in hashes:
 
-                    if hash_id in hashCount:
-                        cnt = hashCount[hash_id]
+                    key = "%s_%s" % (hash_id, treeItem["inode_id"])
+
+                    if key in hashCount:
+                        cnt = hashCount[key]
                     else:
                         cnt = tableIndex.get_count_hash_by_inode(hash_id, treeItem["inode_id"])
-                        hashCount[hash_id] = cnt
+                        hashCount[key] = cnt
 
                     if hash_id in hashCT:
                         method = hashCT[hash_id]

@@ -310,7 +310,7 @@ class Subvolume(object):
 
             if unique_size:
                 self.print_out("Compressed data size is %s (%.2f %%).\n" % (
-                    format_size(compressed_size), compressed_size * 100.0 / unique_size
+                    format_size(compressed_size), compressed_size * 100.0 / apparent_size
                 ))
 
             count_all = 0

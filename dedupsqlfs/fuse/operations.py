@@ -1031,7 +1031,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         """
         manager = self.getManager()
 
-        treeInode = manager.getTable("inode")
+        tableInode = manager.getTable("inode")
 
         indexTable = manager.getTable("inode_hash_block")
         hbsTable = manager.getTable("hash_block_size")
@@ -1057,7 +1057,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not treeItem:
                 break
 
-            inode_size = treeInode.get_size_by_id_nlinks( treeItem["inode_id"] )
+            inode_size = tableInode.get_size_by_id_nlinks( treeItem["inode_id"] )
             apparent_size += inode_size
 
             # Do not trust inode info - we not done block writing and writed size not changed?

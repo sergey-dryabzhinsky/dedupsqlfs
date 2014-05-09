@@ -229,7 +229,7 @@ class Subvolume(object):
                 if not treeItem:
                     break
 
-                inode_size = tableInode.get_size(treeItem["inode_id"])
+                inode_size = tableInode.get_size_by_id_nlinks(treeItem["inode_id"])
                 apparent_size += inode_size
 
                 hashes = ()
@@ -244,7 +244,7 @@ class Subvolume(object):
 
                     curIndex.execute("SELECT COUNT(`hash_id`) AS `cnt`, `hash_id` FROM `inode_hash_block` WHERE `hash_id` IN ("+
                                     ",".join(hashes)
-                                     +") GROUP BY `hash_id`")
+                                     +") AND `inode_id`=%i GROUP BY `hash_id`" % treeItem["inode_id"])
                     while True:
                         indexItems = curIndex.fetchmany(1024)
                         if not indexItems:
@@ -260,8 +260,7 @@ class Subvolume(object):
                         if hids:
                             rsizes = tableHBS.get_real_sizes(hids)
                             for item in rsizes:
-                                cnt = cnts[ item["hash_id"] ]
-                                dedup_size += cnt * item["real_size"]
+                                dedup_size += cnts[ item["hash_id"] ] * item["real_size"]
 
 
                 for hash_id in hashes:

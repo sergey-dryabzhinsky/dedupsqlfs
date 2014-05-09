@@ -333,6 +333,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.__cache_meta_hook()
             self.__cache_block_hook()
+        except FUSEError:
+            raise
         except Exception as e:
             self.__rollback_changes()
             raise self.__except_to_status('flush', e, errno.EIO)
@@ -346,25 +348,19 @@ class DedupOperations(llfuse.Operations): # {{{1
             #for ituple in inode_list:
             #    for inode in ituple:
             #        self.__flush_inode_cached_blocks(inode, clean=True)
+        except FUSEError:
+            raise
         except Exception as e:
             self.__rollback_changes()
             raise self.__except_to_status('forget', e, errno.EIO)
 
     def fsync(self, fh, datasync):
-        try:
-            self.__log_call('fsync', '->(fh=%i, datasync=%r)', fh, datasync)
-            if self.isReadonly(): raise FUSEError(errno.EROFS)
-        except Exception as e:
-            self.__rollback_changes()
-            raise self.__except_to_status('fsync', e, errno.EIO)
+        self.__log_call('fsync', '->(fh=%i, datasync=%r)', fh, datasync)
+        if self.isReadonly(): raise FUSEError(errno.EROFS)
 
     def fsyncdir(self, fh, datasync):
-        try:
-            self.__log_call('fsyncdir', '->(fh=%i, datasync=%r)', fh, datasync)
-            if self.isReadonly(): raise FUSEError(errno.EROFS)
-        except Exception as e:
-            self.__rollback_changes()
-            raise self.__except_to_status('fsyncdir', e, errno.EIO)
+        self.__log_call('fsyncdir', '->(fh=%i, datasync=%r)', fh, datasync)
+        if self.isReadonly(): raise FUSEError(errno.EROFS)
 
     def getattr(self, inode): # {{{3
         self.__log_call('getattr', '->(inode=%r)', inode)
@@ -523,18 +519,14 @@ class DedupOperations(llfuse.Operations): # {{{1
         return self.__getattr(inode)
 
     def listxattr(self, inode):
-        try:
-            self.__log_call('listxattr', '->(inode=%r)', inode)
-            if self.isReadonly(): raise FUSEError(errno.EROFS)
-            inode = self.__fix_inode_if_requested_root(inode)
-            xattrs = self.getTable("xattr").find_by_inode(inode)
-            self.__log_call('listxattr', '<-(xattrs=%r)', xattrs)
-            if not xattrs:
-                return []
-            return xattrs.keys()
-        except Exception as e:
-            self.__rollback_changes()
-            raise self.__except_to_status('listxattr', e, errno.EIO)
+        self.__log_call('listxattr', '->(inode=%r)', inode)
+        if self.isReadonly(): raise FUSEError(errno.EROFS)
+        inode = self.__fix_inode_if_requested_root(inode)
+        xattrs = self.getTable("xattr").find_by_inode(inode)
+        self.__log_call('listxattr', '<-(xattrs=%r)', xattrs)
+        if not xattrs:
+            return []
+        return xattrs.keys()
 
     def lookup(self, parent_inode, name):
         self.__log_call('lookup', '->(parent_inode=%r, name=%r)', parent_inode, name)
@@ -586,6 +578,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             inode, parent_ino = self.__insert(parent_inode, name, mode | stat.S_IFDIR, size, ctx)
             self.getManager().getTable("inode").inc_nlinks(parent_ino)
             return self.__getattr(inode)
+        except FUSEError:
+            raise
         except Exception as e:
             self.__rollback_changes()
             raise self.__except_to_status('mkdir', e, errno.EIO)
@@ -733,7 +727,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             del xattrs[name]
             self.getTable("xattr").update(inode, xattrs)
             return 0
-        except FUSEError as e:
+        except FUSEError:
             raise
         except Exception as e:
             self.__rollback_changes()
@@ -772,6 +766,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.__gc_hook()
             self.__cache_meta_hook()
             return 0
+        except FUSEError:
+            raise
         except Exception as e:
             self.__rollback_changes()
             raise self.__except_to_status('rename', e, errno.ENOENT)
@@ -914,6 +910,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getTable("xattr").insert(inode, xattrs)
 
             return 0
+        except FUSEError:
+            raise
         except Exception as e:
             self.__rollback_changes()
             raise self.__except_to_status('rmdir', e, errno.ENOENT)
@@ -987,9 +985,11 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.__remove(parent_inode, name)
             self.__gc_hook()
+        except FUSEError:
+            raise
         except Exception as e:
             self.__rollback_changes()
-            raise self.__except_to_status('unlink', e, errno.ENOENT)
+            raise self.__except_to_status('unlink', e, errno.EIO)
 
     def write(self, fh, offset, buf): # {{{3
         try:

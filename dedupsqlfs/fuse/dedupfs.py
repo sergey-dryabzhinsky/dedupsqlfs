@@ -20,8 +20,6 @@ except ImportError as e:
 try:
     import llfuse as fuse
     from llfuse import FUSEError
-    from dedupsqlfs.lib import constants
-    from dedupsqlfs.log import logging, DEBUG_VERBOSE
 except ImportError:
     sys.stderr.write("Error: The Python FUSE binding isn't installed!\n" + \
         "If you're on Ubuntu try running `sudo apt-get install python-fuse'.\n")
@@ -29,6 +27,8 @@ except ImportError:
 
 # Local modules that are mostly useful for debugging.
 from dedupsqlfs.my_formats import format_size
+from dedupsqlfs.lib import constants
+from dedupsqlfs.log import logging, DEBUG_VERBOSE
 
 # Storage for options and DB interface
 # Implements FUSE interface

@@ -269,7 +269,7 @@ class Subvolume(object):
                     if hash_id in hashCount:
                         cnt = hashCount[hash_id]
                     else:
-                        cnt = tableIndex.get_count_hash(hash_id)
+                        cnt = tableIndex.get_count_hash_by_inode(hash_id, treeItem["inode_id"])
                         hashCount[hash_id] = cnt
 
                     if hash_id in hashCT:

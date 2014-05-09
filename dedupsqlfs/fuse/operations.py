@@ -528,6 +528,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if self.isReadonly(): raise FUSEError(errno.EROFS)
             inode = self.__fix_inode_if_requested_root(inode)
             xattrs = self.getTable("xattr").find_by_inode(inode)
+            self.__log_call('listxattr', '<-(xattrs=%r)', xattrs)
             if not xattrs:
                 return []
             return xattrs.keys()

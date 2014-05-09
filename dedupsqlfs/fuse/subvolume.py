@@ -222,7 +222,7 @@ class Subvolume(object):
 
             blockSize = int(tableOption.get("block_size"))
 
-            curIndex = tableIndex.getCursor()
+            curIndex = tableIndex.getCursor(True)
 
             while True:
                 treeItem = curTree.fetchone()
@@ -259,9 +259,14 @@ class Subvolume(object):
                                 cnts[ item["hash_id"] ] = cnt
 
                         if hids:
-                            rsizes = tableHBS.get_real_sizes(hids)
-                            for item in rsizes:
-                                dedup_size += cnts[ item["hash_id"] ] * item["real_size"]
+                            for hash_id in hashes:
+                                if hash_id in hashBS:
+                                    hbsItem = hashBS[ hash_id ]
+                                else:
+                                    hbsItem = tableHBS.get(hash_id)
+                                    hashBS[ hash_id ] = hbsItem
+
+                                dedup_size += cnts[ hash_id ] * hbsItem["real_size"]
 
 
                 for hash_id in hashes:

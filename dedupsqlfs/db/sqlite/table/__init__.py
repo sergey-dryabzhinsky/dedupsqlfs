@@ -163,6 +163,7 @@ class Table( object ):
         cur = self._curr
         if new:
             cur = self.getConnection().cursor()
+            return cur
         if not self._curr:
             cur = self._curr = self.getConnection().cursor()
         return cur

@@ -259,7 +259,7 @@ class Subvolume(object):
                                 cnts[ item["hash_id"] ] = cnt
 
                         if hids:
-                            for hash_id in hashes:
+                            for hash_id in hids:
                                 if hash_id in hashBS:
                                     hbsItem = hashBS[ hash_id ]
                                 else:

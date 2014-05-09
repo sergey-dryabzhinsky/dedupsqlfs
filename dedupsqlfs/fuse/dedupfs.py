@@ -60,6 +60,8 @@ class DedupFS(object): # {{{1
             else:
                 self._opts.append("%s=%s" % (key, value,))
 
+        self._fixCompressionOptions()
+
         pass
 
 
@@ -118,6 +120,11 @@ class DedupFS(object): # {{{1
 
 
     def appendCompression(self, name):
+
+        level = None
+        if name and name.find("=") != -1:
+            name, level = name.split("=")
+
         if name == "none":
             from dedupsqlfs.compression.none import NoneCompression
             self._compressors[name] = NoneCompression()
@@ -140,9 +147,41 @@ class DedupFS(object): # {{{1
             from dedupsqlfs.compression.snappy import SnappyCompression
             self._compressors[name] = SnappyCompression()
         else:
-            raise ValueError("Unknown compression method!")
+            raise ValueError("Unknown compression method: %r" % (name,))
+
+        self._compressors[name].setDefaultCompressionLevel(level)
 
         return self
+
+    def _fixCompressionOptions(self):
+
+        method = self.getOption("compression_method")
+        if method and method.find("=") != -1:
+            method, level = method.split("=")
+            self.setOption("compression_method", method)
+
+        methods = self.getOption("compression_custom")
+        if methods and type(methods) in (tuple, list,):
+            methods = list(methods)
+            for i in range(len(methods)):
+                method = methods[i]
+                if method and method.find("=") != -1:
+                    method, level = method.split("=")
+                    methods[i] = method
+            self.setOption("compression_custom", methods)
+
+        return
+
+    def getCompressor(self, name):
+        level = None
+        if name and name.find("=") != -1:
+            name, level = name.split("=")
+        if name in self._compressors:
+            comp = self._compressors[name]
+            comp.setDefaultCompressionLevel(level)
+            return comp
+        else:
+            raise ValueError("Unknown compression method: %r" % (name,))
 
     def compressData(self, data):
         """
@@ -163,7 +202,7 @@ class DedupFS(object): # {{{1
 
         if method != constants.COMPRESSION_TYPE_NONE:
             if method not in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_CUSTOM,):
-                comp = self._compressors[ method ]
+                comp = self.getCompressor(method)
                 if comp.isDataMayBeCompressed(data):
                     cdata = comp.compressData(data, level)
                     cmethod = method
@@ -177,7 +216,7 @@ class DedupFS(object): # {{{1
                 if method == constants.COMPRESSION_TYPE_CUSTOM:
                     methods = self.getOption("compression_custom")
                 for m in methods:
-                    comp = self._compressors[ m ]
+                    comp = self.getCompressor(m)
                     if comp.isDataMayBeCompressed(data):
                         _cdata = comp.compressData(data, level)
                         cdata_length = len(_cdata)
@@ -210,6 +249,10 @@ class DedupFS(object): # {{{1
             manager = self.operations.getManager()
             table = manager.getTable("compression_type")
             for m in methods:
+
+                if m and m.find("=") != -1:
+                    m, level = m.split("=")
+
                 m_id = table.find(m)
                 if not m_id:
                     table.insert(m)

@@ -244,7 +244,7 @@ class Subvolume(object):
 
                     curIndex.execute("SELECT COUNT(`hash_id`) AS `cnt`, `hash_id` FROM `inode_hash_block` WHERE `hash_id` IN ("+
                                     ",".join(hashes)
-                                     +") AND `inode_id`=%i GROUP BY `hash_id`" % treeItem["inode_id"])
+                                     +") GROUP BY `hash_id`")
                     while True:
                         indexItems = curIndex.fetchmany(1024)
                         if not indexItems:
@@ -254,8 +254,9 @@ class Subvolume(object):
                         cnts = {}
                         for item in indexItems:
                             if item["cnt"] > 1:
+                                cnt = tableIndex.get_count_hash_by_inode(item["hash_id"], treeItem["inode_id"])
                                 hids += (item["hash_id"],)
-                                cnts[ item["hash_id"] ] = item["cnt"]-1
+                                cnts[ item["hash_id"] ] = cnt
 
                         if hids:
                             rsizes = tableHBS.get_real_sizes(hids)

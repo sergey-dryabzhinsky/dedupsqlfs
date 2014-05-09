@@ -283,7 +283,7 @@ class Subvolume(object):
 
                         curIndex.execute("SELECT COUNT(`hash_id`) AS `cnt`, `hash_id` FROM `inode_hash_block` WHERE `hash_id` IN ("+
                                         ",".join(hids)
-                                         +") AND `inode_id`=%s GROUP BY `hash_id`" % treeItem["inode_id"])
+                                         +(") AND `inode_id`=%d GROUP BY `hash_id`" % (treeItem["inode_id"],)))
 
                         while True:
                             indexItems = curIndex.fetchmany(1024)

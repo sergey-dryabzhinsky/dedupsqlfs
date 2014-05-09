@@ -208,10 +208,7 @@ class Subvolume(object):
             dedup_size = 0
 
             compMethods = {}
-
-            hashCount = {}
             hashCT = {}
-            hashBS = {}
 
             curTree = tableTree.getCursorForSelectNodeInodes(node['id'])
 

@@ -1057,11 +1057,11 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not treeItem:
                 break
 
-            inode_size = tableInode.get_size_by_id_nlinks( treeItem["inode_id"] )
+            inode_size = tableInode.get_size( treeItem["inode_id"] )
             apparent_size += inode_size
 
             # Do not trust inode info - we not done block writing and writed size not changed?
-            inodeHashes = tuple(item["hash_id"] for item in indexTable.get_hashes_by_inode( treeItem["inode_id"] ))
+            inodeHashes = indexTable.get_hashes_by_inode( treeItem["inode_id"] )
 
             stored_blocks = len(inodeHashes)
             inode_blocks = int(math.ceil(1.0 * inode_size / blockSize))

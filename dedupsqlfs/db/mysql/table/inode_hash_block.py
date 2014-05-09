@@ -115,7 +115,7 @@ class TableInodeHashBlock( Table ):
                 "inode": inode
             }
         )
-        items = cur.fetchall()
+        items = tuple(str(item["hash_id"]) for item in cur.fetchall())
         self.stopTimer('get_hashes_by_inode')
         return items
 

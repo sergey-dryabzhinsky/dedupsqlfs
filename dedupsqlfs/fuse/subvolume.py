@@ -229,12 +229,12 @@ class Subvolume(object):
                 if not treeItem:
                     break
 
-                inode_size = tableInode.get_size_by_id_nlinks(treeItem["inode_id"])
+                inode_size = tableInode.get_size(treeItem["inode_id"])
                 apparent_size += inode_size
 
                 hashes = ()
                 if inode_size:
-                    hashes = set(( str(item["hash_id"]) for item in tableIndex.get_hashes_by_inode(treeItem["inode_id"])))
+                    hashes = set(tableIndex.get_hashes_by_inode(treeItem["inode_id"]))
 
                 stored_blocks = len(hashes)
 

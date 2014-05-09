@@ -269,7 +269,7 @@ class Subvolume(object):
 
                         for item in indexItems:
 
-                            hash_id = item["hash_id"]
+                            hash_id = str(item["hash_id"])
 
                             if item["cnt"] > 1:
                                 hids += (hash_id,)
@@ -283,7 +283,7 @@ class Subvolume(object):
 
                         curIndex.execute("SELECT COUNT(`hash_id`) AS `cnt`, `hash_id` FROM `inode_hash_block` WHERE `hash_id` IN ("+
                                         ",".join(hids)
-                                         +(") AND `inode_id`=%d GROUP BY `hash_id`" % (treeItem["inode_id"],)))
+                                         +") AND `inode_id`=%d GROUP BY `hash_id`" % treeItem["inode_id"])
 
                         while True:
                             indexItems = curIndex.fetchmany(1024)
@@ -292,7 +292,7 @@ class Subvolume(object):
 
                             for item in indexItems:
                                 if item["cnt"] >= 1:
-                                    hash_id = item["hash_id"]
+                                    hash_id = str(item["hash_id"])
                                     dedup_size += item["cnt"] * hash_real_sizes[ hash_id ]
 
 

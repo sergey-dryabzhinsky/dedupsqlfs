@@ -1,3 +1,6 @@
+TODO list
+==========
+
 Here are some things on to-do list, in no particular order:
 
  * Implement thin snapshots - that stores only inode and data changes.

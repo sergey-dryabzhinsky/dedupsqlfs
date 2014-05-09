@@ -725,6 +725,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             inode = self.__fix_inode_if_requested_root(inode)
 
             xattrs = self.getTable("xattr").find_by_inode(inode)
+            self.__log_call('removexattr', '--(xattrs=%r)', inode, xattrs)
             if not xattrs:
                 raise FUSEError(llfuse.ENOATTR)
             if name not in xattrs:
@@ -732,9 +733,11 @@ class DedupOperations(llfuse.Operations): # {{{1
             del xattrs[name]
             self.getTable("xattr").update(inode, xattrs)
             return 0
+        except FUSEError as e:
+            raise
         except Exception as e:
             self.__rollback_changes()
-            raise self.__except_to_status('rmdir', e, errno.ENOENT)
+            raise self.__except_to_status('removexattr', e, errno.ENOENT)
 
 
     def rename(self, inode_parent_old, name_old, inode_parent_new, name_new): # {{{3

@@ -16,6 +16,8 @@ class BaseCompression:
 
     _has_comp_level_options = False
 
+    _default_comp_level = None
+
     _module = None
     _func_comp = None
     _func_decomp = None
@@ -41,6 +43,10 @@ class BaseCompression:
 
     def hasCompressionLevelOptions(self):
         return self._has_comp_level_options
+
+    def setDefaultCompressionLevel(self, level=None):
+        self._default_comp_level = level
+        return self
 
     def getFastCompressionOptions(self):
         return False
@@ -84,6 +90,8 @@ class BaseCompression:
         func = self._get_comp_func()
         if self.hasCompressionLevelOptions():
             opts = self.getCompressionLevelOptions(comp_level)
+            if not opts:
+                opts = self.getCompressionLevelOptions(self._default_comp_level)
             if opts:
                 if type(opts) is dict:
                     return func(data, **opts)

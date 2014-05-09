@@ -118,6 +118,11 @@ class DedupFS(object): # {{{1
 
 
     def appendCompression(self, name):
+
+        level = None
+        if name and name.find("=") != -1:
+            name, level = name.split("=")
+
         if name == "none":
             from dedupsqlfs.compression.none import NoneCompression
             self._compressors[name] = NoneCompression()
@@ -140,9 +145,22 @@ class DedupFS(object): # {{{1
             from dedupsqlfs.compression.snappy import SnappyCompression
             self._compressors[name] = SnappyCompression()
         else:
-            raise ValueError("Unknown compression method!")
+            raise ValueError("Unknown compression method: %r" % (name,))
+
+        self._compressors[name].setDefaultCompressionLevel(level)
 
         return self
+
+    def getCompressor(self, name):
+        level = None
+        if name and name.find("=") != -1:
+            name, level = name.split("=")
+        if name in self._compressors:
+            comp = self._compressors[name]
+            comp.setDefaultCompressionLevel(level)
+            return comp
+        else:
+            raise ValueError("Unknown compression method: %r" % (name,))
 
     def compressData(self, data):
         """
@@ -163,7 +181,7 @@ class DedupFS(object): # {{{1
 
         if method != constants.COMPRESSION_TYPE_NONE:
             if method not in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_CUSTOM,):
-                comp = self._compressors[ method ]
+                comp = self.getCompressor(method)
                 if comp.isDataMayBeCompressed(data):
                     cdata = comp.compressData(data, level)
                     cmethod = method
@@ -177,7 +195,7 @@ class DedupFS(object): # {{{1
                 if method == constants.COMPRESSION_TYPE_CUSTOM:
                     methods = self.getOption("compression_custom")
                 for m in methods:
-                    comp = self._compressors[ m ]
+                    comp = self.getCompressor(m)
                     if comp.isDataMayBeCompressed(data):
                         _cdata = comp.compressData(data, level)
                         cdata_length = len(_cdata)

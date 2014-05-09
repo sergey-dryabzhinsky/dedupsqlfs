@@ -236,7 +236,7 @@ class Subvolume(object):
                 if inode_size:
                     hashes = set(tableIndex.get_hashes_by_inode(treeItem["inode_id"]))
 
-                stored_blocks = len(hashes)
+                stored_blocks = tableIndex.get_count_by_inode(treeItem["inode_id"])
 
                 if stored_blocks:
                     inode_blocks = int(math.ceil(1.0 * inode_size / blockSize))

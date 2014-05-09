@@ -1061,9 +1061,9 @@ class DedupOperations(llfuse.Operations): # {{{1
             apparent_size += inode_size
 
             # Do not trust inode info - we not done block writing and writed size not changed?
-            inodeHashes = indexTable.get_hashes_by_inode( treeItem["inode_id"] )
+            inodeHashes = set(indexTable.get_hashes_by_inode( treeItem["inode_id"] ))
 
-            stored_blocks = len(inodeHashes)
+            stored_blocks = indexTable.get_count_by_inode( treeItem["inode_id"] )
             inode_blocks = int(math.ceil(1.0 * inode_size / blockSize))
 
             sparce_size += (inode_blocks - stored_blocks) * blockSize

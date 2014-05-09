@@ -924,7 +924,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             # host_fs = os.statvfs(self.getOption("data"))
             stats = llfuse.StatvfsData()
 
-            apparent_size, compressed_size = self.getDataSize()
+            apparent_size, compressed_size, sparce_size = self.getDataSize()
 
             # The total number of free blocks available to a non privileged process.
             # stats.f_bavail = host_fs.f_bsize * host_fs.f_bavail / self.block_size
@@ -1022,9 +1022,16 @@ class DedupOperations(llfuse.Operations): # {{{1
     # ---------------------------- Miscellaneous methods: {{{2
 
     def getDataSize(self, use_subvol=True, unique=False):
+        """
+        @param use_subvol: use current subvolume
+        @param unique: calculate unique data sizes
+        @return:
+            if unique: tuple( int unique_apparent_size, int unique_compressed_size)
+            if not: tuple(int apparent_size, int compressed_size, int sparce_size)
+        """
         manager = self.getManager()
 
-        treeInode = manager.getTable("inode")
+        tableInode = manager.getTable("inode")
 
         indexTable = manager.getTable("inode_hash_block")
         hbsTable = manager.getTable("hash_block_size")
@@ -1039,22 +1046,32 @@ class DedupOperations(llfuse.Operations): # {{{1
             compressed_size = hbsTable.sum_comp_size_all()
             return apparent_size, compressed_size
 
+        tableOption = self.getTable('option')
+        blockSize = int(tableOption.get("block_size"))
+
         apparent_size = 0
         compressed_size = 0
+        sparce_size = 0
         while True:
             treeItem = curTree.fetchone()
             if not treeItem:
                 break
 
-            apparent_size += treeInode.get_size_by_id_nlinks( treeItem["inode_id"] )
+            inode_size = tableInode.get_size( treeItem["inode_id"] )
+            apparent_size += inode_size
 
             # Do not trust inode info - we not done block writing and writed size not changed?
-            inodeHashes = tuple(item["hash_id"] for item in indexTable.get_hashes_by_inode( treeItem["inode_id"] ))
+            inodeHashes = set(indexTable.get_hashes_by_inode( treeItem["inode_id"] ))
+
+            stored_blocks = indexTable.get_count_by_inode( treeItem["inode_id"] )
+            inode_blocks = int(math.ceil(1.0 * inode_size / blockSize))
+
+            sparce_size += (inode_blocks - stored_blocks) * blockSize
 
             apparent_size += hbsTable.sum_real_size(inodeHashes)
             compressed_size += hbsTable.sum_comp_size(inodeHashes)
 
-        return apparent_size, compressed_size
+        return apparent_size, compressed_size, sparce_size
 
     def __fix_inode_if_requested_root(self, inode):
         self.__log_call('__fix_inode_if_requested_root', '->(inode=%i)', inode)

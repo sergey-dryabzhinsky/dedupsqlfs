@@ -157,7 +157,7 @@ class TableInode( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute("SELECT `size` FROM `%s` " % self.getName()+
-                    " WHERE `id`=? AND `nlinks`>1", (inode_id,))
+                    " WHERE `id`=? AND `nlinks`>0", (inode_id,))
         item = cur.fetchone()
         if item:
             item = item["size"]

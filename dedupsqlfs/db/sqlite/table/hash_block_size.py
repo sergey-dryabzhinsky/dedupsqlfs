@@ -62,7 +62,7 @@ class TableHashBlockSize( Table ):
     def get_real_sizes( self, hash_ids):
         """
         :param hash_ids: list|tuple
-        :return: int
+        :return: tuple
         """
         self.startTimer()
 
@@ -76,6 +76,46 @@ class TableHashBlockSize( Table ):
             )
             items = cur.fetchall()
         self.stopTimer('get_real_sizes')
+        return items
+
+    def get_hashes_to_real_sizes( self, hash_ids):
+        """
+        :param hash_ids: list|tuple
+        :return: dict
+        """
+        self.startTimer()
+
+        items = {}
+        hids = ",".join((str(hid) for hid in hash_ids))
+        if hids:
+            cur = self.getCursor()
+            cur.execute(
+                "SELECT `real_size`,`hash_id` FROM `%s` " % self.getName()+
+                " WHERE `hash_id` IN (%s)" % hids
+            )
+            for item in cur.fetchall():
+                items[ str(item["hash_id"]) ] = item["real_size"]
+        self.stopTimer('get_hashes_to_real_sizes')
+        return items
+
+    def get_hashes_to_comp_sizes( self, hash_ids):
+        """
+        :param hash_ids: list|tuple
+        :return: dict
+        """
+        self.startTimer()
+
+        items = {}
+        hids = ",".join((str(hid) for hid in hash_ids))
+        if hids:
+            cur = self.getCursor()
+            cur.execute(
+                "SELECT `comp_size`,`hash_id` FROM `%s` " % self.getName()+
+                " WHERE `hash_id` IN (%s)" % hids
+            )
+            for item in cur.fetchall():
+                items[ str(item["hash_id"]) ] = item["comp_size"]
+        self.stopTimer('get_hashes_to_comp_sizes')
         return items
 
     def sum_real_size( self, hash_ids):

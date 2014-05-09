@@ -1,5 +1,11 @@
 Here are some things on to-do list, in no particular order:
 
+ * Implement thin snapshots - that stores only inode and data changes.
+   Current snapshots copying all metadata information.
+
+ * Try to store blocks in several database files or tables. Something
+   like partitioning. Hide it in Block storage class.
+
  * Implement functions for work with blocks, hashes, subvolumes as separate
    commands (options) in do.dedupsqlfs. This should reduce code size of
    FUSE operations file.
@@ -21,7 +27,7 @@ Here are some things on to-do list, in no particular order:
    - fast compression for some types - *.wav/*.pdf
    - best for texts and some other types - *.txt/*.html/*.bmp
    There must be variants for pairs - types:compression. Even custom compression
-   methods: "*.wav,*.pdf:custom:zlib,snappy:fast".
+   methods: "*.wav,*.pdf:custom:zlib=fast,snappy".
    Compression for file types must be redefinable.
    Compression can be overrided for every file.
    Need recompression tool. And fsck support for old-new compression options.

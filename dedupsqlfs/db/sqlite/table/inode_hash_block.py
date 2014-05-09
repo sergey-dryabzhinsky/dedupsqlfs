@@ -30,6 +30,11 @@ class TableInodeHashBlock( Table ):
                 "inode_id"+
             ");"
         )
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS ihb_hash_inode ON `%s` (" % self.getName()+
+                "hash_id, inode_id"+
+            ");"
+        )
         return
 
     def insert( self, inode, block_number, hash_id):
@@ -84,7 +89,7 @@ class TableInodeHashBlock( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute("SELECT hash_id FROM `%s` WHERE inode_id=?" % self.getName(), (inode,))
-        items = tuple(item for item in iter(cur.fetchone,None))
+        items = tuple(str(item["hash_id"]) for item in iter(cur.fetchone,None))
         self.stopTimer('get_hashes_by_inode')
         return items
 
@@ -114,6 +119,18 @@ class TableInodeHashBlock( Table ):
         else:
             item = 0
         self.stopTimer('get_count_hash')
+        return item
+
+    def get_count_hash_by_inode( self, hash_id, inode_id ):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT COUNT(1) as cnt FROM `%s` WHERE hash_id=? AND inode_id=?" % self.getName(), (hash_id, inode_id,))
+        item = cur.fetchone()
+        if item:
+            item = item["cnt"]
+        else:
+            item = 0
+        self.stopTimer('get_count_hash_by_inode')
         return item
 
     def get_count_uniq_inodes(self):

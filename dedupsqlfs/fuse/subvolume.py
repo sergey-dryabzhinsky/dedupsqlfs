@@ -202,57 +202,96 @@ class Subvolume(object):
             self.print_msg("\r%s %%" % count_proc)
 
             apparent_size = 0
+            sparce_size = 0
             compressed_size = 0
             unique_size = 0
+            dedup_size = 0
 
             compMethods = {}
-
-            hashCount = {}
             hashCT = {}
-            hashBS = {}
 
             curTree = tableTree.getCursorForSelectNodeInodes(node['id'])
 
+            tableOption = self.getTable('option')
             tableIndex = self.getTable('inode_hash_block')
             tableHCT = self.getTable('hash_compression_type')
             tableHBS = self.getTable('hash_block_size')
+
+            blockSize = int(tableOption.get("block_size"))
+
+            curIndex = tableIndex.getCursor(True)
 
             while True:
                 treeItem = curTree.fetchone()
                 if not treeItem:
                     break
 
-                apparent_size += tableInode.get_size(treeItem["inode_id"])
+                inode_size = tableInode.get_size(treeItem["inode_id"])
+                apparent_size += inode_size
 
-                hashes = set(( item["hash_id"] for item in tableIndex.get_hashes_by_inode(treeItem["inode_id"])))
+                hashes = ()
+                if inode_size:
+                    hashes = set(tableIndex.get_hashes_by_inode(treeItem["inode_id"]))
 
-                for hash_id in hashes:
+                stored_blocks = tableIndex.get_count_by_inode(treeItem["inode_id"])
 
-                    if hash_id in hashCount:
-                        cnt = hashCount[hash_id]
-                    else:
-                        cnt = tableIndex.get_count_hash(hash_id)
-                        hashCount[hash_id] = cnt
+                if stored_blocks:
+                    inode_blocks = int(math.ceil(1.0 * inode_size / blockSize))
+                    sparce_size += (inode_blocks - stored_blocks) * blockSize
 
-                    if hash_id in hashCT:
-                        method = hashCT[hash_id]
-                    else:
-                        hctItem = tableHCT.get(hash_id)
-                        method = self.getManager().getCompressionTypeName(hctItem["type_id"])
-                        hashCT[hash_id] = method
+                    hash_real_sizes = tableHBS.get_hashes_to_real_sizes(hashes)
+                    hash_comp_sizes = tableHBS.get_hashes_to_comp_sizes(hashes)
 
-                    compMethods[ method ] = compMethods.get(method, 0) + 1
-
-                    if cnt == 1:
-
-                        if hash_id in hashBS:
-                            hbsItem = hashBS[ hash_id ]
+                    for hash_id in hashes:
+                        if hash_id in hashCT:
+                            method = hashCT[hash_id]
                         else:
-                            hbsItem = tableHBS.get(hash_id)
-                            hashBS[ hash_id ] = hbsItem
+                            hctItem = tableHCT.get(hash_id)
+                            method = self.getManager().getCompressionTypeName(hctItem["type_id"])
+                            hashCT[hash_id] = method
 
-                        unique_size += hbsItem['real_size']
-                        compressed_size += hbsItem['comp_size']
+                        compMethods[ method ] = compMethods.get(method, 0) + 1
+
+
+                    curIndex.execute("SELECT COUNT(`hash_id`) AS `cnt`, `hash_id` FROM `inode_hash_block` WHERE `hash_id` IN ("+
+                                    ",".join(hashes)
+                                     +") GROUP BY `hash_id`")
+
+                    hids = ()
+
+                    while True:
+                        indexItems = curIndex.fetchmany(1024)
+                        if not indexItems:
+                            break
+
+                        for item in indexItems:
+
+                            hash_id = str(item["hash_id"])
+
+                            if item["cnt"] > 1:
+                                hids += (hash_id,)
+
+                            if item["cnt"] == 1:
+                                unique_size += hash_real_sizes[ hash_id ]
+
+                            compressed_size += hash_comp_sizes[ hash_id ]
+
+                    if hids:
+
+                        curIndex.execute("SELECT COUNT(`hash_id`) AS `cnt`, `hash_id` FROM `inode_hash_block` WHERE `hash_id` IN ("+
+                                        ",".join(hids)
+                                         +") AND `inode_id`=%d GROUP BY `hash_id`" % treeItem["inode_id"])
+
+                        while True:
+                            indexItems = curIndex.fetchmany(1024)
+                            if not indexItems:
+                                break
+
+                            for item in indexItems:
+                                if item["cnt"] >= 1:
+                                    hash_id = str(item["hash_id"])
+                                    dedup_size += item["cnt"] * hash_real_sizes[ hash_id ]
+
 
                 count_done += 1
 
@@ -265,12 +304,13 @@ class Subvolume(object):
             self.print_msg("\n")
 
             self.print_out("Apparent size is %s.\n" % format_size(apparent_size) )
-
             self.print_out("Unique data size is %s.\n" % format_size(unique_size) )
+            self.print_out("Sparce data size is %s.\n" % format_size(sparce_size) )
+            self.print_out("Deduped data size is %s.\n" % format_size(dedup_size) )
 
             if unique_size:
                 self.print_out("Compressed data size is %s (%.2f %%).\n" % (
-                    format_size(compressed_size), compressed_size * 100.0 / unique_size
+                    format_size(compressed_size), compressed_size * 100.0 / apparent_size
                 ))
 
             count_all = 0

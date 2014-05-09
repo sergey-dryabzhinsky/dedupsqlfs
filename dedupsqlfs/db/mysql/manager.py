@@ -218,7 +218,7 @@ class DbManager( object ):
                 "--skip-networking",
                 "--skip-name-resolve",
                 "--socket=%s" % self.getSocket(),
-                "--default-storage-engine=InnoDB",
+                "--default-storage-engine=MyISAM",
                 # TODO: options
                 "--connect-timeout=10",
                 "--interactive-timeout=3600",

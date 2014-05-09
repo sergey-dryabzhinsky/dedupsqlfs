@@ -20,8 +20,6 @@ except ImportError as e:
 try:
     import llfuse as fuse
     from llfuse import FUSEError
-    from dedupsqlfs.lib import constants
-    from dedupsqlfs.log import logging, DEBUG_VERBOSE
 except ImportError:
     sys.stderr.write("Error: The Python FUSE binding isn't installed!\n" + \
         "If you're on Ubuntu try running `sudo apt-get install python-fuse'.\n")
@@ -29,6 +27,8 @@ except ImportError:
 
 # Local modules that are mostly useful for debugging.
 from dedupsqlfs.my_formats import format_size
+from dedupsqlfs.lib import constants
+from dedupsqlfs.log import logging, DEBUG_VERBOSE
 
 # Storage for options and DB interface
 # Implements FUSE interface
@@ -247,7 +247,7 @@ class DedupFS(object): # {{{1
         indexTable = manager.getTable("inode_hash_block")
         hbsTable = manager.getTable("hash_block_size")
 
-        apparent_size, compressed_size = self.operations.getDataSize(use_subvol=False)
+        apparent_size, compressed_size, sparce_size = self.operations.getDataSize(use_subvol=False)
         apparent_size_u, compressed_size_u = self.operations.getDataSize(use_subvol=False, unique=True)
 
         self.getLogger().info("--" * 79)
@@ -258,19 +258,6 @@ class DedupFS(object): # {{{1
         if apparent_size:
             self.getLogger().info("Apparent size is %s (unique %s).",
                              format_size(apparent_size), format_size(apparent_size_u)
-            )
-            self.getLogger().info("Databases take up %s (ratio is %.2f%%).",
-                             format_size(disk_usage),
-                             100.0 * disk_usage / apparent_size_u)
-            self.getLogger().info("Compressed data take up %s (unique %s, ratioA is %.2f%%, ratioD is %.2f%%).",
-                             format_size(compressed_size), format_size(compressed_size_u),
-                             100.0 * (apparent_size - compressed_size) / apparent_size,
-                             100.0 * compressed_size_u / disk_usage,
-            )
-            self.getLogger().info("Meta data and indexes take up %s (ratioA is %.2f%%, rationD is %.2f%%).",
-                             format_size(disk_usage - compressed_size_u),
-                             100.0 * (disk_usage - compressed_size_u) / apparent_size_u,
-                             100.0 * (disk_usage - compressed_size_u) / disk_usage,
             )
 
             curIndex = indexTable.getCursor()
@@ -299,6 +286,25 @@ class DedupFS(object): # {{{1
             self.getLogger().info("Deduped size is %s (ratio is %.2f%%).",
                              format_size(dedup_size),
                              100.0 * dedup_size / apparent_size)
+
+            self.getLogger().info("Sparce size is %s (ratio is %.2f%%).",
+                             format_size(sparce_size),
+                             100.0 * sparce_size / apparent_size)
+
+            self.getLogger().info("Databases take up %s (ratio is %.2f%%).",
+                             format_size(disk_usage),
+                             100.0 * disk_usage / apparent_size_u)
+            self.getLogger().info("Compressed data take up %s (unique %s, ratioA is %.2f%%, ratioD is %.2f%%).",
+                             format_size(compressed_size), format_size(compressed_size_u),
+                             100.0 * (apparent_size - compressed_size) / apparent_size,
+                             100.0 * compressed_size_u / disk_usage,
+            )
+            self.getLogger().info("Meta data and indexes take up %s (ratioA is %.2f%%, rationD is %.2f%%).",
+                             format_size(disk_usage - compressed_size_u),
+                             100.0 * (disk_usage - compressed_size_u) / apparent_size_u,
+                             100.0 * (disk_usage - compressed_size_u) / disk_usage,
+            )
+
         else:
             self.getLogger().info("Apparent size is %s.",
                              format_size(apparent_size)

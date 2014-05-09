@@ -6,7 +6,6 @@ from time import time
 import os
 import sys
 import subprocess
-import gzip
 
 from dedupsqlfs.db.sqlite import dict_factory
 from dedupsqlfs.log import logging
@@ -26,6 +25,9 @@ class Table( object ):
     _op_count = None
 
     _log = None
+
+    # default start page size for SQLite db file
+    _page_size = 512
 
     def __init__(self, manager):
         if self._table_name is None:
@@ -115,7 +117,7 @@ class Table( object ):
             os.makedirs(db_dir)
 
         isNew = False
-        pageSize = 512
+        pageSize = self._page_size
         if os.path.isfile(db_path):
             fileSize = os.path.getsize(db_path)
         else:

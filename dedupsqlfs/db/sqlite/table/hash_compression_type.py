@@ -66,7 +66,7 @@ class TableHashCompressionType( Table ):
     def count_compression_type( self ):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT COUNT(type_id) AS cnt, type_id FROM `%s` GROUP BY type_id" % self._table_name)
+        cur.execute("SELECT COUNT(1) AS cnt, type_id FROM `%s` GROUP BY type_id" % self._table_name)
         items = cur.fetchall()
         self.stopTimer('count_compression_type')
         return items

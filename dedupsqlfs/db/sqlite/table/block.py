@@ -7,6 +7,9 @@ from dedupsqlfs.db.sqlite.table import Table
 
 class TableBlock( Table ):
 
+    # Use bigger block for data
+    _page_size = 4096
+
     _table_name = "block"
 
     def create( self ):

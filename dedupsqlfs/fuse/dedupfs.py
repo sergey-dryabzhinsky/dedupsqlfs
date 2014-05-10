@@ -60,12 +60,11 @@ class DedupFS(object): # {{{1
             else:
                 self._opts.append("%s=%s" % (key, value,))
 
-        self._fixCompressionOptions()
-
         pass
 
 
     def main(self):
+        self._fixCompressionOptions()
         try:
             fuse.init(self.operations, self.mountpoint, self._opts)
             fuse.main(single=True)
@@ -149,7 +148,7 @@ class DedupFS(object): # {{{1
         else:
             raise ValueError("Unknown compression method: %r" % (name,))
 
-        self._compressors[name].setDefaultCompressionLevel(level)
+        self._compressors[name].setCustomCompressionLevel(level)
 
         return self
 
@@ -159,6 +158,7 @@ class DedupFS(object): # {{{1
         if method and method.find("=") != -1:
             method, level = method.split("=")
             self.setOption("compression_method", method)
+            self.getCompressor(method).setCustomCompressionLevel(level)
 
         methods = self.getOption("compression_custom")
         if methods and type(methods) in (tuple, list,):
@@ -168,17 +168,14 @@ class DedupFS(object): # {{{1
                 if method and method.find("=") != -1:
                     method, level = method.split("=")
                     methods[i] = method
+                    self.getCompressor(method).setCustomCompressionLevel(level)
             self.setOption("compression_custom", methods)
 
         return
 
     def getCompressor(self, name):
-        level = None
-        if name and name.find("=") != -1:
-            name, level = name.split("=")
         if name in self._compressors:
             comp = self._compressors[name]
-            comp.setDefaultCompressionLevel(level)
             return comp
         else:
             raise ValueError("Unknown compression method: %r" % (name,))

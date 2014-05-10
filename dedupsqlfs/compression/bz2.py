@@ -25,9 +25,9 @@ class Bz2Compression(BaseCompression):
     def getBestCompressionOptions(self):
         return ( 9, )
 
-    def getCustomCompressionOptions(self, level=None):
+    def getCustomCompressionOptions(self):
         try:
-            level = int(level)
+            level = int(self._custom_comp_level)
             if level < 1:
                 level = 1
             elif level > 9:

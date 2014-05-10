@@ -31,9 +31,9 @@ class LzmaCompression(BaseCompression):
             "preset": 7,
         }
 
-    def getCustomCompressionOptions(self, level=None):
+    def getCustomCompressionOptions(self):
         try:
-            level = int(level)
+            level = int(self._custom_comp_level)
             if level < 0:
                 level = 0
             elif level > 9:

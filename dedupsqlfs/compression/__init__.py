@@ -16,7 +16,7 @@ class BaseCompression:
 
     _has_comp_level_options = False
 
-    _default_comp_level = None
+    _custom_comp_level = None
 
     _module = None
     _func_comp = None
@@ -44,8 +44,8 @@ class BaseCompression:
     def hasCompressionLevelOptions(self):
         return self._has_comp_level_options
 
-    def setDefaultCompressionLevel(self, level=None):
-        self._default_comp_level = level
+    def setCustomCompressionLevel(self, level=None):
+        self._custom_comp_level = level
         return self
 
     def getFastCompressionOptions(self):
@@ -57,22 +57,26 @@ class BaseCompression:
     def getBestCompressionOptions(self):
         return False
 
-    def getCustomCompressionOptions(self, level=None):
+    def getDefaultCompressionOptions(self):
+        return False
+
+    def getCustomCompressionOptions(self):
         return False
 
     def getCompressionLevelOptions(self, level=None):
         """
         @rtype: dict or tuple or bool
         """
-        opts = False
         if level == constants.COMPRESSION_LEVEL_FAST:
             opts = self.getFastCompressionOptions()
         elif level == constants.COMPRESSION_LEVEL_NORM:
             opts = self.getNormCompressionOptions()
         elif level == constants.COMPRESSION_LEVEL_BEST:
             opts = self.getBestCompressionOptions()
+        elif level == constants.COMPRESSION_LEVEL_DEFAULT:
+            opts = self.getDefaultCompressionOptions()
         else:
-            opts = self.getCustomCompressionOptions(level)
+            opts = self.getCustomCompressionOptions()
         return opts
 
     def isDataMayBeCompressed(self, data):
@@ -95,8 +99,6 @@ class BaseCompression:
         func = self._get_comp_func()
         if self.hasCompressionLevelOptions():
             opts = self.getCompressionLevelOptions(comp_level)
-            if not opts:
-                opts = self.getCompressionLevelOptions(self._default_comp_level)
             if opts:
                 if type(opts) is dict:
                     return func(data, **opts)

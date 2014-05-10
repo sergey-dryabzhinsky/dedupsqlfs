@@ -1,3 +1,4 @@
+#/usr/bin/env python3
 
 import sys
 import os
@@ -10,9 +11,10 @@ curpath = os.path.abspath( sys.argv[0] )
 if os.path.islink(curpath):
     curpath = os.readlink(curpath)
 currentdir = os.path.dirname( curpath )
-basedir = os.path.abspath( os.path.join( currentdir, ".." ) )
+basedir = os.path.abspath( os.path.join( currentdir, "..", ".." ) )
 
 sys.path.insert( 0, basedir )
+os.chdir(basedir)
 
 COMPRESSION_SUPPORTED=('lzo', 'zlib', 'bz2', 'lzma', 'snappy', 'lz4',)
 

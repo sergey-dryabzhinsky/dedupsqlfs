@@ -24,12 +24,13 @@ nROUNDS = 64
 cROUNDS = range(nROUNDS)
 changeData = 4
 dataRange = 1024*128
-dataMin = 0
-dataMax = 15
+dataMin = ord(' ')
+dataMax = ord('z')
 
 def do_simple_ctest(method):
     dt = 0
     lcdata = 0
+    ldata = 0
     data = b''
     for cr in cROUNDS:
 
@@ -44,12 +45,14 @@ def do_simple_ctest(method):
         dt += t2 - t1
 
         lcdata += len(cdata)
+        ldata += len(data)
 
-    return dt / nROUNDS, lcdata / nROUNDS
+    return dt / nROUNDS, ldata / nROUNDS, 100.0 * lcdata / ldata
 
 def do_level_ctest(method, level):
     dt = 0
     lcdata = 0
+    ldata = 0
     data = b''
     for cr in cROUNDS:
 
@@ -64,12 +67,14 @@ def do_level_ctest(method, level):
         dt += t2 - t1
 
         lcdata += len(cdata)
+        ldata += len(data)
 
-    return dt / nROUNDS, lcdata / nROUNDS
+    return dt / nROUNDS, ldata / nROUNDS, 100.0 * lcdata / ldata
 
 def do_level_ctest_lzma(method, level):
     dt = 0
     lcdata = 0
+    ldata = 0
     data = b''
     for cr in cROUNDS:
 
@@ -84,8 +89,9 @@ def do_level_ctest_lzma(method, level):
         dt += t2 - t1
 
         lcdata += len(cdata)
+        ldata += len(data)
 
-    return dt / nROUNDS, lcdata / nROUNDS
+    return dt / nROUNDS, ldata / nROUNDS, 100.0 * lcdata / ldata
 
 COMPRESSION_SUPPORTED={
     'lzo' : (False, do_simple_ctest,),
@@ -112,22 +118,14 @@ for c, data in COMPRESSION_SUPPORTED.items():
     test_func = data[1]
 
     if not levels:
-        dt, lcdata = test_func(m)
-        CTIMING[ c ] = (dt, lcdata,)
+        dt, ldata, ratio_proc = test_func(m)
+        CTIMING[ c ] = (dt, ratio_proc, ldata / dt / 1024.0 / 1024.0,)
     else:
         CTIMING[ c ] = {}
         for level in levels:
             print("-- level: %r" % level)
-            dt, lcdata = test_func(m, level)
-            CTIMING[c][level] = (dt, lcdata,)
-
-#print("\nRaw Results:\n")
-#pprint.pprint(CTIMING)
-
-min_values = {}
-max_values = {}
-
-ldata = 1024*128
+            dt, ldata, ratio_proc = test_func(m, level)
+            CTIMING[c][level] = (dt, ratio_proc, ldata / dt / 1024.0 / 1024.0,)
 
 print("\nResults:\n")
 
@@ -136,13 +134,10 @@ for c, results in CTIMING.items():
     if type(results) is tuple:
 
         dt = results[0]
-        lcdata = results[1]
+        ratio_proc = results[1]
+        speed_mbps = results[2]
 
-        eff = lcdata * 100.0 / ldata
-
-        print("Compression %r: %.6f sec, %.2f %% ratio" % (c, dt, eff))
-        min_values[c] = "%.6f" % dt
-        max_values[c] = "%.6f" % dt
+        print("Compression %r: %.6f sec, %.2f %% ratio, %.2f Mb/s" % (c, dt, ratio_proc, speed_mbps,))
     else:
         data = results.values()
 
@@ -150,29 +145,22 @@ for c, results in CTIMING.items():
         max_v = 0
         for lvl, _results in results.items():
             dt = _results[0]
-            lcdata = _results[1]
+            ratio_proc = _results[1]
+            speed_mbps = _results[2]
             if dt > max_v:
                 max_v = dt
             if dt < min_v:
                 min_v = dt
-
-        min_values[c] = "%.6f" % min_v
-        max_values[c] = "%.6f" % max_v
 
         dv = max_v - min_v
         print("Compression %r:" % c)
 
         for lvl, _results in results.items():
             dt = _results[0]
-            lcdata = _results[1]
-            eff = lcdata * 100.0 / ldata
-            print("-- level: %s, time: %.6f sec, about %.2f %% times, %.2f %% ratio" % (lvl, dt, (dt-min_v)*100.0/dv, eff))
-
-#print("\nMinimal values:")
-#pprint.pprint(min_values)
-
-#print("\nMaximum values:")
-#pprint.pprint(max_values)
+            ratio_proc = _results[1]
+            speed_mbps = _results[2]
+            print("-- level: %s, time: %.6f sec, about %.2f %% times, %.2f %% ratio, %.2f Mb/s" % (
+                lvl, dt, (dt-min_v)*100.0/dv, ratio_proc, speed_mbps))
 
 print("\nTable of times:")
 
@@ -209,15 +197,36 @@ for level in range(0,10):
     for c in cmps:
         results = CTIMING[c]
         if type(results) is tuple:
-            lcdata = results[1]
-            eff = "%.2f" % (lcdata * 100.0 / ldata)
+            eff = "%.2f" % results[1]
             row.append("%8s" % eff)
         else:
             found = False
             for lvl, r in results.items():
                 if lvl == level:
-                    lcdata = r[1]
-                    eff = "%.2f" % (lcdata * 100.0 / ldata)
+                    eff = "%.2f" % r[1]
+                    row.append("%8s" % eff)
+                    found = True
+            if not found:
+                row.append(" "*8)
+
+    print("\t".join(row))
+
+print("\nTable of speed in Mb/s:")
+
+print("\t".join("%-9s" % c for c in _cmps))
+
+for level in range(0,10):
+    row = ["%8s" % level]
+    for c in cmps:
+        results = CTIMING[c]
+        if type(results) is tuple:
+            eff = "%.2f" % results[2]
+            row.append("%8s" % eff)
+        else:
+            found = False
+            for lvl, r in results.items():
+                if lvl == level:
+                    eff = "%.2f" % r[2]
                     row.append("%8s" % eff)
                     found = True
             if not found:

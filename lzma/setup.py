@@ -23,6 +23,8 @@ extens = [Extension('_lzma',
                     include_dirs = [os.path.join(home, 'include'), '/opt/local/include', '/usr/local/include'],
                     library_dirs = [os.path.join(home, 'lib'), '/opt/local/lib', '/usr/local/lib'],
                     extra_compile_args = ["-O2", "-DFORTIFY_SOURCE=2", "-fstack-protector"]
+#                    extra_compile_args = ["-O2", "-march=native"]
+#                    extra_compile_args = ["-O2", "-march=native", "-floop-interchange", "-floop-block", "-floop-strip-mine", "-ftree-loop-distribution"]
                     )
 ]
 

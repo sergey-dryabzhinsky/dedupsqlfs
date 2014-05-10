@@ -204,6 +204,7 @@ class Subvolume(object):
             apparent_size = 0
             sparce_size = 0
             compressed_size = 0
+            compressed_uniq_size = 0
             unique_size = 0
             dedup_size = 0
 
@@ -273,6 +274,7 @@ class Subvolume(object):
 
                             if item["cnt"] == 1:
                                 unique_size += hash_real_sizes[ hash_id ]
+                                compressed_uniq_size += hash_comp_sizes[ hash_id ]
 
                             compressed_size += hash_comp_sizes[ hash_id ]
 
@@ -308,9 +310,13 @@ class Subvolume(object):
             self.print_out("Sparce data size is %s.\n" % format_size(sparce_size) )
             self.print_out("Deduped data size is %s.\n" % format_size(dedup_size) )
 
-            if unique_size:
+            if apparent_size:
                 self.print_out("Compressed data size is %s (%.2f %%).\n" % (
                     format_size(compressed_size), compressed_size * 100.0 / apparent_size
+                ))
+            if unique_size:
+                self.print_out("Compressed unique data size is %s (%.2f %%).\n" % (
+                    format_size(compressed_uniq_size), compressed_uniq_size * 100.0 / unique_size
                 ))
 
             count_all = 0

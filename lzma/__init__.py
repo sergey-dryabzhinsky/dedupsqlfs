@@ -14,20 +14,6 @@ search_paths.append(currentdir)
 
 # Evil hack for import not local module
 imported = False
-try:
-    path = sys.path.pop(0)
-
-    fp, pathname, description = imp.find_module("lzma")
-    module = imp.load_module("lzma", fp, pathname, description)
-
-    compress = module.compress
-    decompress = module.decompress
-
-    sys.path.insert(0, path)
-
-    imported = True
-except:
-    pass
 
 if not imported:
     p1, p2 = sys.version_info[:2]
@@ -58,3 +44,19 @@ if not imported:
             sys.path.pop(0)
 
             break
+
+if not imported:
+    try:
+        path = sys.path.pop(0)
+
+        fp, pathname, description = imp.find_module("lzma")
+        module = imp.load_module("lzma", fp, pathname, description)
+
+        compress = module.compress
+        decompress = module.decompress
+
+        sys.path.insert(0, path)
+
+        imported = True
+    except:
+        pass

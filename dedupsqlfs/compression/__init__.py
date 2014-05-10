@@ -57,6 +57,9 @@ class BaseCompression:
     def getBestCompressionOptions(self):
         return False
 
+    def getCustomCompressionOptions(self, level=None):
+        return False
+
     def getCompressionLevelOptions(self, level=None):
         """
         @rtype: dict or tuple or bool
@@ -64,10 +67,12 @@ class BaseCompression:
         opts = False
         if level == constants.COMPRESSION_LEVEL_FAST:
             opts = self.getFastCompressionOptions()
-        if level == constants.COMPRESSION_LEVEL_NORM:
+        elif level == constants.COMPRESSION_LEVEL_NORM:
             opts = self.getNormCompressionOptions()
-        if level == constants.COMPRESSION_LEVEL_BEST:
+        elif level == constants.COMPRESSION_LEVEL_BEST:
             opts = self.getBestCompressionOptions()
+        else:
+            opts = self.getCustomCompressionOptions(level)
         return opts
 
     def isDataMayBeCompressed(self, data):

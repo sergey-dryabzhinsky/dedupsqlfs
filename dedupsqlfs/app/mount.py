@@ -132,7 +132,7 @@ def main(): # {{{1
     msg = "Enable compression of data blocks using one of the supported compression methods: one of %s"
     msg %= ', '.join('%r' % mth for mth in compression_methods)
     msg += ". Defaults to %r." % constants.COMPRESSION_TYPE_NONE
-    msg += " You can use <method>=<level> syntax."
+    msg += " You can use <method>=<level> syntax, <level> can be integer or value from --compression-level."
     if len(compression_methods) > 1:
         msg += " %r will try all compression methods and choose one with smaller result data." % constants.COMPRESSION_TYPE_BEST
         msg += " %r will try selected compression methods (--custom-compress) and choose one with smaller result data." % constants.COMPRESSION_TYPE_CUSTOM
@@ -142,16 +142,18 @@ def main(): # {{{1
     msg = "Enable compression of data blocks using one or more of the supported compression methods: %s"
     msg %= ', '.join('%r' % mth for mth in compression_methods[:-2])
     msg += ". To use two or more methods select this option in command line for each compression method."
-    msg += " You can use <method>=<level> syntax."
+    msg += " You can use <method>=<level> syntax, <level> can be integer or value from --compression-level."
 
     parser.add_argument('--custom-compress', dest='compression_custom', metavar='METHOD', action="append", help=msg)
 
     parser.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")
     parser.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=-1, help="Minimal block data size for compression. Defaults to -1 bytes (auto). Not compress if data size is less then BYTES long. If not forced to.")
+
+    levels = (constants.COMPRESSION_LEVEL_DEFAULT, constants.COMPRESSION_LEVEL_FAST, constants.COMPRESSION_LEVEL_NORM, constants.COMPRESSION_LEVEL_BEST)
+
     parser.add_argument('--compression-level', dest='compression_level', metavar="LEVEL", default=constants.COMPRESSION_LEVEL_DEFAULT,
-                        choices=(constants.COMPRESSION_LEVEL_DEFAULT, constants.COMPRESSION_LEVEL_FAST, constants.COMPRESSION_LEVEL_NORM, constants.COMPRESSION_LEVEL_BEST),
-                        help="Default compression level ratio: one of %s. Defaults to %r. Not all methods support this option." % (
-                            ', '.join((constants.COMPRESSION_LEVEL_DEFAULT, constants.COMPRESSION_LEVEL_FAST, constants.COMPRESSION_LEVEL_NORM, constants.COMPRESSION_LEVEL_BEST)), constants.COMPRESSION_LEVEL_DEFAULT
+                        help="Compression level ratio: one of %s; or INT. Defaults to %r. Not all methods support this option." % (
+                            ', '.join('%r' % lvl for lvl in levels), constants.COMPRESSION_LEVEL_DEFAULT
                         ))
     # Do not want 'best' after help setup
 

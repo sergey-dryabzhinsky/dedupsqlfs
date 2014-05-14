@@ -1061,19 +1061,22 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not treeItem:
                 break
 
-            inode_size = tableInode.get_size( treeItem["inode_id"] )
-            apparent_size += inode_size
+            inode = tableInode.get(treeItem["inode_id"])
+            apparent_size += inode["size"]
 
-            # Do not trust inode info - we not done block writing and writed size not changed?
-            inodeHashes = set(indexTable.get_hashes_by_inode( treeItem["inode_id"] ))
+            isFile = stat.S_ISREG(inode["mode"])
 
-            stored_blocks = indexTable.get_count_by_inode( treeItem["inode_id"] )
-            inode_blocks = int(math.ceil(1.0 * inode_size / blockSize))
+            if isFile:
 
-            sparce_size += (inode_blocks - stored_blocks) * blockSize
+                stored_blocks = indexTable.get_count_by_inode( treeItem["inode_id"] )
 
-            apparent_size += hbsTable.sum_real_size(inodeHashes)
-            compressed_size += hbsTable.sum_comp_size(inodeHashes)
+                inode_blocks = int(math.ceil(1.0 * inode["size"] / blockSize))
+                sparce_size += (inode_blocks - stored_blocks) * blockSize
+
+                # Do not trust inode info - we not done block writing and writed size not changed?
+                inodeHashes = set(indexTable.get_hashes_by_inode( treeItem["inode_id"] ))
+
+                compressed_size += hbsTable.sum_comp_size(inodeHashes)
 
         return apparent_size, compressed_size, sparce_size
 

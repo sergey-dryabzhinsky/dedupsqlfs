@@ -227,18 +227,19 @@ class Subvolume(object):
                 if not treeItem:
                     break
 
-                inode_size = tableInode.get_size(treeItem["inode_id"])
-                apparent_size += inode_size
+                inode = tableInode.get(treeItem["inode_id"])
+                apparent_size += inode["size"]
 
-                hashes = ()
-                if inode_size:
-                    hashes = set(tableIndex.get_hashes_by_inode(treeItem["inode_id"]))
+                isFile = stat.S_ISREG(inode["mode"])
 
-                stored_blocks = tableIndex.get_count_by_inode(treeItem["inode_id"])
+                if isFile:
 
-                if stored_blocks:
-                    inode_blocks = int(math.ceil(1.0 * inode_size / blockSize))
+                    stored_blocks = tableIndex.get_count_by_inode(treeItem["inode_id"])
+
+                    inode_blocks = int(math.ceil(1.0 * inode["size"] / blockSize))
                     sparce_size += (inode_blocks - stored_blocks) * blockSize
+
+                    hashes = set(tableIndex.get_hashes_by_inode(treeItem["inode_id"]))
 
                     hash_real_sizes = tableHBS.get_hashes_to_real_sizes(hashes)
                     hash_comp_sizes = tableHBS.get_hashes_to_comp_sizes(hashes)

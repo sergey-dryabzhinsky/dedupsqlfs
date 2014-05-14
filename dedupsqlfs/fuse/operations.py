@@ -1070,7 +1070,13 @@ class DedupOperations(llfuse.Operations): # {{{1
 
                 stored_blocks = indexTable.get_count_by_inode( treeItem["inode_id"] )
 
-                inode_blocks = int(math.ceil(1.0 * inode["size"] / blockSize))
+                db = inode["size"] % blockSize
+                inode_blocks = int((inode["size"]-db) / blockSize)
+                if db:
+                    inode_blocks += 1
+                # not defragmented?
+                if stored_blocks > inode_blocks:
+                    stored_blocks = inode_blocks
                 sparce_size += (inode_blocks - stored_blocks) * blockSize
 
                 # Do not trust inode info - we not done block writing and writed size not changed?

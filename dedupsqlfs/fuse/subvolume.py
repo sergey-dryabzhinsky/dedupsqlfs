@@ -236,7 +236,13 @@ class Subvolume(object):
 
                     stored_blocks = tableIndex.get_count_by_inode(treeItem["inode_id"])
 
-                    inode_blocks = int(math.ceil(1.0 * inode["size"] / blockSize))
+                    db = inode["size"] % blockSize
+                    inode_blocks = int((inode["size"]-db) / blockSize)
+                    if db:
+                        inode_blocks += 1
+                    # not defragmented?
+                    if stored_blocks > inode_blocks:
+                        stored_blocks = inode_blocks
                     sparce_size += (inode_blocks - stored_blocks) * blockSize
 
                     hashes = set(tableIndex.get_hashes_by_inode(treeItem["inode_id"]))

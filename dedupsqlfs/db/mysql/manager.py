@@ -247,10 +247,10 @@ class DbManager( object ):
                 "--key-buffer-size=%dM" % (self._buffer_size/1024/1024),
                 "--innodb-buffer-pool-size=%dM" % (self._buffer_size/1024/1024),
                 "--innodb-log-file-size=32M",
-                "--innodb-log-buffer-size=1M",
+                "--innodb-log-buffer-size=4M",
                 "--innodb-autoextend-increment=1",
                 "--query-cache-min-res-unit=1k",
-                "--query-cache-limit=1M",
+                "--query-cache-limit=4M",
                 "--query-cache-size=64M",
                 "--max-allowed-packet=32M",
             ])
@@ -258,7 +258,7 @@ class DbManager( object ):
             if is_mariadb:
                 cmd_opts.extend([
                     # Only MariaDB
-                    "--aria-block-size=1k",
+                    "--aria-block-size=4k",
                     "--aria-log-dir-path=%s" % self.getBasePath(),
                     "--aria-log-file-size=32M",
                     "--aria-pagecache-buffer-size=%dM" % (self._buffer_size/1024/1024),

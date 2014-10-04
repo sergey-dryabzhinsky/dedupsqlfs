@@ -167,8 +167,8 @@ class Snapshot(Subvolume):
 
             # Copy attrs from subvolume table
             subvol_from = tableSubvol.get(root_node_from["id"])
-            tableSubvol.mount_time(root_node_to["id"], subvol_from["mounted_at"])
-            tableSubvol.update_time(root_node_to["id"], subvol_from["updated_at"])
+            tableSubvol.mount_time(root_node_to["subvol_id"], subvol_from["mounted_at"])
+            tableSubvol.update_time(root_node_to["subvol_id"], subvol_from["updated_at"])
 
             self.print_msg("Done\n")
 

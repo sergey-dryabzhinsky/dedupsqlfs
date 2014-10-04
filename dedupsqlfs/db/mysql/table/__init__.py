@@ -16,7 +16,7 @@ class Table( object ):
     _engine = "MyISAM"
     # Only InnoDB
     _compressed = False
-    _key_block_size = 1
+    _key_block_size = 4
 
     _table_name = None
     _manager = None

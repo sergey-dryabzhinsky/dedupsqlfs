@@ -1106,7 +1106,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         if self.mounted_snapshot and not self.getOption("disable_subvolumes"):
             node = self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, self.mounted_snapshot)
             if node:
-                self.getTable('subvolume').update_time(node["id"])
+                self.getTable('subvolume').update_time(node["subvol_id"])
         return self
 
     def __get_tree_node_by_parent_inode_and_name(self, parent_inode, name):
@@ -1448,9 +1448,9 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             node =  self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, self.mounted_snapshot)
             if node:
-                self.getTable('tree').selectSubvolume(node["id"])
+                self.getTable('tree').selectSubvolume(node["subvol_id"])
                 if not self.getOption("disable_subvolumes"):
-                    self.getTable('subvolume').mount_time(node["id"])
+                    self.getTable('subvolume').mount_time(node["subvol_id"])
 
         self.getLogger().debug("__select_snapshot(2): mounted_snapshot=%r" % self.mounted_snapshot)
 

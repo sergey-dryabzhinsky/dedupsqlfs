@@ -161,7 +161,7 @@ class Subvolume(object):
         try:
             node = self.getTable('tree').find_by_inode(attr.st_ino)
             self.getTable('tree').delete_subvolume(node["id"])
-            self.getTable('subvolume').delete(node['id'])
+            self.getTable('subvolume').delete(node['subvol_id'])
         except Exception as e:
             self.getLogger().warn("Can't remove subvolume!")
             self.getLogger().error("E: %s" % e)

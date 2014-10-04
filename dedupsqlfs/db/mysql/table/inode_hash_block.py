@@ -8,51 +8,80 @@ class TableInodeHashBlock( Table ):
 
     _table_name = "inode_hash_block"
 
+    _selected_subvol = None
+
     def create( self ):
         cur = self.getCursor()
 
         # Create table
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
+                "`subvol_id` INT UNSIGNED, "+
                 "`inode_id` BIGINT UNSIGNED NOT NULL, "+
                 "`block_number` BIGINT UNSIGNED NOT NULL, "+
-                "`hash_id` BIGINT UNSIGNED NOT NULL"+
+                "`hash_id` BIGINT UNSIGNED NOT NULL, "+
+                "`real_size` INT UNSIGNED NOT NULL, "+
+                "`real_comp_size` INT UNSIGNED NOT NULL, "+
+                "`writed_size` INT UNSIGNED NOT NULL, "+
+                "`writed_comp_size` INT UNSIGNED NOT NULL "+
             ")"+
             self._getCreationAppendString()
         )
 
         self.createIndexIfNotExists("inode_block", ('inode_id', 'block_number',), unique=True)
+        self.createIndexIfNotExists("subvol", ('subvol_id',))
         self.createIndexIfNotExists("hash", ('hash_id',))
         self.createIndexIfNotExists("inode", ('inode_id',))
         self.createIndexIfNotExists("hash_inode", ('hash_id', 'inode_id',))
         return
 
-    def insert( self, inode, block_number, hash_id):
+    def selectSubvolume(self, subvol_id):
+        self._selected_subvol = subvol_id
+        return self
+
+    def getSelectedSubvolume(self):
+        return self._selected_subvol
+
+    def insert( self, inode, block_number, hash_id,
+                real_size, real_comp_size, writed_size, writed_comp_size):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
             "INSERT INTO `%s` " % self.getName()+
-            " (`inode_id`, `block_number`, `hash_id`) VALUES (%(inode)s, %(block)s, %(hash)s)",
+            " (`inode_id`, `block_number`, `hash_id`, `real_size`, `comp_size`) "+
+            " VALUES (%(inode)s, %(block)s, %(hash)s, %(real)s, %(real_comp)s, %(writed)s, %(writed_comp)s)",
             {
                 "inode": inode,
                 "block": block_number,
-                "hash": hash_id
+                "hash": hash_id,
+                "real": real_size,
+                "real_comp": real_comp_size,
+                "writed": writed_size,
+                "writed_comp": writed_comp_size
             }
         )
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
 
-    def update( self, inode, block_number, new_hash_id):
+    def update( self, inode, block_number, new_hash_id,
+                new_real_size, new_real_comp_size, new_writed_size, new_writed_comp_size):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
             "UPDATE `%s` " % self.getName()+
-            " SET `hash_id`=%(hash)s WHERE `inode_id`=%(inode)s AND `block_number`=%(block)s",
+            " SET `hash_id`=%(hash)s, "+
+            " `real_size`=%(real)s, `real_comp_size`=%(real_comp)s, "+
+            " `writed_size`=%(writed)s, `writed_comp_size`=%(writed_comp)s "+
+            " WHERE `inode_id`=%(inode)s AND `block_number`=%(block)s",
             {
                 "hash": new_hash_id,
                 "inode": inode,
-                "block": block_number
+                "block": block_number,
+                "real": new_real_size,
+                "real_comp": new_real_comp_size,
+                "writed": new_writed_size,
+                "writed_comp": new_writed_comp_size
             }
         )
         item = cur.rowcount
@@ -119,6 +148,20 @@ class TableInodeHashBlock( Table ):
         self.stopTimer('get_hashes_by_inode')
         return items
 
+    def get_hashes_by_subvol( self, subvol_id):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute(
+            "SELECT DISTINCT `hash_id` FROM `%s` " % self.getName()+
+            " WHERE `subvol_id`=%(subvol)s",
+            {
+                "subvol": subvol_id
+            }
+        )
+        items = tuple(str(item["hash_id"]) for item in cur.fetchall())
+        self.stopTimer('get_hashes_by_subvol')
+        return items
+
     def get_by_inode( self, inode):
         self.startTimer()
         cur = self.getCursor()
@@ -138,6 +181,16 @@ class TableInodeHashBlock( Table ):
         for row in iter(fetchone, None):
             yield row
         return
+
+    def get_sum_sizes_by_subvol( self, subvol_id):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT SUM(`real_size`) as `real`, SUM(`real_comp_size`) as `real_comp`,"+
+                    " SUM(`writed_size`) as `writed`, SUM(`writed_comp_size`) as `writed_comp` FROM `%s` " % self.getName()+
+                    " WHERE subvol_id=%s", (subvol_id,))
+        item = cur.fetchone()
+        self.stopTimer('get_sum_sizes_by_subvol')
+        return item
 
     def get_count_by_inode( self, inode):
         self.startTimer()

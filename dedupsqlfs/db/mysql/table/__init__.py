@@ -2,7 +2,6 @@
 
 __author__ = 'sergey'
 
-import types
 from time import time
 import pymysql
 import pymysql.cursors

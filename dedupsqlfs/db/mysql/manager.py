@@ -51,7 +51,6 @@ class DbManager( object ):
         "compression_type",
         "hash",
         "hash_compression_type",
-        "hash_block_size",
         "inode_hash_block",
         "subvolume",
     )
@@ -152,9 +151,6 @@ class DbManager( object ):
             elif name == "hash_compression_type":
                 from dedupsqlfs.db.mysql.table.hash_compression_type import TableHashCompressionType
                 self._table[ name ] = TableHashCompressionType(self)
-            elif name == "hash_block_size":
-                from dedupsqlfs.db.mysql.table.hash_block_size import TableHashBlockSize
-                self._table[ name ] = TableHashBlockSize(self)
             elif name == "hash":
                 from dedupsqlfs.db.mysql.table.hash import TableHash
                 self._table[ name ] = TableHash(self)

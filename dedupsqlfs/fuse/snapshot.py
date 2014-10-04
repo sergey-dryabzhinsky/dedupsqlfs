@@ -107,7 +107,7 @@ class Snapshot(Subvolume):
                 self.getLogger().debug("---- node from: %r" % (node_from_id,))
                 self.getLogger().debug("---- tree item: %r" % (treeItem_from,))
 
-                tableTree.selectSubvolume(root_node_to["id"])
+                tableTree.selectSubvolume(root_node_to["subvol_id"])
                 treeNode_to_id = tableTree.insert(
                     parent_node_to_id,
                     treeItem_from["name_id"],

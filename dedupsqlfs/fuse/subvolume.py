@@ -8,6 +8,7 @@ import sys
 import math
 import llfuse
 import errno
+from time import time
 from datetime import datetime
 from dedupsqlfs.my_formats import format_size
 
@@ -82,6 +83,11 @@ class Subvolume(object):
             if not e.errno == errno.ENOENT:
                 raise
 
+        subvol_id = self.getTable('subvolume').insert(int(time()))
+        self.getTable('tree').selectSubvolume(subvol_id)
+        self.getTable('inode').selectSubvolume(subvol_id)
+        self.getTable('inode_hash_block').selectSubvolume(subvol_id)
+
         ctx = llfuse.RequestContext()
         ctx.uid = os.getuid()
         ctx.gid = os.getgid()
@@ -89,8 +95,6 @@ class Subvolume(object):
 
         node = self.getTable('tree').find_by_inode(attrs.st_ino)
         self.getLogger().debug("Created tree node: %r" % (node,))
-
-        self.getTable('subvolume').insert(node['id'], int(attrs.st_ctime))
 
         return True
 
@@ -160,7 +164,7 @@ class Subvolume(object):
 
         try:
             node = self.getTable('tree').find_by_inode(attr.st_ino)
-            self.getTable('tree').delete_subvolume(node["id"])
+            self.getTable('tree').delete_subvolume(node["subvol_id"])
             self.getTable('subvolume').delete(node['subvol_id'])
         except Exception as e:
             self.getLogger().warn("Can't remove subvolume!")
@@ -190,9 +194,9 @@ class Subvolume(object):
             tableTree = self.getTable('tree')
 
             attr = self.getManager().lookup(llfuse.ROOT_INODE, subvol_name)
-            node = tableTree.find_by_inode(attr.st_ino)
+            rootNode = tableTree.find_by_inode(attr.st_ino)
 
-            count_to_do = tableTree.count_subvolume_inodes(node["id"])
+            count_to_do = tableTree.count_subvolume_inodes(rootNode["subvol_id"])
             count_done = 0
             count_proc = 0
             if count_to_do:
@@ -211,104 +215,32 @@ class Subvolume(object):
             compMethods = {}
             hashCT = {}
 
-            curTree = tableTree.getCursorForSelectNodeInodes(node['id'])
-
             tableOption = self.getTable('option')
             tableIndex = self.getTable('inode_hash_block')
             tableHCT = self.getTable('hash_compression_type')
-            tableHBS = self.getTable('hash_block_size')
 
             blockSize = int(tableOption.get("block_size"))
 
-            curIndex = tableIndex.getCursor(True)
+            hashes = tableIndex.get_hashes_by_subvol(rootNode["subvol_id"])
 
-            while True:
-                treeItem = curTree.fetchone()
-                if not treeItem:
-                    break
+            for hash_id in hashes:
+                if hash_id in hashCT:
+                    method = hashCT[hash_id]
+                else:
+                    hctItem = tableHCT.get(hash_id)
+                    method = self.getManager().getCompressionTypeName(hctItem["type_id"])
+                    hashCT[hash_id] = method
 
-                inode = tableInode.get(treeItem["inode_id"])
-                apparent_size += inode["size"]
+                compMethods[ method ] = compMethods.get(method, 0) + 1
 
-                isFile = stat.S_ISREG(inode["mode"])
+            subvolDataSizes = tableIndex.get_sum_sizes_by_subvol(rootNode['subvol_id'])
 
-                if isFile:
-
-                    stored_blocks = tableIndex.get_count_by_inode(treeItem["inode_id"])
-
-                    db = inode["size"] % blockSize
-                    inode_blocks = int((inode["size"]-db) / blockSize)
-                    if db:
-                        inode_blocks += 1
-                    # not defragmented?
-                    if stored_blocks > inode_blocks:
-                        stored_blocks = inode_blocks
-                    sparce_size += (inode_blocks - stored_blocks) * blockSize
-
-                    hashes = set(tableIndex.get_hashes_by_inode(treeItem["inode_id"]))
-
-                    hash_real_sizes = tableHBS.get_hashes_to_real_sizes(hashes)
-                    hash_comp_sizes = tableHBS.get_hashes_to_comp_sizes(hashes)
-
-                    for hash_id in hashes:
-                        if hash_id in hashCT:
-                            method = hashCT[hash_id]
-                        else:
-                            hctItem = tableHCT.get(hash_id)
-                            method = self.getManager().getCompressionTypeName(hctItem["type_id"])
-                            hashCT[hash_id] = method
-
-                        compMethods[ method ] = compMethods.get(method, 0) + 1
-
-
-                    curIndex.execute("SELECT COUNT(`hash_id`) AS `cnt`, `hash_id` FROM `inode_hash_block` WHERE `hash_id` IN ("+
-                                    ",".join(hashes)
-                                     +") GROUP BY `hash_id`")
-
-                    hids = ()
-
-                    while True:
-                        indexItems = curIndex.fetchmany(1024)
-                        if not indexItems:
-                            break
-
-                        for item in indexItems:
-
-                            hash_id = str(item["hash_id"])
-
-                            if item["cnt"] > 1:
-                                hids += (hash_id,)
-
-                            if item["cnt"] == 1:
-                                unique_size += hash_real_sizes[ hash_id ]
-                                compressed_uniq_size += hash_comp_sizes[ hash_id ]
-
-                            compressed_size += hash_comp_sizes[ hash_id ]
-
-                    if hids:
-
-                        curIndex.execute("SELECT COUNT(`hash_id`) AS `cnt`, `hash_id` FROM `inode_hash_block` WHERE `hash_id` IN ("+
-                                        ",".join(hids)
-                                         +") AND `inode_id`=%d GROUP BY `hash_id`" % treeItem["inode_id"])
-
-                        while True:
-                            indexItems = curIndex.fetchmany(1024)
-                            if not indexItems:
-                                break
-
-                            for item in indexItems:
-                                if item["cnt"] >= 1:
-                                    hash_id = str(item["hash_id"])
-                                    dedup_size += item["cnt"] * hash_real_sizes[ hash_id ]
-
-
-                count_done += 1
-
-                if count_to_do:
-                    proc = "%6.2f" % (count_done * 100.0 / count_to_do,)
-                    if proc != count_proc:
-                        count_proc = proc
-                        self.print_msg("\r%s %%" % count_proc)
+            apparent_size = tableInode.get_subvolume_size(rootNode['subvol_id'])
+            sparce_size = apparent_size - subvolDataSizes["real"]
+            dedup_size = subvolDataSizes["real"] - subvolDataSizes["writed"]
+            unique_size = subvolDataSizes["writed"]
+            compressed_size = subvolDataSizes["real_comp"]
+            compressed_uniq_size = subvolDataSizes["writed_comp"]
 
             self.print_msg("\n")
 

@@ -7,7 +7,6 @@ from dedupsqlfs.db.mysql.table import Table
 class TableTree( Table ):
 
     _table_name = "tree"
-    _key_block_size = 2
 
     _selected_subvol = None
 
@@ -18,7 +17,7 @@ class TableTree( Table ):
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
                 "`id` BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
-                "`subvol_id` BIGINT UNSIGNED, "+
+                "`subvol_id` INT UNSIGNED, "+
                 "`parent_id` BIGINT UNSIGNED, "+
                 "`name_id` BIGINT UNSIGNED NOT NULL, "+
                 "`inode_id` BIGINT UNSIGNED NOT NULL"+
@@ -36,10 +35,10 @@ class TableTree( Table ):
         return
 
     def getRowSize(self):
-        return 5 * 8
+        return 4 * 8 + 4
 
-    def selectSubvolume(self, node_id):
-        self._selected_subvol = node_id
+    def selectSubvolume(self, subvol_id):
+        self._selected_subvol = subvol_id
         return self
 
     def getSelectedSubvolume(self):

@@ -8,6 +8,8 @@ class TableInode( Table ):
 
     _table_name = "inode"
 
+    _selected_subvol = None
+
     def create( self ):
         cur = self.getCursor()
 
@@ -15,6 +17,7 @@ class TableInode( Table ):
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`id` BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
+                "`subvol_id` INT UNSIGNED, "+
                 "`nlinks` INT UNSIGNED NOT NULL, "+
                 "`mode` SMALLINT UNSIGNED NOT NULL, "+
                 "`uid` SMALLINT UNSIGNED NOT NULL, "+
@@ -26,20 +29,29 @@ class TableInode( Table ):
                 "`ctime` INT UNSIGNED NOT NULL, "+
                 "`atime_ns` INT UNSIGNED NOT NULL DEFAULT 0, "+
                 "`mtime_ns` INT UNSIGNED NOT NULL DEFAULT 0, "+
-                "`ctime_ns` INT UNSIGNED NOT NULL DEFAULT 0"+
+                "`ctime_ns` INT UNSIGNED NOT NULL DEFAULT 0,"+
+                "`block_size` INT UNSIGNED NOT NULL"+
             ")"+
             self._getCreationAppendString()
         )
 
         self.createIndexIfNotExists("id_nlinks", ('id', 'nlinks',))
+        self.createIndexIfNotExists("subvol_block", ('subvol_id','block_size'))
         return
 
     def getRowSize(self):
-        return 8 + 4 + 2 + 2 + 2 + 4 + 8 + 6 * 4
+        return 8 + 4 + 4 + 2 + 2 + 2 + 4 + 8 + 6 * 4 + 4
+
+    def selectSubvolume(self, subvol_id):
+        self._selected_subvol = subvol_id
+        return self
+
+    def getSelectedSubvolume(self):
+        return self._selected_subvol
 
     def insert( self, nlinks, mode,
                 uid=-1, gid=-1, rdev=0, size=0, atime=0, mtime=0, ctime=0,
-                atime_ns=0, mtime_ns=0, ctime_ns=0):
+                atime_ns=0, mtime_ns=0, ctime_ns=0, block_size=0):
         """
         :param value: bytes
         :return: int
@@ -48,9 +60,10 @@ class TableInode( Table ):
         cur = self.getCursor()
 
         cur.execute("INSERT INTO `%s`" % self.getName() +
-                    "(`nlinks`, `mode`, `uid`, `gid`, `rdev`, `size`, `atime`, `mtime`, `ctime`, `atime_ns`, `mtime_ns`, `ctime_ns`) " +
-                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (
-            nlinks, mode, uid, gid, rdev, size, atime, mtime, ctime, atime_ns, mtime_ns, ctime_ns
+                    "(`subvol_id`, `nlinks`, `mode`, `uid`, `gid`, `rdev`, `size`, `atime`, `mtime`, `ctime`, `atime_ns`, `mtime_ns`, `ctime_ns`, `block_size`) " +
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (
+            self.getSelectedSubvolume(), nlinks, mode, uid, gid, rdev, size,
+            atime, mtime, ctime, atime_ns, mtime_ns, ctime_ns, block_size
         ))
         item = cur.lastrowid
         self.stopTimer('insert')
@@ -182,6 +195,18 @@ class TableInode( Table ):
         item = cur.fetchone()
         self.stopTimer('get_count')
         return item["cnt"]
+
+    def get_subvolume_size(self, subvol_id):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT SUM(`size`) as `s` FROM `%s` WHERE `subvol_id`=%(subvol)s AND `block_size`>0" % self.getName(),
+            {
+                "subvol": subvol_id
+            }
+        )
+        item = cur.fetchone()
+        self.stopTimer('get_subvolume_size')
+        return item["s"]
 
     def get_size_by_id_nlinks(self, inode_id):
         self.startTimer()

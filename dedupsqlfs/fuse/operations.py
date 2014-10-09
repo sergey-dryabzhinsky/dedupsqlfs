@@ -310,6 +310,9 @@ class DedupOperations(llfuse.Operations): # {{{1
                     self.__collect_garbage()
             if self.getOption("verbosity") > 1:
                 self.__print_stats()
+
+            self.getManager().getTable('option').update('mounted', 0)
+
             self.getManager().close()
             return 0
         except Exception as e:
@@ -471,6 +474,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.__select_snapshot()
             self.__get_opts_from_db()
             # Make sure the hash function is (still) valid (since the database was created).
+
+            self.getManager().getTable('option').update('mounted', 1)
 
             try:
                 # Get a reference to the hash function.
@@ -1407,6 +1412,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             optTable.insert("mounted_snapshot", self.mounted_snapshot)
 
+            optTable.insert("mounted", 1)
             optTable.insert("inited", 1)
 
         for name in ("compression_method", "compression_level",):
@@ -1449,8 +1455,14 @@ class DedupOperations(llfuse.Operations): # {{{1
             node =  self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, self.mounted_snapshot)
             if node:
                 self.getTable('tree').selectSubvolume(node["subvol_id"])
+                self.getTable('inode').selectSubvolume(node["subvol_id"])
+                self.getTable('inode_hash_block').selectSubvolume(node["subvol_id"])
                 if not self.getOption("disable_subvolumes"):
                     self.getTable('subvolume').mount_time(node["subvol_id"])
+                subvol = self.getTable('subvolume').get(node["subvol_id"])
+                if subvol["readonly"]:
+                    self.getApplication().setReadonly(True)
+                    self.getLogger().warning("Selected readonly subvolume or snapshot!")
 
         self.getLogger().debug("__select_snapshot(2): mounted_snapshot=%r" % self.mounted_snapshot)
 
@@ -1491,6 +1503,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.getLogger().debug("__insert->(parent_inode=%i,name=%r,mode=%o,size=%i)", parent_inode, name, mode, size)
 
         nlinks = mode & stat.S_IFDIR and 2 or 1
+        blksz = mode & stat.S_IFREG and self.block_size or 0
 
         manager = self.getManager()
         inodeTable = manager.getTable("inode")
@@ -1501,7 +1514,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         inode_id = inodeTable.insert(
             nlinks, mode, ctx.uid, ctx.gid, rdev, size,
             t_i, t_i, t_i,
-            t_ns, t_ns, t_ns
+            t_ns, t_ns, t_ns,
+            blksz
         )
 
         name_id = self.__intern(name)

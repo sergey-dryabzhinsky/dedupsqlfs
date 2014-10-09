@@ -48,9 +48,10 @@ class TableInodeHashBlock( Table ):
         cur = self.getCursor()
         cur.execute(
             "INSERT INTO `%s` " % self.getName()+
-            " (`inode_id`, `block_number`, `hash_id`, `real_size`, `comp_size`) "+
-            " VALUES (%(inode)s, %(block)s, %(hash)s, %(real)s, %(real_comp)s, %(writed)s, %(writed_comp)s)",
+            " (`subvol_id`, `inode_id`, `block_number`, `hash_id`, `real_size`, `comp_size`) "+
+            " VALUES (%(subvol)s, %(inode)s, %(block)s, %(hash)s, %(real)s, %(real_comp)s, %(writed)s, %(writed_comp)s)",
             {
+                "subvol": self._selected_subvol,
                 "inode": inode,
                 "block": block_number,
                 "hash": hash_id,

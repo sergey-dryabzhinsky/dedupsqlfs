@@ -58,7 +58,7 @@ class Snapshot(Subvolume):
 
             self.getLogger().debug("-- into subvolume node: %r" % (root_node_to,))
 
-            count_to_do = tableTree.count_subvolume_nodes(root_node_from["id"])
+            count_to_do = tableTree.count_subvolume_nodes(root_node_from["subvol_id"])
             count_done = 0
             count_proc = 0
             if count_to_do:
@@ -95,12 +95,15 @@ class Snapshot(Subvolume):
                 at, at_ns = self.get_time_tuple(attr_from.st_atime)
                 mt, mt_ns = self.get_time_tuple(attr_from.st_mtime)
                 ct, ct_ns = self.get_time_tuple(attr_from.st_ctime)
+
+                tableInode.selectSubvolume(root_node_to["subvol_id"])
                 inode_to_id = tableInode.insert(
                     attr_from.st_nlink, attr_from.st_mode,
                     attr_from.st_uid, attr_from.st_gid, attr_from.st_rdev, attr_from.st_size,
                     at, mt, ct,
                     at_ns, mt_ns, ct_ns
                 )
+                tableInode.selectSubvolume(None)
 
                 treeItem_from = tableTree.get(node_from_id)
 
@@ -128,11 +131,15 @@ class Snapshot(Subvolume):
                     dp = 1.0 / count_indexes_from
                     check_count = 0
                     for indexItem in tableIndex.get_by_inode(attr_from.st_ino):
+
+                        tableIndex.selectSubvolume(root_node_to["subvol_id"])
                         tableIndex.insert(
                             inode_to_id,
                             indexItem["block_number"],
                             indexItem["hash_id"]
                         )
+                        tableIndex.selectSubvolume(None)
+
                         check_count += 1
                         count_done += dp
                         if count_to_do:
@@ -166,9 +173,12 @@ class Snapshot(Subvolume):
                 self.getManager().getManager().commit()
 
             # Copy attrs from subvolume table
-            subvol_from = tableSubvol.get(root_node_from["id"])
+            subvol_from = tableSubvol.get(root_node_from["subvol_id"])
             tableSubvol.mount_time(root_node_to["subvol_id"], subvol_from["mounted_at"])
             tableSubvol.update_time(root_node_to["subvol_id"], subvol_from["updated_at"])
+
+            # All snapshots readonly by default
+            tableSubvol.readonly(root_node_to["subvol_id"], True)
 
             self.print_msg("Done\n")
 

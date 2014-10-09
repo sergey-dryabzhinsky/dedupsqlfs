@@ -175,6 +175,38 @@ class Subvolume(object):
 
         return
 
+    def readonly(self, name, flag=True):
+        """
+        @param name: Subvolume name
+        @type  name: bytes
+        """
+
+        if not name:
+            self.getLogger().error("Select subvolume which you need to delete!")
+            return
+
+        subvol_name = name
+        if not subvol_name.startswith(b'@'):
+            subvol_name = b'@' + subvol_name
+
+        try:
+            attr = self.getManager().lookup(llfuse.ROOT_INODE, subvol_name)
+        except Exception:
+            self.getLogger().warn("Can't remove subvolume! Not found!")
+            return
+
+        try:
+            node = self.getTable('tree').find_by_inode(attr.st_ino)
+            self.getTable('subvolume').readonly(node['subvol_id'], flag)
+        except Exception as e:
+            self.getLogger().warn("Can't set subvolume readonly flag!")
+            self.getLogger().error("E: %s" % e)
+            import traceback
+            self.getLogger().error(traceback.format_exc())
+            return
+
+        return
+
     def report_usage(self, name):
         """
         @param name: Subvolume name

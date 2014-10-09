@@ -16,6 +16,7 @@ class TableSubvolume( Table ):
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`id` INT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
+                "`readonly` TINYINT UNSIGNED NOT NULL DEFAULT 0, "+
                 "`created_at` INT UNSIGNED NOT NULL, "+
                 "`mounted_at` INT UNSIGNED, "+
                 "`updated_at` INT UNSIGNED"+
@@ -46,6 +47,24 @@ class TableSubvolume( Table ):
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
+
+    def readonly(self, subvol_id, flag=True):
+        self.startTimer()
+        if flag:
+            flag = 1
+        else:
+            flag = 0
+        cur = self.getCursor()
+        cur.execute(
+            "UPDATE `%s` " % self.getName()+
+            " SET `readonly`=%(readonly)s WHERE `id`=%(id)s",
+            {
+                "readonly": flag,
+                "id": subvol_id
+            }
+        )
+        self.stopTimer('mount_time')
+        return cur.rowcount
 
     def mount_time(self, subvol_id, mtime=None):
         self.startTimer()

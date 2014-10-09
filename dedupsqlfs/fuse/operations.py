@@ -1885,10 +1885,14 @@ class DedupOperations(llfuse.Operations): # {{{1
         tableBlock = self.getTable("block")
         tableHash = self.getTable("hash")
         tableHCT = self.getTable("hash_compression_type")
-        tableHBS = self.getTable("hash_block_size")
 
         hash_value = self.__hash(data_block)
         hash_id = tableHash.find(hash_value)
+
+        real_size = block_length
+        real_comp_size = 0
+        writed_size = 0
+        writed_comp_size = 0
 
         # It is new block now?
         if not hash_id:
@@ -1912,19 +1916,19 @@ class DedupOperations(llfuse.Operations): # {{{1
 
                 hash_id = index_hash_id
                 hash_CT = tableHCT.get(hash_id)
-                hash_BS = tableHBS.get(hash_id)
 
                 tableHash.update(hash_id, hash_value)
                 if hash_CT["type_id"] != self.getCompressionTypeId(cmethod):
                     tableHCT.update(hash_id, self.getCompressionTypeId(cmethod))
-                if hash_BS["real_size"] != block_length or hash_BS["comp_size"] != cdata_length:
-                    tableHBS.update(hash_id, block_length, cdata_length)
                 tableBlock.update(hash_id, cdata)
             else:
                 hash_id = tableHash.insert(hash_value)
                 tableBlock.insert(hash_id, cdata)
                 tableHCT.insert(hash_id, self.getCompressionTypeId(cmethod))
-                tableHBS.insert(hash_id, block_length, cdata_length)
+
+            real_comp_size = cdata_length
+            writed_size = block_length
+            writed_comp_size = cdata_length
 
             self.bytes_written += block_length
             self.bytes_written_compressed += cdata_length
@@ -1932,9 +1936,14 @@ class DedupOperations(llfuse.Operations): # {{{1
 #            hash_count = tableIndex.get_count_hash(hash_id)
 #            self.getLogger().debug("-- deduped by hash = %s, count in index db = %s" % (hash_id, hash_count,))
 
+            old_block = self.getTable("block").get(hash_id)
+
+            real_comp_size = len(old_block["data"])
+            writed_size = 0
+            writed_comp_size = 0
+
             if self.getOption('collision_check_enabled'):
 
-                old_block = self.getTable("block").get(hash_id)
                 hash_CT = tableHCT.get(hash_id)
                 old_data = self.__decompress(old_block["data"], hash_CT["type_id"]).getvalue()
                 if old_data != data_block:
@@ -1952,10 +1961,16 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.bytes_deduped += block_length
 
         if not index_hash_id:
-            tableIndex.insert(inode, block_number, hash_id)
+            tableIndex.insert(
+                inode, block_number, hash_id,
+                real_size, real_comp_size, writed_size, writed_comp_size
+            )
             self.cached_indexes.set(inode, block_number, hash_id)
         elif index_hash_id != hash_id:
-            tableIndex.update(inode, block_number, hash_id)
+            tableIndex.update(
+                inode, block_number, hash_id,
+                real_size, real_comp_size, writed_size, writed_comp_size
+            )
             self.cached_indexes.set(inode, block_number, hash_id)
 
         self.time_spent_writing_blocks += time.time() - start_time

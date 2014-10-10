@@ -13,6 +13,7 @@ try:
     import hashlib
     from dedupsqlfs.lib import constants
     from dedupsqlfs.db import check_engines
+    from dedupsqlfs.db.mysql import table_engines
     from dedupsqlfs.log import logging
 except ImportError as e:
     msg = "Error: Failed to load one of the required Python modules! (%s)\n"
@@ -84,10 +85,10 @@ def main(): # {{{1
                         help=msg)
 
     if "mysql" in engines:
-        tengines = ('MyISAM', 'InnoDB', 'Aria')
-        msg = "One of MySQL table engines: "+", ".join(tengines)+". Default: MyISAM. Aria engine can be used only with MariaDB server."
-        parser.add_argument('--table-engine', dest='table_engine', metavar='ENGINE', choices=tengines, default=tengines[0],
-                        help=msg)
+        msg = "One of MySQL table engines: "+", ".join(table_engines)+". Default: MyISAM. Aria and TokuDB engine can be used only with MariaDB server."
+        parser.add_argument('--table-engine', dest='table_engine', metavar='ENGINE',
+                            choices=table_engines, default=table_engines[0],
+                            help=msg)
 
     parser.add_argument('--no-cache', dest='use_cache', action='store_false', help="Don't use cache in memory and delayed write to storage files.")
     parser.add_argument('--cache-meta-timeout', dest='cache_meta_timeout', metavar='NUMBER', type=int, default=20, help="Delay flush expired metadata for NUMBER of seconds. Defaults to 20 seconds.")

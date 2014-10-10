@@ -11,7 +11,7 @@ class Table( object ):
     _conn = None
     _curr = None
 
-    # InnoDB, MyISAM, Aria
+    # InnoDB, MyISAM, Aria, TokuDB
     _engine = "MyISAM"
     # Only InnoDB
     _compressed = False

@@ -13,6 +13,7 @@ try:
     import logging
     from dedupsqlfs.lib import constants
     from dedupsqlfs.db import check_engines
+    from dedupsqlfs.db.mysql import table_engines
 except ImportError as e:
     msg = "Error: Failed to load one of the required Python modules! (%s)\n"
     sys.stderr.write(msg % str(e))
@@ -89,10 +90,10 @@ def main(): # {{{1
                         help=msg)
 
     if "mysql" in engines:
-        tengines = ('MyISAM', 'InnoDB', 'Aria')
-        msg = "One of MySQL table engines: "+", ".join(tengines)+". Default: MyISAM. Aria engine can be used only with MariaDB server."
-        parser.add_argument('--table-engine', dest='table_engine', metavar='ENGINE', choices=tengines, default=tengines[0],
-                        help=msg)
+        msg = "One of MySQL table engines: "+", ".join(table_engines)+". Default: MyISAM. Aria engine can be used only with MariaDB server."
+        parser.add_argument('--table-engine', dest='table_engine', metavar='ENGINE',
+                            choices=table_engines, default=table_engines[0],
+                            help=msg)
 
     parser.add_argument('--no-transactions', dest='use_transactions', action='store_false', help="Don't use transactions when making multiple related changes, this might make the file system faster or slower (?).")
     parser.add_argument('--nosync', dest='synchronous', action='store_false', help="Disable SQLite's normal synchronous behavior which guarantees that data is written to disk immediately, because it slows down the file system too much (this means you might lose data when the mount point isn't cleanly unmounted).")

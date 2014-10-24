@@ -13,7 +13,6 @@ try:
     import logging
     from dedupsqlfs.lib import constants
     from dedupsqlfs.db import check_engines
-    from dedupsqlfs.db.mysql import table_engines
 except ImportError as e:
     msg = "Error: Failed to load one of the required Python modules! (%s)\n"
     sys.stderr.write(msg % str(e))
@@ -76,10 +75,6 @@ def main(): # {{{1
     parser.add_argument('--name', dest='name', metavar='DATABASE', default="dedupsqlfs", help="Specify the name for the database directory in which metadata and blocks data is stored. Defaults to dedupsqlfs")
     parser.add_argument('--temp', dest='temp', metavar='DIRECTORY', help="Specify the location for the files in which temporary data is stored. By default honour TMPDIR environment variable value.")
     parser.add_argument('--block-size', dest='block_size', metavar='BYTES', default=1024*128, type=int, help="Specify the maximum block size in bytes" + option_stored_in_db + ". Defaults to 128kB.")
-    parser.add_argument('--mount-snapshot', dest='snapshot_mount', metavar='NAME', default=None, help="Use shapshot NAME as root fs.")
-    parser.add_argument('--raw-root', dest='disable_subvolumes', action="store_true", help="Disable use of all snapshots and subvolumes. Unhide them into root of FS.")
-
-    parser.add_argument('--memory-limit', dest='memory_limit', action='store_true', help="Use some lower values for less memory consumption.")
 
     engines, msg = check_engines()
     if not engines:
@@ -90,7 +85,12 @@ def main(): # {{{1
                         help=msg)
 
     if "mysql" in engines:
-        msg = "One of MySQL table engines: "+", ".join(table_engines)+". Default: MyISAM. Aria engine can be used only with MariaDB server."
+
+        from dedupsqlfs.db.mysql import get_table_engines
+
+        table_engines = get_table_engines()
+
+        msg = "One of MySQL table engines: "+", ".join(table_engines)+". Default: MyISAM. Aria and TokuDB engine can be used only with MariaDB or Percona server."
         parser.add_argument('--table-engine', dest='table_engine', metavar='ENGINE',
                             choices=table_engines, default=table_engines[0],
                             help=msg)

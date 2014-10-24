@@ -8,6 +8,9 @@ class TableBlock( Table ):
 
     _table_name = "block"
 
+    _compressed = False
+    _toku_compression = "uncompressed"
+
     def create( self ):
         c = self.getCursor()
 

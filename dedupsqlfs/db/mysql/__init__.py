@@ -1,3 +1,12 @@
 __author__ = 'sergey'
 
-table_engines = ('MyISAM', 'InnoDB', 'Aria', 'TokuDB')
+import subprocess
+
+def get_table_engines():
+
+    table_engines = ('MyISAM', 'InnoDB',)
+
+    output = subprocess.check_output(["mysqld", "--version"])
+    if output.find(b'MariaDB'):
+        table_engines += ('Aria', 'TokuDB',)
+    return table_engines

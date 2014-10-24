@@ -13,9 +13,11 @@ class Table( object ):
 
     # InnoDB, MyISAM, Aria, TokuDB
     _engine = "MyISAM"
-    # Only InnoDB
-    _compressed = False
-    _key_block_size = 4
+    # Only InnoDB, TokuDB
+    _compressed = True
+    # Only for TokuDB: default, zlib, fast, quicklz, small, lzma, uncompressed
+    _toku_compression = None
+    _key_block_size = 8
 
     _table_name = None
     _manager = None
@@ -38,6 +40,11 @@ class Table( object ):
         _cs = " Engine=" + self._engine
         if self._engine == "InnoDB" and self._compressed:
             _cs += " ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=%d;" % self._key_block_size
+        if self._engine == "TokuDB":
+            if not self._compressed:
+                _cs += " COMPRESSION=tokudb_uncompressed;"
+            elif self._toku_compression:
+                _cs += " COMPRESSION=tokudb_%s;" % self._toku_compression
         if self._engine == "Aria":
             _cs += " ROW_FORMAT=DYNAMIC TRANSACTIONAL=0 PAGE_CHECKSUM=0 TABLE_CHECKSUM=0;"
         if self._engine == "MyISAM":

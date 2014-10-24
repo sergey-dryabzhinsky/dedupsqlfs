@@ -13,7 +13,6 @@ try:
     import hashlib
     from dedupsqlfs.lib import constants
     from dedupsqlfs.db import check_engines
-    from dedupsqlfs.db.mysql import table_engines
     from dedupsqlfs.log import logging
 except ImportError as e:
     msg = "Error: Failed to load one of the required Python modules! (%s)\n"
@@ -85,7 +84,12 @@ def main(): # {{{1
                         help=msg)
 
     if "mysql" in engines:
-        msg = "One of MySQL table engines: "+", ".join(table_engines)+". Default: MyISAM. Aria and TokuDB engine can be used only with MariaDB server."
+
+        from dedupsqlfs.db.mysql import get_table_engines
+
+        table_engines = get_table_engines()
+
+        msg = "One of MySQL table engines: "+", ".join(table_engines)+". Default: MyISAM. Aria and TokuDB engine can be used only with MariaDB or Percona server."
         parser.add_argument('--table-engine', dest='table_engine', metavar='ENGINE',
                             choices=table_engines, default=table_engines[0],
                             help=msg)
@@ -148,7 +152,7 @@ def main(): # {{{1
     parser.add_argument('--custom-compress', dest='compression_custom', metavar='METHOD', action="append", help=msg)
 
     parser.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")
-    parser.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=-1, help="Minimal block data size for compression. Defaults to -1 bytes (auto). Not compress if data size is less then BYTES long. If not forced to.")
+    parser.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=-1, help="Minimal block data size for compression. Defaults to -1 bytes (auto). Do not compress if data size is less than BYTES long. If not forced to.")
 
     levels = (constants.COMPRESSION_LEVEL_DEFAULT, constants.COMPRESSION_LEVEL_FAST, constants.COMPRESSION_LEVEL_NORM, constants.COMPRESSION_LEVEL_BEST)
 
@@ -169,7 +173,7 @@ def main(): # {{{1
 
     parser.add_argument('-o', '--mountoption', help="specify mount option", action="append")
 
-    parser.add_argument('--mountpoint', help="specify mount point")
+    parser.add_argument('mountpoint', help="specify mount point", nargs=1)
 
     args = parser.parse_args()
 

@@ -105,16 +105,23 @@ class Subvolume(object):
 
         fh = self.getManager().opendir(llfuse.ROOT_INODE)
 
+        tableInode = self.getTable('inode')
+        tableTree = self.getTable('tree')
+        tableIndex = self.getTable('inode_hash_block')
+
         self.print_out("Subvolumes:\n")
-        self.print_out("-"*(46+22+22+22+1) + "\n")
-        self.print_out("%-46s| %-20s| %-20s| %-20s|\n" % ("Name", "Created", "Last mounted", "Last updated"))
-        self.print_out("-"*(46+22+22+22+1) + "\n")
+        self.print_out("-"*(46+12+14+14+22+22+22+1) + "\n")
+        self.print_out("%-46s| %-10s| %-12s| %-12s| %-20s| %-20s| %-20s|\n" % (
+            "Name", "ReadOnly", "Data Size", "Real Size", "Created", "Last mounted", "Last updated"))
+        self.print_out("-"*(46+12+14+14+22+22+22+1) + "\n")
 
         for name, attr, node in self.getManager().readdir(fh, 0):
 
+            rootNode = tableTree.find_by_inode(attr.st_ino)
+
             self.getLogger().debug("subvolume.list(): name=%r, attr=%r, node=%r" % (name, attr, node,))
 
-            subvol = self.getTable('subvolume').get(node)
+            subvol = self.getTable('subvolume').get(rootNode['subvol_id'])
 
             ctime = "---"
             if subvol["created_at"]:
@@ -128,14 +135,25 @@ class Subvolume(object):
             if subvol["updated_at"]:
                 utime = datetime.fromtimestamp(subvol["updated_at"])
 
-            self.print_out("%-46s| %-20s| %-20s| %-20s|\n" % (
+            readonly = False
+            if subvol["readonly"]:
+                readonly = True
+
+            subvolDataSizes = tableIndex.get_sum_sizes_by_subvol(rootNode['subvol_id'])
+            apparent_size = tableInode.get_subvolume_size(rootNode['subvol_id'])
+            unique_size = subvolDataSizes["writed"]
+
+            self.print_out(u"{0:<46s}| {1:<10s}| {1:<12s}| {1:<12s}| {2:<20s}| {3:<20s}| {4:<20s}|\n".format(
                 name.decode("utf8"),
+                readonly,
+                format_size(apparent_size),
+                format_size(unique_size),
                 ctime,
                 mtime,
                 utime,
-            ))
+                ))
 
-        self.print_out("-"*(46+22+22+22+1) + "\n")
+        self.print_out("-"*(46+12+14+14+22+22+22+1) + "\n")
 
         self.getManager().releasedir(fh)
 
@@ -228,30 +246,11 @@ class Subvolume(object):
             attr = self.getManager().lookup(llfuse.ROOT_INODE, subvol_name)
             rootNode = tableTree.find_by_inode(attr.st_ino)
 
-            count_to_do = tableTree.count_subvolume_inodes(rootNode["subvol_id"])
-            count_done = 0
-            count_proc = 0
-            if count_to_do:
-                count_proc = "%6.2f" % (count_done * 100.0 / count_to_do,)
-
-            self.print_msg("Progress:\n")
-            self.print_msg("\r%s %%" % count_proc)
-
-            apparent_size = 0
-            sparce_size = 0
-            compressed_size = 0
-            compressed_uniq_size = 0
-            unique_size = 0
-            dedup_size = 0
-
             compMethods = {}
             hashCT = {}
 
-            tableOption = self.getTable('option')
             tableIndex = self.getTable('inode_hash_block')
             tableHCT = self.getTable('hash_compression_type')
-
-            blockSize = int(tableOption.get("block_size"))
 
             hashes = tableIndex.get_hashes_by_subvol(rootNode["subvol_id"])
 

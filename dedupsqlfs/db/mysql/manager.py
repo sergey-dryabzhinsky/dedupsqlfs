@@ -44,6 +44,7 @@ class DbManager( object ):
         "option",
         "tree",
         "name",
+        "name_pattern_option",
         "inode",
         "link",
         "block",
@@ -133,6 +134,9 @@ class DbManager( object ):
             elif name == "name":
                 from dedupsqlfs.db.mysql.table.name import TableName
                 self._table[ name ] = TableName(self)
+            elif name == "name_pattern_option":
+                from dedupsqlfs.db.mysql.table.name_pattern_option import TableNamePatternOption
+                self._table[ name ] = TableNamePatternOption(self)
             elif name == "inode":
                 from dedupsqlfs.db.mysql.table.inode import TableInode
                 self._table[ name ] = TableInode(self)
@@ -204,7 +208,7 @@ class DbManager( object ):
                 "--basedir=/usr",
                 "--datadir=%s" % datadir,
                 "--tmpdir=%s" % tmpdir,
-                "--plugin-dir=/var/lib/mysql/plugin",
+                "--plugin-dir=/usr/lib/mysql/plugin",
                 "--log-error=%s" % logfile,
                 "--slow-query-log",
                 "--slow-query-log-file=%s" % slowlogfile,
@@ -214,12 +218,23 @@ class DbManager( object ):
                 "--skip-networking",
                 "--skip-name-resolve",
                 "--socket=%s" % self.getSocket(),
-                "--default-storage-engine=MyISAM",
+                "--default-storage-engine=%s" % self._table_engine,
                 # TODO: options
                 "--connect-timeout=10",
                 "--interactive-timeout=3600",
                 "--wait-timeout=3600",
             ]
+
+            if os.geteuid() == 0:
+                cmd_opts.append("--user=mysql")
+                for f in (self.getBasePath(), tmpdir, datadir, logfile, slowlogfile, pidfile, self.getSocket(),):
+                    if os.path.exists(f):
+                        subprocess.Popen([
+                            "chown",
+                            "mysql:mysql",
+                            f
+                        ]).wait()
+
             if self.getAutocommit():
                 cmd_opts.append("--autocommit")
             else:
@@ -235,30 +250,64 @@ class DbManager( object ):
                 "--big-tables",
                 # TODO: warn about hugetlbfs mount and sysctl setup
                 #"--large-pages",
-                "--innodb-file-per-table",
-                "--innodb-flush-method=O_DIRECT",
-                "--innodb-file-format=Barracuda",
-                "--skip-innodb-doublewrite",
 
-                "--key-buffer-size=%dM" % (self._buffer_size/1024/1024),
-                "--innodb-buffer-pool-size=%dM" % (self._buffer_size/1024/1024),
-                "--innodb-log-file-size=32M",
-                "--innodb-log-buffer-size=4M",
-                "--innodb-autoextend-increment=1",
                 "--query-cache-min-res-unit=1k",
                 "--query-cache-limit=4M",
                 "--query-cache-size=64M",
                 "--max-allowed-packet=32M",
             ])
+            if self._table_engine == "InnoDB":
+                cmd_opts.extend([
+                    "--innodb-file-per-table",
+                    "--innodb-flush-method=O_DIRECT",
+                    "--innodb-file-format=Barracuda",
+                    "--skip-innodb-doublewrite",
+                    "--innodb-buffer-pool-size=%dM" % (self._buffer_size/1024/1024),
+                    "--innodb-log-file-size=32M",
+                    "--innodb-log-buffer-size=4M",
+                    "--innodb-autoextend-increment=1",
+                ])
+            else:
+                cmd_opts.extend([
+                    "--skip-innodb",
+                ])
+
+            if self._table_engine == "MyISAM":
+                cmd_opts.extend([
+                    "--key-buffer-size=%dM" % (self._buffer_size/1024/1024),
+                ])
+            else:
+                cmd_opts.extend([
+                    "--key-buffer-size=8k",
+                ])
 
             if is_mariadb:
-                cmd_opts.extend([
-                    # Only MariaDB
-                    "--aria-block-size=4k",
-                    "--aria-log-dir-path=%s" % self.getBasePath(),
-                    "--aria-log-file-size=32M",
-                    "--aria-pagecache-buffer-size=%dM" % (self._buffer_size/1024/1024),
-                ])
+
+                if self._table_engine == "TokuDB":
+                    cmd_opts.extend([
+                        "--tokudb-block-size=8k",
+                        "--tokudb-loader-memory-size=%dM" % (self._buffer_size/1024/1024),
+                        "--tokudb-directio=1"
+                    ])
+                else:
+                    cmd_opts.extend([
+                        "--tokudb-loader-memory-size=8k",
+                    ])
+
+                if self._table_engine == "Aria":
+                    cmd_opts.extend([
+                        # Only MariaDB
+                        "--aria-block-size=8k",
+                        "--aria-log-dir-path=%s" % self.getBasePath(),
+                        "--aria-log-file-size=32M",
+                        "--aria-pagecache-buffer-size=%dM" % (self._buffer_size/1024/1024),
+                    ])
+                else:
+                    cmd_opts.extend([
+                        "--aria-block-size=8k",
+                        "--aria-log-file-size=8k",
+                        "--aria-pagecache-buffer-size=8k",
+                    ])
 
             if is_new:
 
@@ -266,10 +315,14 @@ class DbManager( object ):
 
                 cmd = ["mysql_install_db"]
                 cmd.extend(cmd_opts)
-                retcode = subprocess.Popen(cmd,
-                                 cwd=self.getBasePath(),
-                                 stdout=open(os.devnull, 'w'),
-                                 stderr=open(os.devnull, 'w')
+
+                self.getLogger().debug("CMD: %r" % (cmd,))
+
+                retcode = subprocess.Popen(
+                    cmd,
+                    cwd=self.getBasePath(),
+                    stdout=open(os.devnull, 'w'),
+                    stderr=open(os.devnull, 'w')
                 ).wait()
                 if retcode:
                     print("Something wrong! Return code: %s" % retcode)
@@ -280,10 +333,13 @@ class DbManager( object ):
 
             print("Starting up MySQLd...")
 
-            self._mysqld_proc = subprocess.Popen(cmd,
-                                                 cwd=self.getBasePath(),
-                                                 stdout=open(os.devnull, 'w'),
-                                                 stderr=open(os.devnull, 'w')
+            self.getLogger().debug("CMD: %r" % (cmd,))
+
+            self._mysqld_proc = subprocess.Popen(
+                cmd,
+                cwd=self.getBasePath(),
+                stdout=open(os.devnull, 'w'),
+                stderr=open(os.devnull, 'w')
             )
 
             print("Wait up 10 sec for it to start...")

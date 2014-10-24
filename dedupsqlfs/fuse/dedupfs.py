@@ -60,6 +60,10 @@ class DedupFS(object): # {{{1
             else:
                 self._opts.append("%s=%s" % (key, value,))
 
+        self.getLogger().debug("DedupFS options: %r" % (self.options,))
+        self.getLogger().debug("DedupFS mount options: %r" % (self._opts,))
+        self.getLogger().debug("DedupFS mountpoint: %r" % (self.mountpoint,))
+
         pass
 
 

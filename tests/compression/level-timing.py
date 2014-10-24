@@ -22,22 +22,31 @@ os.chdir(basedir)
 
 nROUNDS = 64
 cROUNDS = range(nROUNDS)
-changeData = 4
 dataRange = 1024*128
 dataMin = ord(' ')
 dataMax = ord('z')
+
+def generate_data():
+    data_rounds = ()
+    for cr in cROUNDS:
+        sys.stdout.write(".")
+        sys.stdout.flush()
+        data = b''
+        for l in range(1, dataRange):
+            data += chr( random.randint(dataMin, dataMax)).encode()
+        data_rounds += (data,)
+    print("\n")
+    return data_rounds
+
+print("Generate random data rounds (%s):" % nROUNDS)
+generated_data = generate_data()
+print("Done")
 
 def do_simple_ctest(method):
     dt = 0
     lcdata = 0
     ldata = 0
-    data = b''
-    for cr in cROUNDS:
-
-        if cr % changeData == 0:
-            data = b''
-            for l in range(1, dataRange):
-                data += chr( random.randint(dataMin, dataMax)).encode()
+    for data in generated_data:
 
         t1 = time.time()
         cdata = method.compress(data)
@@ -53,13 +62,7 @@ def do_level_ctest(method, level):
     dt = 0
     lcdata = 0
     ldata = 0
-    data = b''
-    for cr in cROUNDS:
-
-        if cr % changeData == 0:
-            data = b''
-            for l in range(1, dataRange):
-                data += chr( random.randint(dataMin, dataMax)).encode()
+    for data in generated_data:
 
         t1 = time.time()
         cdata = method.compress(data, level)
@@ -75,13 +78,7 @@ def do_level_ctest_lzma(method, level):
     dt = 0
     lcdata = 0
     ldata = 0
-    data = b''
-    for cr in cROUNDS:
-
-        if cr % changeData == 0:
-            data = b''
-            for l in range(1, dataRange):
-                data += chr( random.randint(dataMin, dataMax)).encode()
+    for data in generated_data:
 
         t1 = time.time()
         cdata = method.compress(data, preset=level)

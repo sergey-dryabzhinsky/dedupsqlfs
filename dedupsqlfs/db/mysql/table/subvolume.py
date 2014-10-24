@@ -63,7 +63,7 @@ class TableSubvolume( Table ):
                 "id": subvol_id
             }
         )
-        self.stopTimer('mount_time')
+        self.stopTimer('readonly')
         return cur.rowcount
 
     def mount_time(self, subvol_id, mtime=None):

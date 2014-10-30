@@ -36,7 +36,8 @@ class TableInode( Table ):
         )
 
         self.createIndexIfNotExists("id_nlinks", ('id', 'nlinks',))
-        self.createIndexIfNotExists("subvol_block", ('subvol_id','block_size'))
+        self.createIndexIfNotExists("block_nlinks", ('block_size','nlinks',))
+        self.createIndexIfNotExists("subvol_block_nlinks", ('subvol_id','block_size','nlinks',))
         return
 
     def getRowSize(self):
@@ -199,14 +200,31 @@ class TableInode( Table ):
     def get_subvolume_size(self, subvol_id):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT SUM(`size`) as `s` FROM `%s` WHERE `subvol_id`=%(subvol)s AND `block_size`>0" % self.getName(),
+        cur.execute("SELECT SUM(`size`) as `s` FROM `%s` " % self.getName() +
+                    " WHERE `subvol_id`=%(subvol)s AND `block_size`>0 AND `nlinks`>0",
             {
                 "subvol": subvol_id
             }
         )
         item = cur.fetchone()
+        if not item or item["s"] is None:
+            item = 0
+        else:
+            item = item["s"]
         self.stopTimer('get_subvolume_size')
-        return item["s"]
+        return item
+
+    def get_sizes(self):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT SUM(`size`) as `s` FROM `%s` WHERE `block_size`>0  AND `nlinks`>0" % self.getName())
+        item = cur.fetchone()
+        if not item or item["s"] is None:
+            item = 0
+        else:
+            item = item["s"]
+        self.stopTimer('get_sizes')
+        return item
 
     def get_size_by_id_nlinks(self, inode_id):
         self.startTimer()

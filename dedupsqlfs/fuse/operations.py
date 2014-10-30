@@ -347,10 +347,10 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.__log_call('forget', '->(inode_list=%r)', inode_list)
             if self.isReadonly(): raise FUSEError(errno.EROFS)
             # clear block cache
-            self.__cache_meta_hook()
-            #for ituple in inode_list:
-            #    for inode in ituple:
-            #        self.__flush_inode_cached_blocks(inode, clean=True)
+            for ituple in inode_list:
+                for inode in ituple:
+                    self.cached_blocks.expire(inode)
+                    self.cached_indexes.forget(inode)
         except FUSEError:
             raise
         except Exception as e:
@@ -451,6 +451,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.synchronous = self.getOption("synchronous")
             if self.getOption("use_transactions") is not None:
                 self.use_transactions = self.getOption("use_transactions")
+
             # Initialize the logging and database subsystems.
             self.__log_call('init', 'init()')
 
@@ -459,9 +460,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             # lose data when the file system isn't cleanly unmounted...
             if not self.synchronous and not self.isReadonly():
                 self.getLogger().warning("Warning: Disabling synchronous operation, you might lose data..")
-                self.getManager().close()
-                self.getManager().setSynchronous(self.synchronous)
-                self.getManager().begin()
 
             self.mounted_snapshot = self.getOption("snapshot_mount")
             if self.mounted_snapshot:
@@ -1038,56 +1036,33 @@ class DedupOperations(llfuse.Operations): # {{{1
             if unique: tuple( int unique_apparent_size, int unique_compressed_size)
             if not: tuple(int apparent_size, int compressed_size, int sparce_size)
         """
+        self.getLogger().debug("getDataSize(use_subvol=%r, unique=%r)" % (use_subvol, unique,))
+
         manager = self.getManager()
 
         tableInode = manager.getTable("inode")
 
-        indexTable = manager.getTable("inode_hash_block")
-        hbsTable = manager.getTable("hash_block_size")
+        tableIndex = manager.getTable("inode_hash_block")
+
+        rootNode = self.__get_tree_node_by_parent_inode_and_name(1, self.mounted_snapshot)
 
         if use_subvol:
-            curTree = manager.getTable("tree").getCursorForSelectCurrentSubvolInodes()
+            dataSizes = tableIndex.get_sum_sizes_by_subvol(rootNode['subvol_id'])
+            apparent_size = tableInode.get_subvolume_size(rootNode['subvol_id'])
         else:
-            curTree = manager.getTable("tree").getCursorForSelectInodes()
+            dataSizes = tableIndex.get_sum_sizes()
+            apparent_size = tableInode.get_sizes()
+
+        self.getLogger().debug("getDataSize: apparent_size=%r, dataSizes=%r" % (apparent_size, dataSizes,))
+
+        real_size = dataSizes["real"]
+        compressed_size = dataSizes["real_comp"]
 
         if unique:
-            apparent_size = hbsTable.sum_real_size_all()
-            compressed_size = hbsTable.sum_comp_size_all()
+            compressed_size = dataSizes["writed_comp"]
             return apparent_size, compressed_size
 
-        tableOption = self.getTable('option')
-        blockSize = int(tableOption.get("block_size"))
-
-        apparent_size = 0
-        compressed_size = 0
-        sparce_size = 0
-        while True:
-            treeItem = curTree.fetchone()
-            if not treeItem:
-                break
-
-            inode = tableInode.get(treeItem["inode_id"])
-            apparent_size += inode["size"]
-
-            isFile = stat.S_ISREG(inode["mode"])
-
-            if isFile:
-
-                stored_blocks = indexTable.get_count_by_inode( treeItem["inode_id"] )
-
-                db = inode["size"] % blockSize
-                inode_blocks = int((inode["size"]-db) / blockSize)
-                if db:
-                    inode_blocks += 1
-                # not defragmented?
-                if stored_blocks > inode_blocks:
-                    stored_blocks = inode_blocks
-                sparce_size += (inode_blocks - stored_blocks) * blockSize
-
-                # Do not trust inode info - we not done block writing and writed size not changed?
-                inodeHashes = set(indexTable.get_hashes_by_inode( treeItem["inode_id"] ))
-
-                compressed_size += hbsTable.sum_comp_size(inodeHashes)
+        sparce_size = apparent_size - real_size
 
         return apparent_size, compressed_size, sparce_size
 
@@ -1369,6 +1344,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         # which differs from the info returned in later calls. The simple fix is to
         # use Python's os.getuid() and os.getgid() library functions instead of
         # fuse.FuseGetContext().
+        self.getLogger().debug("__init_store()")
 
         optTable = self.getTable("option")
         inited = optTable.get("inited")
@@ -1440,19 +1416,25 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.getLogger().debug("__select_snapshot(1): mounted_snapshot=%r" % self.mounted_snapshot)
 
+        node = None
         if self.mounted_snapshot:
-            node =  self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, self.mounted_snapshot)
+            node = self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, self.mounted_snapshot)
+            self.getLogger().debug("__select_snapshot(1.1): node=%r" % (node,))
             if node:
                 pass
             else:
+                self.getLogger().debug("__select_snapshot(1.2): node not found, select default")
                 self.mounted_snapshot = constants.ROOT_SUBVOLUME_NAME
         elif not self.getOption("disable_subvolumes"):
+            self.getLogger().debug("__select_snapshot(1.3): select default subvolume")
             self.mounted_snapshot = constants.ROOT_SUBVOLUME_NAME
 
         if self.mounted_snapshot:
             optTable.update("mounted_snapshot", self.mounted_snapshot)
 
-            node =  self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, self.mounted_snapshot)
+            if not node:
+                node = self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, self.mounted_snapshot)
+                self.getLogger().debug("__select_snapshot(2.1): node=%r" % (node,))
             if node:
                 self.getTable('tree').selectSubvolume(node["subvol_id"])
                 self.getTable('inode').selectSubvolume(node["subvol_id"])

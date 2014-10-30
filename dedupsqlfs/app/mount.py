@@ -173,7 +173,7 @@ def main(): # {{{1
 
     parser.add_argument('-o', '--mountoption', help="specify mount option", action="append")
 
-    parser.add_argument('mountpoint', help="specify mount point", nargs=1)
+    parser.add_argument('mountpoint', help="specify mount point")
 
     args = parser.parse_args()
 

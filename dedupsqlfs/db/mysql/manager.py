@@ -78,6 +78,16 @@ class DbManager( object ):
 
     def setSynchronous(self, flag=True):
         self._synchronous = flag == True
+        if self._mysqld_proc:
+            conn = self.getConnection(True)
+            cur = conn.cursor()
+            if flag:
+                cur.execute("SET GLOBAL innodb_flush_log_at_trx_commit=1")
+                cur.execute("SET GLOBAL flush=1")
+            else:
+                cur.execute("SET GLOBAL innodb_flush_log_at_trx_commit=2")
+                cur.execute("SET GLOBAL flush=0")
+            cur.close()
         return self
 
     def getSynchronous(self):
@@ -85,6 +95,14 @@ class DbManager( object ):
 
     def setAutocommit(self, flag=True):
         self._autocommit = flag == True
+        if self._mysqld_proc:
+            conn = self.getConnection(True)
+            cur = conn.cursor()
+            if flag:
+                cur.execute("SET GLOBAL autocommit=1")
+            else:
+                cur.execute("SET GLOBAL autocommit=0")
+            cur.close()
         return self
 
     def getAutocommit(self):
@@ -432,11 +450,17 @@ class DbManager( object ):
             if self._conn:
                 return self._conn
 
+            conv = pymysql.converters.conversions.copy()
+            conv[246]=float     # convert decimals to floats
+            conv[10]=str        # convert dates to strings
+
             conn = self._conn = pymysql.connect(
                 unix_socket=self.getSocket(),
                 user=self.getUser(),
                 passwd=self.getPassword(),
-                db=self.getDbName())
+                db=self.getDbName(),
+                conv=conv
+            )
             self._conn.autocommit(self.getAutocommit())
 
         cur = conn.cursor()

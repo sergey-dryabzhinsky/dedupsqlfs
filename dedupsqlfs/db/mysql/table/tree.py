@@ -150,7 +150,7 @@ class TableTree( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT `id`, `inode_id` FROM `%s` " % self.getName()+
+            "SELECT `id`, `inode_id`, `subvol_id` FROM `%s` " % self.getName()+
             " WHERE `parent_id`=%(parent)s AND `name_id`=%(name)s",
             {
                 "parent": parent_id,

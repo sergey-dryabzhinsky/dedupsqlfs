@@ -48,7 +48,7 @@ class TableInodeHashBlock( Table ):
         cur = self.getCursor()
         cur.execute(
             "INSERT INTO `%s` " % self.getName()+
-            " (`subvol_id`, `inode_id`, `block_number`, `hash_id`, `real_size`, `comp_size`) "+
+            " (`subvol_id`,`inode_id`,`block_number`,`hash_id`,`real_size`,`real_comp_size`,`writed_size`,`writed_comp_size`) "+
             " VALUES (%(subvol)s, %(inode)s, %(block)s, %(hash)s, %(real)s, %(real_comp)s, %(writed)s, %(writed_comp)s)",
             {
                 "subvol": self._selected_subvol,
@@ -190,7 +190,31 @@ class TableInodeHashBlock( Table ):
                     " SUM(`writed_size`) as `writed`, SUM(`writed_comp_size`) as `writed_comp` FROM `%s` " % self.getName()+
                     " WHERE subvol_id=%s", (subvol_id,))
         item = cur.fetchone()
+        if not item or item["real"] is None:
+            item = {
+                "real": 0,
+                "real_comp": 0,
+                "writed": 0,
+                "writed_comp": 0
+            }
         self.stopTimer('get_sum_sizes_by_subvol')
+        return item
+
+    def get_sum_sizes( self ):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT SUM(`real_size`) as `real`, SUM(`real_comp_size`) as `real_comp`,"+
+                    " SUM(`writed_size`) as `writed`, SUM(`writed_comp_size`) as `writed_comp` FROM `%s` " % self.getName()
+        )
+        item = cur.fetchone()
+        if not item or item["real"] is None:
+            item = {
+                "real": 0,
+                "real_comp": 0,
+                "writed": 0,
+                "writed_comp": 0
+            }
+        self.stopTimer('get_sum_sizes')
         return item
 
     def get_count_by_inode( self, inode):

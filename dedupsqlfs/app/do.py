@@ -144,6 +144,14 @@ def create_snapshot(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
+    logger = logging.getLogger("do.dedupsqlfs/create_snapshot")
+    logger.setLevel(logging.INFO)
+    logger.addHandler(logging.StreamHandler(sys.stderr))
+
+    if not options.subvol_selected:
+        logger.error("Select subvolume/snapshot from which create new one!")
+        return
+
     _fuse.setOption("disable_subvolumes", True)
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", False)

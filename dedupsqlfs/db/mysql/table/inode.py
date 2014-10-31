@@ -145,6 +145,20 @@ class TableInode( Table ):
         self.stopTimer('get_size')
         return item
 
+    def get_block_size(self, inode):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute(
+            "SELECT `block_size` FROM `%s` " % self.getName()+
+            " WHERE `id`=%(id)s",
+            {
+                "id": inode
+            }
+        )
+        item = int(cur.fetchone()["block_size"])
+        self.stopTimer('get_block_size')
+        return item
+
     def inc_nlinks(self, inode):
         self.startTimer()
         cur = self.getCursor()
@@ -258,6 +272,15 @@ class TableInode( Table ):
                         " WHERE `id` IN (%s)" % (id_str,))
             count = cur.rowcount
         self.stopTimer('remove_by_ids')
+        return count
+
+    def delete_subvolume(self, subvol_id):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("DELETE FROM `%s` " % self.getName()+
+                    " WHERE `subvol_id`=%s" % (subvol_id,))
+        count = cur.rowcount
+        self.stopTimer('delete_subvolume')
         return count
 
     def get_inodes_by_inodes(self, inode_ids):

@@ -48,13 +48,11 @@ class Snapshot(Subvolume):
         try:
             tableTree.selectSubvolume(None)
 
-            root_node_from = node_from = self.getManager().get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, subvol_from)
-            attr_from = self.getManager().getattr(root_node_from["inode_id"])
+            root_node_from = self.getManager().get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, subvol_from)
 
             self.getLogger().debug("-- use subvolume node: %r" % (root_node_from,))
 
-            root_node_to = node_to = self.getManager().get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, subvol_to)
-            attr_to = self.getManager().getattr(root_node_to["inode_id"])
+            root_node_to = self.getManager().get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, subvol_to)
 
             self.getLogger().debug("-- into subvolume node: %r" % (root_node_to,))
 
@@ -64,51 +62,39 @@ class Snapshot(Subvolume):
             if count_to_do:
                 count_proc = "%6.2f" % (count_done * 100.0 / count_to_do,)
 
-            self.print_msg("Progress:\n")
-            self.print_msg("\r%s %%  " % count_proc)
+            self.print_msg("Count subvolume nodes: %s\n" % count_to_do)
 
-            _inode_from = tableInode.get(attr_from.st_ino)
+            count_to_index = tableIndex.get_count_by_subvol(root_node_from["subvol_id"])
+            self.print_msg("Count subvolume index: %s\n" % count_to_index)
+
+            self.print_msg("Progress:\n")
+            self.print_msg("\r%s   %%  " % count_proc)
+
+            _inode_from = tableInode.get(root_node_from["inode_id"])
             del _inode_from["id"]
 
-            tableInode.update_data(attr_to.st_ino, _inode_from)
-
-            tableTree.selectSubvolume(None)
+            tableInode.update_data(root_node_to["inode_id"], _inode_from)
 
             nodes = []
-            for name_from, attr_from, node_from_id in self.getManager().readdir(node_from["inode_id"], 0):
-                if attr_from.st_ino == node_from["inode_id"]:
-                    continue
-                nodes.append((node_from_id, attr_from, name_from, node_to["id"]))
+            for node in self.getTable("tree").get_children(root_node_from["id"]):
+                inode_from = tableInode.get(node["inode_id"])
+                nodes.append((node, inode_from, root_node_to["id"],))
 
             self.getLogger().debug("Start copying subvol:")
             while len(nodes)>0:
 
-                node_from_id, attr_from, name_from, parent_node_to_id = nodes.pop()
-
-                v = {}
-                for a in attr_from.__slots__:
-                    v[a] = getattr(attr_from, a)
-
-                self.getLogger().debug("-- name_from: %r, attr_from: %r, node_from: %s; to parent node: %s" % (
-                    name_from, v, node_from_id, parent_node_to_id))
-
-                at, at_ns = self.get_time_tuple(attr_from.st_atime)
-                mt, mt_ns = self.get_time_tuple(attr_from.st_mtime)
-                ct, ct_ns = self.get_time_tuple(attr_from.st_ctime)
+                treeItem_from, inode_from, parent_node_to_id = nodes.pop()
 
                 tableInode.selectSubvolume(root_node_to["subvol_id"])
                 inode_to_id = tableInode.insert(
-                    attr_from.st_nlink, attr_from.st_mode,
-                    attr_from.st_uid, attr_from.st_gid, attr_from.st_rdev, attr_from.st_size,
-                    at, mt, ct,
-                    at_ns, mt_ns, ct_ns
+                    inode_from["nlinks"], inode_from["mode"],
+                    inode_from["uid"], inode_from["gid"],
+                    inode_from["rdev"], inode_from["size"],
+                    inode_from["atime"], inode_from["mtime"], inode_from["ctime"],
+                    inode_from["atime_ns"], inode_from["mtime_ns"], inode_from["ctime_ns"],
+                    inode_from["block_size"]
                 )
                 tableInode.selectSubvolume(None)
-
-                treeItem_from = tableTree.get(node_from_id)
-
-                self.getLogger().debug("---- node from: %r" % (node_from_id,))
-                self.getLogger().debug("---- tree item: %r" % (treeItem_from,))
 
                 tableTree.selectSubvolume(root_node_to["subvol_id"])
                 treeNode_to_id = tableTree.insert(
@@ -118,47 +104,50 @@ class Snapshot(Subvolume):
                 )
                 tableTree.selectSubvolume(None)
 
-                linkTarget_from = tableLink.find_by_inode(attr_from.st_ino)
+                linkTarget_from = tableLink.find_by_inode(inode_from["id"])
                 if linkTarget_from:
                     tableLink.insert(inode_to_id, linkTarget_from)
 
-                xattr_from = tableXattr.find_by_inode(attr_from.st_ino)
+                xattr_from = tableXattr.find_by_inode(inode_from["id"])
                 if xattr_from:
                     tableXattr.insert(inode_to_id, xattr_from)
 
-                count_indexes_from = tableIndex.get_count_by_inode(attr_from.st_ino)
+                count_indexes_from = tableIndex.get_count_by_inode(inode_from["id"])
                 if count_indexes_from:
                     dp = 1.0 / count_indexes_from
                     check_count = 0
-                    for indexItem in tableIndex.get_by_inode(attr_from.st_ino):
+                    for indexItem in tableIndex.get_by_inode(inode_from["id"]):
 
                         tableIndex.selectSubvolume(root_node_to["subvol_id"])
                         tableIndex.insert(
                             inode_to_id,
                             indexItem["block_number"],
-                            indexItem["hash_id"]
+                            indexItem["hash_id"],
+                            indexItem["real_size"],
+                            indexItem["real_comp_size"],
+                            indexItem["writed_size"],
+                            indexItem["writed_comp_size"],
                         )
                         tableIndex.selectSubvolume(None)
 
                         check_count += 1
                         count_done += dp
                         if count_to_do:
-                            proc = "%6.4f" % (count_done * 100.0 / count_to_do,)
+                            proc = "%8.4f" % (count_done * 100.0 / count_to_do,)
                             if proc != count_proc:
                                 count_proc = proc
                                 if self.getManager().flushCaches():
                                     self.getManager().getManager().commit()
-                                self.print_msg("\r%s %%" % count_proc)
+                                self.print_msg("\r%s %%  " % count_proc)
                     if check_count != count_indexes_from:
-                        raise OSError("Count inode data blocks don't match to written count! inode=%s, count_db=%s, count_count=%s" % (attr_from.st_ino, count_indexes_from, check_count,))
+                        raise OSError("Count inode data blocks don't match to written count! inode=%s, count_db=%s, count_count=%s" % (inode_from["id"], count_indexes_from, check_count,))
                 else:
                     count_done += 1
 
-                if stat.S_ISDIR(attr_from.st_mode):
-                    for name_from, new_attr_from, node_from_id in self.getManager().readdir(attr_from.st_ino, 0):
-                        if attr_from.st_ino == new_attr_from.st_ino:
-                            continue
-                        nodes.append((node_from_id, new_attr_from, name_from, treeNode_to_id,))
+                if stat.S_ISDIR(inode_from["mode"]):
+                    for node in self.getTable("tree").get_children(treeItem_from["id"]):
+                        inode_from = tableInode.get(node["inode_id"])
+                        nodes.append((node, inode_from, treeNode_to_id,))
 
                 if count_to_do:
                     proc = "%6.2f" % (count_done * 100.0 / count_to_do,)
@@ -166,11 +155,17 @@ class Snapshot(Subvolume):
                         count_proc = proc
                         if self.getManager().flushCaches():
                             self.getManager().getManager().commit()
-                        self.print_msg("\r%s %%    " % count_proc)
+                        self.print_msg("\r%s   %%  " % count_proc)
 
             self.print_msg("\n")
             if not self.getManager().flushCaches():
                 self.getManager().getManager().commit()
+
+            count_to_do = tableTree.count_subvolume_nodes(root_node_to["subvol_id"])
+            self.print_msg("Count new subvolume nodes: %s\n" % count_to_do)
+
+            count_to_index = tableIndex.get_count_by_subvol(root_node_to["subvol_id"])
+            self.print_msg("Count new subvolume index: %s\n" % count_to_index)
 
             # Copy attrs from subvolume table
             subvol_from = tableSubvol.get(root_node_from["subvol_id"])

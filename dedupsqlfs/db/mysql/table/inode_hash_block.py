@@ -226,6 +226,15 @@ class TableInodeHashBlock( Table ):
         self.stopTimer('get_count_by_inode')
         return item['cnt']
 
+    def get_count_by_subvol( self, subvol_id):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT COUNT(1) as `cnt` FROM `%s` " % self.getName()+
+                    " WHERE subvol_id=%s", (subvol_id,))
+        item = cur.fetchone()
+        self.stopTimer('get_count_by_subvol')
+        return item['cnt']
+
     def get_count_hash( self, hash_id ):
         self.startTimer()
         cur = self.getCursor()
@@ -294,6 +303,15 @@ class TableInodeHashBlock( Table ):
                         " WHERE `inode_id` IN (%s)" % (id_str,))
             count = cur.rowcount
         self.stopTimer('remove_by_inodes')
+        return count
+
+    def delete_subvolume(self, subvol_id):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("DELETE FROM `%s` " % self.getName()+
+                    " WHERE `subvol_id`=%s" % (subvol_id,))
+        count = cur.rowcount
+        self.stopTimer('delete_subvolume')
         return count
 
     def get_hashes_by_hashes(self, hash_ids):

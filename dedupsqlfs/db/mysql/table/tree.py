@@ -101,7 +101,7 @@ class TableTree( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute("SELECT COUNT(`id`) AS `cnt` FROM `%s` " % self.getName()+
-                    " WHERE `subvol_id`=%s OR `id`=%s", (subvol_id, subvol_id))
+                    " WHERE `subvol_id`=%s", (subvol_id,))
         item = cur.fetchone()
         if item:
             item = item["cnt"]

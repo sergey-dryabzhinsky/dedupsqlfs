@@ -110,10 +110,10 @@ class Subvolume(object):
         tableIndex = self.getTable('inode_hash_block')
 
         self.print_out("Subvolumes:\n")
-        self.print_out("-"*(46+12+14+14+22+22+22+1) + "\n")
-        self.print_out("%-46s| %-10s| %-12s| %-12s| %-20s| %-20s| %-20s|\n" % (
-            "Name", "ReadOnly", "Data Size", "Real Size", "Created", "Last mounted", "Last updated"))
-        self.print_out("-"*(46+12+14+14+22+22+22+1) + "\n")
+        self.print_out("-"*(46+12+14+14+14+22+22+22+1) + "\n")
+        self.print_out("%-46s| %-10s| %-12s| %-12s| %-12s| %-20s| %-20s| %-20s|\n" % (
+            "Name", "ReadOnly", "Data Size", "Writed Size", "Real Size", "Created", "Last mounted", "Last updated"))
+        self.print_out("-"*(46+12+14+14+14+22+22+22+1) + "\n")
 
         for name, attr, node in self.getManager().readdir(fh, 0):
 
@@ -142,18 +142,20 @@ class Subvolume(object):
             subvolDataSizes = tableIndex.get_sum_sizes_by_subvol(rootNode['subvol_id'])
             apparent_size = tableInode.get_subvolume_size(rootNode['subvol_id'])
             unique_size = subvolDataSizes["writed"]
+            comp_size = subvolDataSizes["writed_comp"]
 
-            self.print_out(u"{0:<46s}| {1:<10s}| {1:<12s}| {1:<12s}| {2:<20s}| {3:<20s}| {4:<20s}|\n".format(
+            self.print_out("%-46s| %-10r| %-12s| %-12s| %-12s| %-20s| %-20s| %-20s|\n" % (
                 name.decode("utf8"),
                 readonly,
                 format_size(apparent_size),
                 format_size(unique_size),
+                format_size(comp_size),
                 ctime,
                 mtime,
                 utime,
                 ))
 
-        self.print_out("-"*(46+12+14+14+22+22+22+1) + "\n")
+        self.print_out("-"*(46+12+14+14+14+22+22+22+1) + "\n")
 
         self.getManager().releasedir(fh)
 
@@ -183,6 +185,8 @@ class Subvolume(object):
         try:
             node = self.getTable('tree').find_by_inode(attr.st_ino)
             self.getTable('tree').delete_subvolume(node["subvol_id"])
+            self.getTable('inode').delete_subvolume(node["subvol_id"])
+            self.getTable('inode_hash_block').delete_subvolume(node["subvol_id"])
             self.getTable('subvolume').delete(node['subvol_id'])
         except Exception as e:
             self.getLogger().warn("Can't remove subvolume!")

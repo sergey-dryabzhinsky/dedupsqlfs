@@ -2383,7 +2383,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         tableHash = self.getTable("hash")
         tableBlock = self.getTable("block")
-        tableHBS = self.getTable("hash_block_size")
         tableHCT = self.getTable("hash_compression_type")
         tableIndex = self.getTable("inode_hash_block")
 
@@ -2421,7 +2420,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             count += tableHash.remove_by_ids(to_delete)
             tableBlock.remove_by_ids(to_delete)
-            tableHBS.remove_by_ids(to_delete)
             tableHCT.remove_by_ids(to_delete)
 
             p = "%6.2f%%" % (100.0 * current / countHashes)

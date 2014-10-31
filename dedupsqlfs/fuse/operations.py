@@ -669,19 +669,19 @@ class DedupOperations(llfuse.Operations): # {{{1
         @param fh: file handler number - inode.id
         @type  fh: int
         """
-        self.__log_call('readdir', '->(fh=%r)', fh)
+        self.__log_call('readdir', '->(fh=%r, offset=%i)', fh, offset)
 
         inode = self.__fix_inode_if_requested_root(fh)
 
-        self.__log_call('readdir', '-- (inode=%r, %i)', inode, offset)
+        self.__log_call('readdir', '-- (inode=%r)', inode)
 
         cur_node = self.__get_tree_node_by_inode(inode)
 
         self.__log_call('readdir', '-- (node=%r)', cur_node)
 
-        for node in self.getTable("tree").get_children(cur_node["id"]):
-            if node["id"] <= offset:
-                continue
+        for node in self.getTable("tree").get_children(cur_node["id"], offset):
+            #if node["id"] <= offset:
+            #    continue
             name = self.getTable("name").get(node["name_id"])
             attrs = self.__getattr(node["inode_id"])
             self.__log_call('readdir', '<-(name=%r, attrs=%r, node=%i)',

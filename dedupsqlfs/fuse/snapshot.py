@@ -47,6 +47,8 @@ class Snapshot(Subvolume):
 
         try:
             tableTree.selectSubvolume(None)
+            tableInode.selectSubvolume(None)
+            tableIndex.selectSubvolume(None)
 
             root_node_from = self.getManager().get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, subvol_from)
 
@@ -56,7 +58,7 @@ class Snapshot(Subvolume):
 
             self.getLogger().debug("-- into subvolume node: %r" % (root_node_to,))
 
-            count_to_do = tableTree.count_subvolume_nodes(root_node_from["subvol_id"])
+            count_to_do = tableTree.count_subvolume_nodes(root_node_from["subvol_id"]) - 1
             count_done = 0
             count_proc = 0
             if count_to_do:
@@ -161,7 +163,7 @@ class Snapshot(Subvolume):
             if not self.getManager().flushCaches():
                 self.getManager().getManager().commit()
 
-            count_to_do = tableTree.count_subvolume_nodes(root_node_to["subvol_id"])
+            count_to_do = tableTree.count_subvolume_nodes(root_node_to["subvol_id"]) - 1
             self.print_msg("Count new subvolume nodes: %s\n" % count_to_do)
 
             count_to_index = tableIndex.get_count_by_subvol(root_node_to["subvol_id"])

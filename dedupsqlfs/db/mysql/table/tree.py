@@ -94,7 +94,6 @@ class TableTree( Table ):
         )
         item = cur.rowcount
         self.stopTimer('delete_subvolume')
-        item += self.delete(subvol_id)
         return item
 
     def count_subvolume_nodes(self, subvol_id):
@@ -205,14 +204,15 @@ class TableTree( Table ):
         self.stopTimer('get_children_inodes')
         return items
 
-    def get_children(self, parent_id):
+    def get_children(self, parent_id, offset=0):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
             "SELECT * FROM `%s` " % self.getName()+
-            " WHERE `parent_id`=%(parent)s ORDER BY `id` ASC",
+            " WHERE `parent_id`=%(parent)s AND `id`>%(offset)s ORDER BY `id` ASC",
             {
-                "parent": parent_id
+                "parent": parent_id,
+                "offset": offset
             }
         )
         items = cur.fetchall()

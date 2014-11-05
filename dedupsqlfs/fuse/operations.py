@@ -389,6 +389,18 @@ class DedupOperations(llfuse.Operations): # {{{1
             if self.getOption("block_size") is not None:
                 self.block_size = self.getOption("block_size")
 
+            if self.block_size < constants.BLOCK_SIZE_MIN:
+                self.getLogger().warn("Block size less than minimal! (%i<%i) Set to default minimal." % (
+                    self.block_size, constants.BLOCK_SIZE_MIN
+                ))
+                self.block_size = constants.BLOCK_SIZE_MIN
+
+            if self.block_size > constants.BLOCK_SIZE_MAX:
+                self.getLogger().warn("Block size more than maximal! (%i>%i) Set to default maximal." % (
+                    self.block_size, constants.BLOCK_SIZE_MAX
+                ))
+                self.block_size = constants.BLOCK_SIZE_MAX
+
             if self.getOption("compression_method") is not None:
                 self.compression_method = self.getOption("compression_method")
             if self.getOption("hash_function") is not None:
@@ -1547,21 +1559,24 @@ class DedupOperations(llfuse.Operations): # {{{1
             if inodes:
                 raise FUSEError(errno.ENOTEMPTY)
             else:
-                attr["nlinks"] -= 1
-                self.cached_attrs.set(cur_node["inode_id"], attr, writed=True)
+                if attr["nlinks"] > 0:
+                    attr["nlinks"] -= 1
+                    self.cached_attrs.set(cur_node["inode_id"], attr, writed=True)
 
         treeTable.delete(cur_node["id"])
 
-        attr["nlinks"] -= 1
-        self.cached_attrs.set(cur_node["inode_id"], attr, writed=True)
+        if attr["nlinks"] > 0:
+            attr["nlinks"] -= 1
+            self.cached_attrs.set(cur_node["inode_id"], attr, writed=True)
 
         # Inodes with nlinks = 0 are purged periodically from __collect_garbage() so
         # we don't have to do that here.
 
         if attr["mode"] & stat.S_IFDIR:
             par_attr = self.__get_inode_row(parent_inode)
-            par_attr["nlinks"] -= 1
-            self.cached_attrs.set(parent_inode, par_attr, writed=True)
+            if par_attr["nlinks"] > 0:
+                par_attr["nlinks"] -= 1
+                self.cached_attrs.set(parent_inode, par_attr, writed=True)
             self.cached_attrs.unset(parent_inode)
             self.cached_nodes.unset(parent_inode)
             self.cached_indexes.forget(parent_inode)

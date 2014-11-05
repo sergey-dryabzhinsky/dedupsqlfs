@@ -288,44 +288,29 @@ class DedupFS(object): # {{{1
         manager = self.operations.getManager()
         disk_usage = manager.getFileSize()
 
-        indexTable = manager.getTable("inode_hash_block")
-        hbsTable = manager.getTable("hash_block_size")
-
-        apparent_size, compressed_size, sparce_size = self.operations.getDataSize(use_subvol=False)
-        apparent_size_u, compressed_size_u = self.operations.getDataSize(use_subvol=False, unique=True)
-
         self.getLogger().info("--" * 79)
 
-        #print("disk_usage: %r" % disk_usage)
-        #print("apparent_size: %r" % apparent_size)
+        tableInode = manager.getTable("inode")
+
+        tableIndex = manager.getTable("inode_hash_block")
+
+        apparent_size = tableInode.get_sizes()
+
+        dataSizes = tableIndex.get_sum_sizes()
+
+        real_size = dataSizes["real"]
+        apparent_size_u = dataSizes["writed"]
+        compressed_size = dataSizes["real_comp"]
 
         if apparent_size:
             self.getLogger().info("Apparent size is %s (unique %s).",
                              format_size(apparent_size), format_size(apparent_size_u)
             )
 
-            curIndex = indexTable.getCursor()
+            compressed_size_u = dataSizes["writed_comp"]
 
-            curIndex.execute("SELECT COUNT(`hash_id`) AS `cnt`, `hash_id` FROM `inode_hash_block` GROUP BY `hash_id`")
-
-            dedup_size = 0
-            while True:
-                indexItems = curIndex.fetchmany(1024)
-                if not indexItems:
-                    break
-
-                hids = ()
-                cnts = {}
-                for item in indexItems:
-                    if item["cnt"] > 1:
-                        hids += (item["hash_id"],)
-                        cnts[ item["hash_id"] ] = item["cnt"]-1
-
-                if hids:
-                    rsizes = hbsTable.get_real_sizes(hids)
-                    for item in rsizes:
-                        cnt = cnts[ item["hash_id"] ]
-                        dedup_size += cnt * item["real_size"]
+            sparce_size = apparent_size - real_size
+            dedup_size = real_size - apparent_size_u
 
             self.getLogger().info("Deduped size is %s (ratio is %.2f%%).",
                              format_size(dedup_size),

@@ -65,63 +65,60 @@ class Subvolume(object):
         @type  name: bytes
 
         @return: tree node ID
-        @rtype: bool
+        @rtype: bool|dict
         """
 
         if not name:
             self.getLogger().error("Define subvolume name which you need to create!")
             return False
 
-        subvol_name = name
-        if not subvol_name.startswith(b'@'):
-            subvol_name = b'@' + subvol_name
+        tableSubvol = self.getTable('subvolume')
+        subvol_id = tableSubvol.find(name)
+        if subvol_id:
+            subvolItem = self.getTable('subvolume').get(subvol_id)
+            self.getLogger().warning("Subvolume with name %r already exists!" % name)
+            return subvolItem
 
-        try:
-            self.getManager().lookup(llfuse.ROOT_INODE, subvol_name)
-            return False
-        except llfuse.FUSEError as e:
-            if not e.errno == errno.ENOENT:
-                raise
+        subvol_id = self.getTable('subvolume').insert(name, int(time()))
+        subvolItem = self.getTable('subvolume').get(subvol_id)
 
-        subvol_id = self.getTable('subvolume').insert(int(time()))
-        self.getTable('tree').selectSubvolume(subvol_id)
-        self.getTable('inode').selectSubvolume(subvol_id)
-        self.getTable('inode_hash_block').selectSubvolume(subvol_id)
+        tableName = self.getTable("name")
+        tableTree = self.getTable('tree_' + subvolItem["hash"])
+        tableInode = self.getTable('inode_' + subvolItem["hash"])
 
-        ctx = llfuse.RequestContext()
-        ctx.uid = os.getuid()
-        ctx.gid = os.getgid()
-        attrs = self.getManager().mkdir(llfuse.ROOT_INODE, subvol_name, self.root_mode, ctx)
+        uid, gid = os.getuid(), os.getgid()
+        t_i, t_ns = self.getManager().newctime_tuple()
+        nameRoot = b''
 
-        node = self.getTable('tree').find_by_inode(attrs.st_ino)
-        self.getLogger().debug("Created tree node: %r" % (node,))
+        name_id = tableName.find(nameRoot)
+        if not name_id:
+            name_id = tableName.insert(nameRoot)
+        # Directory size: name-row-size + inode-row-size + tree-row-size
+        sz = tableName.getRowSize(nameRoot) + tableInode.getRowSize() + tableTree.getRowSize()
+        inode_id = tableInode.insert(2, self.root_mode, uid, gid, 0, sz, t_i, t_i, t_i, t_ns, t_ns, t_ns)
+        tableTree.insert(None, name_id, inode_id)
 
-        return True
+        return subvolItem
 
     def list(self):
         """
         List all subvolumes
         """
 
-        fh = self.getManager().opendir(llfuse.ROOT_INODE)
-
-        tableInode = self.getTable('inode')
-        tableTree = self.getTable('tree')
-        tableIndex = self.getTable('inode_hash_block')
+        tableSubvol = self.getTable('subvolume')
 
         self.print_out("Subvolumes:\n")
-        self.print_out("-"*(46+12+14+14+14+22+22+22+1) + "\n")
-        self.print_out("%-46s| %-10s| %-12s| %-12s| %-12s| %-20s| %-20s| %-20s|\n" % (
-            "Name", "ReadOnly", "Data Size", "Writed Size", "Real Size", "Created", "Last mounted", "Last updated"))
-        self.print_out("-"*(46+12+14+14+14+22+22+22+1) + "\n")
+        self.print_out("-"*(46+12+14+22+22+22+1) + "\n")
+        self.print_out("%-46s| %-10s| %-12s| %-20s| %-20s| %-20s|\n" % (
+            "Name", "ReadOnly", "Data Size", "Created", "Last mounted", "Last updated"))
+        self.print_out("-"*(46+12+14+22+22+22+1) + "\n")
 
-        for name, attr, node in self.getManager().readdir(fh, 0):
+        for subvol_id in tableSubvol.get_ids():
 
-            rootNode = tableTree.find_by_inode(attr.st_ino)
+            subvol = tableSubvol.get(subvol_id)
 
-            self.getLogger().debug("subvolume.list(): name=%r, attr=%r, node=%r" % (name, attr, node,))
-
-            subvol = self.getTable('subvolume').get(rootNode['subvol_id'])
+            tableInode = self.getTable("inode_" + subvol["hash"])
+            apparent_size = tableInode.get_sizes()
 
             ctime = "---"
             if subvol["created_at"]:
@@ -139,25 +136,16 @@ class Subvolume(object):
             if subvol["readonly"]:
                 readonly = True
 
-            subvolDataSizes = tableIndex.get_sum_sizes_by_subvol(rootNode['subvol_id'])
-            apparent_size = tableInode.get_subvolume_size(rootNode['subvol_id'])
-            unique_size = subvolDataSizes["writed"]
-            comp_size = subvolDataSizes["writed_comp"]
-
-            self.print_out("%-46s| %-10r| %-12s| %-12s| %-12s| %-20s| %-20s| %-20s|\n" % (
-                name.decode("utf8"),
+            self.print_out("%-46s| %-10r| %-12s| %-20s| %-20s| %-20s|\n" % (
+                subvol["name"],
                 readonly,
                 format_size(apparent_size),
-                format_size(unique_size),
-                format_size(comp_size),
                 ctime,
                 mtime,
                 utime,
                 ))
 
-        self.print_out("-"*(46+12+14+14+14+22+22+22+1) + "\n")
-
-        self.getManager().releasedir(fh)
+        self.print_out("-"*(46+12+14+22+22+22+1) + "\n")
 
         return
 

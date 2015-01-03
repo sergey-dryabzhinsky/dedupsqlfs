@@ -18,7 +18,7 @@ class TableSubvolume( Table ):
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
-                "`hash` BINARY(16) NOT NULL, "+
+                "`hash` CHAR(32) NOT NULL, "+
                 "`name` BLOB NOT NULL, "+
                 "`readonly` TINYINT UNSIGNED NOT NULL DEFAULT 0, "+
                 "created_at INTEGER NOT NULL, "+
@@ -41,7 +41,7 @@ class TableSubvolume( Table ):
 
         context = hashlib.new('md5')
         context.update(name)
-        digest = sqlite3.Binary(context.digest())
+        digest = context.hexdigest()
 
         bname = sqlite3.Binary(name)
 
@@ -108,7 +108,7 @@ class TableSubvolume( Table ):
 
         context = hashlib.new('md5')
         context.update(name)
-        digest = sqlite3.Binary(context.digest())
+        digest = context.hexdigest()
 
         cur.execute(
             "SELECT * FROM `%s` " % self.getName()+
@@ -117,5 +117,13 @@ class TableSubvolume( Table ):
         item = cur.fetchone()
         self.stopTimer('find')
         return item
+
+    def get_ids(self):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT id FROM `%s`" % self.getName())
+        items = (item["id"] for item in cur.fetchall())
+        self.stopTimer('get')
+        return items
 
     pass

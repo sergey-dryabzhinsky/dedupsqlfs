@@ -17,7 +17,7 @@ class TableSubvolume( Table ):
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`id` INT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
-                "`hash` BINARY(16) NOT NULL, "+
+                "`hash` CHAR(32) NOT NULL, "+
                 "`name` BLOB NOT NULL, "+
                 "`readonly` TINYINT UNSIGNED NOT NULL DEFAULT 0, "+
                 "`created_at` INT UNSIGNED NOT NULL, "+
@@ -42,7 +42,7 @@ class TableSubvolume( Table ):
 
         context = hashlib.new('md5')
         context.update(name)
-        digest = context.digest()
+        digest = context.hexdigest()
 
         cur.execute(
             "INSERT INTO `%s` " % self.getName()+
@@ -144,7 +144,7 @@ class TableSubvolume( Table ):
 
         context = hashlib.new('md5')
         context.update(name)
-        digest = context.digest()
+        digest = context.hexdigest()
 
         cur.execute(
             "SELECT * FROM `%s` " % self.getName()+

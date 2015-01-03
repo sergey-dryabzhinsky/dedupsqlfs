@@ -80,7 +80,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.calls_log_filter = []
 
         self.fs_mounted_at = time.time()
-        self.mounted_snapshot = None
+        self.mounted_subvolume = None
+        self.mounted_subvolume_name = None
 
         self.gc_enabled = True
         self.gc_umount_enabled = True
@@ -169,6 +170,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         return self.manager
 
     def getTable(self, table_name):
+        if self.mounted_subvolume and table_name in ("tree", "inode", "link", "xattr", "inode_hash_block", "inode_option"):
+            table_name += "_" + self.mounted_subvolume["hash"]
         return self.getManager().getTable(table_name)
 
     def getApplication(self):
@@ -459,6 +462,13 @@ class DedupOperations(llfuse.Operations): # {{{1
             if self.getOption("use_transactions") is not None:
                 self.use_transactions = self.getOption("use_transactions")
 
+            try:
+                # Get a reference to the hash function.
+                hashlib.new(self.hash_function)
+            except:
+                self.getLogger().critical("Error: The selected hash function %r doesn't exist!", self.hash_function)
+                sys.exit(1)
+
             # Initialize the logging and database subsystems.
             self.__log_call('init', 'init()')
 
@@ -468,26 +478,18 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not self.synchronous and not self.isReadonly():
                 self.getLogger().warning("Warning: Disabling synchronous operation, you might lose data..")
 
-            self.mounted_snapshot = self.getOption("snapshot_mount")
-            if self.mounted_snapshot:
-                self.mounted_snapshot = self.mounted_snapshot.encode('utf8')
-                if not self.mounted_snapshot.startswith(b'@'):
-                    self.mounted_snapshot = b'@' + self.mounted_snapshot
-
             if not self.isReadonly():
                 self.__init_store()
-            self.__select_snapshot()
+
+            self.mounted_subvolume_name = self.getOption("mounted_subvolume")
+            if self.mounted_subvolume_name:
+                self.mounted_subvolume_name = self.mounted_subvolume.encode('utf8')
+
+            self.__select_subvolume()
             self.__get_opts_from_db()
             # Make sure the hash function is (still) valid (since the database was created).
 
             self.getManager().getTable('option').update('mounted', 1)
-
-            try:
-                # Get a reference to the hash function.
-                hashlib.new(self.hash_function)
-            except:
-                self.getLogger().critical("Error: The selected hash function %r doesn't exist!", self.hash_function)
-                sys.exit(1)
 
             # Select the compression method (if any) after potentially reading the
             # configured block size that was used to create the database (see the
@@ -1318,34 +1320,12 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         if not inited:
 
-            inodeTable = self.getTable("inode")
-            nameTable = self.getTable("name")
-            treeTable = self.getTable("tree")
-
-            uid, gid = os.getuid(), os.getgid()
-            t_i, t_ns = self.__newctime_tuple()
-            nameRoot = b''
-
-            name_id = nameTable.insert(nameRoot)
-            # Directory size: name-row-size + inode-row-size + tree-row-size
-            sz = nameTable.getRowSize(nameRoot) + inodeTable.getRowSize() + treeTable.getRowSize()
-            inode_id = inodeTable.insert(2, self.root_mode, uid, gid, 0, sz, t_i, t_i, t_i, t_ns, t_ns, t_ns)
-            treeTable.insert(None, name_id, inode_id)
-
             nameRoot = constants.ROOT_SUBVOLUME_NAME
 
-            # Need to setup option for right subvolume handling...
-            # Disable subvolumes handlers for raw access
+            subv = Subvolume(self)
+            self.mounted_subvolume = subv.create(nameRoot)
 
-            opt_save = self.getApplication().getOption("disable_subvolumes")
-            self.getApplication().setOption("disable_subvolumes", True)
-
-            snap = Subvolume(self)
-            snap.create(nameRoot)
-
-            self.getApplication().setOption("disable_subvolumes", opt_save)
-
-            self.mounted_snapshot = nameRoot
+            self.mounted_subvolume_name = nameRoot
 
             for name in ("block_size",):
                 optTable.insert(name, "%i" % self.getOption(name))
@@ -1353,7 +1333,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             for name in ("hash_function",):
                 optTable.insert(name, "%s" % self.getOption(name))
 
-            optTable.insert("mounted_snapshot", self.mounted_snapshot)
+            optTable.insert("mounted_subvolume", self.mounted_subvolume_name)
 
             optTable.insert("mounted", 1)
             optTable.insert("inited", 1)
@@ -1377,43 +1357,43 @@ class DedupOperations(llfuse.Operations): # {{{1
         return
 
 
-    def __select_snapshot(self):
+    def __select_subvolume(self):
         manager = self.getManager()
         optTable = manager.getTable("option")
+        subvTable = manager.getTable('subvolume')
 
-        self.getLogger().debug("__select_snapshot(1): mounted_snapshot=%r" % self.mounted_snapshot)
+        self.getLogger().debug("__select_subvolume(1): mounted_subvolume=%r" % self.mounted_subvolume_name)
 
         node = None
-        if self.mounted_snapshot:
-            node = self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, self.mounted_snapshot)
-            self.getLogger().debug("__select_snapshot(1.1): node=%r" % (node,))
-            if node:
+        if self.mounted_subvolume_name:
+            if subvTable.find(self.mounted_subvolume_name):
                 pass
             else:
-                self.getLogger().debug("__select_snapshot(1.2): node not found, select default")
-                self.mounted_snapshot = constants.ROOT_SUBVOLUME_NAME
-        elif not self.getOption("disable_subvolumes"):
-            self.getLogger().debug("__select_snapshot(1.3): select default subvolume")
-            self.mounted_snapshot = constants.ROOT_SUBVOLUME_NAME
+                self.getLogger().warning("__select_subvolume(1.2): subvolume not found, select default")
+                self.mounted_subvolume_name = constants.ROOT_SUBVOLUME_NAME
+        else:
+            check = optTable.get("mounted_subvolume")
+            if check:
+                self.getLogger().warning("__select_subvolume(1.2): subvolume not found, select previous: %r" % check)
+                self.mounted_subvolume_name = check
+            else:
+                self.getLogger().warning("__select_subvolume(1.2): subvolume not found, select default")
+                self.mounted_subvolume_name = constants.ROOT_SUBVOLUME_NAME
 
-        if self.mounted_snapshot:
-            optTable.update("mounted_snapshot", self.mounted_snapshot)
+        if self.mounted_subvolume_name:
+            optTable.update("mounted_subvolume", self.mounted_subvolume_name)
 
-            if not node:
-                node = self.__get_tree_node_by_parent_inode_and_name(llfuse.ROOT_INODE, self.mounted_snapshot)
-                self.getLogger().debug("__select_snapshot(2.1): node=%r" % (node,))
-            if node:
-                self.getTable('tree').selectSubvolume(node["subvol_id"])
-                self.getTable('inode').selectSubvolume(node["subvol_id"])
-                self.getTable('inode_hash_block').selectSubvolume(node["subvol_id"])
-                if not self.getOption("disable_subvolumes"):
-                    self.getTable('subvolume').mount_time(node["subvol_id"])
-                subvol = self.getTable('subvolume').get(node["subvol_id"])
-                if subvol["readonly"]:
-                    self.getApplication().setReadonly(True)
-                    self.getLogger().warning("Selected readonly subvolume or snapshot!")
+            subvol_id = subvTable.find(self.mounted_subvolume_name)
+            if subvol_id:
+                self.mounted_subvolume = subvTable.get(subvol_id)
+            else:
+                subv = Subvolume(self)
+                self.mounted_subvolume = subv.create(self.mounted_subvolume_name)
 
-        self.getLogger().debug("__select_snapshot(2): mounted_snapshot=%r" % self.mounted_snapshot)
+            if self.mounted_subvolume["readonly"]:
+                self.getApplication().setReadonly(True)
+
+        self.getLogger().debug("__select_snapshot(2): mounted_snapshot=%r" % self.mounted_subvolume_name)
 
         return
 
@@ -1585,6 +1565,9 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __newctime_tuple(self): # {{{3
         return self.__get_time_tuple( self.__newctime() )
+
+    def newctime_tuple(self): # {{{3
+        return self.__newctime_tuple()
 
     def __get_time_tuple(self, t): # {{{3
         t_ns, t_i = math.modf(t)

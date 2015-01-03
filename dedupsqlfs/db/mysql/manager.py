@@ -150,6 +150,10 @@ class DbManager( object ):
             elif name == "tree":
                 from dedupsqlfs.db.mysql.table.tree import TableTree
                 self._table[ name ] = TableTree(self)
+            elif name.startswith("tree_"):
+                from dedupsqlfs.db.sqlite.table.tree import TableTree
+                self._table[ name ] = TableTree(self)
+                self._table[ name ].setName(name)
             elif name == "name":
                 from dedupsqlfs.db.mysql.table.name import TableName
                 self._table[ name ] = TableName(self)
@@ -159,18 +163,34 @@ class DbManager( object ):
             elif name == "inode":
                 from dedupsqlfs.db.mysql.table.inode import TableInode
                 self._table[ name ] = TableInode(self)
+            elif name.startswith("inode_"):
+                from dedupsqlfs.db.sqlite.table.inode import TableInode
+                self._table[ name ] = TableInode(self)
+                self._table[ name ].setName(name)
             elif name == "inode_option":
                 from dedupsqlfs.db.mysql.table.inode_option import TableInodeOption
                 self._table[ name ] = TableInodeOption(self)
+            elif name.startswith("inode_option_"):
+                from dedupsqlfs.db.sqlite.table.inode_option import TableInodeOption
+                self._table[ name ] = TableInodeOption(self)
+                self._table[ name ].setName(name)
             elif name == "link":
                 from dedupsqlfs.db.mysql.table.link import TableLink
                 self._table[ name ] = TableLink(self)
+            elif name.startswith("link_"):
+                from dedupsqlfs.db.sqlite.table.link import TableLink
+                self._table[ name ] = TableLink(self)
+                self._table[ name ].setName(name)
             elif name == "block":
                 from dedupsqlfs.db.mysql.table.block import TableBlock
                 self._table[ name ] = TableBlock(self)
             elif name == "xattr":
                 from dedupsqlfs.db.mysql.table.xattr import TableInodeXattr
                 self._table[ name ] = TableInodeXattr(self)
+            elif name.startswith("xattr_"):
+                from dedupsqlfs.db.sqlite.table.xattr import TableInodeXattr
+                self._table[ name ] = TableInodeXattr(self)
+                self._table[ name ].setName(name)
             elif name == "compression_type":
                 from dedupsqlfs.db.mysql.table.compression_type import TableCompressionType
                 self._table[ name ] = TableCompressionType(self)
@@ -183,6 +203,10 @@ class DbManager( object ):
             elif name == "inode_hash_block":
                 from dedupsqlfs.db.mysql.table.inode_hash_block import TableInodeHashBlock
                 self._table[ name ] = TableInodeHashBlock(self)
+            elif name.startswith("inode_hash_block_"):
+                from dedupsqlfs.db.sqlite.table.inode_hash_block import TableInodeHashBlock
+                self._table[ name ] = TableInodeHashBlock(self)
+                self._table[ name ].setName(name)
             elif name == "subvolume":
                 from dedupsqlfs.db.mysql.table.subvolume import TableSubvolume
                 self._table[ name ] = TableSubvolume(self)

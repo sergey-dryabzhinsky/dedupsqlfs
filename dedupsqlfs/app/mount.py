@@ -70,8 +70,7 @@ def main(): # {{{1
     parser.add_argument('--name', dest='name', metavar='DATABASE', default="dedupsqlfs", help="Specify the name for the database directory in which metadata and blocks data is stored. Defaults to dedupsqlfs")
     parser.add_argument('--temp', dest='temp', metavar='DIRECTORY', help="Specify the location for the files in which temporary data is stored. By default honour TMPDIR environment variable value.")
     parser.add_argument('--block-size', dest='block_size', metavar='BYTES', default=1024*128, type=int, help="Specify the maximum block size in bytes" + option_stored_in_db + ". Defaults to 128kB.")
-    parser.add_argument('--mount-snapshot', dest='snapshot_mount', metavar='NAME', default=None, help="Use shapshot NAME as root fs.")
-    parser.add_argument('--raw-root', dest='disable_subvolumes', action="store_true", help="Disable use of all snapshots and subvolumes. Unhide them into root of FS.")
+    parser.add_argument('--mount-subvolume', dest='mounted_subvolume', metavar='NAME', default=None, help="Use subvolume NAME as root fs.")
 
     parser.add_argument('--memory-limit', dest='memory_limit', action='store_true', help="Use some lower values for less memory consumption.")
 
@@ -89,19 +88,19 @@ def main(): # {{{1
 
         table_engines = get_table_engines()
 
-        msg = "One of MySQL table engines: "+", ".join(table_engines)+". Default: MyISAM. Aria and TokuDB engine can be used only with MariaDB or Percona server."
+        msg = "One of MySQL table engines: "+", ".join(table_engines)+". Default: %r. Aria and TokuDB engine can be used only with MariaDB or Percona server." % table_engines[0]
         parser.add_argument('--table-engine', dest='table_engine', metavar='ENGINE',
                             choices=table_engines, default=table_engines[0],
                             help=msg)
 
     parser.add_argument('--no-cache', dest='use_cache', action='store_false', help="Don't use cache in memory and delayed write to storage files.")
     parser.add_argument('--cache-meta-timeout', dest='cache_meta_timeout', metavar='NUMBER', type=int, default=20, help="Delay flush expired metadata for NUMBER of seconds. Defaults to 20 seconds.")
-    parser.add_argument('--cache-block-write-timeout', dest='cache_block_write_timeout', metavar='NUMBER', type=int, default=5, help="Delay flush expired data from memory to storage for NUMBER of seconds. Defaults to 5 seconds.")
+    parser.add_argument('--cache-block-write-timeout', dest='cache_block_write_timeout', metavar='NUMBER', type=int, default=10, help="Delay flush expired data from memory to storage for NUMBER of seconds. Defaults to 10 seconds.")
     parser.add_argument('--cache-block-write-size', dest='cache_block_write_size', metavar='BYTES', type=int,
-                        default=256*1024*1024, help="Blocks write cache potential size in BYTES. Defaults to 256 MB.")
-    parser.add_argument('--cache-block-read-timeout', dest='cache_block_read_timeout', metavar='NUMBER', type=int, default=5, help="Delay flush expired data from memory for NUMBER of seconds. Defaults to 5 seconds.")
+                        default=512*1024*1024, help="Blocks write cache potential size in BYTES. Defaults to 512 MB.")
+    parser.add_argument('--cache-block-read-timeout', dest='cache_block_read_timeout', metavar='NUMBER', type=int, default=10, help="Delay flush expired data from memory for NUMBER of seconds. Defaults to 10 seconds.")
     parser.add_argument('--cache-block-read-size', dest='cache_block_read_size', metavar='BYTES', type=int,
-                        default=256*1024*1024, help="Blocks read cache potential size in BYTES. Defaults to 256 MB.")
+                        default=512*1024*1024, help="Blocks read cache potential size in BYTES. Defaults to 512 MB.")
 
     parser.add_argument('--no-transactions', dest='use_transactions', action='store_false', help="Don't use transactions when making multiple related changes, this might make the file system faster or slower (?).")
     parser.add_argument('--nosync', dest='synchronous', action='store_false', help="Disable SQLite's normal synchronous behavior which guarantees that data is written to disk immediately, because it slows down the file system too much (this means you might lose data when the mount point isn't cleanly unmounted).")

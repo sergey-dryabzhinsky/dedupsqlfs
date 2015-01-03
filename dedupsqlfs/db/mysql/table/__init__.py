@@ -95,6 +95,10 @@ class Table( object ):
     def getName(self):
         return self._table_name
 
+    def setName(self, tableName):
+        self._table_name = tableName
+        return self
+
     def getManager(self):
         """
         @rtype L{dedupsqlfs.db.mysql.manager.DbManager}
@@ -235,6 +239,13 @@ class Table( object ):
         return self
 
     def close(self):
+        return self
+
+    def drop(self):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("DROP TABLE `%s`" % self.getName())
+        self.stopTimer("drop")
         return self
 
     pass

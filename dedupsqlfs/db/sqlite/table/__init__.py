@@ -285,4 +285,12 @@ class Table( object ):
             self._conn = None
         return self
 
+    def drop(self):
+        self.startTimer()
+        self.close()
+        if os.path.isfile(self.getDbFilePath()):
+            os.unlink(self.getDbFilePath())
+        self.stopTimer("drop")
+        return self
+
     pass

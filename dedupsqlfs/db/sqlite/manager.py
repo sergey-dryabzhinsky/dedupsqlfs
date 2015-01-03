@@ -18,14 +18,15 @@ class DbManager( object ):
         "option",
         "tree",
         "name",
+        "name_pattern_option",
         "inode",
+        "inode_option",
         "link",
         "block",
         "xattr",
         "compression_type",
         "hash",
         "hash_compression_type",
-        "hash_block_size",
         "inode_hash_block",
         "subvolume",
     )
@@ -108,9 +109,12 @@ class DbManager( object ):
             elif name == "hash_compression_type":
                 from dedupsqlfs.db.sqlite.table.hash_compression_type import TableHashCompressionType
                 self._table[ name ] = TableHashCompressionType(self)
-            elif name == "hash_block_size":
-                from dedupsqlfs.db.sqlite.table.hash_block_size import TableHashBlockSize
-                self._table[ name ] = TableHashBlockSize(self)
+            elif name == "name_pattern_option":
+                from dedupsqlfs.db.sqlite.table.name_pattern_option import TableNamePatternOption
+                self._table[ name ] = TableNamePatternOption(self)
+            elif name == "inode_option":
+                from dedupsqlfs.db.sqlite.table.inode_option import TableInodeOption
+                self._table[ name ] = TableInodeOption(self)
             elif name == "hash":
                 from dedupsqlfs.db.sqlite.table.hash import TableHash
                 self._table[ name ] = TableHash(self)

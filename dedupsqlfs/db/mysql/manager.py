@@ -46,6 +46,7 @@ class DbManager( object ):
         "name",
         "name_pattern_option",
         "inode",
+        "inode_option",
         "link",
         "block",
         "xattr",
@@ -158,6 +159,9 @@ class DbManager( object ):
             elif name == "inode":
                 from dedupsqlfs.db.mysql.table.inode import TableInode
                 self._table[ name ] = TableInode(self)
+            elif name == "inode_option":
+                from dedupsqlfs.db.mysql.table.inode_option import TableInodeOption
+                self._table[ name ] = TableInodeOption(self)
             elif name == "link":
                 from dedupsqlfs.db.mysql.table.link import TableLink
                 self._table[ name ] = TableLink(self)

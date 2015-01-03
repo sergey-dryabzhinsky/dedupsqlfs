@@ -154,7 +154,7 @@ class TableSubvolume( Table ):
             }
         )
         item = cur.fetchone()
-        self.stopTimer('get')
+        self.stopTimer('find')
         return item
 
     pass

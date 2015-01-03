@@ -94,6 +94,10 @@ class Table( object ):
     def getName(self):
         return self._table_name
 
+    def setName(self, tableName):
+        self._table_name = tableName
+        return self
+
     def getManager(self):
         return self._manager
 

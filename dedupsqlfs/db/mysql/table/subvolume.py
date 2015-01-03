@@ -2,6 +2,7 @@
 
 __author__ = 'sergey'
 
+import hashlib
 from time import time
 from dedupsqlfs.db.mysql.table import Table
 
@@ -16,6 +17,8 @@ class TableSubvolume( Table ):
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`id` INT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
+                "`hash` BINARY(16) NOT NULL, "+
+                "`name` BLOB NOT NULL, "+
                 "`readonly` TINYINT UNSIGNED NOT NULL DEFAULT 0, "+
                 "`created_at` INT UNSIGNED NOT NULL, "+
                 "`mounted_at` INT UNSIGNED, "+
@@ -23,10 +26,12 @@ class TableSubvolume( Table ):
             ")"+
             self._getCreationAppendString()
         )
+        self.createIndexIfNotExists("hash", ('hash',), unique=True)
         return
 
-    def insert( self, created_at, mounted_at=None, updated_at=None ):
+    def insert( self, name, created_at, mounted_at=None, updated_at=None ):
         """
+        :param name: str            - name for subvolume/snapshot
         :param created_at: int      - creation time
         :param mounted_at: int|None - subvolume mounted
         :param updated_at: int|None - subvolume updated
@@ -34,11 +39,18 @@ class TableSubvolume( Table ):
         """
         self.startTimer()
         cur = self.getCursor()
+
+        context = hashlib.new('md5')
+        context.update(name)
+        digest = context.digest()
+
         cur.execute(
             "INSERT INTO `%s` " % self.getName()+
-            " (`created_at`, `mounted_at`, `updated_at`) "+
-            "VALUES (%(created)s, %(mounted)s, %(updated)s)",
+            " (`hash`,`name`,`created_at`, `mounted_at`, `updated_at`) "+
+            "VALUES (%(hash)s, %(name)s, %(created)s, %(mounted)s, %(updated)s)",
             {
+                "hash": digest,
+                "name": name,
                 "created": created_at,
                 "mounted": mounted_at,
                 "updated": updated_at
@@ -120,6 +132,25 @@ class TableSubvolume( Table ):
             " WHERE `id`=%(id)s",
             {
                 "id": subvol_id
+            }
+        )
+        item = cur.fetchone()
+        self.stopTimer('get')
+        return item
+
+    def find(self, name):
+        self.startTimer()
+        cur = self.getCursor()
+
+        context = hashlib.new('md5')
+        context.update(name)
+        digest = context.digest()
+
+        cur.execute(
+            "SELECT * FROM `%s` " % self.getName()+
+            " WHERE `hash`=%(hash)s",
+            {
+                "hash": digest
             }
         )
         item = cur.fetchone()

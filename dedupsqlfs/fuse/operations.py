@@ -226,7 +226,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             c[ key ] = getattr(ctx, key)
 
         self.__log_call('access', '->(inode=%i, mode=%o, ctx=%r)', inode, mode, c)
-        inode = self.__fix_inode_if_requested_root(inode)
         if mode != os.F_OK and not self.__access(inode, mode, ctx):
             return False
         return True
@@ -260,8 +259,6 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.__log_call('create', '->(inode_parent=%i, name=%r, mode=%o, flags=%o, ctx=%r)',
                         inode_parent, name, mode, flags, c)
         if self.isReadonly(): return errno.EROFS
-
-        inode_parent = self.__fix_inode_if_requested_root(inode_parent)
 
         try:
             node = self.__get_tree_node_by_parent_inode_and_name(inode_parent, name)
@@ -367,7 +364,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def getattr(self, inode): # {{{3
         self.__log_call('getattr', '->(inode=%r)', inode)
-        inode = self.__fix_inode_if_requested_root(inode)
         attr = self.__getattr(inode)
         v = self.__get_inode_row(inode)
         self.__log_call('getattr', '<-(inode=%r, attr=%r)', inode, v)
@@ -375,7 +371,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def getxattr(self, inode, name): # {{{3
         self.__log_call('getxattr', '->(inode=%r, name=%r)', inode, name)
-        inode = self.__fix_inode_if_requested_root(inode)
         xattrs = self.getTable("xattr").find_by_inode(inode)
         if not xattrs:
             raise FUSEError(llfuse.ENOATTR)
@@ -510,9 +505,6 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.__log_call('link', '->(inode=%r, parent_inode=%r, new_name=%r)', inode, new_parent_inode, new_name)
         if self.isReadonly(): raise FUSEError(errno.EROFS)
 
-        inode = self.__fix_inode_if_requested_root(inode)
-        new_parent_inode = self.__fix_inode_if_requested_root(new_parent_inode)
-
         parent_node = self.__get_tree_node_by_inode(new_parent_inode)
         string_id = self.__intern(new_name)
 
@@ -536,7 +528,6 @@ class DedupOperations(llfuse.Operations): # {{{1
     def listxattr(self, inode):
         self.__log_call('listxattr', '->(inode=%r)', inode)
         if self.isReadonly(): raise FUSEError(errno.EROFS)
-        inode = self.__fix_inode_if_requested_root(inode)
         xattrs = self.getTable("xattr").find_by_inode(inode)
         self.__log_call('listxattr', '<-(xattrs=%r)', xattrs)
         if not xattrs:
@@ -545,8 +536,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def lookup(self, parent_inode, name):
         self.__log_call('lookup', '->(parent_inode=%r, name=%r)', parent_inode, name)
-
-        parent_inode = self.__fix_inode_if_requested_root(parent_inode)
 
         node = self.__get_tree_node_by_parent_inode_and_name(parent_inode, name)
         attr = self.__getattr(node["inode_id"])
@@ -582,8 +571,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             if self.isReadonly(): raise FUSEError(errno.EROFS)
 
-            parent_inode = self.__fix_inode_if_requested_root(parent_inode)
-
             nameTable = self.getTable("name")
             inodeTable = self.getTable("inode")
             treeTable = self.getTable("tree")
@@ -609,8 +596,6 @@ class DedupOperations(llfuse.Operations): # {{{1
                             parent_inode, name, mode, rdev, c)
             if self.isReadonly(): return -errno.EROFS
 
-            parent_inode = self.__fix_inode_if_requested_root(parent_inode)
-
             inode, parent_ino = self.__insert(parent_inode, name, mode, 0, ctx, rdev)
             return self.__getattr(inode)
         except Exception as e:
@@ -625,8 +610,6 @@ class DedupOperations(llfuse.Operations): # {{{1
         if self.isReadonly(): raise FUSEError(errno.EROFS)
         # Make sure the file exists?
 
-        inode = self.__fix_inode_if_requested_root(inode)
-
         if flags & os.O_TRUNC:
             self.__log_call('open', '-- truncate file!')
             row = self.__get_inode_row(inode)
@@ -639,7 +622,6 @@ class DedupOperations(llfuse.Operations): # {{{1
     def opendir(self, inode): # {{{3
         self.__log_call('opendir', 'opendir(inode=%i)', inode)
         # Make sure the file exists?
-        inode = self.__fix_inode_if_requested_root(inode)
         self.__get_tree_node_by_inode(inode)
         # Make sure the file is readable and/or writable.
         return inode
@@ -683,7 +665,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         """
         self.__log_call('readdir', '->(fh=%r, offset=%i)', fh, offset)
 
-        inode = self.__fix_inode_if_requested_root(fh)
+        inode = fh
 
         self.__log_call('readdir', '-- (inode=%r)', inode)
 
@@ -703,8 +685,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def readlink(self, inode): # {{{3
         self.__log_call('readlink', '->(inode=%i)', inode)
-
-        inode = self.__fix_inode_if_requested_root(inode)
 
         target = self.getTable("link").find_by_inode(inode)
         if not target:
@@ -731,8 +711,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             if self.isReadonly():
                 raise FUSEError(errno.EROFS)
 
-            inode = self.__fix_inode_if_requested_root(inode)
-
             xattrs = self.getTable("xattr").find_by_inode(inode)
             self.__log_call('removexattr', '--(xattrs=%r)', inode, xattrs)
             if not xattrs:
@@ -755,9 +733,6 @@ class DedupOperations(llfuse.Operations): # {{{1
                             inode_parent_old, name_old, inode_parent_new, name_new)
             if self.isReadonly():
                 raise FUSEError(errno.EROFS)
-
-            inode_parent_old = self.__fix_inode_if_requested_root(inode_parent_old)
-            inode_parent_new = self.__fix_inode_if_requested_root(inode_parent_new)
 
             node = self.__get_tree_node_by_parent_inode_and_name(inode_parent_old, name_old)
 
@@ -793,8 +768,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             if self.isReadonly():
                 raise FUSEError(errno.EROFS)
 
-            inode_parent = self.__fix_inode_if_requested_root(inode_parent)
-
             self.__remove(inode_parent, name, check_empty=True)
             self.__gc_hook()
             return 0
@@ -816,8 +789,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.__log_call('setattr', '->(inode=%i, attr=%r)', inode, v)
             if self.isReadonly(): return -errno.EROFS
-
-            inode = self.__fix_inode_if_requested_root(inode)
 
             row = self.__get_inode_row(inode)
             self.getLogger().debug("-- current row: %r", row)
@@ -909,8 +880,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             if self.isReadonly():
                 raise FUSEError(errno.EROFS)
 
-            inode = self.__fix_inode_if_requested_root(inode)
-
             xattrs = self.getTable("xattr").find_by_inode(inode)
 
             newxattr = False
@@ -977,8 +946,6 @@ class DedupOperations(llfuse.Operations): # {{{1
                             inode_parent, name, target, c)
             if self.isReadonly(): return -errno.EROFS
 
-            inode_parent = self.__fix_inode_if_requested_root(inode_parent)
-
             # Create an inode to hold the symbolic link.
             inode, parent_ino = self.__insert(inode_parent, name, self.link_mode, len(target), ctx)
             # Save the symbolic link's target.
@@ -995,8 +962,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.__log_call('unlink', '->(parent_inode=%i, name=%r)', parent_inode, name)
             if self.isReadonly():
                 raise FUSEError(errno.EROFS)
-
-            parent_inode = self.__fix_inode_if_requested_root(parent_inode)
 
             self.__remove(parent_inode, name)
             self.__gc_hook()
@@ -1077,16 +1042,6 @@ class DedupOperations(llfuse.Operations): # {{{1
         sparce_size = apparent_size - real_size
 
         return apparent_size, compressed_size, sparce_size
-
-    def __fix_inode_if_requested_root(self, inode):
-        self.__log_call('__fix_inode_if_requested_root', '->(inode=%i)', inode)
-        if inode == llfuse.ROOT_INODE and not self.getOption("disable_subvolumes"):
-            if self.mounted_snapshot:
-                node = self.__get_tree_node_by_parent_inode_and_name(inode, self.mounted_snapshot)
-                if node:
-                    self.__log_call('__fix_inode_if_requested_root', '->fixed(inode=%i)', node["inode_id"])
-                    return node["inode_id"]
-        return inode
 
     def __update_mounted_subvolume_time(self):
         t_now = time.time()

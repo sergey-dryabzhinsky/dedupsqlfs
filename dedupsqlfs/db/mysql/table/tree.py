@@ -17,7 +17,6 @@ class TableTree( Table ):
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
                 "`id` BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
-                "`subvol_id` INT UNSIGNED, "+
                 "`parent_id` BIGINT UNSIGNED, "+
                 "`name_id` BIGINT UNSIGNED NOT NULL, "+
                 "`inode_id` BIGINT UNSIGNED NOT NULL"+
@@ -25,24 +24,15 @@ class TableTree( Table ):
             self._getCreationAppendString()
         )
 
-        self.createIndexIfNotExists("spn", ('subvol_id', 'parent_id', 'name_id',), unique=True)
+        self.createIndexIfNotExists("pn", ('parent_id', 'name_id',), unique=True)
         self.createIndexIfNotExists("inode", ('inode_id',))
         self.createIndexIfNotExists("parent_id", ('parent_id', 'id'))
-        self.createIndexIfNotExists("parent_name", ('parent_id', 'name_id',))
-        self.createIndexIfNotExists("subvol", ('subvol_id',))
         self.createIndexIfNotExists("name", ('name_id',))
 
         return
 
     def getRowSize(self):
-        return 4 * 8 + 4
-
-    def selectSubvolume(self, subvol_id):
-        self._selected_subvol = subvol_id
-        return self
-
-    def getSelectedSubvolume(self):
-        return self._selected_subvol
+        return 4 * 8
 
     def insert( self, parent_id, name_id, inode_id ):
         """
@@ -55,10 +45,9 @@ class TableTree( Table ):
         cur = self.getCursor()
         cur.execute(
             "INSERT INTO `%s` " % self.getName()+
-            " (`subvol_id`, `parent_id`, `name_id`, `inode_id`) "+
-            "VALUES (%(subvol)s, %(parent)s, %(name)s, %(inode)s)",
+            " (`parent_id`, `name_id`, `inode_id`) "+
+            "VALUES (%(parent)s, %(name)s, %(inode)s)",
             {
-                "subvol": self._selected_subvol,
                 "parent": parent_id,
                 "name": name_id,
                 "inode": inode_id
@@ -80,69 +69,6 @@ class TableTree( Table ):
         )
         item = cur.rowcount
         self.stopTimer('delete')
-        return item
-
-    def delete_subvolume(self, subvol_id):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute(
-            "DELETE FROM `%s` " % self.getName()+
-            " WHERE `subvol_id`=%(subvol)s",
-            {
-                "subvol": subvol_id
-            }
-        )
-        item = cur.rowcount
-        self.stopTimer('delete_subvolume')
-        return item
-
-    def count_subvolume_nodes(self, subvol_id):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute("SELECT COUNT(`id`) AS `cnt` FROM `%s` " % self.getName()+
-                    " WHERE `subvol_id`=%s", (subvol_id,))
-        item = cur.fetchone()
-        if item:
-            item = item["cnt"]
-        else:
-            item = 0
-        self.stopTimer('count_subvolume_nodes')
-        return item
-
-    def count_subvolume_inodes(self, subvol_id):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute(
-            "SELECT DISTINCT COUNT(`inode_id`) AS `cnt` FROM `%s` " % self.getName()+
-            " WHERE `subvol_id`=%(subvol)s",
-            {
-                "subvol": subvol_id
-            }
-        )
-        item = cur.fetchone()
-        if item:
-            item = item["cnt"]
-        else:
-            item = 0
-        self.stopTimer('count_subvolume_inodes')
-        return item
-
-    def count_subvolume_names(self, subvol_id):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute(
-            "SELECT DISTINCT COUNT(`name_id`) AS `cnt` FROM `%s` " % self.getName()+
-            " WHERE `subvol_id`=%(subvol)s",
-            {
-                "subvol": subvol_id
-            }
-        )
-        item = cur.fetchone()
-        if item:
-            item = item["cnt"]
-        else:
-            item = 0
-        self.stopTimer('count_subvolume_names')
         return item
 
     def find_by_parent_name(self, parent_id, name_id):

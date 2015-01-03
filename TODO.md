@@ -5,6 +5,7 @@ Here are some things on to-do list, in no particular order:
 
  * Implement thin snapshots - that stores only inode and data changes.
    Current snapshots copying all metadata information.
+   This need COW.
 
  * Try to store blocks in several database files or tables. Something
    like partitioning. Hide it in Block storage class.

@@ -8,8 +8,6 @@ class TableInode( Table ):
 
     _table_name = "inode"
 
-    _selected_subvol = None
-
     def create( self ):
         cur = self.getCursor()
 

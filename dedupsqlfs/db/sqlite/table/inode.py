@@ -153,6 +153,18 @@ class TableInode( Table ):
         self.stopTimer('get_count')
         return item["cnt"]
 
+    def get_sizes(self):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT SUM(`size`) as `s` FROM `%s` WHERE `nlinks`>0" % self.getName())
+        item = cur.fetchone()
+        if not item or item["s"] is None:
+            item = 0
+        else:
+            item = item["s"]
+        self.stopTimer('get_sizes')
+        return item
+
     def get_size_by_id_nlinks(self, inode_id):
         self.startTimer()
         cur = self.getCursor()

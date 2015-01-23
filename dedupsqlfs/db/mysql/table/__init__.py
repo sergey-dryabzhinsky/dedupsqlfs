@@ -16,7 +16,7 @@ class Table( object ):
     # Only InnoDB, TokuDB
     _compressed = True
     # Only for TokuDB: default, zlib, fast, quicklz, small, lzma, uncompressed
-    _toku_compression = None
+    _toku_compression = "small"
     _key_block_size = 8
 
     _table_name = None

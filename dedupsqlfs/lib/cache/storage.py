@@ -154,11 +154,15 @@ class StorageTimeSize(object):
 
 
     def isWritedCacheFull(self):
+        if self._max_write_cache_size < 0:
+            return False
         filled = 100.0 * self._cur_write_cache_size / self._max_write_cache_size
         max_fill = 100 + self._max_size_trsh
         return filled > max_fill
 
     def isReadCacheFull(self):
+        if self._max_read_cache_size < 0:
+            return False
         filled = 100.0 * self._cur_read_cache_size / self._max_read_cache_size
         max_fill = 100 + self._max_size_trsh
         return filled > max_fill

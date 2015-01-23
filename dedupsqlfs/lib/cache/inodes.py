@@ -102,6 +102,8 @@ class InodesTime(object):
             self._inodes[ key ]["time"] = 0
         return self
 
+    def expire(self, inode):
+        return self.unset(inode)
 
     def clear(self):
         old_inodes = {}

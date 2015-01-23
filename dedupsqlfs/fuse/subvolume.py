@@ -6,7 +6,6 @@ import os
 import stat
 import sys
 import math
-import llfuse
 from time import time
 from datetime import datetime
 from dedupsqlfs.my_formats import format_size
@@ -109,7 +108,7 @@ class Subvolume(object):
         self.print_out("Subvolumes:\n")
         self.print_out("-"*(46+12+14+22+22+22+1) + "\n")
         self.print_out("%-46s| %-10s| %-12s| %-20s| %-20s| %-20s|\n" % (
-            "Name", "ReadOnly", "Data Size", "Created", "Last mounted", "Last updated"))
+            "Name", "ReadOnly", "Apparent Size", "Created", "Last mounted", "Last updated"))
         self.print_out("-"*(46+12+14+22+22+22+1) + "\n")
 
         for subvol_id in tableSubvol.get_ids():
@@ -209,7 +208,7 @@ class Subvolume(object):
 
         return changed > 0
 
-    def report_usage(self, name):
+    def get_usage(self, name, hashTypes=False):
         """
         @param name: Subvolume name
         @type  name: bytes
@@ -219,26 +218,36 @@ class Subvolume(object):
             self.getLogger().error("Select subvolume which you need to process!")
             return
 
-        subvol_name = name
-        if not subvol_name.startswith(b'@'):
-            subvol_name = b'@' + subvol_name
+        tableSubvol = self.getTable('subvolume')
 
-        try:
-            tableInode = self.getTable('inode')
-            tableTree = self.getTable('tree')
+        subvol_id = tableSubvol.find(name)
+        if not subvol_id:
+            self.getLogger().error("Subvolume with name %r not found!" % name)
+            return False
 
-            attr = self.getManager().lookup(llfuse.ROOT_INODE, subvol_name)
-            rootNode = tableTree.find_by_inode(attr.st_ino)
+        subvolItem = self.getTable('subvolume').get(subvol_id)
 
-            compMethods = {}
-            hashCT = {}
+        tableInode = self.getTable('inode_' + subvolItem["hash"])
+        tableIndex = self.getTable('inode_hash_block_' + subvolItem["hash"])
 
-            tableIndex = self.getTable('inode_hash_block')
-            tableHCT = self.getTable('hash_compression_type')
+        compMethods = {}
+        hashCT = {}
+        hashSZ = {}
 
-            hashes = tableIndex.get_hashes_by_subvol(rootNode["subvol_id"])
+        tableHCT = self.getTable('hash_compression_type')
+        tableHS = self.getTable('hash_sizes')
 
-            for hash_id in hashes:
+        hashes = tableIndex.get_hash_ids()
+
+        dataSize = 0
+        compressedSize = 0
+        uniqueSize = 0
+        compressedUniqueSize = 0
+
+        for hash_id in hashes:
+
+            if hashTypes:
+
                 if hash_id in hashCT:
                     method = hashCT[hash_id]
                 else:
@@ -248,55 +257,79 @@ class Subvolume(object):
 
                 compMethods[ method ] = compMethods.get(method, 0) + 1
 
-            subvolDataSizes = tableIndex.get_sum_sizes_by_subvol(rootNode['subvol_id'])
 
-            apparent_size = tableInode.get_subvolume_size(rootNode['subvol_id'])
-            sparce_size = apparent_size - subvolDataSizes["real"]
-            dedup_size = subvolDataSizes["real"] - subvolDataSizes["writed"]
-            unique_size = subvolDataSizes["writed"]
-            compressed_size = subvolDataSizes["real_comp"]
-            compressed_uniq_size = subvolDataSizes["writed_comp"]
+            if hash_id in hashSZ:
+                hszItem = hashSZ[hash_id]
+            else:
+                hszItem = tableHS.get(hash_id)
+                hashSZ[hash_id] = hszItem
+                uniqueSize += hszItem["real_size"]
+                compressedUniqueSize += hszItem["compressed_size"]
 
-            self.print_msg("\n")
+            dataSize += hszItem["real_size"]
+            compressedSize += hszItem["compressed_size"]
 
-            self.print_out("Apparent size is %s.\n" % format_size(apparent_size) )
-            self.print_out("Unique data size is %s.\n" % format_size(unique_size) )
-            self.print_out("Sparce data size is %s.\n" % format_size(sparce_size) )
-            self.print_out("Deduped data size is %s.\n" % format_size(dedup_size) )
+        apparentSize = tableInode.get_sizes()
+        sparseSize = apparentSize - dataSize
+        dedupSize = dataSize - uniqueSize
 
-            if apparent_size:
-                self.print_out("Compressed data size is %s (%.2f %%).\n" % (
-                    format_size(compressed_size), compressed_size * 100.0 / apparent_size
-                ))
-            if unique_size:
-                self.print_out("Compressed unique data size is %s (%.2f %%).\n" % (
-                    format_size(compressed_uniq_size), compressed_uniq_size * 100.0 / unique_size
-                ))
+        count_all = 0
+        comp_types = {}
 
-            count_all = 0
-            comp_types = {}
-
+        if hashTypes:
             for method, cnt in compMethods.items():
                 count_all += cnt
                 comp_types[ cnt ] = method
 
-            keys = list(comp_types.keys())
-            keys.sort(reverse=True)
+        return {
+            "apparentSize": apparentSize,
+            "dataSize": dataSize,
+            "dedupSize": dedupSize,
+            "sparseSize": sparseSize,
+            "uniqueSize": uniqueSize,
+            "compressedSize": compressedSize,
+            "compressedUniqueSize": compressedUniqueSize,
+            "compressionTypes": comp_types,
+            "compressionTypesAll": count_all
+        }
 
-            if keys:
-                self.print_out("Compression by types:\n")
-            for key in keys:
-                compression = comp_types[key]
-                self.print_out(" %8s used by %.2f%% blocks\n" % (
-                    compression, 100.0 * key / count_all
-                ))
+    def report_usage(self, name):
+        """
+        @param name: Subvolume name
+        @type  name: bytes
+        """
+        usage = self.get_usage(name, True)
 
-        except Exception as e:
-            self.getLogger().warn("Can't process subvolume! %s" % e)
-            import traceback
-            self.getLogger().error(traceback.format_exc())
+        self.print_msg("\n")
+
+        self.print_out("Apparent size is %s.\n" % format_size(usage["apparentSize"]) )
+        self.print_out("Unique data size is %s.\n" % format_size(usage["uniqueSize"]) )
+        self.print_out("Sparce data size is %s.\n" % format_size(usage["sparseSize"]) )
+        self.print_out("Deduped data size is %s.\n" % format_size(usage["dedupSize"]) )
+
+        if usage["apparentSize"]:
+            self.print_out("Compressed data size is %s (%.2f %%).\n" % (
+                format_size(usage["compressedSize"]), usage["compressedSize"] * 100.0 / usage["apparentSize"]
+            ))
+        if usage["uniqueSize"]:
+            self.print_out("Compressed unique data size is %s (%.2f %%).\n" % (
+                format_size(usage["compressedUniqueSize"]), usage["compressedUniqueSize"] * 100.0 / usage["uniqueSize"]
+            ))
+
+        count_all = usage["compressionTypesAll"]
+        comp_types = usage["compressionTypes"]
+
+        keys = list(comp_types.keys())
+        keys.sort(reverse=True)
+
+        if keys:
+            self.print_out("Compression by types:\n")
+        for key in keys:
+            compression = comp_types[key]
+            self.print_out(" %8s used by %.2f%% blocks\n" % (
+                compression, 100.0 * key / count_all
+            ))
 
         return
-
 
     pass

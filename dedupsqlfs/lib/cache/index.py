@@ -90,7 +90,7 @@ class IndexTime(object):
 
         return removed
 
-    def forget(self, inode):
+    def expire(self, inode):
         inode = str(inode)
         if inode in self._inodes:
             inode_data = self._inodes[inode]

@@ -165,19 +165,6 @@ class TableInode( Table ):
         self.stopTimer('get_sizes')
         return item
 
-    def get_size_by_id_nlinks(self, inode_id):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute("SELECT `size` FROM `%s` " % self.getName()+
-                    " WHERE `id`=? AND `nlinks`>0", (inode_id,))
-        item = cur.fetchone()
-        if item:
-            item = item["size"]
-        else:
-            item = 0
-        self.stopTimer('get_size_by_id_nlinks')
-        return item
-
     def get_inode_ids(self, start_id, end_id):
         self.startTimer()
         cur = self.getCursor()

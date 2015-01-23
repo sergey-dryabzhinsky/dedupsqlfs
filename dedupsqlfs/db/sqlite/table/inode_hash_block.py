@@ -145,6 +145,20 @@ class TableInodeHashBlock( Table ):
         self.stopTimer('get_count_uniq_inodes')
         return item
 
+    def get_count_block_by_inode(self, inode_id):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT COUNT(`block_number`) as `cnt` FROM `%s`" % self.getName()+
+                    " wHERE `inode_id` = ?", (inode_id,)
+        )
+        item = cur.fetchone()
+        if item:
+            item = item["cnt"]
+        else:
+            item = 0
+        self.stopTimer('get_count_block_by_inode')
+        return item
+
     def get_inode_ids(self, start_id, end_id):
         self.startTimer()
         cur = self.getCursor()
@@ -178,6 +192,14 @@ class TableInodeHashBlock( Table ):
             iids = tuple(str(item["hash_id"]) for item in iter(cur.fetchone,None))
 
         self.stopTimer('get_hashes_by_hashes')
+        return iids
+
+    def get_hash_ids(self):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT `hash_id` FROM `%s` " % self.getName())
+        iids = tuple(item["hash_id"] for item in iter(cur.fetchone,None))
+        self.stopTimer('get_hash_ids')
         return iids
 
     pass

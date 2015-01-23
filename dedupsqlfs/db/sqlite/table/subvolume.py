@@ -23,9 +23,10 @@ class TableSubvolume( Table ):
                 "`readonly` TINYINT UNSIGNED NOT NULL DEFAULT 0, "+
                 "created_at INTEGER NOT NULL, "+
                 "mounted_at INTEGER, "+
-                "updated_at INTEGER"+
+                "updated_at INTEGER,"
             ");"
         )
+        self.createIndexIfNotExists("hash", ('hash',), unique=True)
         return
 
     def insert( self, name, created_at, mounted_at=None, updated_at=None ):
@@ -89,7 +90,7 @@ class TableSubvolume( Table ):
     def delete(self, subvol_id):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("DELETE FROM `%s` WHERE nid=?" % self.getName(), (subvol_id,))
+        cur.execute("DELETE FROM `%s` WHERE id=?" % self.getName(), (subvol_id,))
         item = cur.rowcount
         self.stopTimer('delete')
         return item
@@ -123,7 +124,7 @@ class TableSubvolume( Table ):
         cur = self.getCursor()
         cur.execute("SELECT id FROM `%s`" % self.getName())
         items = (item["id"] for item in cur.fetchall())
-        self.stopTimer('get')
+        self.stopTimer('get_ids')
         return items
 
     pass

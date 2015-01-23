@@ -7,7 +7,6 @@ import stat
 import sys
 import math
 import llfuse
-import errno
 from time import time
 from datetime import datetime
 from dedupsqlfs.my_formats import format_size
@@ -160,22 +159,23 @@ class Subvolume(object):
             self.getLogger().error("Select subvolume which you need to delete!")
             return
 
-        subvol_name = name
-        if not subvol_name.startswith(b'@'):
-            subvol_name = b'@' + subvol_name
+        tableSubvol = self.getTable('subvolume')
+
+        subvol_id = tableSubvol.find(name)
+        if not subvol_id:
+            self.getLogger().error("Subvolume with name %r not found!" % name)
+            return False
+
+        subvolItem = self.getTable('subvolume').get(subvol_id)
 
         try:
-            attr = self.getManager().lookup(llfuse.ROOT_INODE, subvol_name)
-        except Exception:
-            self.getLogger().warn("Can't remove subvolume! Not found!")
-            return
-
-        try:
-            node = self.getTable('tree').find_by_inode(attr.st_ino)
-            self.getTable('tree').delete_subvolume(node["subvol_id"])
-            self.getTable('inode').delete_subvolume(node["subvol_id"])
-            self.getTable('inode_hash_block').delete_subvolume(node["subvol_id"])
-            self.getTable('subvolume').delete(node['subvol_id'])
+            self.getTable('tree_' + subvolItem["hash"]).drop()
+            self.getTable('inode_' + subvolItem["hash"]).drop()
+            self.getTable('inode_hash_block_' + subvolItem["hash"]).drop()
+            self.getTable('inode_option_' + subvolItem["hash"]).drop()
+            self.getTable('link_' + subvolItem["hash"]).drop()
+            self.getTable('xattr_' + subvolItem["hash"]).drop()
+            self.getTable('subvolume').delete(subvol_id)
         except Exception as e:
             self.getLogger().warn("Can't remove subvolume!")
             self.getLogger().error("E: %s" % e)
@@ -189,33 +189,25 @@ class Subvolume(object):
         """
         @param name: Subvolume name
         @type  name: bytes
+
+        @return: success
+        @rtype: bool
         """
 
         if not name:
             self.getLogger().error("Select subvolume which you need to delete!")
-            return
+            return False
 
-        subvol_name = name
-        if not subvol_name.startswith(b'@'):
-            subvol_name = b'@' + subvol_name
+        tableSubvol = self.getTable('subvolume')
 
-        try:
-            attr = self.getManager().lookup(llfuse.ROOT_INODE, subvol_name)
-        except Exception:
-            self.getLogger().warn("Can't remove subvolume! Not found!")
-            return
+        subvol_id = tableSubvol.find(name)
+        if not subvol_id:
+            self.getLogger().error("Subvolume with name %r not found!" % name)
+            return False
 
-        try:
-            node = self.getTable('tree').find_by_inode(attr.st_ino)
-            self.getTable('subvolume').readonly(node['subvol_id'], flag)
-        except Exception as e:
-            self.getLogger().warn("Can't set subvolume readonly flag!")
-            self.getLogger().error("E: %s" % e)
-            import traceback
-            self.getLogger().error(traceback.format_exc())
-            return
+        changed = self.getTable('subvolume').readonly(subvol_id, flag)
 
-        return
+        return changed > 0
 
     def report_usage(self, name):
         """

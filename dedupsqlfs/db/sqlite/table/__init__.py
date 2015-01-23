@@ -285,6 +285,59 @@ class Table( object ):
             self._conn = None
         return self
 
+    def createIndexIfNotExists(self, indexName, fieldList, unique=False, indexSizes=None):
+        """
+        @param indexName: Index name
+        @param fieldList: List of table fields for index
+        @param unique: Is index unique?
+        @param indexSizes: Sizes for CHAR/BINARY/BLOB/TEXT indexes. How many starting symbols to index
+
+        @type indexName: str
+        @type fieldList: list|tuple
+        @type unique: bool
+        @type indexSizes: dict
+        """
+        if not len(fieldList):
+            raise ValueError("Define table field list for index!")
+
+        cur = self.getCursor()
+
+        cur.execute(
+            "PRAGMA index_info(`?`);",
+            (self.getName()+"_" + indexName,)
+        )
+        row = cur.fetchone()
+
+        exists = (row is not None) and (len(row) > 0)
+
+        if not exists:
+            _u = ""
+            if unique:
+                _u = "UNIQUE"
+
+            _f = ()
+
+            if not indexSizes or type(indexSizes) is not dict:
+                indexSizes = {}
+
+            for field in fieldList:
+
+                _isz = ""
+                sz = indexSizes.get(field, 0)
+                if sz > 0:
+                    _isz = "(%d)" % sz
+
+                _f += ("`%s`%s" % (field, _isz,),)
+
+            _f = ",".join(_f)
+
+            cur.execute(
+                "CREATE "+_u+" INDEX `%s` " % (self.getName() + "_" + indexName)+
+                " ON `%s` " % self.getName()+
+                "("+_f+")")
+
+        return exists
+
     def drop(self):
         self.startTimer()
         self.close()

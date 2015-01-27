@@ -5,7 +5,6 @@ import sys
 import os
 import time
 import random
-import pprint
 
 dirname = "dedupsqlfs"
 
@@ -17,24 +16,28 @@ if os.path.islink(curpath):
 currentdir = os.path.dirname( curpath )
 basedir = os.path.abspath( os.path.join( currentdir, "..", ".." ) )
 
+dynloaddir = os.path.abspath( os.path.join( basedir, "lib-dynload" ) )
+
+sys.path.insert( 0, dynloaddir )
 sys.path.insert( 0, basedir )
 os.chdir(basedir)
 
-nROUNDS = 64
+nROUNDS = 32
 cROUNDS = range(nROUNDS)
-dataRange = 1024*128
+dataRange = 1024*16
 dataMin = ord(' ')
 dataMax = ord('z')
 
 def generate_data():
     data_rounds = ()
+    rnd = random.SystemRandom()
     for cr in cROUNDS:
         sys.stdout.write(".")
         sys.stdout.flush()
         data = b''
         for l in range(1, dataRange):
-            data += chr( random.randint(dataMin, dataMax)).encode()
-        data_rounds += (data,)
+            data += chr( rnd.randint(dataMin, dataMax)).encode()
+        data_rounds += (data * 128,)
     print("\n")
     return data_rounds
 

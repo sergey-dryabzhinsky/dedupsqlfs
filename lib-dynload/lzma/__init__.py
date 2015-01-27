@@ -20,9 +20,9 @@ if not imported:
 
     build_dir = None
     for d in search_paths:
-        build_dir = os.path.abspath( os.path.join(d, "lzma", "build") )
+        build_dir = os.path.abspath( os.path.join(d, "lib-dynload", "lzma", "build") )
         if not os.path.isdir(build_dir):
-            build_dir = os.path.abspath( os.path.join(d, "..", "lzma", "build") )
+            build_dir = os.path.abspath( os.path.join(d, "..", "lib-dynload", "lzma", "build") )
         if os.path.isdir(build_dir):
             break
 

@@ -13,6 +13,9 @@ if os.path.islink(curpath):
 currentdir = os.path.dirname( curpath )
 basedir = os.path.abspath( os.path.join( currentdir, "..", ".." ) )
 
+dynloaddir = os.path.abspath( os.path.join( basedir, "lib-dynload" ) )
+
+sys.path.insert( 0, dynloaddir )
 sys.path.insert( 0, basedir )
 os.chdir(basedir)
 

@@ -64,8 +64,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.cache_meta_timeout = 20
         self.cache_block_write_timeout = 10
         self.cache_block_read_timeout = 10
-        self.cache_block_write_size = 256*1024*1024
-        self.cache_block_read_size = 256*1024*1024
+        self.cache_block_write_size = -1
+        self.cache_block_read_size = -1
 
         self.subvol_uptate_last_run = time.time()
 
@@ -472,13 +472,13 @@ class DedupOperations(llfuse.Operations): # {{{1
 
                 if self.cache_block_write_size:
                     if self.getOption("memory_limit") and not self.getOption("cache_block_write_size"):
-                        if self.cache_block_write_size > 256*self.block_size:
+                        if self.cache_block_write_size > 256*self.block_size or self.cache_block_write_size < 0:
                             self.cache_block_write_size = 256*self.block_size
                     self.cached_blocks.setMaxWriteCacheSize(self.cache_block_write_size)
 
                 if self.cache_block_read_size:
                     if self.getOption("memory_limit") and not self.getOption("cache_block_read_size"):
-                        if self.cache_block_read_size > 256*self.block_size:
+                        if self.cache_block_read_size > 256*self.block_size or self.cache_block_read_size < 0:
                             self.cache_block_read_size = 256*self.block_size
                     self.cached_blocks.setMaxReadCacheSize(self.cache_block_read_size)
 

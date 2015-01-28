@@ -97,6 +97,7 @@ COMPRESSION_SUPPORTED={
     'lzo' : (False, do_simple_ctest,),
     'lz4' : (False, do_simple_ctest,),
     'snappy' : (False, do_simple_ctest,),
+    'quicklz' : (False, do_simple_ctest,),
     'zlib' : (range(0,10), do_level_ctest,),
     'bz2' : (range(1,10), do_level_ctest,),
     'lzma' : (range(0,10), do_level_ctest_lzma,),

@@ -11,6 +11,8 @@ currentdir = os.path.dirname( curpath )
 build_dir = os.path.abspath( os.path.join(currentdir, "lib-dynload", "snappy", "build") )
 if not os.path.isdir(build_dir):
     build_dir = os.path.abspath( os.path.join(currentdir, "..", "lib-dynload", "snappy", "build") )
+if not os.path.isdir(build_dir):
+    build_dir = os.path.abspath( os.path.join(currentdir, "..", "..", "lib-dynload", "snappy", "build") )
 
 dirs = os.listdir(build_dir)
 for d in dirs:

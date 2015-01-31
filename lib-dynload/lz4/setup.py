@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 
-"""Setup file for veezio backend"""
 
 from setuptools import setup, find_packages, Extension
 
-VERSION = (0, 6, 0)
+VERSION = (0, 7, 0)
 
 setup(
     name='lz4',
@@ -21,8 +20,26 @@ setup(
             'src/lz4.c',
             'src/lz4hc.c',
             'src/python-lz4.c'
-        ], extra_compile_args=["-O2", "-DFORTIFY_SOURCE=2", "-fstack-protector"])
-#        ], extra_compile_args=["-O2", "-march=native"])
-#        ], extra_compile_args=["-O2", "-march=native", "-floop-interchange", "-floop-block", "-floop-strip-mine", "-ftree-loop-distribution"])
+        ], extra_compile_args=[
+            "-std=c99",
+            "-O3",
+            "-Wall",
+            "-W",
+            "-Wundef",
+            "-DLZ4_VERSION=\"r119\"",
+            "-DFORTIFY_SOURCE=2", "-fstack-protector",
+            "-march=native",
+#            "-floop-interchange", "-floop-block", "-floop-strip-mine", "-ftree-loop-distribution",
+        ])
+    ],
+    classifiers=[
+        'Development Status :: 5 - Production/Stable',
+        'License :: OSI Approved :: BSD License',
+        'Intended Audience :: Developers',
+        'Programming Language :: C',
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 2.6',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.3',
     ],
 )

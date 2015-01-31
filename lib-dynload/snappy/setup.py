@@ -1,6 +1,6 @@
 # Copyright (c) 2011, Andres Moreira <andres@andresmoreira.com>
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
 #     * Redistributions of source code must retain the above copyright
@@ -11,7 +11,7 @@
 #     * Neither the name of the authors nor the
 #       names of its contributors may be used to endorse or promote products
 #       derived from this software without specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -25,9 +25,9 @@
 
 from distutils.core import setup, Extension
 
-version = '0.4'
+version = '0.5'
 long_description = """
-Python library for the snappy compression library from Google.
+Python bindings for the snappy compression library from Google.
 
 More details about Snappy library: http://code.google.com/p/snappy
 """
@@ -35,12 +35,11 @@ More details about Snappy library: http://code.google.com/p/snappy
 
 snappymodule = Extension('snappy',
                          libraries=['snappy'],
-                         language='c++',
-                         sources=['snappymodule.cc'],
-        extra_compile_args=["-O2", "-DFORTIFY_SOURCE=2", "-fstack-protector"]
-#        extra_compile_args=["-O2", "-march=native"]
-#        extra_compile_args=["-O2", "-march=native", "-floop-interchange", "-floop-block", "-floop-strip-mine", "-ftree-loop-distribution"]
-    )
+                         sources=['snappymodule.cc', 'crc32c.c'],
+                    extra_compile_args = ["-O2", "-march=native", "-DFORTIFY_SOURCE=2", "-fstack-protector"]
+#                    extra_compile_args = ["-O2", "-march=native"]
+#                    extra_compile_args = ["-O2", "-march=native", "-floop-interchange", "-floop-block", "-floop-strip-mine", "-ftree-loop-distribution"]
+)
 
 setup(
     name='python-snappy',
@@ -71,6 +70,5 @@ setup(
                  'Programming Language :: Python :: 3.1',
                  'Programming Language :: Python :: 3.2',
                  ],
-    ext_modules = [snappymodule]
+    ext_modules=[snappymodule]
 )
-

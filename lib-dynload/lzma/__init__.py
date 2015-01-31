@@ -23,6 +23,8 @@ if not imported:
         build_dir = os.path.abspath( os.path.join(d, "lib-dynload", "lzma", "build") )
         if not os.path.isdir(build_dir):
             build_dir = os.path.abspath( os.path.join(d, "..", "lib-dynload", "lzma", "build") )
+        if not os.path.isdir(build_dir):
+            build_dir = os.path.abspath( os.path.join(d, "..", "..", "lib-dynload", "lzma", "build") )
         if os.path.isdir(build_dir):
             break
 
@@ -34,12 +36,12 @@ if not imported:
         if d.find("-%s.%s" % (p1, p2)) != -1 and d.find("lib.") != -1:
             sys.path.insert(0, os.path.join(build_dir, d) )
 
-#            fp, pathname, description = imp.find_module("lzma")
-#            module = imp.load_module("lzma", fp, pathname, description)
-            from .module import *
+            try:
+                from .module import compress, decompress
 
-            compress = module.compress
-            decompress = module.decompress
+                imported = True
+            except:
+                pass
 
             sys.path.pop(0)
 

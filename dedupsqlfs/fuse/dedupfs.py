@@ -149,6 +149,9 @@ class DedupFS(object): # {{{1
         elif name == "snappy":
             from dedupsqlfs.compression.snappy import SnappyCompression
             self._compressors[name] = SnappyCompression()
+        elif name == "quicklz":
+            from dedupsqlfs.compression.quicklz import QuickLzCompression
+            self._compressors[name] = QuickLzCompression()
         else:
             raise ValueError("Unknown compression method: %r" % (name,))
 

@@ -6,14 +6,12 @@
 # See other files for separate copyright notices.
 
 import sys, os
-from warnings import warn
 
-from distutils import log
 from distutils.command.build_ext import build_ext
 from distutils.core import setup
 from distutils.extension import Extension
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 packages = []
 home = os.path.expanduser("~")
@@ -22,7 +20,7 @@ extens = [Extension('_lzma',
                     libraries = ['lzma'],
                     include_dirs = [os.path.join(home, 'include'), '/opt/local/include', '/usr/local/include'],
                     library_dirs = [os.path.join(home, 'lib'), '/opt/local/lib', '/usr/local/lib'],
-                    extra_compile_args = ["-O2", "-DFORTIFY_SOURCE=2", "-fstack-protector"]
+                    extra_compile_args = ["-O2", "-march=native", "-DFORTIFY_SOURCE=2", "-fstack-protector"]
 #                    extra_compile_args = ["-O2", "-march=native"]
 #                    extra_compile_args = ["-O2", "-march=native", "-floop-interchange", "-floop-block", "-floop-strip-mine", "-ftree-loop-distribution"]
                     )

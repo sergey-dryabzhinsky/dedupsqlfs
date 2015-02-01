@@ -19,7 +19,7 @@ sys.path.insert( 0, dynloaddir )
 sys.path.insert( 0, basedir )
 os.chdir(basedir)
 
-COMPRESSION_SUPPORTED=('lzo', 'zlib', 'bz2', 'lzma', 'snappy', 'lz4', 'quicklz')
+COMPRESSION_SUPPORTED=('lzo', 'zlib', 'bz2', 'lzma', 'snappy', 'lz4', ('lz4', 'lz4h', 'compressHC',), 'quicklz')
 
 CLENGTHS={}
 
@@ -29,7 +29,15 @@ for l in range(1, 256, 1):
     done = True
 
     for c in COMPRESSION_SUPPORTED:
-        m = __import__(c)
+
+        if type(c) is tuple:
+            _c = c
+            c = _c[1]
+            m = __import__(_c[0])
+            method = getattr(m, _c[2])
+        else:
+            m = __import__(c)
+            method = getattr(m, "compress")
 
         if not c in CLENGTHS:
             CLENGTHS[ c ] = {
@@ -44,7 +52,7 @@ for l in range(1, 256, 1):
         CLENGTHS[ c ]["length"] = l
 
         s = b'a' * l
-        cs = m.compress(s)
+        cs = method(s)
         if len(s) > len(cs):
             CLENGTHS[ c ]["done"] = True
 

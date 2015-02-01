@@ -26,8 +26,8 @@ sys.path.insert( 0, basedir )
 nROUNDS = 5
 cROUNDS = range(nROUNDS)
 dataRange = 1024*128*4
-dataMin = ord(' ')
-dataMax = ord('z')
+dataMin = ord('A')
+dataMax = ord('Z')
 processData = b''
 
 compressedData = {}
@@ -73,7 +73,10 @@ def do_simple_ctest(method, name):
         sys.stdout.flush()
 
         t1 = time.time()
-        cdata = method.compress(processData)
+        if name == 'lz4h':
+            cdata = method.compressHC(processData)
+        else:
+            cdata = method.compress(processData)
         t2 = time.time()
         dt += t2 - t1
 
@@ -185,6 +188,7 @@ def do_level_dtest(method, name, level):
 COMPRESSION_SUPPORTED={
     'lzo' : (False, do_simple_ctest,),
     'lz4' : (False, do_simple_ctest,),
+    'lz4h' : (False, do_simple_ctest,),
     'snappy' : (False, do_simple_ctest,),
     'quicklz' : (False, do_simple_ctest,),
     'zlib' : (range(0,10), do_level_ctest,),
@@ -195,6 +199,7 @@ COMPRESSION_SUPPORTED={
 DECOMPRESSION_SUPPORTED={
     'lzo' : (False, do_simple_dtest,),
     'lz4' : (False, do_simple_dtest,),
+    'lz4h' : (False, do_simple_dtest,),
     'snappy' : (False, do_simple_dtest,),
     'quicklz' : (False, do_simple_dtest,),
     'zlib' : (range(0,10), do_level_dtest,),
@@ -217,7 +222,10 @@ for c, data in COMPRESSION_SUPPORTED.items():
 
     print("Test %r" % c)
 
-    m = __import__(c)
+    if c == 'lz4h':
+        m = __import__('lz4')
+    else:
+        m = __import__(c)
 
     levels = data[0]
     test_func = data[1]
@@ -352,7 +360,10 @@ for c, data in DECOMPRESSION_SUPPORTED.items():
 
     print("Test %r" % c)
 
-    m = __import__(c)
+    if c == 'lz4h':
+        m = __import__('lz4')
+    else:
+        m = __import__(c)
 
     levels = data[0]
     test_func = data[1]

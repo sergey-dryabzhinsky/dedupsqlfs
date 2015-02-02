@@ -25,32 +25,59 @@ sys.path.insert( 0, basedir )
 
 nROUNDS = 5
 cROUNDS = range(nROUNDS)
-dataRange = 1024*128*4
+blockSize = 1024*128
+blockCnt = 16
 dataMin = ord('A')
 dataMax = ord('Z')
-processData = b''
+processData = ()
+processDataLength = 0
 
 compressedData = {}
 
 def generate_data():
-    global processData
+    global processData, processDataLength
     rnd = random.SystemRandom()
-    b = io.BytesIO()
-    for n in range(dataRange):
-        if n % 1024 == 0:
-            sys.stdout.write(".")
-            sys.stdout.flush()
+    for cnt in range(blockCnt):
+        b = io.BytesIO()
+        for n in range(blockSize):
+            if n % 1024 == 0:
+                sys.stdout.write(".")
+                sys.stdout.flush()
 
-        b.write(struct.pack('B', rnd.randint(dataMin, dataMax)))
+            b.write(struct.pack('B', rnd.randint(dataMin, dataMax)))
+        processData += (b.getvalue(),)
+        processDataLength += b.tell()
     print("")
-    processData = b.getvalue()
     return
 
 def generate_file_data(file_path):
-    global processData
+    global processData, blockCnt, processDataLength
+
     f = open(file_path, 'rb')
-    processData = f.read()
+
+    f.seek(0, 2)
+    nblk = f.tell() / blockSize
+    processDataLength = f.tell()
+    f.seek(0, 0)
+
+    last_p = 0
+    while True:
+        block = f.read(blockSize)
+        if block:
+            processData += (block,)
+            blockCnt += 1
+        else:
+            break
+
+        p = int(20.0 * blockCnt / nblk)
+        if p > last_p:
+            last_p = p
+            sys.stdout.write(".")
+            sys.stdout.flush()
+
     f.close()
+
+    print("")
     return
 
 if len(sys.argv) > 1:
@@ -66,24 +93,40 @@ def do_simple_ctest(method, name):
 
     dt = 0.0
     lcdata = 0.0
-    ldata = len(processData) * nROUNDS
+
+    nblk = len(processData)
+
+    ldata = processDataLength * nROUNDS
 
     for n in range(nROUNDS):
         sys.stdout.write(".")
         sys.stdout.flush()
 
-        t1 = time.time()
-        if name == 'lz4h':
-            cdata = method.compressHC(processData)
-        else:
-            cdata = method.compress(processData)
-        t2 = time.time()
-        dt += t2 - t1
+        last_p = 0
+        iblk = 0
+        for data in processData:
+            t1 = time.time()
+            if name == 'lz4h':
+                cdata = method.compressHC(data)
+            else:
+                cdata = method.compress(data)
+            t2 = time.time()
+            dt += t2 - t1
 
-        if not compressedData.get(name):
-            compressedData[ name ] = cdata
+            if n == 0:
+                if not compressedData.get(name):
+                    compressedData[ name ] = ()
+                compressedData[ name ] += (cdata,)
 
-        lcdata += len(cdata)
+            lcdata += len(cdata)
+
+            p = int(20.0 * iblk / nblk)
+            if p > last_p:
+                last_p = p
+                sys.stdout.write("*")
+                sys.stdout.flush()
+
+            iblk += 1
 
     print("")
     return dt / nROUNDS, ldata / nROUNDS, 100.0 * lcdata / ldata
@@ -94,21 +137,37 @@ def do_level_ctest(method, name, level):
     key = name + "_" + str(level)
     dt = 0.0
     lcdata = 0.0
-    ldata = len(processData) * nROUNDS
+
+    nblk = len(processData)
+
+    ldata = processDataLength * nROUNDS
 
     for n in range(nROUNDS):
         sys.stdout.write(".")
         sys.stdout.flush()
 
-        t1 = time.time()
-        cdata = method.compress(processData, level)
-        t2 = time.time()
-        dt += t2 - t1
+        last_p = 0
+        iblk = 0
+        for data in processData:
+            t1 = time.time()
+            cdata = method.compress(data, level)
+            t2 = time.time()
+            dt += t2 - t1
 
-        if not compressedData.get(key):
-            compressedData[ key ] = cdata
+            if n == 0:
+                if not compressedData.get(key):
+                    compressedData[ key ] = ()
+                compressedData[ key ] += (cdata,)
 
-        lcdata += len(cdata)
+            lcdata += len(cdata)
+
+            p = int(20.0 * iblk / nblk)
+            if p > last_p:
+                last_p = p
+                sys.stdout.write("*")
+                sys.stdout.flush()
+
+            iblk += 1
 
     print("")
     return dt / nROUNDS, ldata / nROUNDS, 100.0 * lcdata / ldata
@@ -119,21 +178,37 @@ def do_level_ctest_lzma(method, name, level):
     key = name + "_" + str(level)
     dt = 0.0
     lcdata = 0.0
-    ldata = len(processData) * nROUNDS
+
+    nblk = len(processData)
+
+    ldata = processDataLength * nROUNDS
 
     for n in range(nROUNDS):
         sys.stdout.write(".")
         sys.stdout.flush()
 
-        t1 = time.time()
-        cdata = method.compress(processData, preset=level)
-        t2 = time.time()
-        dt += t2 - t1
+        last_p = 0
+        iblk = 0
+        for data in processData:
+            t1 = time.time()
+            cdata = method.compress(data, preset=level)
+            t2 = time.time()
+            dt += t2 - t1
 
-        if not compressedData.get(key):
-            compressedData[ key ] = cdata
+            if n == 0:
+                if not compressedData.get(key):
+                    compressedData[ key ] = ()
+                compressedData[ key ] += (cdata,)
 
-        lcdata += len(cdata)
+            lcdata += len(cdata)
+
+            p = int(20.0 * iblk / nblk)
+            if p > last_p:
+                last_p = p
+                sys.stdout.write("*")
+                sys.stdout.flush()
+
+            iblk += 1
 
     print("")
     return dt / nROUNDS, ldata / nROUNDS, 100.0 * lcdata / ldata
@@ -145,18 +220,30 @@ def do_simple_dtest(method, name):
     dt = 0.0
     ldata = 0.0
 
-    cdata = compressedData[ name ]
+    cdataAll = compressedData[ name ]
+    nblk = len(cdataAll)
 
     for n in range(nROUNDS):
         sys.stdout.write(".")
         sys.stdout.flush()
 
-        t1 = time.time()
-        data = method.decompress(cdata)
-        t2 = time.time()
-        dt += t2 - t1
+        last_p = 0
+        iblk = 0
+        for cdata in cdataAll:
+            t1 = time.time()
+            data = method.decompress(cdata)
+            t2 = time.time()
+            dt += t2 - t1
 
-        ldata += len(data)
+            ldata += len(data)
+
+            p = int(20.0 * iblk / nblk)
+            if p > last_p:
+                last_p = p
+                sys.stdout.write("*")
+                sys.stdout.flush()
+
+            iblk += 1
 
     print("")
     return dt / nROUNDS, ldata / nROUNDS
@@ -168,18 +255,30 @@ def do_level_dtest(method, name, level):
     ldata = 0.0
 
     key = name + "_" + str(level)
-    cdata = compressedData[ key ]
+    cdataAll = compressedData[ key ]
+    nblk = len(cdataAll)
 
     for n in range(nROUNDS):
         sys.stdout.write(".")
         sys.stdout.flush()
 
-        t1 = time.time()
-        data = method.decompress(cdata)
-        t2 = time.time()
-        dt += t2 - t1
+        last_p = 0
+        iblk = 0
+        for cdata in cdataAll:
+            t1 = time.time()
+            data = method.decompress(cdata)
+            t2 = time.time()
+            dt += t2 - t1
 
-        ldata += len(data)
+            ldata += len(data)
+
+            p = int(20.0 * iblk / nblk)
+            if p > last_p:
+                last_p = p
+                sys.stdout.write("*")
+                sys.stdout.flush()
+
+            iblk += 1
 
     print("")
     return dt / nROUNDS, ldata / nROUNDS

@@ -9,6 +9,32 @@ __author__ = 'sergey'
 
 from dedupsqlfs.lib import constants
 
+class Task(object):
+    """
+    @ivar key: int|str          - task primary key
+    @ivar data: bytes           - data to compress
+    """
+
+    key = None
+
+    data = None
+
+    pass
+
+class Result(object):
+    """
+    @ivar key: int|str          - task primary key
+    @ivar method: str           - compression method used
+    @ivar cdata: bytes          - compressed data
+    """
+
+    key = None
+
+    method = None
+    cdata = None
+
+    pass
+
 class BaseCompressTool(object):
 
     _compressors = None
@@ -28,6 +54,13 @@ class BaseCompressTool(object):
         self._options = {}
         pass
 
+    def init(self):
+        return self
+
+    def stop(self):
+        return self
+
+
     def setOption(self, key, value):
         self._options[key] = value
         return self
@@ -36,6 +69,11 @@ class BaseCompressTool(object):
         return self._options.get(key, default=default)
 
     def appendCompression(self, name):
+
+        level = None
+        if name and name.find("=") != -1:
+            name, level = name.split("=")
+
         if name == "none":
             from dedupsqlfs.compression.none import NoneCompression
             self._compressors[name] = NoneCompression()
@@ -54,13 +92,28 @@ class BaseCompressTool(object):
         elif name == "lz4":
             from dedupsqlfs.compression.lz4 import Lz4Compression
             self._compressors[name] = Lz4Compression()
+        elif name == "lz4h":
+            from dedupsqlfs.compression.lz4h import Lz4hCompression
+            self._compressors[name] = Lz4hCompression()
         elif name == "snappy":
             from dedupsqlfs.compression.snappy import SnappyCompression
             self._compressors[name] = SnappyCompression()
+        elif name == "quicklz":
+            from dedupsqlfs.compression.quicklz import QuickLzCompression
+            self._compressors[name] = QuickLzCompression()
         else:
             raise ValueError("Unknown compression method!")
 
+        self._compressors[name].setCustomCompressionLevel(level)
+
         return self
+
+    def getCompressor(self, name):
+        if name in self._compressors:
+            comp = self._compressors[name]
+            return comp
+        else:
+            raise ValueError("Unknown compression method: %r" % (name,))
 
     def compressData(self, data):
         """

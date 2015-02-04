@@ -29,6 +29,7 @@ except ImportError:
 from dedupsqlfs.my_formats import format_size
 from dedupsqlfs.lib import constants
 from dedupsqlfs.log import logging, DEBUG_VERBOSE
+from dedupsqlfs.fuse.compress.mp import MultiProcCompressTool
 
 # Storage for options and DB interface
 # Implements FUSE interface
@@ -64,17 +65,25 @@ class DedupFS(object): # {{{1
         self.getLogger().debug("DedupFS mount options: %r" % (self._opts,))
         self.getLogger().debug("DedupFS mountpoint: %r" % (self.mountpoint,))
 
+        self._compressTool = MultiProcCompressTool()
+
         pass
 
 
     def main(self):
         self._fixCompressionOptions()
+
+        self._compressTool.init()
+
         try:
             fuse.init(self.operations, self.mountpoint, self._opts)
             fuse.main(single=True)
         except:
             fuse.close(unmount=False)
             raise
+
+        self._compressTool.stop()
+
         fuse.close()
 
     def parseFuseOptions(self, mountoptions):
@@ -124,6 +133,8 @@ class DedupFS(object): # {{{1
 
     def appendCompression(self, name):
 
+        self._compressTool.appendCompression(name)
+
         level = None
         if name and name.find("=") != -1:
             name, level = name.split("=")
@@ -164,8 +175,8 @@ class DedupFS(object): # {{{1
         method = self.getOption("compression_method")
         if method and method.find("=") != -1:
             method, level = method.split("=")
-            self.setOption("compression_method", method)
-            self.getCompressor(method).setCustomCompressionLevel(level)
+            self._compressTool.setOption("compression_method", method)
+            self._compressTool.getCompressor(method).setCustomCompressionLevel(level)
 
         methods = self.getOption("compression_custom")
         if methods and type(methods) in (tuple, list,):
@@ -175,8 +186,8 @@ class DedupFS(object): # {{{1
                 if method and method.find("=") != -1:
                     method, level = method.split("=")
                     methods[i] = method
-                    self.getCompressor(method).setCustomCompressionLevel(level)
-            self.setOption("compression_custom", methods)
+                    self._compressTool.getCompressor(method).setCustomCompressionLevel(level)
+            self._compressTool.setOption("compression_custom", methods)
 
         return
 

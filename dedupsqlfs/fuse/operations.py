@@ -57,7 +57,6 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.bytes_deduped_last = 0
 
         self.cache_enabled = True
-        self.cache_gc_last_run = time.time()
         self.cache_gc_meta_last_run = time.time()
         self.cache_gc_block_write_last_run = time.time()
         self.cache_gc_block_read_last_run = time.time()
@@ -66,6 +65,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.cache_block_read_timeout = 10
         self.cache_block_write_size = -1
         self.cache_block_read_size = -1
+        self.flush_interval = 5
 
         self.subvol_uptate_last_run = time.time()
 
@@ -447,6 +447,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.cache_block_read_size = self.getOption("cache_block_read_size")
             if self.getOption("cache_meta_timeout") is not None:
                 self.cache_meta_timeout = self.getOption("cache_meta_timeout")
+            if self.getOption("flush_interval") is not None:
+                self.flush_interval = self.getOption("flush_interval")
 
             if self.getOption("gc_enabled") is not None:
                 self.gc_enabled = self.getOption("gc_enabled")
@@ -1953,7 +1955,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         flushed_readed_expiredBySize_blocks = 0
 
         start_time1 = time.time()
-        if time.time() - self.cache_gc_block_write_last_run >= 1:
+        if time.time() - self.cache_gc_block_write_last_run >= self.flush_interval:
             flushed = self.__flush_old_cached_blocks(self.cached_blocks.expired(True), True)
             flushed_writed_blocks += flushed
             flushed_writed_expiredByTime_blocks += flushed
@@ -1977,7 +1979,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
 
         start_time1 = time.time()
-        if time.time() - self.cache_gc_block_read_last_run >= 1:
+        if time.time() - self.cache_gc_block_read_last_run >= self.flush_interval:
             flushed = self.cached_blocks.expired(False)
             flushed_readed_blocks += flushed
             flushed_readed_expiredByTime_blocks += flushed
@@ -2037,7 +2039,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         start_time = time.time()
 
-        if start_time - self.cache_gc_meta_last_run >= 1:
+        if start_time - self.cache_gc_meta_last_run >= self.flush_interval:
 
             flushed_nodes = self.cached_nodes.clear()
             flushed_names = self.cached_names.clear()

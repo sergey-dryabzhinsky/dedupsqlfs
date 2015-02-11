@@ -93,14 +93,17 @@ def main(): # {{{1
                             choices=table_engines, default=table_engines[0],
                             help=msg)
 
-    parser.add_argument('--no-cache', dest='use_cache', action='store_false', help="Don't use cache in memory and delayed write to storage files.")
+    parser.add_argument('--no-cache', dest='use_cache', action='store_false', help="Don't use cache in memory and delayed write to storage.")
     parser.add_argument('--cache-meta-timeout', dest='cache_meta_timeout', metavar='NUMBER', type=int, default=20, help="Delay flush expired metadata for NUMBER of seconds. Defaults to 20 seconds.")
-    parser.add_argument('--cache-block-write-timeout', dest='cache_block_write_timeout', metavar='NUMBER', type=int, default=10, help="Delay flush expired data from memory to storage for NUMBER of seconds. Defaults to 10 seconds.")
+    parser.add_argument('--cache-block-write-timeout', dest='cache_block_write_timeout', metavar='NUMBER', type=int, default=10, help="Expire writed data and flush from memory after NUMBER of seconds. Defaults to 10 seconds.")
     parser.add_argument('--cache-block-write-size', dest='cache_block_write_size', metavar='BYTES', type=int,
-                        default=512*1024*1024, help="Blocks write cache potential size in BYTES. Defaults to 512 MB.")
-    parser.add_argument('--cache-block-read-timeout', dest='cache_block_read_timeout', metavar='NUMBER', type=int, default=10, help="Delay flush expired data from memory for NUMBER of seconds. Defaults to 10 seconds.")
+                        default=1024*1024*1024,
+                        help="Write cache for blocks: potential size in BYTES. Set to -1 for infinite. Defaults to 1024 MB.")
+    parser.add_argument('--cache-block-read-timeout', dest='cache_block_read_timeout', metavar='NUMBER', type=int, default=10, help="Expire readed data and flush from memory after NUMBER of seconds. Defaults to 10 seconds.")
     parser.add_argument('--cache-block-read-size', dest='cache_block_read_size', metavar='BYTES', type=int,
-                        default=512*1024*1024, help="Blocks read cache potential size in BYTES. Defaults to 512 MB.")
+                        default=1024*1024*1024,
+                        help="Readed cache for blocks: potential size in BYTES. Set to -1 for infinite. Defaults to 1024 MB.")
+    parser.add_argument('--flush-interval', dest='flush_interval', metavar="N", type=int, default=5, help="Call expired cache callector every Nth seconds on FUSE operations. Defaults to 5.")
 
     parser.add_argument('--no-transactions', dest='use_transactions', action='store_false', help="Don't use transactions when making multiple related changes, this might make the file system faster or slower (?).")
     parser.add_argument('--nosync', dest='synchronous', action='store_false', help="Disable SQLite's normal synchronous behavior which guarantees that data is written to disk immediately, because it slows down the file system too much (this means you might lose data when the mount point isn't cleanly unmounted).")

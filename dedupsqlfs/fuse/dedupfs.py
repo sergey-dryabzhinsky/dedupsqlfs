@@ -83,6 +83,7 @@ class DedupFS(object): # {{{1
             fuse.close(unmount=False)
             raise
 
+        self._compressTool.stop()
         fuse.close()
 
     def parseFuseOptions(self, mountoptions):

@@ -72,6 +72,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.cached_names = CacheTTLseconds()
         self.cached_nodes = CacheTTLseconds()
         self.cached_attrs = InodesTime()
+        self.cached_xattrs = CacheTTLseconds()
 
         self.cached_blocks = StorageTimeSize()
         self.cached_indexes = IndexTime()
@@ -405,7 +406,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def getxattr(self, inode, name): # {{{3
         self.__log_call('getxattr', '->(inode=%r, name=%r)', inode, name)
-        xattrs = self.getTable("xattr").find_by_inode(inode)
+
+        xattrs = self.__get_cached_xattrs(inode)
         if not xattrs:
             raise FUSEError(llfuse.ENOATTR)
         if name not in xattrs:
@@ -466,6 +468,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.cached_nodes.set_max_ttl(0)
                 self.cached_names.set_max_ttl(0)
                 self.cached_attrs.set_max_ttl(0)
+                self.cached_xattrs.set_max_ttl(0)
             else:
                 if self.block_size:
                     self.cached_blocks.setBlockSize(self.block_size)
@@ -487,6 +490,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.cached_nodes.set_max_ttl(self.cache_meta_timeout)
                 self.cached_names.set_max_ttl(self.cache_meta_timeout)
                 self.cached_attrs.set_max_ttl(self.cache_meta_timeout)
+                self.cached_xattrs.set_max_ttl(self.cache_meta_timeout)
                 self.cached_indexes.setMaxTtl(self.cache_meta_timeout)
 
 
@@ -563,7 +567,7 @@ class DedupOperations(llfuse.Operations): # {{{1
     def listxattr(self, inode):
         self.__log_call('listxattr', '->(inode=%r)', inode)
         if self.isReadonly(): raise FUSEError(errno.EROFS)
-        xattrs = self.getTable("xattr").find_by_inode(inode)
+        xattrs = self.__get_cached_xattrs(inode)
         self.__log_call('listxattr', '<-(xattrs=%r)', xattrs)
         if not xattrs:
             return []
@@ -746,7 +750,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if self.isReadonly():
                 raise FUSEError(errno.EROFS)
 
-            xattrs = self.getTable("xattr").find_by_inode(inode)
+            xattrs = self.__get_cached_xattrs(inode)
             self.__log_call('removexattr', '--(xattrs=%r)', inode, xattrs)
             if not xattrs:
                 raise FUSEError(llfuse.ENOATTR)
@@ -754,6 +758,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 raise FUSEError(llfuse.ENOATTR)
             del xattrs[name]
             self.getTable("xattr").update(inode, xattrs)
+            self.cached_xattrs.set(inode, xattrs)
             return 0
         except FUSEError:
             raise
@@ -915,7 +920,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if self.isReadonly():
                 raise FUSEError(errno.EROFS)
 
-            xattrs = self.getTable("xattr").find_by_inode(inode)
+            xattrs = self.__get_cached_xattrs(inode)
 
             newxattr = False
             if not xattrs:
@@ -928,12 +933,14 @@ class DedupOperations(llfuse.Operations): # {{{1
             else:
                 self.getTable("xattr").insert(inode, xattrs)
 
+            self.cached_xattrs.set(inode, xattrs)
+
             return 0
         except FUSEError:
             raise
         except Exception as e:
             self.__rollback_changes()
-            raise self.__except_to_status('rmdir', e, errno.ENOENT)
+            raise self.__except_to_status('setxattr', e, errno.ENOENT)
 
     def stacktrace(self):
         self.__log_call('stacktrace', '->()')
@@ -1041,6 +1048,16 @@ class DedupOperations(llfuse.Operations): # {{{1
 
 
     # ---------------------------- Miscellaneous methods: {{{2
+
+    def __get_cached_xattrs(self, inode):
+        xattrs = self.cached_xattrs.get(inode)
+        if xattrs is None:
+            xattrs = self.getTable("xattr").find(inode)
+            if xattrs:
+                self.cached_xattrs.set(inode, xattrs)
+            else:
+                self.cached_xattrs.set(inode, False)
+        return xattrs
 
     def __update_mounted_subvolume_time(self):
         t_now = time.time()
@@ -1503,11 +1520,13 @@ class DedupOperations(llfuse.Operations): # {{{1
             if par_attr["nlinks"] > 0:
                 par_attr["nlinks"] -= 1
                 self.cached_attrs.set(parent_inode, par_attr, writed=True)
+            self.cached_xattrs.unset(parent_inode)
             self.cached_attrs.unset(parent_inode)
             self.cached_nodes.unset(parent_inode)
             self.cached_indexes.expire(parent_inode)
 
         self.cached_attrs.unset(cur_node["inode_id"])
+        self.cached_xattrs.unset(cur_node["inode_id"])
         self.cached_nodes.unset((parent_inode, name))
         self.cached_nodes.unset(cur_node["inode_id"])
         self.cached_names.unset(name)
@@ -1670,17 +1689,18 @@ class DedupOperations(llfuse.Operations): # {{{1
     def __report_database_operations(self): # {{{3
         if self.getLogger().isEnabledFor(logging.INFO):
             counts = []
+            allcount = 0
             for tn in self.getManager().tables:
                 t = self.getTable(tn)
 
                 opCount = t.getOperationsCount()
                 for op, count in opCount.items():
                     counts.append((count, 'Table %r - operation %r count' % (tn, op,),))
+                    allcount += count
 
             maxdescwidth = max([len(l) for t, l in counts]) + 3
             counts.sort(reverse=True)
 
-            allcount = self.getManager().getOperationsCount()
             self.getLogger().debug("Database all operations: %s", allcount)
 
             printed_heading = False
@@ -2035,6 +2055,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         flushed_nodes = 0
         flushed_names = 0
         flushed_attrs = 0
+        flushed_xattrs = 0
         flushed_indexes = 0
 
         start_time = time.time()
@@ -2043,6 +2064,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             flushed_nodes = self.cached_nodes.clear()
             flushed_names = self.cached_names.clear()
+            flushed_xattrs = self.cached_xattrs.clear()
             flushed_indexes = self.cached_indexes.expired()
 
             # Just readed...
@@ -2054,10 +2076,10 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.cache_gc_meta_last_run = time.time()
 
-        if flushed_attrs + flushed_nodes + flushed_names + flushed_indexes > 0:
+        if flushed_attrs + flushed_nodes + flushed_names + flushed_indexes + flushed_xattrs > 0:
             elapsed_time = time.time() - start_time
-            self.getLogger().debug("Meta cache cleanup: flushed %i nodes, %i attrs, %i names, %i indexes in %s.",
-                                  flushed_nodes, flushed_attrs, flushed_names, flushed_indexes,
+            self.getLogger().debug("Meta cache cleanup: flushed %i nodes, %i attrs,  %i xattrs, %i names, %i indexes in %s.",
+                                  flushed_nodes, flushed_attrs, flushed_xattrs, flushed_names, flushed_indexes,
                                   format_timespan(elapsed_time))
 
         self.__timing_report_hook()

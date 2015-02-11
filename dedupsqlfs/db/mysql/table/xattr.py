@@ -73,7 +73,7 @@ class TableInodeXattr( Table ):
         self.stopTimer('update')
         return item
 
-    def find_by_inode( self, inode):
+    def find( self, inode):
         """
         :param inode: int
         :return: int
@@ -90,7 +90,7 @@ class TableInodeXattr( Table ):
         item = cur.fetchone()
         if item:
             item = pickle.loads(item["data"])
-        self.stopTimer('find_by_inode')
+        self.stopTimer('find')
         return item
 
     def get_count(self):

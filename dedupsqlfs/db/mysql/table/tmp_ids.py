@@ -66,7 +66,7 @@ class TableTmpIds( Table ):
             cur = self.getCursor()
             cur.execute("SELECT `id` FROM `%s` " % self.getName()+
                         " WHERE `id` IN (%s)" % (id_str,))
-            ret_ids = tuple(str(item["inode_id"]) for item in cur)
+            ret_ids = tuple(str(item["id"]) for item in cur)
         self.stopTimer('get_ids_by_ids')
         return ret_ids
 

@@ -1821,7 +1821,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             "hash": None,
             "data": None,
             "new": False,
-            "update": False
+            "update": False,
+            "real_size": block_length,
         }
 
         if (block_length == 0 and index_hash_id) or sparse_block:
@@ -1830,7 +1831,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.cached_indexes.unset(inode, block_number)
 
             self.time_spent_writing_blocks += time.time() - start_time
-            return
+            return result
 
         tableHash = self.getTable("hash")
         tableHCT = self.getTable("hash_compression_type")
@@ -1844,24 +1845,11 @@ class DedupOperations(llfuse.Operations): # {{{1
         # It is new block now?
         if not hash_id:
 
-            hash_count = 0
-            if index_hash_id:
-                hash_count = tableIndex.get_count_hash(index_hash_id)
-
             result["new"] = True
 
-            if hash_count == 1:
-                self.getLogger().debug("-- update one block data")
-
-                hash_id = index_hash_id
-                tableHash.update(hash_id, hash_value)
-
-                result["hash"] = hash_id
-                result["update"] = True
-            else:
-                self.getLogger().debug("-- insert new block data")
-                hash_id = tableHash.insert(hash_value)
-                result["hash"] = hash_id
+            self.getLogger().debug("-- insert new block data")
+            hash_id = tableHash.insert(hash_value)
+            result["hash"] = hash_id
 
             self.bytes_written += block_length
         else:
@@ -1916,6 +1904,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                     item = self.__write_block_data(int(inode), int(block_number), block)
                     if item["hash"]:
                         blocksToCompress[ item["hash"] ] = item["data"]
+                        del item["data"]
                         blocks[ item["hash"] ] = item
                     if writed:
                         count += 1
@@ -1931,21 +1920,26 @@ class DedupOperations(llfuse.Operations): # {{{1
             cdata, cmethod = cItem
             dItem = blocks[ hash_id ]
 
-            real_size = len(dItem["data"])
+            real_size = dItem["real_size"]
             real_comp_size = len(cdata)
 
+            cmethod_id = self.getCompressionTypeId(cmethod)
+
             if dItem["new"]:
-                if dItem["update"]:
 
-                    hash_CT = tableHCT.get(hash_id)
-                    if hash_CT["type_id"] != self.getCompressionTypeId(cmethod):
-                        tableHCT.update(hash_id, self.getCompressionTypeId(cmethod))
-                    tableBlock.update(hash_id, cdata)
-                    tableHSZ.update(hash_id, real_size, real_comp_size)
+                tableBlock.insert(hash_id, cdata)
 
+                hash_CT = tableHCT.get(hash_id)
+                if hash_CT:
+                    if hash_CT["type_id"] != cmethod_id:
+                        tableHCT.update(hash_id, cmethod_id)
                 else:
-                    tableBlock.insert(hash_id, cdata)
-                    tableHCT.insert(hash_id, self.getCompressionTypeId(cmethod))
+                    tableHCT.insert(hash_id, cmethod_id)
+
+                hash_SZ = tableHSZ.get(hash_id)
+                if hash_SZ:
+                    tableHSZ.update(hash_id, real_size, real_comp_size)
+                else:
                     tableHSZ.insert(hash_id, real_size, real_comp_size)
 
                 self.bytes_written_compressed += real_comp_size
@@ -2155,6 +2149,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             if p != proc:
                 proc = p
                 self.getLogger().debug("%s (count=%d)", proc, count)
+
+        tableTmp.drop()
 
         if count > 0:
             self.should_vacuum = True
@@ -2422,12 +2418,18 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.getManager().commit()
 
+        tableTmp.drop()
+
         if count > 0:
             self.should_vacuum = True
             self.getTable("hash").commit()
             self.__vacuum_datatable("hash")
             self.getTable("block").commit()
             self.__vacuum_datatable("block")
+            self.getTable("hash_compression_type").commit()
+            self.__vacuum_datatable("hash_compression_type")
+            self.getTable("hash_sizes").commit()
+            self.__vacuum_datatable("hash_sizes")
             return "Cleaned up %i unused data block%s and hashes in %%s." % (
                 count, count != 1 and 's' or '',
             )

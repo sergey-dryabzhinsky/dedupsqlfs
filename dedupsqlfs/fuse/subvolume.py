@@ -294,15 +294,17 @@ class Subvolume(object):
 
             if hashTypes:
 
+                method = False
                 if hash_id in hashCT:
                     method = hashCT[hash_id]
                 else:
                     hctItem = tableHCT.get(hash_id)
-                    method = self.getManager().getCompressionTypeName(hctItem["type_id"])
-                    hashCT[hash_id] = method
+                    if hctItem:
+                        method = self.getManager().getCompressionTypeName(hctItem["type_id"])
+                        hashCT[hash_id] = method
 
-                compMethods[ method ] = compMethods.get(method, 0) + 1
-
+                if method:
+                    compMethods[ method ] = compMethods.get(method, 0) + 1
 
             if hash_id in hashSZ:
                 hszItem = hashSZ[hash_id]

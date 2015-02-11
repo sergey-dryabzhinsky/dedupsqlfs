@@ -154,6 +154,8 @@ class Subvolume(object):
 
         tableSubvol = self.getTable('subvolume')
         tableTmp = self.getTable('tmp_ids')
+        tableTmp.drop()
+        tableTmp.create()
 
         for subvol_id in tableSubvol.get_ids():
 
@@ -177,6 +179,8 @@ class Subvolume(object):
 
         tableSubvol = self.getTable('subvolume')
         tableTmp = self.getTable('tmp_ids')
+        tableTmp.drop()
+        tableTmp.create()
 
         for subvol_id in tableSubvol.get_ids():
 

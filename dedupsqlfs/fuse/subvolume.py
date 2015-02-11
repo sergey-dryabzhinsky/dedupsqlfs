@@ -106,10 +106,10 @@ class Subvolume(object):
         tableSubvol = self.getTable('subvolume')
 
         self.print_out("Subvolumes:\n")
-        self.print_out("-"*(46+12+14+22+22+22+1) + "\n")
-        self.print_out("%-46s| %-10s| %-12s| %-20s| %-20s| %-20s|\n" % (
+        self.print_out("-"*(46+12+16+22+22+22+1) + "\n")
+        self.print_out("%-46s| %-10s| %-14s| %-20s| %-20s| %-20s|\n" % (
             "Name", "ReadOnly", "Apparent Size", "Created", "Last mounted", "Last updated"))
-        self.print_out("-"*(46+12+14+22+22+22+1) + "\n")
+        self.print_out("-"*(46+12+16+22+22+22+1) + "\n")
 
         for subvol_id in tableSubvol.get_ids():
 
@@ -134,7 +134,7 @@ class Subvolume(object):
             if subvol["readonly"]:
                 readonly = True
 
-            self.print_out("%-46s| %-10r| %-12s| %-20s| %-20s| %-20s|\n" % (
+            self.print_out("%-46s| %-10r| %-14s| %-20s| %-20s| %-20s|\n" % (
                 subvol["name"],
                 readonly,
                 format_size(apparent_size),
@@ -143,7 +143,7 @@ class Subvolume(object):
                 utime,
                 ))
 
-        self.print_out("-"*(46+12+14+22+22+22+1) + "\n")
+        self.print_out("-"*(46+12+16+22+22+22+1) + "\n")
 
         return
 

@@ -1351,9 +1351,9 @@ class DedupOperations(llfuse.Operations): # {{{1
 
 
     def __select_subvolume(self):
-        manager = self.getManager()
-        optTable = manager.getTable("option")
-        subvTable = manager.getTable('subvolume')
+
+        optTable = self.getTable("option")
+        subvTable = self.getTable('subvolume')
 
         self.getLogger().debug("__select_subvolume(1): mounted_subvolume=%r" % self.mounted_subvolume_name)
 
@@ -1425,9 +1425,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         nlinks = mode & stat.S_IFDIR and 2 or 1
 
-        manager = self.getManager()
-        inodeTable = manager.getTable("inode")
-        treeTable = manager.getTable("tree")
+        inodeTable = self.getTable("inode")
+        treeTable = self.getTable("tree")
 
         t_i, t_ns = self.__newctime_tuple()
 

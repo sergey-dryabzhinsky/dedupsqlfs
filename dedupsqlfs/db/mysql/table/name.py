@@ -2,6 +2,7 @@
 
 __author__ = 'sergey'
 
+import hashlib
 from dedupsqlfs.db.mysql.table import Table
 
 class TableName( Table ):
@@ -16,12 +17,13 @@ class TableName( Table ):
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`id` BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
+                "`hash` BINARY(16) NOT NULL, "+
                 "`value` BLOB NOT NULL"+
             ")"+
             self._getCreationAppendString()
         )
 
-        self.createIndexIfNotExists("value", ('value',), unique=True, indexSizes={'value':200})
+        self.createIndexIfNotExists("hash", ('hash',), unique=True)
         return
 
     def getRowSize(self, value):
@@ -29,7 +31,7 @@ class TableName( Table ):
         :param value: bytes
         :return: int
         """
-        return 8 + len(value)+2
+        return 8 + 16 + len(value)+2
 
     def insert(self, value):
         """
@@ -39,9 +41,13 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
+        context = hashlib.new('md5')
+        context.update(value)
+        digest = context.digest()
+
         cur.execute(
             "INSERT INTO `%s` " % self.getName()+
-            " (`value`) VALUES (%s)", (value,))
+            " (`hash`,`value`) VALUES (%s,%s)", (digest,value,))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
@@ -54,9 +60,13 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
+        context = hashlib.new('md5')
+        context.update(value)
+        digest = context.digest()
+
         cur.execute(
             "SELECT `id` FROM `%s` " % self.getName()+
-            " WHERE `value`=%s", (value,))
+            " WHERE `hash`=%s", (digest,))
         item = cur.fetchone()
         if item:
             item = item["id"]

@@ -13,13 +13,13 @@ class TableHashCompressionType( Table ):
 
         # Create table
         c.execute(
-            "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
+            "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "hash_id INTEGER PRIMARY KEY, "+
                 "type_id INTEGER NOT NULL "+
             ");"
         )
         c.execute(
-            "CREATE INDEX IF NOT EXISTS hct_type ON `%s` (" % self._table_name+
+            "CREATE INDEX IF NOT EXISTS hct_type ON `%s` (" % self.getName()+
                 "type_id"+
             ");"
         )

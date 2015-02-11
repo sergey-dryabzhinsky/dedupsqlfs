@@ -70,8 +70,7 @@ def main(): # {{{1
     parser.add_argument('--name', dest='name', metavar='DATABASE', default="dedupsqlfs", help="Specify the name for the database directory in which metadata and blocks data is stored. Defaults to dedupsqlfs")
     parser.add_argument('--temp', dest='temp', metavar='DIRECTORY', help="Specify the location for the files in which temporary data is stored. By default honour TMPDIR environment variable value.")
     parser.add_argument('--block-size', dest='block_size', metavar='BYTES', default=1024*128, type=int, help="Specify the maximum block size in bytes" + option_stored_in_db + ". Defaults to 128kB.")
-    parser.add_argument('--mount-snapshot', dest='snapshot_mount', metavar='NAME', default=None, help="Use shapshot NAME as root fs.")
-    parser.add_argument('--raw-root', dest='disable_subvolumes', action="store_true", help="Disable use of all snapshots and subvolumes. Unhide them into root of FS.")
+    parser.add_argument('--mount-subvolume', dest='mounted_subvolume', metavar='NAME', default=None, help="Use subvolume NAME as root fs.")
 
     parser.add_argument('--memory-limit', dest='memory_limit', action='store_true', help="Use some lower values for less memory consumption.")
 
@@ -84,19 +83,27 @@ def main(): # {{{1
                         help=msg)
 
     if "mysql" in engines:
-        tengines = ('MyISAM', 'InnoDB', 'Aria')
-        msg = "One of MySQL table engines: "+", ".join(tengines)+". Default: MyISAM. Aria engine can be used only with MariaDB server."
-        parser.add_argument('--table-engine', dest='table_engine', metavar='ENGINE', choices=tengines, default=tengines[0],
-                        help=msg)
 
-    parser.add_argument('--no-cache', dest='use_cache', action='store_false', help="Don't use cache in memory and delayed write to storage files.")
+        from dedupsqlfs.db.mysql import get_table_engines
+
+        table_engines = get_table_engines()
+
+        msg = "One of MySQL table engines: "+", ".join(table_engines)+". Default: %r. Aria and TokuDB engine can be used only with MariaDB or Percona server." % table_engines[0]
+        parser.add_argument('--table-engine', dest='table_engine', metavar='ENGINE',
+                            choices=table_engines, default=table_engines[0],
+                            help=msg)
+
+    parser.add_argument('--no-cache', dest='use_cache', action='store_false', help="Don't use cache in memory and delayed write to storage.")
     parser.add_argument('--cache-meta-timeout', dest='cache_meta_timeout', metavar='NUMBER', type=int, default=20, help="Delay flush expired metadata for NUMBER of seconds. Defaults to 20 seconds.")
-    parser.add_argument('--cache-block-write-timeout', dest='cache_block_write_timeout', metavar='NUMBER', type=int, default=5, help="Delay flush expired data from memory to storage for NUMBER of seconds. Defaults to 5 seconds.")
+    parser.add_argument('--cache-block-write-timeout', dest='cache_block_write_timeout', metavar='NUMBER', type=int, default=10, help="Expire writed data and flush from memory after NUMBER of seconds. Defaults to 10 seconds.")
     parser.add_argument('--cache-block-write-size', dest='cache_block_write_size', metavar='BYTES', type=int,
-                        default=256*1024*1024, help="Blocks write cache potential size in BYTES. Defaults to 256 MB.")
-    parser.add_argument('--cache-block-read-timeout', dest='cache_block_read_timeout', metavar='NUMBER', type=int, default=5, help="Delay flush expired data from memory for NUMBER of seconds. Defaults to 5 seconds.")
+                        default=1024*1024*1024,
+                        help="Write cache for blocks: potential size in BYTES. Set to -1 for infinite. Defaults to 1024 MB.")
+    parser.add_argument('--cache-block-read-timeout', dest='cache_block_read_timeout', metavar='NUMBER', type=int, default=10, help="Expire readed data and flush from memory after NUMBER of seconds. Defaults to 10 seconds.")
     parser.add_argument('--cache-block-read-size', dest='cache_block_read_size', metavar='BYTES', type=int,
-                        default=256*1024*1024, help="Blocks read cache potential size in BYTES. Defaults to 256 MB.")
+                        default=1024*1024*1024,
+                        help="Readed cache for blocks: potential size in BYTES. Set to -1 for infinite. Defaults to 1024 MB.")
+    parser.add_argument('--flush-interval', dest='flush_interval', metavar="N", type=int, default=5, help="Call expired cache callector every Nth seconds on FUSE operations. Defaults to 5.")
 
     parser.add_argument('--no-transactions', dest='use_transactions', action='store_false', help="Don't use transactions when making multiple related changes, this might make the file system faster or slower (?).")
     parser.add_argument('--nosync', dest='synchronous', action='store_false', help="Disable SQLite's normal synchronous behavior which guarantees that data is written to disk immediately, because it slows down the file system too much (this means you might lose data when the mount point isn't cleanly unmounted).")
@@ -147,7 +154,7 @@ def main(): # {{{1
     parser.add_argument('--custom-compress', dest='compression_custom', metavar='METHOD', action="append", help=msg)
 
     parser.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")
-    parser.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=-1, help="Minimal block data size for compression. Defaults to -1 bytes (auto). Not compress if data size is less then BYTES long. If not forced to.")
+    parser.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=-1, help="Minimal block data size for compression. Defaults to -1 bytes (auto). Do not compress if data size is less than BYTES long. If not forced to.")
 
     levels = (constants.COMPRESSION_LEVEL_DEFAULT, constants.COMPRESSION_LEVEL_FAST, constants.COMPRESSION_LEVEL_NORM, constants.COMPRESSION_LEVEL_BEST)
 
@@ -168,7 +175,7 @@ def main(): # {{{1
 
     parser.add_argument('-o', '--mountoption', help="specify mount option", action="append")
 
-    parser.add_argument('--mountpoint', help="specify mount point")
+    parser.add_argument('mountpoint', help="specify mount point")
 
     args = parser.parse_args()
 

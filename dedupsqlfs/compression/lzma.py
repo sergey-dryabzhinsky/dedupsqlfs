@@ -31,6 +31,11 @@ class LzmaCompression(BaseCompression):
             "preset": 7,
         }
 
+    def getDefaultCompressionOptions(self):
+        return {
+            "preset": 1,
+        }
+
     def getCustomCompressionOptions(self):
         try:
             level = int(self._custom_comp_level)

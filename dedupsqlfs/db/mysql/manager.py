@@ -44,14 +44,15 @@ class DbManager( object ):
         "option",
         "tree",
         "name",
+        "name_pattern_option",
         "inode",
+        "inode_option",
         "link",
         "block",
         "xattr",
         "compression_type",
         "hash",
         "hash_compression_type",
-        "hash_block_size",
         "inode_hash_block",
         "subvolume",
     )
@@ -78,6 +79,16 @@ class DbManager( object ):
 
     def setSynchronous(self, flag=True):
         self._synchronous = flag == True
+        if self._mysqld_proc:
+            conn = self.getConnection(True)
+            cur = conn.cursor()
+            if flag:
+                cur.execute("SET GLOBAL innodb_flush_log_at_trx_commit=1")
+                cur.execute("SET GLOBAL flush=1")
+            else:
+                cur.execute("SET GLOBAL innodb_flush_log_at_trx_commit=2")
+                cur.execute("SET GLOBAL flush=0")
+            cur.close()
         return self
 
     def getSynchronous(self):
@@ -85,6 +96,14 @@ class DbManager( object ):
 
     def setAutocommit(self, flag=True):
         self._autocommit = flag == True
+        if self._mysqld_proc:
+            conn = self.getConnection(True)
+            cur = conn.cursor()
+            if flag:
+                cur.execute("SET GLOBAL autocommit=1")
+            else:
+                cur.execute("SET GLOBAL autocommit=0")
+            cur.close()
         return self
 
     def getAutocommit(self):
@@ -131,39 +150,69 @@ class DbManager( object ):
             elif name == "tree":
                 from dedupsqlfs.db.mysql.table.tree import TableTree
                 self._table[ name ] = TableTree(self)
+            elif name.startswith("tree_"):
+                from dedupsqlfs.db.sqlite.table.tree import TableTree
+                self._table[ name ] = TableTree(self)
+                self._table[ name ].setName(name)
             elif name == "name":
                 from dedupsqlfs.db.mysql.table.name import TableName
                 self._table[ name ] = TableName(self)
+            elif name == "name_pattern_option":
+                from dedupsqlfs.db.mysql.table.name_pattern_option import TableNamePatternOption
+                self._table[ name ] = TableNamePatternOption(self)
             elif name == "inode":
                 from dedupsqlfs.db.mysql.table.inode import TableInode
                 self._table[ name ] = TableInode(self)
+            elif name.startswith("inode_") and not name.startswith("inode_hash_block"):
+                from dedupsqlfs.db.sqlite.table.inode import TableInode
+                self._table[ name ] = TableInode(self)
+                self._table[ name ].setName(name)
+            elif name == "inode_option":
+                from dedupsqlfs.db.mysql.table.inode_option import TableInodeOption
+                self._table[ name ] = TableInodeOption(self)
+            elif name.startswith("inode_option_"):
+                from dedupsqlfs.db.sqlite.table.inode_option import TableInodeOption
+                self._table[ name ] = TableInodeOption(self)
+                self._table[ name ].setName(name)
             elif name == "link":
                 from dedupsqlfs.db.mysql.table.link import TableLink
                 self._table[ name ] = TableLink(self)
+            elif name.startswith("link_"):
+                from dedupsqlfs.db.sqlite.table.link import TableLink
+                self._table[ name ] = TableLink(self)
+                self._table[ name ].setName(name)
             elif name == "block":
                 from dedupsqlfs.db.mysql.table.block import TableBlock
                 self._table[ name ] = TableBlock(self)
             elif name == "xattr":
                 from dedupsqlfs.db.mysql.table.xattr import TableInodeXattr
                 self._table[ name ] = TableInodeXattr(self)
+            elif name.startswith("xattr_"):
+                from dedupsqlfs.db.sqlite.table.xattr import TableInodeXattr
+                self._table[ name ] = TableInodeXattr(self)
+                self._table[ name ].setName(name)
             elif name == "compression_type":
                 from dedupsqlfs.db.mysql.table.compression_type import TableCompressionType
                 self._table[ name ] = TableCompressionType(self)
             elif name == "hash_compression_type":
                 from dedupsqlfs.db.mysql.table.hash_compression_type import TableHashCompressionType
                 self._table[ name ] = TableHashCompressionType(self)
-            elif name == "hash_block_size":
-                from dedupsqlfs.db.mysql.table.hash_block_size import TableHashBlockSize
-                self._table[ name ] = TableHashBlockSize(self)
             elif name == "hash":
                 from dedupsqlfs.db.mysql.table.hash import TableHash
                 self._table[ name ] = TableHash(self)
             elif name == "inode_hash_block":
                 from dedupsqlfs.db.mysql.table.inode_hash_block import TableInodeHashBlock
                 self._table[ name ] = TableInodeHashBlock(self)
+            elif name.startswith("inode_hash_block_"):
+                from dedupsqlfs.db.sqlite.table.inode_hash_block import TableInodeHashBlock
+                self._table[ name ] = TableInodeHashBlock(self)
+                self._table[ name ].setName(name)
             elif name == "subvolume":
                 from dedupsqlfs.db.mysql.table.subvolume import TableSubvolume
                 self._table[ name ] = TableSubvolume(self)
+            elif name == "tmp_ids":
+                from dedupsqlfs.db.mysql.table.tmp_ids import TableTmpIds
+                self._table[ name ] = TableTmpIds(self)
             else:
                 raise ValueError("Unknown database %r" % name)
         return self._table[ name ]
@@ -208,7 +257,7 @@ class DbManager( object ):
                 "--basedir=/usr",
                 "--datadir=%s" % datadir,
                 "--tmpdir=%s" % tmpdir,
-                "--plugin-dir=/var/lib/mysql/plugin",
+                "--plugin-dir=/usr/lib/mysql/plugin",
                 "--log-error=%s" % logfile,
                 "--slow-query-log",
                 "--slow-query-log-file=%s" % slowlogfile,
@@ -218,12 +267,23 @@ class DbManager( object ):
                 "--skip-networking",
                 "--skip-name-resolve",
                 "--socket=%s" % self.getSocket(),
-                "--default-storage-engine=MyISAM",
+                "--default-storage-engine=%s" % self._table_engine,
                 # TODO: options
                 "--connect-timeout=10",
                 "--interactive-timeout=3600",
                 "--wait-timeout=3600",
             ]
+
+            if os.geteuid() == 0:
+                cmd_opts.append("--user=mysql")
+                for f in (self.getBasePath(), tmpdir, datadir, logfile, slowlogfile, pidfile, self.getSocket(),):
+                    if os.path.exists(f):
+                        subprocess.Popen([
+                            "chown",
+                            "mysql:mysql",
+                            f
+                        ]).wait()
+
             if self.getAutocommit():
                 cmd_opts.append("--autocommit")
             else:
@@ -239,30 +299,64 @@ class DbManager( object ):
                 "--big-tables",
                 # TODO: warn about hugetlbfs mount and sysctl setup
                 #"--large-pages",
-                "--innodb-file-per-table",
-                "--innodb-flush-method=O_DIRECT",
-                "--innodb-file-format=Barracuda",
-                "--skip-innodb-doublewrite",
 
-                "--key-buffer-size=%dM" % (self._buffer_size/1024/1024),
-                "--innodb-buffer-pool-size=%dM" % (self._buffer_size/1024/1024),
-                "--innodb-log-file-size=32M",
-                "--innodb-log-buffer-size=1M",
-                "--innodb-autoextend-increment=1",
                 "--query-cache-min-res-unit=1k",
-                "--query-cache-limit=1M",
+                "--query-cache-limit=4M",
                 "--query-cache-size=64M",
                 "--max-allowed-packet=32M",
             ])
+            if self._table_engine == "InnoDB":
+                cmd_opts.extend([
+                    "--innodb-file-per-table",
+                    "--innodb-flush-method=O_DIRECT",
+                    "--innodb-file-format=Barracuda",
+                    "--skip-innodb-doublewrite",
+                    "--innodb-buffer-pool-size=%dM" % (self._buffer_size/1024/1024),
+                    "--innodb-log-file-size=32M",
+                    "--innodb-log-buffer-size=4M",
+                    "--innodb-autoextend-increment=1",
+                ])
+            else:
+                cmd_opts.extend([
+                    "--skip-innodb",
+                ])
+
+            if self._table_engine == "MyISAM":
+                cmd_opts.extend([
+                    "--key-buffer-size=%dM" % (self._buffer_size/1024/1024),
+                ])
+            else:
+                cmd_opts.extend([
+                    "--key-buffer-size=8k",
+                ])
 
             if is_mariadb:
-                cmd_opts.extend([
-                    # Only MariaDB
-                    "--aria-block-size=1k",
-                    "--aria-log-dir-path=%s" % self.getBasePath(),
-                    "--aria-log-file-size=32M",
-                    "--aria-pagecache-buffer-size=%dM" % (self._buffer_size/1024/1024),
-                ])
+
+                if self._table_engine == "TokuDB":
+                    cmd_opts.extend([
+                        "--tokudb-block-size=8k",
+                        "--tokudb-loader-memory-size=%dM" % (self._buffer_size/1024/1024),
+                        "--tokudb-directio=1"
+                    ])
+                else:
+                    cmd_opts.extend([
+                        "--tokudb-loader-memory-size=8k",
+                    ])
+
+                if self._table_engine == "Aria":
+                    cmd_opts.extend([
+                        # Only MariaDB
+                        "--aria-block-size=8k",
+                        "--aria-log-dir-path=%s" % self.getBasePath(),
+                        "--aria-log-file-size=32M",
+                        "--aria-pagecache-buffer-size=%dM" % (self._buffer_size/1024/1024),
+                    ])
+                else:
+                    cmd_opts.extend([
+                        "--aria-block-size=8k",
+                        "--aria-log-file-size=8k",
+                        "--aria-pagecache-buffer-size=8k",
+                    ])
 
             if is_new:
 
@@ -270,10 +364,14 @@ class DbManager( object ):
 
                 cmd = ["mysql_install_db"]
                 cmd.extend(cmd_opts)
-                retcode = subprocess.Popen(cmd,
-                                 cwd=self.getBasePath(),
-                                 stdout=open(os.devnull, 'w'),
-                                 stderr=open(os.devnull, 'w')
+
+                self.getLogger().debug("CMD: %r" % (cmd,))
+
+                retcode = subprocess.Popen(
+                    cmd,
+                    cwd=self.getBasePath(),
+                    stdout=open(os.devnull, 'w'),
+                    stderr=open(os.devnull, 'w')
                 ).wait()
                 if retcode:
                     print("Something wrong! Return code: %s" % retcode)
@@ -284,10 +382,13 @@ class DbManager( object ):
 
             print("Starting up MySQLd...")
 
-            self._mysqld_proc = subprocess.Popen(cmd,
-                                                 cwd=self.getBasePath(),
-                                                 stdout=open(os.devnull, 'w'),
-                                                 stderr=open(os.devnull, 'w')
+            self.getLogger().debug("CMD: %r" % (cmd,))
+
+            self._mysqld_proc = subprocess.Popen(
+                cmd,
+                cwd=self.getBasePath(),
+                stdout=open(os.devnull, 'w'),
+                stderr=open(os.devnull, 'w')
             )
 
             print("Wait up 10 sec for it to start...")
@@ -380,11 +481,17 @@ class DbManager( object ):
             if self._conn:
                 return self._conn
 
+            conv = pymysql.converters.conversions.copy()
+            conv[246]=float     # convert decimals to floats
+            conv[10]=str        # convert dates to strings
+
             conn = self._conn = pymysql.connect(
                 unix_socket=self.getSocket(),
                 user=self.getUser(),
                 passwd=self.getPassword(),
-                db=self.getDbName())
+                db=self.getDbName(),
+                conv=conv
+            )
             self._conn.autocommit(self.getAutocommit())
 
         cur = conn.cursor()
@@ -494,3 +601,16 @@ class DbManager( object ):
         for t in self.tables:
             self.getTable(t).create()
         return self
+
+    def copy(self, oldTableName, newTableName):
+        t1 = self.getTable(oldTableName)
+        t2 = self.getTable(newTableName)
+
+        t1.create()
+        t2.create()
+
+        # Rename files
+        t2.getCursor().execute("INSERT `%s` SELECT * FROM `%s`;" % (newTableName, oldTableName,))
+        return self
+
+    pass

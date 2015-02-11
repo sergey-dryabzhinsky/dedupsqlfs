@@ -12,6 +12,7 @@ try:
     import hashlib
     import logging
     from dedupsqlfs.lib import constants
+    from dedupsqlfs.db import check_engines
 except ImportError as e:
     msg = "Error: Failed to load one of the required Python modules! (%s)\n"
     sys.stderr.write(msg % str(e))
@@ -22,27 +23,35 @@ def mkfs(options, compression_methods=None, hash_functions=None):
     from dedupsqlfs.fuse.dedupfs import DedupFS
     from dedupsqlfs.fuse.operations import DedupOperations
 
-    ops = DedupOperations()
-    _fuse = DedupFS(
-        ops, None,
-        options,
-        use_ino=True, default_permissions=True, fsname="dedupsqlfs")
+    ops = None
+    ret = 0
+    try:
+        ops = DedupOperations()
 
-    _fuse.saveCompressionMethods(compression_methods)
+        _fuse = DedupFS(
+            ops, None,
+            options,
+            fsname="dedupsqlfs", allow_root=True)
 
-    for modname in compression_methods:
-        if modname == constants.COMPRESSION_TYPE_NONE:
-            continue
-        module = __import__(modname)
-        _fuse.appendCompression(modname, getattr(module, "compress"), getattr(module, "decompress"))
+        _fuse.saveCompressionMethods(compression_methods)
 
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", False)
+        for modname in compression_methods:
+            _fuse.appendCompression(modname)
 
-    _fuse.operations.init()
-    _fuse.operations.destroy()
-    return 0
+        _fuse.setOption("gc_umount_enabled", False)
+        _fuse.setOption("gc_vacuum_enabled", False)
+        _fuse.setOption("gc_enabled", False)
+
+        _fuse.operations.init()
+        _fuse.operations.destroy()
+    except Exception:
+        import traceback
+        print(traceback.format_exc())
+        ret = -1
+    if ops:
+        ops.getManager().close()
+
+    return ret
 
 def main(): # {{{1
     """
@@ -50,7 +59,7 @@ def main(): # {{{1
     mount points. Execute "dedupsqlfs -h" for a list of valid command line options.
     """
 
-    logger = logging.getLogger("mkfs.dedupsqlfs[main]")
+    logger = logging.getLogger("mkfs.dedupsqlfs/main")
     logger.setLevel(logging.INFO)
     logger.addHandler(logging.StreamHandler(sys.stderr))
 
@@ -66,6 +75,27 @@ def main(): # {{{1
     parser.add_argument('--name', dest='name', metavar='DATABASE', default="dedupsqlfs", help="Specify the name for the database directory in which metadata and blocks data is stored. Defaults to dedupsqlfs")
     parser.add_argument('--temp', dest='temp', metavar='DIRECTORY', help="Specify the location for the files in which temporary data is stored. By default honour TMPDIR environment variable value.")
     parser.add_argument('--block-size', dest='block_size', metavar='BYTES', default=1024*128, type=int, help="Specify the maximum block size in bytes" + option_stored_in_db + ". Defaults to 128kB.")
+
+    engines, msg = check_engines()
+    if not engines:
+        logger.error("No storage engines available! Please install sqlite or pymysql python module!")
+        return 1
+
+    parser.add_argument('--storage-engine', dest='storage_engine', metavar='ENGINE', choices=engines, default=engines[0],
+                        help=msg)
+
+    if "mysql" in engines:
+
+        from dedupsqlfs.db.mysql import get_table_engines
+
+        table_engines = get_table_engines()
+
+        msg = "One of MySQL table engines: "+", ".join(table_engines)+". Default: MyISAM. Aria and TokuDB engine can be used only with MariaDB or Percona server."
+        parser.add_argument('--table-engine', dest='table_engine', metavar='ENGINE',
+                            choices=table_engines, default=table_engines[0],
+                            help=msg)
+
+    parser.add_argument('--no-transactions', dest='use_transactions', action='store_false', help="Don't use transactions when making multiple related changes, this might make the file system faster or slower (?).")
     parser.add_argument('--nosync', dest='synchronous', action='store_false', help="Disable SQLite's normal synchronous behavior which guarantees that data is written to disk immediately, because it slows down the file system too much (this means you might lose data when the mount point isn't cleanly unmounted).")
 
     # Dynamically check for supported hashing algorithms.
@@ -89,13 +119,32 @@ def main(): # {{{1
         compression_methods.append(constants.COMPRESSION_TYPE_BEST)
         compression_methods.append(constants.COMPRESSION_TYPE_CUSTOM)
 
-    msg = "enable compression of data blocks using one of the supported compression methods: one of %s"
+    msg = "Enable compression of data blocks using one of the supported compression methods: one of %s"
     msg %= ', '.join('%r' % mth for mth in compression_methods)
     msg += ". Defaults to %r." % constants.COMPRESSION_TYPE_NONE
-    parser.add_argument('--compress', dest='compression_method', metavar='METHOD', choices=compression_methods, default=constants.COMPRESSION_TYPE_NONE, help=msg)
-    parser.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression event if resulting data is bigger than original.")
-    parser.add_argument('--custom-compress', dest='compression_custom', metavar='METHOD', choices=compression_methods, action="append", help=msg)
-    parser.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=64, help="Minimal block data size for compression. Defaults to 64 bytes. Do not do compression if not forced to.")
+    msg += " You can use <method>=<level> syntax, <level> can be integer or value from --compression-level."
+    if len(compression_methods) > 1:
+        msg += " %r will try all compression methods and choose one with smaller result data." % constants.COMPRESSION_TYPE_BEST
+        msg += " %r will try selected compression methods (--custom-compress) and choose one with smaller result data." % constants.COMPRESSION_TYPE_CUSTOM
+
+    parser.add_argument('--compress', dest='compression_method', metavar='METHOD', default=constants.COMPRESSION_TYPE_NONE, help=msg)
+
+    msg = "Enable compression of data blocks using one or more of the supported compression methods: %s"
+    msg %= ', '.join('%r' % mth for mth in compression_methods[:-2])
+    msg += ". To use two or more methods select this option in command line for each compression method."
+    msg += " You can use <method>=<level> syntax, <level> can be integer or value from --compression-level."
+
+    parser.add_argument('--custom-compress', dest='compression_custom', metavar='METHOD', action="append", help=msg)
+
+    parser.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")
+    parser.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=-1, help="Minimal block data size for compression. Defaults to -1 bytes (auto). Not compress if data size is less then BYTES long. If not forced to.")
+
+    levels = (constants.COMPRESSION_LEVEL_DEFAULT, constants.COMPRESSION_LEVEL_FAST, constants.COMPRESSION_LEVEL_NORM, constants.COMPRESSION_LEVEL_BEST)
+
+    parser.add_argument('--compression-level', dest='compression_level', metavar="LEVEL", default=constants.COMPRESSION_LEVEL_DEFAULT,
+                        help="Compression level ratio: one of %s; or INT. Defaults to %r. Not all methods support this option." % (
+                            ', '.join('%r' % lvl for lvl in levels), constants.COMPRESSION_LEVEL_DEFAULT
+                        ))
 
     # Dynamically check for profiling support.
     try:

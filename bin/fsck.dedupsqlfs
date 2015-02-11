@@ -27,6 +27,9 @@ if not os.path.exists( os.path.join( basedir, dirname ) ):
     raise SystemExit( "ERROR: Could not find required directory: %s" %
                       os.path.join( basedir, dirname ) )
 
+dynloaddir = os.path.abspath( os.path.join( basedir, "lib-dynload" ) )
+
+sys.path.insert( 0, dynloaddir )
 sys.path.insert( 0, basedir )
 
 from dedupsqlfs.app.fsck import main

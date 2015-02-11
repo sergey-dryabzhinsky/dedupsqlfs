@@ -25,6 +25,9 @@ class Bz2Compression(BaseCompression):
     def getBestCompressionOptions(self):
         return ( 9, )
 
+    def getDefaultCompressionOptions(self):
+        return ( 2, )
+
     def getCustomCompressionOptions(self):
         try:
             level = int(self._custom_comp_level)

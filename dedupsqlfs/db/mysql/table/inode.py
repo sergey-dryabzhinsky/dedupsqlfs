@@ -49,8 +49,9 @@ class TableInode( Table ):
 
         cur.execute("INSERT INTO `%s`" % self.getName() +
                     "(`nlinks`, `mode`, `uid`, `gid`, `rdev`, `size`, `atime`, `mtime`, `ctime`, `atime_ns`, `mtime_ns`, `ctime_ns`) " +
-                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (
-            nlinks, mode, uid, gid, rdev, size, atime, mtime, ctime, atime_ns, mtime_ns, ctime_ns
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (
+            nlinks, mode, uid, gid, rdev, size,
+            atime, mtime, ctime, atime_ns, mtime_ns, ctime_ns
         ))
         item = cur.lastrowid
         self.stopTimer('insert')
@@ -168,7 +169,7 @@ class TableInode( Table ):
             cur = self.getCursor()
             cur.execute(
                 "SELECT COUNT(1) as `cnt` FROM `%s` WHERE `id` IN (%s) AND `nlinks`>0" % (
-                self._table_name, id_str,)
+                self.getName(), id_str,)
             )
             result = cur.fetchone()["cnt"]
 
@@ -182,6 +183,18 @@ class TableInode( Table ):
         item = cur.fetchone()
         self.stopTimer('get_count')
         return item["cnt"]
+
+    def get_sizes(self):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT SUM(`size`) as `s` FROM `%s` WHERE `nlinks`>0" % self.getName())
+        item = cur.fetchone()
+        if not item or item["s"] is None:
+            item = 0
+        else:
+            item = item["s"]
+        self.stopTimer('get_sizes')
+        return item
 
     def get_size_by_id_nlinks(self, inode_id):
         self.startTimer()

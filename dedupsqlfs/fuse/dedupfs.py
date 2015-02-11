@@ -29,6 +29,7 @@ except ImportError:
 from dedupsqlfs.my_formats import format_size
 from dedupsqlfs.lib import constants
 from dedupsqlfs.log import logging, DEBUG_VERBOSE
+from dedupsqlfs.fuse.compress.mp import MultiProcCompressTool
 
 # Storage for options and DB interface
 # Implements FUSE interface
@@ -60,18 +61,30 @@ class DedupFS(object): # {{{1
             else:
                 self._opts.append("%s=%s" % (key, value,))
 
+        self.getLogger().debug("DedupFS options: %r" % (self.options,))
+        self.getLogger().debug("DedupFS mount options: %r" % (self._opts,))
+        self.getLogger().debug("DedupFS mountpoint: %r" % (self.mountpoint,))
+
+        self._compressTool = MultiProcCompressTool()
+
         pass
 
 
     def main(self):
         self._fixCompressionOptions()
+
+        self._compressTool.init()
+
         try:
             fuse.init(self.operations, self.mountpoint, self._opts)
             fuse.main(single=True)
         except:
             fuse.close(unmount=False)
+            self._compressTool.stop()
             raise
+
         fuse.close()
+        self._compressTool.stop()
 
     def parseFuseOptions(self, mountoptions):
         if not mountoptions:
@@ -119,37 +132,7 @@ class DedupFS(object): # {{{1
 
 
     def appendCompression(self, name):
-
-        level = None
-        if name and name.find("=") != -1:
-            name, level = name.split("=")
-
-        if name == "none":
-            from dedupsqlfs.compression.none import NoneCompression
-            self._compressors[name] = NoneCompression()
-        elif name == "zlib":
-            from dedupsqlfs.compression.zlib import ZlibCompression
-            self._compressors[name] = ZlibCompression()
-        elif name == "bz2":
-            from dedupsqlfs.compression.bz2 import Bz2Compression
-            self._compressors[name] = Bz2Compression()
-        elif name == "lzma":
-            from dedupsqlfs.compression.lzma import LzmaCompression
-            self._compressors[name] = LzmaCompression()
-        elif name == "lzo":
-            from dedupsqlfs.compression.lzo import LzoCompression
-            self._compressors[name] = LzoCompression()
-        elif name == "lz4":
-            from dedupsqlfs.compression.lz4 import Lz4Compression
-            self._compressors[name] = Lz4Compression()
-        elif name == "snappy":
-            from dedupsqlfs.compression.snappy import SnappyCompression
-            self._compressors[name] = SnappyCompression()
-        else:
-            raise ValueError("Unknown compression method: %r" % (name,))
-
-        self._compressors[name].setCustomCompressionLevel(level)
-
+        self._compressTool.appendCompression(name)
         return self
 
     def _fixCompressionOptions(self):
@@ -157,8 +140,10 @@ class DedupFS(object): # {{{1
         method = self.getOption("compression_method")
         if method and method.find("=") != -1:
             method, level = method.split("=")
-            self.setOption("compression_method", method)
-            self.getCompressor(method).setCustomCompressionLevel(level)
+            self._compressTool.setOption("compression_method", method)
+            self._compressTool.getCompressor(method).setCustomCompressionLevel(level)
+        else:
+            self._compressTool.setOption("compression_method", method)
 
         methods = self.getOption("compression_custom")
         if methods and type(methods) in (tuple, list,):
@@ -168,8 +153,12 @@ class DedupFS(object): # {{{1
                 if method and method.find("=") != -1:
                     method, level = method.split("=")
                     methods[i] = method
-                    self.getCompressor(method).setCustomCompressionLevel(level)
-            self.setOption("compression_custom", methods)
+                    self._compressTool.getCompressor(method).setCustomCompressionLevel(level)
+            self._compressTool.setOption("compression_custom", methods)
+
+        self._compressTool.setOption("compression_minimal_size", self.getOption("compression_minimal_size"))
+        self._compressTool.setOption("compression_level", self.getOption("compression_level"))
+        self._compressTool.setOption("compression_forced", self.getOption("compression_forced"))
 
         return
 
@@ -180,62 +169,12 @@ class DedupFS(object): # {{{1
         else:
             raise ValueError("Unknown compression method: %r" % (name,))
 
-    def compressData(self, data):
-        """
-        Compress data and returns back
+    def compressData(self, dataBlocks):
+        return self._compressTool.compressData(dataBlocks)
 
-        @return tuple (compressed data (bytes), compresion method (string) )
-        """
-        method = self.getOption("compression_method")
-        forced = self.getOption("compression_forced")
-        level = self.getOption("compression_level")
+    def decompressData(self, method, compressedBlock):
+        return self._compressTool.decompressData(method, compressedBlock)
 
-        cdata = data
-        data_length = len(data)
-        cmethod = constants.COMPRESSION_TYPE_NONE
-
-        if data_length <= self.getOption("compression_minimal_size") and not forced:
-            return cdata, cmethod
-
-        if method != constants.COMPRESSION_TYPE_NONE:
-            if method not in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_CUSTOM,):
-                comp = self.getCompressor(method)
-                if comp.isDataMayBeCompressed(data):
-                    cdata = comp.compressData(data, level)
-                    cmethod = method
-                    if data_length <= len(cdata) and not forced:
-                        cdata = data
-                        cmethod = constants.COMPRESSION_TYPE_NONE
-            else:
-                min_len = data_length * 2
-                # BEST
-                methods = self._compressors.keys()
-                if method == constants.COMPRESSION_TYPE_CUSTOM:
-                    methods = self.getOption("compression_custom")
-                for m in methods:
-                    comp = self.getCompressor(m)
-                    if comp.isDataMayBeCompressed(data):
-                        _cdata = comp.compressData(data, level)
-                        cdata_length = len(_cdata)
-                        if min_len > cdata_length:
-                            min_len = cdata_length
-                            cdata = _cdata
-                            cmethod = m
-
-                if data_length <= min_len and not forced:
-                    cdata = data
-                    cmethod = constants.COMPRESSION_TYPE_NONE
-
-        return cdata, cmethod
-
-    def decompressData(self, method, data):
-        """
-        deCompress data and returns back
-
-        @return bytes
-        """
-        comp = self._compressors[ method ]
-        return comp.decompressData(data)
 
     def setDataDirectory(self, data_dir_path):
         self.operations.getManager().setBasepath(data_dir_path)
@@ -284,44 +223,29 @@ class DedupFS(object): # {{{1
         manager = self.operations.getManager()
         disk_usage = manager.getFileSize()
 
-        indexTable = manager.getTable("inode_hash_block")
-        hbsTable = manager.getTable("hash_block_size")
-
-        apparent_size, compressed_size, sparce_size = self.operations.getDataSize(use_subvol=False)
-        apparent_size_u, compressed_size_u = self.operations.getDataSize(use_subvol=False, unique=True)
-
         self.getLogger().info("--" * 79)
 
-        #print("disk_usage: %r" % disk_usage)
-        #print("apparent_size: %r" % apparent_size)
+        tableInode = manager.getTable("inode")
+
+        tableIndex = manager.getTable("inode_hash_block")
+
+        apparent_size = tableInode.get_sizes()
+
+        dataSizes = tableIndex.get_sum_sizes()
+
+        real_size = dataSizes["real"]
+        apparent_size_u = dataSizes["writed"]
+        compressed_size = dataSizes["real_comp"]
 
         if apparent_size:
             self.getLogger().info("Apparent size is %s (unique %s).",
                              format_size(apparent_size), format_size(apparent_size_u)
             )
 
-            curIndex = indexTable.getCursor()
+            compressed_size_u = dataSizes["writed_comp"]
 
-            curIndex.execute("SELECT COUNT(`hash_id`) AS `cnt`, `hash_id` FROM `inode_hash_block` GROUP BY `hash_id`")
-
-            dedup_size = 0
-            while True:
-                indexItems = curIndex.fetchmany(1024)
-                if not indexItems:
-                    break
-
-                hids = ()
-                cnts = {}
-                for item in indexItems:
-                    if item["cnt"] > 1:
-                        hids += (item["hash_id"],)
-                        cnts[ item["hash_id"] ] = item["cnt"]-1
-
-                if hids:
-                    rsizes = hbsTable.get_real_sizes(hids)
-                    for item in rsizes:
-                        cnt = cnts[ item["hash_id"] ]
-                        dedup_size += cnt * item["real_size"]
+            sparce_size = apparent_size - real_size
+            dedup_size = real_size - apparent_size_u
 
             self.getLogger().info("Deduped size is %s (ratio is %.2f%%).",
                              format_size(dedup_size),

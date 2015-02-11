@@ -144,19 +144,22 @@ def create_snapshot(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("disable_subvolumes", True)
+    logger = logging.getLogger("do.dedupsqlfs/create_snapshot")
+    logger.setLevel(logging.INFO)
+    logger.addHandler(logging.StreamHandler(sys.stderr))
+
+    if not options.subvol_selected:
+        logger.error("Select subvolume/snapshot from which create new one!")
+        return
+
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(False)
 
-    _fuse.operations.init()
-
     from dedupsqlfs.fuse.snapshot import Snapshot
     snap = Snapshot(_fuse.operations)
     snap.make(options.subvol_selected.encode('utf8'), options.snapshot_create.encode('utf8'))
-
-    _fuse.operations.destroy()
     return
 
 def remove_snapshot(options, _fuse):
@@ -167,19 +170,14 @@ def remove_snapshot(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("disable_subvolumes", True)
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(False)
 
-    _fuse.operations.init()
-
     from dedupsqlfs.fuse.snapshot import Snapshot
     snap = Snapshot(_fuse.operations)
     snap.remove(options.snapshot_remove.encode('utf8'))
-
-    _fuse.operations.destroy()
     return
 
 def remove_snapshot_older(options, _fuse):
@@ -190,19 +188,14 @@ def remove_snapshot_older(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("disable_subvolumes", True)
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(False)
 
-    _fuse.operations.init()
-
     from dedupsqlfs.fuse.snapshot import Snapshot
     snap = Snapshot(_fuse.operations)
     snap.remove_older_than(options.snapshot_remove_older, options.snapshot_remove_by_last_update_time)
-
-    _fuse.operations.destroy()
     return
 
 def print_snapshot_stats(options, _fuse):
@@ -213,19 +206,35 @@ def print_snapshot_stats(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("disable_subvolumes", True)
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(True)
 
-    _fuse.operations.init()
-
     from dedupsqlfs.fuse.snapshot import Snapshot
     snap = Snapshot(_fuse.operations)
     snap.report_usage(options.snapshot_stats.encode('utf8'))
+    return
 
-    _fuse.operations.destroy()
+def set_snapshot_readonly(options, _fuse, flag):
+    """
+    @param options: Commandline options
+    @type  options: object
+
+    @param _fuse: FUSE wrapper
+    @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
+    """
+    _fuse.setOption("gc_umount_enabled", False)
+    _fuse.setOption("gc_vacuum_enabled", False)
+    _fuse.setOption("gc_enabled", False)
+    _fuse.setReadonly(True)
+
+    from dedupsqlfs.fuse.snapshot import Snapshot
+    snap = Snapshot(_fuse.operations)
+    if flag:
+        snap.readonly(options.snapshot_readonly_set.encode('utf8'))
+    else:
+        snap.readonly(options.snapshot_readonly_unset.encode('utf8'))
     return
 
 
@@ -315,6 +324,12 @@ def do(options, compression_methods=None):
 
         if options.snapshot_remove_older:
             return remove_snapshot_older(options, _fuse)
+
+        if options.snapshot_readonly_set:
+            return set_snapshot_readonly(options, _fuse, True)
+
+        if options.snapshot_readonly_unset:
+            return set_snapshot_readonly(options, _fuse, False)
 
         if options.snapshot_stats:
             return print_snapshot_stats(options, _fuse)
@@ -448,12 +463,14 @@ def main(): # {{{1
     snapshot.add_argument('--remove-snapshots-older-than', dest='snapshot_remove_older', metavar='DATE', help="Remove snapshots older than selected creation date. Date format: 'YYYY-mm-ddTHH:MM:SS'.")
     snapshot.add_argument('--remove-snapshots-by-last-update-time', dest='snapshot_remove_by_last_update_time', action='store_true', help="Remove snapshots older than selected last update date.")
     snapshot.add_argument('--snapshot-stats', dest='snapshot_stats', metavar='NAME', help="Print information about selected snapshot")
+    snapshot.add_argument('--set-snapshot-readonly', dest='snapshot_readonly_set', metavar='NAME', help="Set subvolume READONLY flag for selected snapshot.")
+    snapshot.add_argument('--unset-snapshot-readonly', dest='snapshot_readonly_unset', metavar='NAME', help="UnSet subvolume READONLY flag for selected snapshot.")
 
-    snapshot = parser.add_argument_group('Subvolume')
-    snapshot.add_argument('--list-subvol', dest='subvol_list', action='store_true', help="Show list of all subvolumes")
-    snapshot.add_argument('--create-subvol', dest='subvol_create', metavar='NAME', help="Create new subvolume")
-    snapshot.add_argument('--remove-subvol', dest='subvol_remove', metavar='NAME', help="Remove selected subvolume")
-    snapshot.add_argument('--subvol-stats', dest='subvol_stats', metavar='NAME', help="Print information about selected subvolume")
+    subvol = parser.add_argument_group('Subvolume')
+    subvol.add_argument('--list-subvol', dest='subvol_list', action='store_true', help="Show list of all subvolumes")
+    subvol.add_argument('--create-subvol', dest='subvol_create', metavar='NAME', help="Create new subvolume")
+    subvol.add_argument('--remove-subvol', dest='subvol_remove', metavar='NAME', help="Remove selected subvolume")
+    subvol.add_argument('--subvol-stats', dest='subvol_stats', metavar='NAME', help="Print information about selected subvolume")
 
     args = parser.parse_args()
 

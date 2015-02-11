@@ -15,7 +15,7 @@ class TableCompressionType( Table ):
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
-                "value TEXT NOT NULL, "+
+                "value CHAR(32) NOT NULL, "+
                 "UNIQUE(value) "
             ")"
         )

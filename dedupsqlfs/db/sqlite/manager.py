@@ -3,6 +3,7 @@
 __author__ = 'sergey'
 
 import os
+import shutil
 
 class DbManager( object ):
 
@@ -18,14 +19,15 @@ class DbManager( object ):
         "option",
         "tree",
         "name",
+        "name_pattern_option",
         "inode",
+        "inode_option",
         "link",
         "block",
         "xattr",
         "compression_type",
         "hash",
         "hash_compression_type",
-        "hash_block_size",
         "inode_hash_block",
         "subvolume",
     )
@@ -87,39 +89,72 @@ class DbManager( object ):
             elif name == "tree":
                 from dedupsqlfs.db.sqlite.table.tree import TableTree
                 self._table[ name ] = TableTree(self)
+            elif name.startswith("tree_"):
+                from dedupsqlfs.db.sqlite.table.tree import TableTree
+                self._table[ name ] = TableTree(self)
+                self._table[ name ].setName(name)
             elif name == "name":
                 from dedupsqlfs.db.sqlite.table.name import TableName
                 self._table[ name ] = TableName(self)
             elif name == "inode":
                 from dedupsqlfs.db.sqlite.table.inode import TableInode
                 self._table[ name ] = TableInode(self)
+            elif name.startswith("inode_") and not name.startswith("inode_hash_block"):
+                from dedupsqlfs.db.sqlite.table.inode import TableInode
+                self._table[ name ] = TableInode(self)
+                self._table[ name ].setName(name)
             elif name == "link":
                 from dedupsqlfs.db.sqlite.table.link import TableLink
                 self._table[ name ] = TableLink(self)
+            elif name.startswith("link_"):
+                from dedupsqlfs.db.sqlite.table.link import TableLink
+                self._table[ name ] = TableLink(self)
+                self._table[ name ].setName(name)
             elif name == "block":
                 from dedupsqlfs.db.sqlite.table.block import TableBlock
                 self._table[ name ] = TableBlock(self)
             elif name == "xattr":
                 from dedupsqlfs.db.sqlite.table.xattr import TableInodeXattr
                 self._table[ name ] = TableInodeXattr(self)
+            elif name.startswith("xattr_"):
+                from dedupsqlfs.db.sqlite.table.xattr import TableInodeXattr
+                self._table[ name ] = TableInodeXattr(self)
+                self._table[ name ].setName(name)
             elif name == "compression_type":
                 from dedupsqlfs.db.sqlite.table.compression_type import TableCompressionType
                 self._table[ name ] = TableCompressionType(self)
             elif name == "hash_compression_type":
                 from dedupsqlfs.db.sqlite.table.hash_compression_type import TableHashCompressionType
                 self._table[ name ] = TableHashCompressionType(self)
-            elif name == "hash_block_size":
-                from dedupsqlfs.db.sqlite.table.hash_block_size import TableHashBlockSize
-                self._table[ name ] = TableHashBlockSize(self)
+            elif name == "hash_sizes":
+                from dedupsqlfs.db.sqlite.table.hash_sizes import TableHashSizes
+                self._table[ name ] = TableHashSizes(self)
+            elif name == "name_pattern_option":
+                from dedupsqlfs.db.sqlite.table.name_pattern_option import TableNamePatternOption
+                self._table[ name ] = TableNamePatternOption(self)
+            elif name == "inode_option":
+                from dedupsqlfs.db.sqlite.table.inode_option import TableInodeOption
+                self._table[ name ] = TableInodeOption(self)
+            elif name.startswith("inode_option_"):
+                from dedupsqlfs.db.sqlite.table.inode_option import TableInodeOption
+                self._table[ name ] = TableInodeOption(self)
+                self._table[ name ].setName(name)
             elif name == "hash":
                 from dedupsqlfs.db.sqlite.table.hash import TableHash
                 self._table[ name ] = TableHash(self)
             elif name == "inode_hash_block":
                 from dedupsqlfs.db.sqlite.table.inode_hash_block import TableInodeHashBlock
                 self._table[ name ] = TableInodeHashBlock(self)
+            elif name.startswith("inode_hash_block_"):
+                from dedupsqlfs.db.sqlite.table.inode_hash_block import TableInodeHashBlock
+                self._table[ name ] = TableInodeHashBlock(self)
+                self._table[ name ].setName(name)
             elif name == "subvolume":
                 from dedupsqlfs.db.sqlite.table.subvolume import TableSubvolume
                 self._table[ name ] = TableSubvolume(self)
+            elif name == "tmp_ids":
+                from dedupsqlfs.db.sqlite.table.tmp_ids import TableTmpIds
+                self._table[ name ] = TableTmpIds(self)
             else:
                 raise ValueError("Unknown database %r" % name)
         return self._table[ name ]
@@ -189,6 +224,18 @@ class DbManager( object ):
     def create(self):
         for t in self.tables:
             self.getTable(t).create()
+        return self
+
+    def copy(self, oldTableName, newTableName):
+        t1 = self.getTable(oldTableName)
+        t2 = self.getTable(newTableName)
+
+        t1.create()
+        t1.close()
+
+        # Rename files
+        shutil.copyfile(t1.getDbFilePath(), t2.getDbFilePath())
+        t2.getCursor().execute("ALTER TABLE `%s` RENAME TO `%s`" % (oldTableName, newTableName,))
         return self
 
     pass

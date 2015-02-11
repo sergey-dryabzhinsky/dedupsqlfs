@@ -8,6 +8,8 @@ class TableInodeHashBlock( Table ):
 
     _table_name = "inode_hash_block"
 
+    _selected_subvol = None
+
     def create( self ):
         cur = self.getCursor()
 
@@ -16,7 +18,7 @@ class TableInodeHashBlock( Table ):
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`inode_id` BIGINT UNSIGNED NOT NULL, "+
                 "`block_number` BIGINT UNSIGNED NOT NULL, "+
-                "`hash_id` BIGINT UNSIGNED NOT NULL"+
+                "`hash_id` BIGINT UNSIGNED NOT NULL "+
             ")"+
             self._getCreationAppendString()
         )
@@ -32,7 +34,8 @@ class TableInodeHashBlock( Table ):
         cur = self.getCursor()
         cur.execute(
             "INSERT INTO `%s` " % self.getName()+
-            " (`inode_id`, `block_number`, `hash_id`) VALUES (%(inode)s, %(block)s, %(hash)s)",
+            " (`inode_id`,`block_number`,`hash_id`) "+
+            " VALUES (%(inode)s, %(block)s, %(hash)s)",
             {
                 "inode": inode,
                 "block": block_number,
@@ -48,7 +51,8 @@ class TableInodeHashBlock( Table ):
         cur = self.getCursor()
         cur.execute(
             "UPDATE `%s` " % self.getName()+
-            " SET `hash_id`=%(hash)s WHERE `inode_id`=%(inode)s AND `block_number`=%(block)s",
+            " SET `hash_id`=%(hash)s "+
+            " WHERE `inode_id`=%(inode)s AND `block_number`=%(block)s",
             {
                 "hash": new_hash_id,
                 "inode": inode,

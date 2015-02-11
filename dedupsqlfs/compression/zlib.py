@@ -25,6 +25,9 @@ class ZlibCompression(BaseCompression):
     def getBestCompressionOptions(self):
         return ( 9, )
 
+    def getDefaultCompressionOptions(self):
+        return ( 3, )
+
     def getCustomCompressionOptions(self):
         try:
             level = int(self._custom_comp_level)

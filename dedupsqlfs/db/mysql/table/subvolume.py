@@ -2,6 +2,7 @@
 
 __author__ = 'sergey'
 
+import hashlib
 from time import time
 from dedupsqlfs.db.mysql.table import Table
 
@@ -15,19 +16,22 @@ class TableSubvolume( Table ):
         # Create table
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
-                "`node_id` BIGINT UNSIGNED PRIMARY KEY, "+
+                "`id` INT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
+                "`hash` CHAR(32) NOT NULL, "+
+                "`name` BLOB NOT NULL, "+
+                "`readonly` TINYINT UNSIGNED NOT NULL DEFAULT 0, "+
                 "`created_at` INT UNSIGNED NOT NULL, "+
                 "`mounted_at` INT UNSIGNED, "+
                 "`updated_at` INT UNSIGNED"+
             ")"+
             self._getCreationAppendString()
         )
+        self.createIndexIfNotExists("hash", ('hash',), unique=True)
         return
 
-    def insert( self, node_id, created_at, mounted_at=None, updated_at=None ):
+    def insert( self, name, created_at, mounted_at=None, updated_at=None ):
         """
-        :param node_id: int         - tree node
-        :param name_id: int         - node name
+        :param name: str            - name for subvolume/snapshot
         :param created_at: int      - creation time
         :param mounted_at: int|None - subvolume mounted
         :param updated_at: int|None - subvolume updated
@@ -35,78 +39,122 @@ class TableSubvolume( Table ):
         """
         self.startTimer()
         cur = self.getCursor()
+
+        context = hashlib.new('md5')
+        context.update(name)
+        digest = context.hexdigest()
+
         cur.execute(
             "INSERT INTO `%s` " % self.getName()+
-            " (`node_id`, `created_at`, `mounted_at`, `updated_at`) "+
-            "VALUES (%(node)s, %(created)s, %(mounted)s, %(updated)s)",
+            " (`hash`,`name`,`created_at`, `mounted_at`, `updated_at`) "+
+            "VALUES (%(hash)s, %(name)s, %(created)s, %(mounted)s, %(updated)s)",
             {
-                "node": node_id,
+                "hash": digest,
+                "name": name,
                 "created": created_at,
                 "mounted": mounted_at,
                 "updated": updated_at
             }
         )
+        item = cur.lastrowid
         self.stopTimer('insert')
-        return node_id
+        return item
 
-    def mount_time(self, node_id, mtime=None):
+    def readonly(self, subvol_id, flag=True):
+        self.startTimer()
+        if flag:
+            flag = 1
+        else:
+            flag = 0
+        cur = self.getCursor()
+        cur.execute(
+            "UPDATE `%s` " % self.getName()+
+            " SET `readonly`=%(readonly)s WHERE `id`=%(id)s",
+            {
+                "readonly": flag,
+                "id": subvol_id
+            }
+        )
+        self.stopTimer('readonly')
+        return cur.rowcount
+
+    def mount_time(self, subvol_id, mtime=None):
         self.startTimer()
         if mtime is None:
             mtime = int(time())
         cur = self.getCursor()
         cur.execute(
             "UPDATE `%s` " % self.getName()+
-            " SET `mounted_at`=%(mounted)s WHERE `node_id`=%(node)s",
+            " SET `mounted_at`=%(mounted)s WHERE `id`=%(id)s",
             {
                 "mounted": mtime,
-                "node": node_id
+                "id": subvol_id
             }
         )
         self.stopTimer('mount_time')
         return cur.rowcount
 
-    def update_time(self, node_id, utime=None):
+    def update_time(self, subvol_id, utime=None):
         self.startTimer()
         if utime is None:
             utime = int(time())
         cur = self.getCursor()
         cur.execute(
             "UPDATE `%s` " % self.getName()+
-            " SET `updated_at`=%(updated)s WHERE `node_id`=%(node)s",
+            " SET `updated_at`=%(updated)s WHERE `id`=%(id)s",
             {
                 "updated": utime,
-                "node": node_id
+                "id": subvol_id
             }
         )
         self.stopTimer('update_time')
         return cur.rowcount
 
-    def delete(self, node_id):
+    def delete(self, subvol_id):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
             "DELETE FROM `%s` " % self.getName()+
-            " WHERE `node_id`=%(node)s",
+            " WHERE `id`=%(id)s",
             {
-                "node": node_id
+                "id": subvol_id
             }
         )
         item = cur.rowcount
         self.stopTimer('delete')
         return item
 
-    def get(self, node_id):
+    def get(self, subvol_id):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
             "SELECT * FROM `%s` " % self.getName()+
-            " WHERE `node_id`=%(node)s",
+            " WHERE `id`=%(id)s",
             {
-                "node": node_id
+                "id": subvol_id
             }
         )
         item = cur.fetchone()
         self.stopTimer('get')
+        return item
+
+    def find(self, name):
+        self.startTimer()
+        cur = self.getCursor()
+
+        context = hashlib.new('md5')
+        context.update(name)
+        digest = context.hexdigest()
+
+        cur.execute(
+            "SELECT * FROM `%s` " % self.getName()+
+            " WHERE `hash`=%(hash)s",
+            {
+                "hash": digest
+            }
+        )
+        item = cur.fetchone()
+        self.stopTimer('find')
         return item
 
     pass

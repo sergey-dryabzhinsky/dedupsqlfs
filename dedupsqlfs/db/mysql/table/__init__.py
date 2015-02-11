@@ -2,7 +2,6 @@
 
 __author__ = 'sergey'
 
-import types
 from time import time
 import pymysql
 import pymysql.cursors
@@ -12,11 +11,13 @@ class Table( object ):
     _conn = None
     _curr = None
 
-    # InnoDB, MyISAM, Aria
+    # InnoDB, MyISAM, Aria, TokuDB
     _engine = "MyISAM"
-    # Only InnoDB
-    _compressed = False
-    _key_block_size = 1
+    # Only InnoDB, TokuDB
+    _compressed = True
+    # Only for TokuDB: default, zlib, fast, quicklz, small, lzma, uncompressed
+    _toku_compression = "small"
+    _key_block_size = 8
 
     _table_name = None
     _manager = None
@@ -39,6 +40,11 @@ class Table( object ):
         _cs = " Engine=" + self._engine
         if self._engine == "InnoDB" and self._compressed:
             _cs += " ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=%d;" % self._key_block_size
+        if self._engine == "TokuDB":
+            if not self._compressed:
+                _cs += " COMPRESSION=tokudb_uncompressed;"
+            elif self._toku_compression:
+                _cs += " COMPRESSION=tokudb_%s;" % self._toku_compression
         if self._engine == "Aria":
             _cs += " ROW_FORMAT=DYNAMIC TRANSACTIONAL=0 PAGE_CHECKSUM=0 TABLE_CHECKSUM=0;"
         if self._engine == "MyISAM":
@@ -88,6 +94,10 @@ class Table( object ):
 
     def getName(self):
         return self._table_name
+
+    def setName(self, tableName):
+        self._table_name = tableName
+        return self
 
     def getManager(self):
         """
@@ -229,6 +239,13 @@ class Table( object ):
         return self
 
     def close(self):
+        return self
+
+    def drop(self):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("DROP TABLE `%s`" % self.getName())
+        self.stopTimer("drop")
         return self
 
     pass

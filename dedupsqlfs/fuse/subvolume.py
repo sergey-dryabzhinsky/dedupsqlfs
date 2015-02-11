@@ -308,12 +308,14 @@ class Subvolume(object):
                 hszItem = hashSZ[hash_id]
             else:
                 hszItem = tableHS.get(hash_id)
-                hashSZ[hash_id] = hszItem
-                uniqueSize += hszItem["real_size"]
-                compressedUniqueSize += hszItem["compressed_size"]
+                if hszItem:
+                    hashSZ[hash_id] = hszItem
+                    uniqueSize += hszItem["real_size"]
+                    compressedUniqueSize += hszItem["compressed_size"]
 
-            dataSize += hszItem["real_size"]
-            compressedSize += hszItem["compressed_size"]
+            if hszItem:
+                dataSize += hszItem["real_size"]
+                compressedSize += hszItem["compressed_size"]
 
         apparentSize = tableInode.get_sizes()
         sparseSize = apparentSize - dataSize

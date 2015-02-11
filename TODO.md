@@ -3,23 +3,11 @@ TODO list
 
 Here are some things on to-do list, in no particular order:
 
- * Implement thin snapshots - that stores only inode and data changes.
-   Current snapshots copying all metadata information.
-   This need COW.
-
  * Try to store blocks in several database files or tables. Something
    like partitioning. Hide it in Block storage class.
 
- * Implement functions for work with blocks, hashes, subvolumes as separate
-   commands (options) in do.dedupsqlfs. This should reduce code size of
-   FUSE operations file.
-
  * Implement creation of subvolumes, snapshots on-the-fly via commands through
    socket interface. And other commands too.
-
- * Multiprocess block hashing and compression.
-   Not always needed. On writing many small files SQLite database writes
-   is slow more then data compression or hashing process.
 
  * Automatically switch to a larger block size to reduce the overhead for files
    that rarely change after being created (like >= 100MB video files :-)

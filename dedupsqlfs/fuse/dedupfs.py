@@ -79,12 +79,12 @@ class DedupFS(object): # {{{1
             fuse.init(self.operations, self.mountpoint, self._opts)
             fuse.main(single=True)
         except:
-            self._compressTool.stop()
             fuse.close(unmount=False)
+            self._compressTool.stop()
             raise
 
-        self._compressTool.stop()
         fuse.close()
+        self._compressTool.stop()
 
     def parseFuseOptions(self, mountoptions):
         if not mountoptions:

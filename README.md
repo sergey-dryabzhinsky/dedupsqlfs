@@ -40,7 +40,7 @@ The file system initially stored everything in a multiple [SQLite](http://www.sq
  * Delayed writes for blocks (hashing and compression too).
  * Use "stream"-like writes and read of data blocks, don't store complete files in memory.
  * Cached filesystem tree nodes, inodes and data blocks.
- * New compression methods (some ported for python3): lzo (ported), lz4 (ported), lzma, snappy.
+ * New compression methods (some ported for python3): lzo (ported), lz4 (ported), quicklz (ported), lzma, snappy.
  * Support for data storage in localy started MySQL server.
 
 ### Limitations
@@ -73,7 +73,7 @@ Additional compression modules can be builded with commands:
     $ cd lzo
     $ python3 setup.py clean -a
     $ python3 setup.py build
-    # ... same for lz4, snappy
+    # ... same for lz4, snappy,..
 
 Additional storage engine via MySQL can be accessed with commands:
 

@@ -1924,7 +1924,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                         count += 1
 
         start_time = time.time()
-        compressedBlocks = self.getApplication().compressDataTool(blocksToCompress)
+        compressedBlocks = self.getApplication().compressData(blocksToCompress)
         self.time_spent_compressing += time.time() - start_time
 
         tableBlock = self.getTable("block")

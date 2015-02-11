@@ -1593,12 +1593,6 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.time_spent_hashing += time.time() - start_time
         return digest
 
-    def __compress(self, data): # {{{3
-        start_time = time.time()
-        cdata, cmethod = self.getApplication().compressData(data)
-        self.time_spent_compressing += time.time() - start_time
-        return cdata, cmethod
-
     def __decompress(self, block_data, compression_type_id):
         start_time = time.time()
         compression = self.getCompressionTypeName( compression_type_id )

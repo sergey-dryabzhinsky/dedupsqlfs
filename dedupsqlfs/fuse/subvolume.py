@@ -170,6 +170,29 @@ class Subvolume(object):
 
         return
 
+    def prepareIndexHashIds(self):
+        """
+        List all subvolumes
+        """
+
+        tableSubvol = self.getTable('subvolume')
+        tableTmp = self.getTable('tmp_ids')
+
+        for subvol_id in tableSubvol.get_ids():
+
+            subvol = tableSubvol.get(subvol_id)
+
+            tableIndex = self.getTable("inode_hash_block_" + subvol["hash"])
+
+            curIndex = tableIndex.getCursor()
+            curIndex.execute("SELECT DISTINCT hash_id FROM `%s`" % tableIndex.getName())
+
+            for node in iter(curIndex.fetchone, None):
+                if not tableTmp.find(node["hash_id"]):
+                    tableTmp.insert(node["hash_id"])
+
+        return
+
 
     def remove(self, name):
         """

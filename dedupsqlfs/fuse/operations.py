@@ -321,7 +321,6 @@ class DedupOperations(llfuse.Operations): # {{{1
     def flush(self, fh):
         try:
             self.__log_call('flush', '->(fh=%i)', fh)
-            if self.isReadonly(): raise FUSEError(errno.EROFS)
 
             attr = self.__get_inode_row(fh)
             self.__log_call('flush', '-- inode(%i) size=%i', fh, attr["size"])
@@ -565,7 +564,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def listxattr(self, inode):
         self.__log_call('listxattr', '->(inode=%r)', inode)
-        if self.isReadonly(): raise FUSEError(errno.EROFS)
         xattrs = self.__get_cached_xattrs(inode)
         self.__log_call('listxattr', '<-(xattrs=%r)', xattrs)
         if not xattrs:
@@ -645,10 +643,10 @@ class DedupOperations(llfuse.Operations): # {{{1
         Return filehandler ID
         """
         self.__log_call('open', '->(inode=%i, flags=%o)', inode, flags)
-        if self.isReadonly(): raise FUSEError(errno.EROFS)
         # Make sure the file exists?
 
         if flags & os.O_TRUNC:
+            if self.isReadonly(): raise FUSEError(errno.EROFS)
             self.__log_call('open', '-- truncate file!')
             row = self.__get_inode_row(inode)
             row["size"] = 0
@@ -1015,6 +1013,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             raise self.__except_to_status('unlink', e, errno.EIO)
 
     def write(self, fh, offset, buf): # {{{3
+        if self.isReadonly(): raise FUSEError(errno.EROFS)
         try:
             start_time = time.time()
 
@@ -2374,7 +2373,12 @@ class DedupOperations(llfuse.Operations): # {{{1
         tableHash = self.getTable("hash")
         tableBlock = self.getTable("block")
         tableHCT = self.getTable("hash_compression_type")
-        tableIndex = self.getTable("inode_hash_block")
+        tableHSZ = self.getTable("hash_sizes")
+
+        subv = Subvolume(self)
+        subv.prepareIndexHashIds()
+
+        tableTmp = self.getTable("tmp_ids")
 
         self.getLogger().debug("Clean unused data blocks and hashes...")
 
@@ -2401,7 +2405,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not hashIds:
                 continue
 
-            indexHashIds = tableIndex.get_hashes_by_hashes(hashIds)
+            indexHashIds = tableTmp.get_ids_by_ids(hashIds)
 
             to_delete = ()
             for hash_id in hashIds:
@@ -2411,6 +2415,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             count += tableHash.remove_by_ids(to_delete)
             tableBlock.remove_by_ids(to_delete)
             tableHCT.remove_by_ids(to_delete)
+            tableHSZ.remove_by_ids(to_delete)
 
             p = "%6.2f%%" % (100.0 * current / countHashes)
             if p != proc:

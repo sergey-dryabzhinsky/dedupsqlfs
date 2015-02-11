@@ -210,6 +210,9 @@ class DbManager( object ):
             elif name == "subvolume":
                 from dedupsqlfs.db.mysql.table.subvolume import TableSubvolume
                 self._table[ name ] = TableSubvolume(self)
+            elif name == "tmp_ids":
+                from dedupsqlfs.db.mysql.table.tmp_ids import TableTmpIds
+                self._table[ name ] = TableTmpIds(self)
             else:
                 raise ValueError("Unknown database %r" % name)
         return self._table[ name ]

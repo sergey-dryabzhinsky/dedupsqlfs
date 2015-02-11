@@ -1923,15 +1923,11 @@ class DedupOperations(llfuse.Operations): # {{{1
                     if not writed:
                         count += 1
 
-        start_time = time.time()
-        compressedBlocks = self.getApplication().compressData(blocksToCompress)
-        self.time_spent_compressing += time.time() - start_time
-
         tableBlock = self.getTable("block")
         tableHCT = self.getTable("hash_compression_type")
         tableHSZ = self.getTable("hash_sizes")
 
-        for hash_id, cItem in compressedBlocks.items():
+        for hash_id, cItem in self.getApplication().compressData(blocksToCompress):
             cdata, cmethod = cItem
             dItem = blocks[ hash_id ]
 
@@ -1953,6 +1949,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                     tableHSZ.insert(hash_id, real_size, real_comp_size)
 
                 self.bytes_written_compressed += real_comp_size
+
+        self.time_spent_compressing += self.getApplication().getCompressTool().time_spent_compressing
 
         return count
 

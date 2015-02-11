@@ -162,12 +162,9 @@ class DedupFS(object): # {{{1
 
         return
 
-    def getCompressor(self, name):
-        if name in self._compressors:
-            comp = self._compressors[name]
-            return comp
-        else:
-            raise ValueError("Unknown compression method: %r" % (name,))
+
+    def getCompressTool(self):
+        return self._compressTool
 
     def compressData(self, dataBlocks):
         return self._compressTool.compressData(dataBlocks)

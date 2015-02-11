@@ -7,7 +7,7 @@ Used in single or multi process compression classes
 
 __author__ = 'sergey'
 
-from time import sleep
+from time import sleep, time
 from .base import BaseCompressTool, Task, Result, constants
 from multiprocessing import JoinableQueue, Process, cpu_count
 
@@ -152,8 +152,7 @@ class MultiProcCompressTool(BaseCompressTool):
 
         @return dict { hash id: (compressed data (bytes), compresion method (string) ) }
         """
-
-        result = {}
+        start_time = time()
 
         nkeys = len(dataToCompress.keys())
 
@@ -165,20 +164,23 @@ class MultiProcCompressTool(BaseCompressTool):
 
         gotKeys = 0
         while gotKeys < nkeys:
-            sleep(0.01)
             try:
                 res = self._result_queue.get_nowait()
             except:
                 res = None
 
             if res is None:
+                sleep(0.01)
                 continue
 
             if type(res) is Result:
-                result[ res.key ] = (res.cdata, res.method,)
+                self._result_queue.task_done()
+                yield res.key, (res.cdata, res.method,)
                 gotKeys += 1
 
-        return result
+        self.time_spent_compressing = time() - start_time
+
+        return
 
     def decompressData(self, method, data):
         """

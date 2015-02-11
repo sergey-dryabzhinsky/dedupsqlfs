@@ -152,19 +152,14 @@ def create_snapshot(options, _fuse):
         logger.error("Select subvolume/snapshot from which create new one!")
         return
 
-    _fuse.setOption("disable_subvolumes", True)
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(False)
 
-    _fuse.operations.init()
-
     from dedupsqlfs.fuse.snapshot import Snapshot
     snap = Snapshot(_fuse.operations)
     snap.make(options.subvol_selected.encode('utf8'), options.snapshot_create.encode('utf8'))
-
-    _fuse.operations.destroy()
     return
 
 def remove_snapshot(options, _fuse):
@@ -175,19 +170,14 @@ def remove_snapshot(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("disable_subvolumes", True)
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(False)
 
-    _fuse.operations.init()
-
     from dedupsqlfs.fuse.snapshot import Snapshot
     snap = Snapshot(_fuse.operations)
     snap.remove(options.snapshot_remove.encode('utf8'))
-
-    _fuse.operations.destroy()
     return
 
 def remove_snapshot_older(options, _fuse):
@@ -198,19 +188,14 @@ def remove_snapshot_older(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("disable_subvolumes", True)
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(False)
 
-    _fuse.operations.init()
-
     from dedupsqlfs.fuse.snapshot import Snapshot
     snap = Snapshot(_fuse.operations)
     snap.remove_older_than(options.snapshot_remove_older, options.snapshot_remove_by_last_update_time)
-
-    _fuse.operations.destroy()
     return
 
 def print_snapshot_stats(options, _fuse):
@@ -221,22 +206,17 @@ def print_snapshot_stats(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("disable_subvolumes", True)
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(True)
 
-    _fuse.operations.init()
-
     from dedupsqlfs.fuse.snapshot import Snapshot
     snap = Snapshot(_fuse.operations)
     snap.report_usage(options.snapshot_stats.encode('utf8'))
-
-    _fuse.operations.destroy()
     return
 
-def print_snapshot_readonly(options, _fuse, flag):
+def set_snapshot_readonly(options, _fuse, flag):
     """
     @param options: Commandline options
     @type  options: object
@@ -244,13 +224,10 @@ def print_snapshot_readonly(options, _fuse, flag):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("disable_subvolumes", True)
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(True)
-
-    _fuse.operations.init()
 
     from dedupsqlfs.fuse.snapshot import Snapshot
     snap = Snapshot(_fuse.operations)
@@ -258,8 +235,6 @@ def print_snapshot_readonly(options, _fuse, flag):
         snap.readonly(options.snapshot_readonly_set.encode('utf8'))
     else:
         snap.readonly(options.snapshot_readonly_unset.encode('utf8'))
-
-    _fuse.operations.destroy()
     return
 
 
@@ -351,10 +326,10 @@ def do(options, compression_methods=None):
             return remove_snapshot_older(options, _fuse)
 
         if options.snapshot_readonly_set:
-            return print_snapshot_readonly(options, _fuse, True)
+            return set_snapshot_readonly(options, _fuse, True)
 
         if options.snapshot_readonly_unset:
-            return print_snapshot_readonly(options, _fuse, False)
+            return set_snapshot_readonly(options, _fuse, False)
 
         if options.snapshot_stats:
             return print_snapshot_stats(options, _fuse)

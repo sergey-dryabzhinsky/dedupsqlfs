@@ -152,6 +152,9 @@ class DbManager( object ):
             elif name == "subvolume":
                 from dedupsqlfs.db.sqlite.table.subvolume import TableSubvolume
                 self._table[ name ] = TableSubvolume(self)
+            elif name == "tmp_ids":
+                from dedupsqlfs.db.sqlite.table.tmp_ids import TableTmpIds
+                self._table[ name ] = TableTmpIds(self)
             else:
                 raise ValueError("Unknown database %r" % name)
         return self._table[ name ]
@@ -226,6 +229,9 @@ class DbManager( object ):
     def copy(self, oldTableName, newTableName):
         t1 = self.getTable(oldTableName)
         t2 = self.getTable(newTableName)
+
+        t1.create()
+        t1.close()
 
         # Rename files
         shutil.copyfile(t1.getDbFilePath(), t2.getDbFilePath())

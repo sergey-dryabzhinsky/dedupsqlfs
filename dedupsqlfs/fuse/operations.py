@@ -1330,6 +1330,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         optTable = self.getTable("option")
         inited = optTable.get("inited")
 
+        self.getLogger().debug("__init_store(): inited=%r" % inited)
+
         if not inited:
 
             nameRoot = constants.ROOT_SUBVOLUME_NAME
@@ -2113,7 +2115,11 @@ class DedupOperations(llfuse.Operations): # {{{1
     def __collect_strings(self): # {{{4
 
         tableName = self.getTable("name")
-        tableTree = self.getTable("tree")
+
+        subv = Subvolume(self)
+        subv.prepareTreeNameIds()
+
+        tableTmp = self.getTable("tmp_ids")
 
         self.getLogger().debug("Clean unused path segments...")
 
@@ -2140,7 +2146,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not nameIds:
                 continue
 
-            treeNameIds = tableTree.get_names_by_names(nameIds)
+            treeNameIds = tableTmp.get_ids_by_ids(nameIds)
 
             to_delete = ()
             for name_id in nameIds:

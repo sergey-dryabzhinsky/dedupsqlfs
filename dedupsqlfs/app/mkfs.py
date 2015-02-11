@@ -29,7 +29,7 @@ def mkfs(options, compression_methods=None, hash_functions=None):
         ops = DedupOperations()
 
         _fuse = DedupFS(
-            ops, options.mountpoint,
+            ops, None,
             options,
             fsname="dedupsqlfs", allow_root=True)
 

@@ -22,12 +22,7 @@ class Snapshot(Subvolume):
             return
 
         subvol_from = from_subvol
-        if not from_subvol.startswith(b'@'):
-            subvol_from = b'@' + from_subvol
-
         subvol_to = with_name
-        if not with_name.startswith(b'@'):
-            subvol_to = b'@' + with_name
 
         tableSubvol = self.getTable('subvolume')
         subvolItemTo = tableSubvol.find(subvol_to)
@@ -36,7 +31,7 @@ class Snapshot(Subvolume):
             return
         else:
             # New subvol
-            subvol_id = tableSubvol.insert(subvol_from, int(time()))
+            subvol_id = tableSubvol.insert(subvol_to, int(time()))
             tableSubvol.readonly(subvol_id)
             subvolItemTo = tableSubvol.get(subvol_id)
 

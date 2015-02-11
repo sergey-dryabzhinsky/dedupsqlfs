@@ -134,7 +134,7 @@ class Subvolume(object):
                 readonly = True
 
             self.print_out("%-46s| %-10r| %-14s| %-20s| %-20s| %-20s|\n" % (
-                subvol["name"],
+                subvol["name"].decode(),
                 readonly,
                 format_size(apparent_size),
                 ctime,
@@ -143,6 +143,30 @@ class Subvolume(object):
                 ))
 
         self.print_out("-"*(46+12+16+22+22+22+1) + "\n")
+
+        return
+
+
+    def prepareTreeNameIds(self):
+        """
+        List all subvolumes
+        """
+
+        tableSubvol = self.getTable('subvolume')
+        tableTmp = self.getTable('tmp_ids')
+
+        for subvol_id in tableSubvol.get_ids():
+
+            subvol = tableSubvol.get(subvol_id)
+
+            tableTree = self.getTable("tree_" + subvol["hash"])
+
+            curTree = tableTree.getCursor()
+            curTree.execute("SELECT DISTINCT name_id FROM `%s`" % tableTree.getName())
+
+            for node in iter(curTree.fetchone, None):
+                if not tableTmp.find(node["name_id"]):
+                    tableTmp.insert(node["name_id"])
 
         return
 
@@ -159,12 +183,10 @@ class Subvolume(object):
 
         tableSubvol = self.getTable('subvolume')
 
-        subvol_id = tableSubvol.find(name)
-        if not subvol_id:
+        subvolItem = tableSubvol.find(name)
+        if not subvolItem:
             self.getLogger().error("Subvolume with name %r not found!" % name)
             return False
-
-        subvolItem = self.getTable('subvolume').get(subvol_id)
 
         try:
             self.getTable('tree_' + subvolItem["hash"]).drop()
@@ -173,7 +195,7 @@ class Subvolume(object):
             self.getTable('inode_option_' + subvolItem["hash"]).drop()
             self.getTable('link_' + subvolItem["hash"]).drop()
             self.getTable('xattr_' + subvolItem["hash"]).drop()
-            self.getTable('subvolume').delete(subvol_id)
+            self.getTable('subvolume').delete(subvolItem["id"])
         except Exception as e:
             self.getLogger().warn("Can't remove subvolume!")
             self.getLogger().error("E: %s" % e)

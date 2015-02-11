@@ -603,6 +603,7 @@ class DbManager( object ):
         t1 = self.getTable(oldTableName)
         t2 = self.getTable(newTableName)
 
+        t1.create()
         t2.create()
 
         # Rename files

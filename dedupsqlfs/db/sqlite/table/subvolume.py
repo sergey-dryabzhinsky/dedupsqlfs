@@ -23,7 +23,7 @@ class TableSubvolume( Table ):
                 "`readonly` TINYINT UNSIGNED NOT NULL DEFAULT 0, "+
                 "created_at INTEGER NOT NULL, "+
                 "mounted_at INTEGER, "+
-                "updated_at INTEGER,"
+                "updated_at INTEGER"
             ");"
         )
         self.createIndexIfNotExists("hash", ('hash',), unique=True)
@@ -47,7 +47,7 @@ class TableSubvolume( Table ):
         bname = sqlite3.Binary(name)
 
         cur.execute("INSERT INTO `%s`(hash, name, created_at, mounted_at, updated_at) " % self.getName()+
-                    "VALUES (?, ?, ?, ?)", (digest, bname, created_at, mounted_at, updated_at))
+                    "VALUES (?, ?, ?, ?, ?)", (digest, bname, created_at, mounted_at, updated_at))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
@@ -100,6 +100,8 @@ class TableSubvolume( Table ):
         cur = self.getCursor()
         cur.execute("SELECT * FROM `%s` WHERE id=?" % self.getName(), (subvol_id,))
         item = cur.fetchone()
+        if item:
+            item['hash'] = item['hash'].decode()
         self.stopTimer('get')
         return item
 
@@ -116,6 +118,8 @@ class TableSubvolume( Table ):
             " WHERE `hash`=?", (digest,)
         )
         item = cur.fetchone()
+        if item:
+            item['hash'] = item['hash'].decode()
         self.stopTimer('find')
         return item
 

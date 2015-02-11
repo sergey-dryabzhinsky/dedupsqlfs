@@ -514,7 +514,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.mounted_subvolume_name = self.getOption("mounted_subvolume")
             if self.mounted_subvolume_name:
-                self.mounted_subvolume_name = self.mounted_subvolume.encode('utf8')
+                self.mounted_subvolume_name = b'' + self.mounted_subvolume.encode()
 
             self.__select_subvolume()
             self.__get_opts_from_db()
@@ -1364,7 +1364,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().warning("__select_subvolume(1.2): subvolume not found, select default")
                 self.mounted_subvolume_name = constants.ROOT_SUBVOLUME_NAME
         else:
-            check = optTable.get("mounted_subvolume")
+            check = optTable.get("mounted_subvolume", True)
             if check:
                 self.getLogger().warning("__select_subvolume(1.2): subvolume not found, select previous: %r" % check)
                 self.mounted_subvolume_name = check
@@ -1375,9 +1375,9 @@ class DedupOperations(llfuse.Operations): # {{{1
         if self.mounted_subvolume_name:
             optTable.update("mounted_subvolume", self.mounted_subvolume_name)
 
-            subvol_id = subvTable.find(self.mounted_subvolume_name)
-            if subvol_id:
-                self.mounted_subvolume = subvTable.get(subvol_id)
+            subvolItem = subvTable.find(self.mounted_subvolume_name)
+            if subvolItem:
+                self.mounted_subvolume = subvolItem
             else:
                 subv = Subvolume(self)
                 self.mounted_subvolume = subv.create(self.mounted_subvolume_name)
@@ -1424,7 +1424,6 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.getLogger().debug("__insert->(parent_inode=%i,name=%r,mode=%o,size=%i)", parent_inode, name, mode, size)
 
         nlinks = mode & stat.S_IFDIR and 2 or 1
-        blksz = mode & stat.S_IFREG and self.block_size or 0
 
         manager = self.getManager()
         inodeTable = manager.getTable("inode")
@@ -1435,8 +1434,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         inode_id = inodeTable.insert(
             nlinks, mode, ctx.uid, ctx.gid, rdev, size,
             t_i, t_i, t_i,
-            t_ns, t_ns, t_ns,
-            blksz
+            t_ns, t_ns, t_ns
         )
 
         name_id = self.__intern(name)

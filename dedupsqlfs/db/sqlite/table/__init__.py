@@ -303,7 +303,7 @@ class Table( object ):
         cur = self.getCursor()
 
         cur.execute(
-            "PRAGMA index_info(`?`);",
+            "PRAGMA index_info(`%s`);" %
             (self.getName()+"_" + indexName,)
         )
         row = cur.fetchone()

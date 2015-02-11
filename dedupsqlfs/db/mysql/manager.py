@@ -163,7 +163,7 @@ class DbManager( object ):
             elif name == "inode":
                 from dedupsqlfs.db.mysql.table.inode import TableInode
                 self._table[ name ] = TableInode(self)
-            elif name.startswith("inode_"):
+            elif name.startswith("inode_") and not name.startswith("inode_hash_block"):
                 from dedupsqlfs.db.sqlite.table.inode import TableInode
                 self._table[ name ] = TableInode(self)
                 self._table[ name ].setName(name)

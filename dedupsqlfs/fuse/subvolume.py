@@ -30,7 +30,7 @@ class Subvolume(object):
         return self._manager
 
     def getTable(self, name):
-        return self.getManager().getTable(name)
+        return self.getManager().getManager().getTable(name)
 
     def getLogger(self):
         return self.getManager().getLogger()
@@ -220,12 +220,10 @@ class Subvolume(object):
 
         tableSubvol = self.getTable('subvolume')
 
-        subvol_id = tableSubvol.find(name)
-        if not subvol_id:
+        subvolItem = tableSubvol.find(name)
+        if not subvolItem:
             self.getLogger().error("Subvolume with name %r not found!" % name)
             return False
-
-        subvolItem = self.getTable('subvolume').get(subvol_id)
 
         tableInode = self.getTable('inode_' + subvolItem["hash"])
         tableIndex = self.getTable('inode_hash_block_' + subvolItem["hash"])

@@ -9,7 +9,7 @@ __author__ = 'sergey'
 
 from time import sleep
 from .base import BaseCompressTool, Task, Result, constants
-from multiprocessing import Queue, Process, cpu_count
+from multiprocessing import JoinableQueue, Process, cpu_count
 
 class MultiProcCompressTool(BaseCompressTool):
 
@@ -23,13 +23,13 @@ class MultiProcCompressTool(BaseCompressTool):
         self._procs = []
 
         self._np = cpu_count()
-        self._task_queue = Queue()
-        self._result_queue = Queue()
+        self._task_queue = JoinableQueue()
+        self._result_queue = JoinableQueue()
 
         for n in range(self._np):
-            p = Process(None, None, "Compressor-%s" % n, (self._task_queue, self._result_queue,))
-            self._procs.append(p)
+            p = Process(target=self._worker, name="Compressor-%s" % n, args=(self._task_queue, self._result_queue,))
             p.start()
+            self._procs.append(p)
 
         return self
 
@@ -61,8 +61,8 @@ class MultiProcCompressTool(BaseCompressTool):
     def _worker(self, in_queue, out_queue):
         """
 
-        @param in_queue: multiprocessing.Queue
-        @param out_queue: multiprocessing.Queue
+        @param in_queue: {multiprocessing.JoinableQueue}
+        @param out_queue: {multiprocessing.JoinableQueue}
 
         @var task: Task
 
@@ -81,6 +81,7 @@ class MultiProcCompressTool(BaseCompressTool):
                 continue
 
             if type(task) is str and task == "stop":
+                in_queue.task_done()
                 break
 
             if type(task) is Task:
@@ -88,6 +89,7 @@ class MultiProcCompressTool(BaseCompressTool):
                 result.cdata, result.method = self._compressData(task.data)
                 result.key = task.key
                 out_queue.put_nowait(result)
+                in_queue.task_done()
 
         return
 

@@ -66,7 +66,7 @@ class BaseCompressTool(object):
         return self
 
     def getOption(self, key, default=None):
-        return self._options.get(key, default=default)
+        return self._options.get(key, default)
 
     def appendCompression(self, name):
 

@@ -1801,6 +1801,13 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.getLogger().debug("write block: inode=%s, block number=%s, data length=%s, sparse=%r" % (inode, block_number, block_length, sparse_block,))
 
+        result = {
+            "hash": None,
+            "data": None,
+            "new": False,
+            "update": False
+        }
+
         if (block_length == 0 and index_hash_id) or sparse_block:
             self.getLogger().debug("write block: remove empty or zero-filled block")
             tableIndex.delete_by_inode_number(inode, block_number)
@@ -1809,57 +1816,45 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.time_spent_writing_blocks += time.time() - start_time
             return
 
-        tableBlock = self.getTable("block")
         tableHash = self.getTable("hash")
         tableHCT = self.getTable("hash_compression_type")
-        tableHSZ = self.getTable("hash_sizes")
 
         hash_value = self.__hash(data_block)
         hash_id = tableHash.find(hash_value)
 
-        real_size = block_length
+        result["data"] = data_block
+        result["hash"] = hash_id
 
         # It is new block now?
         if not hash_id:
-
-            cdata, cmethod = self.__compress(data_block)
 
             hash_count = 0
             if index_hash_id:
                 hash_count = tableIndex.get_count_hash(index_hash_id)
 
-            cdata_length = len(cdata)
-            real_comp_size = cdata_length
-
-            self.getLogger().debug("-- compression: method=%s, new data length = %s" % (cmethod, cdata_length))
+            result["new"] = True
 
             if hash_count == 1:
                 self.getLogger().debug("-- update one block data")
 
                 hash_id = index_hash_id
-                hash_CT = tableHCT.get(hash_id)
-
                 tableHash.update(hash_id, hash_value)
-                if hash_CT["type_id"] != self.getCompressionTypeId(cmethod):
-                    tableHCT.update(hash_id, self.getCompressionTypeId(cmethod))
-                tableBlock.update(hash_id, cdata)
-                tableHSZ.update(hash_id, real_size, real_comp_size)
+
+                result["hash"] = hash_id
+                result["update"] = True
             else:
                 self.getLogger().debug("-- insert new block data")
                 hash_id = tableHash.insert(hash_value)
-                tableBlock.insert(hash_id, cdata)
-                tableHCT.insert(hash_id, self.getCompressionTypeId(cmethod))
-                tableHSZ.insert(hash_id, real_size, real_comp_size)
+                result["hash"] = hash_id
 
             self.bytes_written += block_length
-            self.bytes_written_compressed += cdata_length
         else:
 #            hash_count = tableIndex.get_count_hash(hash_id)
 #            self.getLogger().debug("-- deduped by hash = %s, count in index db = %s" % (hash_id, hash_count,))
 
-            old_block = self.getTable("block").get(hash_id)
-
             if self.getOption('collision_check_enabled'):
+
+                old_block = self.getTable("block").get(hash_id)
 
                 hash_CT = tableHCT.get(hash_id)
                 old_data = self.__decompress(old_block["data"], hash_CT["type_id"]).getvalue()
@@ -1889,21 +1884,60 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.cached_indexes.set(inode, block_number, hash_id)
 
         self.time_spent_writing_blocks += time.time() - start_time
-        return
+        return result
 
 
     def __flush_old_cached_blocks(self, cached_blocks, writed=False):
         count = 0
+
+        blocksToCompress = {}
+        blocks = {}
+
         for inode, inode_data in cached_blocks.items():
             for block_number, block_data in inode_data.items():
                 if block_data["w"]:
                     block = block_data.get("block")
-                    self.__write_block_data(int(inode), int(block_number), block)
+                    item = self.__write_block_data(int(inode), int(block_number), block)
+                    if item["hash"]:
+                        blocksToCompress[ item["hash"] ] = item["data"]
+                        blocks[ item["hash"] ] = item
                     if writed:
                         count += 1
                 else:
                     if not writed:
                         count += 1
+
+        start_time = time.time()
+        compressedBlocks = self.getApplication().compressDataTool(blocksToCompress)
+        self.time_spent_compressing += time.time() - start_time
+
+        tableBlock = self.getTable("block")
+        tableHCT = self.getTable("hash_compression_type")
+        tableHSZ = self.getTable("hash_sizes")
+
+        for hash_id, cItem in compressedBlocks.items():
+            cdata, cmethod = cItem
+            dItem = blocks[ hash_id ]
+
+            real_size = len(dItem["data"])
+            real_comp_size = len(cdata)
+
+            if dItem["new"]:
+                if dItem["update"]:
+
+                    hash_CT = tableHCT.get(hash_id)
+                    if hash_CT["type_id"] != self.getCompressionTypeId(cmethod):
+                        tableHCT.update(hash_id, self.getCompressionTypeId(cmethod))
+                    tableBlock.update(hash_id, cdata)
+                    tableHSZ.update(hash_id, real_size, real_comp_size)
+
+                else:
+                    tableBlock.insert(hash_id, cdata)
+                    tableHCT.insert(hash_id, self.getCompressionTypeId(cmethod))
+                    tableHSZ.insert(hash_id, real_size, real_comp_size)
+
+                self.bytes_written_compressed += real_comp_size
+
         return count
 
     def __cache_block_hook(self): # {{{3

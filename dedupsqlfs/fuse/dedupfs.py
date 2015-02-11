@@ -79,10 +79,9 @@ class DedupFS(object): # {{{1
             fuse.init(self.operations, self.mountpoint, self._opts)
             fuse.main(single=True)
         except:
+            self._compressTool.stop()
             fuse.close(unmount=False)
             raise
-
-        self._compressTool.stop()
 
         fuse.close()
 
@@ -177,6 +176,8 @@ class DedupFS(object): # {{{1
             method, level = method.split("=")
             self._compressTool.setOption("compression_method", method)
             self._compressTool.getCompressor(method).setCustomCompressionLevel(level)
+        else:
+            self._compressTool.setOption("compression_method", method)
 
         methods = self.getOption("compression_custom")
         if methods and type(methods) in (tuple, list,):
@@ -189,6 +190,10 @@ class DedupFS(object): # {{{1
                     self._compressTool.getCompressor(method).setCustomCompressionLevel(level)
             self._compressTool.setOption("compression_custom", methods)
 
+        self._compressTool.setOption("compression_minimal_size", self.getOption("compression_minimal_size"))
+        self._compressTool.setOption("compression_level", self.getOption("compression_level"))
+        self._compressTool.setOption("compression_forced", self.getOption("compression_forced"))
+
         return
 
     def getCompressor(self, name):
@@ -197,6 +202,12 @@ class DedupFS(object): # {{{1
             return comp
         else:
             raise ValueError("Unknown compression method: %r" % (name,))
+
+    def compressDataTool(self, dataBlocks):
+        return self._compressTool.compressData(dataBlocks)
+
+    def decompressDataTool(self, method, compressedBlock):
+        return self._compressTool.decompressData(method, compressedBlock)
 
     def compressData(self, data):
         """

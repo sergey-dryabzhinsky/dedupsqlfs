@@ -3,6 +3,7 @@
 __author__ = 'sergey'
 
 import os
+import shutil
 
 class DbManager( object ):
 
@@ -220,6 +221,15 @@ class DbManager( object ):
     def create(self):
         for t in self.tables:
             self.getTable(t).create()
+        return self
+
+    def copy(self, oldTableName, newTableName):
+        t1 = self.getTable(oldTableName)
+        t2 = self.getTable(newTableName)
+
+        # Rename files
+        shutil.copyfile(t1.getDbFilePath(), t2.getDbFilePath())
+        t2.getCursor().execute("ALTER TABLE `%s` RENAME TO `%s`" % (oldTableName, newTableName,))
         return self
 
     pass

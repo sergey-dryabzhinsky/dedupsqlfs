@@ -71,9 +71,8 @@ class Subvolume(object):
             return False
 
         tableSubvol = self.getTable('subvolume')
-        subvol_id = tableSubvol.find(name)
-        if subvol_id:
-            subvolItem = self.getTable('subvolume').get(subvol_id)
+        subvolItem = tableSubvol.find(name)
+        if subvolItem:
             self.getLogger().warning("Subvolume with name %r already exists!" % name)
             return subvolItem
 

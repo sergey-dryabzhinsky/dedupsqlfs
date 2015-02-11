@@ -598,3 +598,15 @@ class DbManager( object ):
         for t in self.tables:
             self.getTable(t).create()
         return self
+
+    def copy(self, oldTableName, newTableName):
+        t1 = self.getTable(oldTableName)
+        t2 = self.getTable(newTableName)
+
+        t2.create()
+
+        # Rename files
+        t2.getCursor().execute("INSERT `%s` SELECT * FROM `%s`;" % (newTableName, oldTableName,))
+        return self
+
+    pass

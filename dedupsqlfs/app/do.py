@@ -77,7 +77,7 @@ def list_subvolume(options, _fuse):
 
     from dedupsqlfs.fuse.subvolume import Subvolume
     sv = Subvolume(_fuse.operations)
-    sv.list()
+    sv.list(_fuse.getOption("subvol_list_with_stats"))
 
     _fuse.operations.destroy()
     return
@@ -445,6 +445,7 @@ def main(): # {{{1
 
     snapshot = parser.add_argument_group('Snapshot')
     snapshot.add_argument('--list-snapshots', dest='snapshot_list', action='store_true', help="Show list of all snapshots")
+    snapshot.add_argument('--list-snapshots-with-stats', dest='subvol_list_with_stats', action='store_true', help="Show more statistics in snapshots list. Slow.")
     snapshot.add_argument('--select-subvol', dest='subvol_selected', metavar='NAME', default=None, help="Select subvolume for operations.")
     snapshot.add_argument('--create-snapshot', dest='snapshot_create', metavar='NAME', help="Create new snapshot from selected subvolume")
     snapshot.add_argument('--remove-snapshot', dest='snapshot_remove', metavar='NAME', help="Remove selected snapshot")
@@ -456,6 +457,7 @@ def main(): # {{{1
 
     subvol = parser.add_argument_group('Subvolume')
     subvol.add_argument('--list-subvol', dest='subvol_list', action='store_true', help="Show list of all subvolumes")
+    subvol.add_argument('--list-subvol-with-stats', dest='subvol_list_with_stats', action='store_true', help="Show more statistics in subvolumes list. Slow.")
     subvol.add_argument('--create-subvol', dest='subvol_create', metavar='NAME', help="Create new subvolume")
     subvol.add_argument('--remove-subvol', dest='subvol_remove', metavar='NAME', help="Remove selected subvolume")
     subvol.add_argument('--subvol-stats', dest='subvol_stats', metavar='NAME', help="Print information about selected subvolume")

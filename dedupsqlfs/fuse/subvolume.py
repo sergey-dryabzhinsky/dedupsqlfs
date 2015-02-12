@@ -76,7 +76,9 @@ class Subvolume(object):
             self.getLogger().warning("Subvolume with name %r already exists!" % name)
             return subvolItem
 
-        subvol_id = self.getTable('subvolume').insert(name, int(time()))
+        t_i, t_ns = self.getManager().newctime_tuple()
+
+        subvol_id = self.getTable('subvolume').insert(name, t_i, None, t_i)
         subvolItem = self.getTable('subvolume').get(subvol_id)
 
         tableName = self.getTable("name")
@@ -84,7 +86,6 @@ class Subvolume(object):
         tableInode = self.getTable('inode_' + subvolItem["hash"])
 
         uid, gid = os.getuid(), os.getgid()
-        t_i, t_ns = self.getManager().newctime_tuple()
         nameRoot = b''
 
         name_id = tableName.find(nameRoot)
@@ -99,7 +100,7 @@ class Subvolume(object):
 
         return subvolItem
 
-    def list(self):
+    def list(self, with_stats=False):
         """
         List all subvolumes
         """
@@ -107,17 +108,29 @@ class Subvolume(object):
         tableSubvol = self.getTable('subvolume')
 
         self.print_out("Subvolumes:\n")
-        self.print_out("-"*(46+12+16+22+22+22+1) + "\n")
-        self.print_out("%-46s| %-10s| %-14s| %-20s| %-20s| %-20s|\n" % (
-            "Name", "ReadOnly", "Apparent Size", "Created", "Last mounted", "Last updated"))
-        self.print_out("-"*(46+12+16+22+22+22+1) + "\n")
+
+        if not with_stats:
+            self.print_out("-"*(46+11+16+22+22+22+1) + "\n")
+            self.print_out("%-46s| %-9s| %-14s| %-20s| %-20s| %-20s|\n" % (
+                "Name", "ReadOnly", "Apparent Size", "Created", "Last mounted", "Last updated"))
+            self.print_out("-"*(46+11+16+22+22+22+1) + "\n")
+        else:
+            self.print_out("-"*(46+11+16+15+19+17+22+22+22+1) + "\n")
+            self.print_out("%-46s| %-9s| %-14s| %-13s| %-17s| %-15s| %-20s| %-20s| %-20s|\n" % (
+                "Name", "ReadOnly",
+                "Apparent Size", "Unique Size", "Compressed Size", "Dedupped Size",
+                "Created", "Last mounted", "Last updated"))
+            self.print_out("-"*(46+11+16+15+19+17+22+22+22+1) + "\n")
 
         for subvol_id in tableSubvol.get_ids():
 
             subvol = tableSubvol.get(subvol_id)
 
-            tableInode = self.getTable("inode_" + subvol["hash"])
-            apparent_size = tableInode.get_sizes()
+            if not with_stats:
+                tableInode = self.getTable("inode_" + subvol["hash"])
+                apparent_size = tableInode.get_sizes()
+            else:
+                usage = self.get_usage(subvol["name"])
 
             ctime = "---"
             if subvol["created_at"]:
@@ -135,16 +148,32 @@ class Subvolume(object):
             if subvol["readonly"]:
                 readonly = True
 
-            self.print_out("%-46s| %-10r| %-14s| %-20s| %-20s| %-20s|\n" % (
-                subvol["name"].decode(),
-                readonly,
-                format_size(apparent_size),
-                ctime,
-                mtime,
-                utime,
-                ))
+            if not with_stats:
+                self.print_out("%-46s| %-10r| %-14s| %-20s| %-20s| %-20s|\n" % (
+                    subvol["name"].decode(),
+                    readonly,
+                    format_size(apparent_size),
+                    ctime,
+                    mtime,
+                    utime,
+                    ))
+            else:
+                self.print_out("%-46s| %-9s| %-14s| %-13s| %-17s| %-15s| %-20s| %-20s| %-20s|\n" % (
+                    subvol["name"].decode(),
+                    readonly,
+                    format_size(usage["apparentSize"]),
+                    format_size(usage["uniqueSize"]),
+                    format_size(usage["compressedSize"]),
+                    format_size(usage["dedupSize"]),
+                    ctime,
+                    mtime,
+                    utime,
+                    ))
 
-        self.print_out("-"*(46+12+16+22+22+22+1) + "\n")
+        if not with_stats:
+            self.print_out("-"*(46+11+16+22+22+22+1) + "\n")
+        else:
+            self.print_out("-"*(46+11+16+15+19+17+22+22+22+1) + "\n")
 
         return
 

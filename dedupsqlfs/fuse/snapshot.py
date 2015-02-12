@@ -31,11 +31,13 @@ class Snapshot(Subvolume):
             return
         else:
             # New subvol
-            subvol_id = tableSubvol.insert(subvol_to, int(time()))
+            subvol_id = tableSubvol.insert(subvol_to, int(time()), subvolItemFrom["updated_at"])
             tableSubvol.readonly(subvol_id)
             subvolItemTo = tableSubvol.get(subvol_id)
 
         subvolItemFrom = tableSubvol.find(subvol_from)
+
+        self.getManager().getManager().commit()
 
         self.getLogger().debug("Use subvolume: %r" % subvol_from)
         self.getLogger().debug("Into subvolume: %r" % subvol_to)
@@ -49,6 +51,8 @@ class Snapshot(Subvolume):
             )
 
         self.print_msg("Done\n")
+
+        self.getManager().getManager().commit()
 
         return
 

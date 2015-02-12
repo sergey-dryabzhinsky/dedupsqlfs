@@ -49,14 +49,11 @@ def create_subvolume(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("disable_subvolumes", True)
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
-    _fuse.setOption("cache_enabled", False)
+    _fuse.setOption("use_transactions", True)
     _fuse.setReadonly(False)
-
-    _fuse.operations.init()
 
     from dedupsqlfs.fuse.subvolume import Subvolume
     sv = Subvolume(_fuse.operations)
@@ -73,13 +70,10 @@ def list_subvolume(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("disable_subvolumes", True)
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(True)
-
-    _fuse.operations.init()
 
     from dedupsqlfs.fuse.subvolume import Subvolume
     sv = Subvolume(_fuse.operations)
@@ -96,13 +90,11 @@ def remove_subvolume(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("disable_subvolumes", True)
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
+    _fuse.setOption("use_transactions", True)
     _fuse.setReadonly(False)
-
-    _fuse.operations.init()
 
     from dedupsqlfs.fuse.subvolume import Subvolume
     sv = Subvolume(_fuse.operations)
@@ -120,13 +112,10 @@ def print_subvol_stats(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("disable_subvolumes", True)
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(True)
-
-    _fuse.operations.init()
 
     from dedupsqlfs.fuse.subvolume import Subvolume
     sv = Subvolume(_fuse.operations)
@@ -155,6 +144,7 @@ def create_snapshot(options, _fuse):
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
+    _fuse.setOption("use_transactions", True)
     _fuse.setReadonly(False)
 
     from dedupsqlfs.fuse.snapshot import Snapshot
@@ -173,6 +163,7 @@ def remove_snapshot(options, _fuse):
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
+    _fuse.setOption("use_transactions", True)
     _fuse.setReadonly(False)
 
     from dedupsqlfs.fuse.snapshot import Snapshot
@@ -191,6 +182,7 @@ def remove_snapshot_older(options, _fuse):
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
+    _fuse.setOption("use_transactions", True)
     _fuse.setReadonly(False)
 
     from dedupsqlfs.fuse.snapshot import Snapshot
@@ -227,6 +219,7 @@ def set_snapshot_readonly(options, _fuse, flag):
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
+    _fuse.setOption("use_transactions", True)
     _fuse.setReadonly(True)
 
     from dedupsqlfs.fuse.snapshot import Snapshot
@@ -239,17 +232,14 @@ def set_snapshot_readonly(options, _fuse, flag):
 
 
 def print_fs_stats(options, _fuse):
-    _fuse.setOption("disable_subvolumes", True)
     _fuse.setReadonly(True)
     _fuse.getLogger().setLevel(logging.INFO)
-    _fuse.operations.init()
     _fuse.report_disk_usage()
     _fuse.operations.destroy()
     return 0
 
 
 def data_vacuum(options, _fuse):
-    _fuse.setOption("disable_subvolumes", True)
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", True)
     _fuse.setOption("gc_enabled", False)
@@ -266,7 +256,6 @@ def data_defragment(options, _fuse):
     """
     @todo
     """
-    _fuse.setOption("disable_subvolumes", True)
     _fuse.setOption("gc_umount_enabled", True)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", True)
@@ -280,7 +269,6 @@ def data_defragment(options, _fuse):
 def do(options, compression_methods=None):
     from dedupsqlfs.fuse.dedupfs import DedupFS
     from dedupsqlfs.fuse.operations import DedupOperations
-
 
     ops = None
     try:

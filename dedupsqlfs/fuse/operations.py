@@ -1064,7 +1064,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.subvol_uptate_last_run = t_now
 
-        if self.mounted_subvolume and not self.getOption("disable_subvolumes"):
+        if self.mounted_subvolume:
             self.getTable('subvolume').update_time(self.mounted_subvolume["id"])
         return self
 

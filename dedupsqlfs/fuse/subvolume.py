@@ -95,6 +95,8 @@ class Subvolume(object):
         inode_id = tableInode.insert(2, self.root_mode, uid, gid, 0, sz, t_i, t_i, t_i, t_ns, t_ns, t_ns)
         tableTree.insert(None, name_id, inode_id)
 
+        self.getManager().getManager().commit()
+
         return subvolItem
 
     def list(self):
@@ -230,6 +232,8 @@ class Subvolume(object):
             self.getLogger().error(traceback.format_exc())
             return
 
+        self.getManager().getManager().commit()
+
         return
 
     def readonly(self, name, flag=True):
@@ -253,6 +257,8 @@ class Subvolume(object):
             return False
 
         changed = self.getTable('subvolume').readonly(subvol_id, flag)
+
+        self.getManager().getManager().commit()
 
         return changed > 0
 
@@ -344,6 +350,8 @@ class Subvolume(object):
         @type  name: bytes
         """
         usage = self.get_usage(name, True)
+        if not usage:
+            return
 
         self.print_msg("\n")
 

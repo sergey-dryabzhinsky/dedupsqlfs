@@ -217,77 +217,111 @@ class DedupFS(object): # {{{1
                 self.getLogger().setLevel(logging.NOTSET)
 
     def report_disk_usage(self): # {{{3
+
         manager = self.operations.getManager()
         disk_usage = manager.getFileSize()
 
-        self.getLogger().info("--" * 79)
+        self.getLogger().info("--" * 39)
 
-        tableInode = manager.getTable("inode")
+        tableSubvol = manager.getTable("subvolume")
 
-        tableIndex = manager.getTable("inode_hash_block")
+        apparentSize = 0
+        dataSize = 0
+        uniqueSize = 0
+        compressedSize = 0
+        compressedUniqueSize = 0
+        compMethods = {}
+        hashCT = {}
+        hashSZ = {}
 
-        apparent_size = tableInode.get_sizes()
+        for subvol_id in tableSubvol.get_ids():
 
-        dataSizes = tableIndex.get_sum_sizes()
+            subvol = tableSubvol.get(subvol_id)
+            tableInode = manager.getTable("inode_" + subvol["hash"])
+            apparentSize += tableInode.get_sizes()
 
-        real_size = dataSizes["real"]
-        apparent_size_u = dataSizes["writed"]
-        compressed_size = dataSizes["real_comp"]
+        tableHCT = manager.getTable('hash_compression_type')
+        tableHS = manager.getTable('hash_sizes')
+        tableH = manager.getTable('hash')
 
-        if apparent_size:
-            self.getLogger().info("Apparent size is %s (unique %s).",
-                             format_size(apparent_size), format_size(apparent_size_u)
+        curH = tableH.getCursor()
+        curH.execute("SELECT `id` FROM `%s`" % tableH.getName())
+
+        for item in iter(curH.fetchone, None):
+
+            hash_id = item["id"]
+
+            if hash_id in hashCT:
+                method = hashCT[hash_id]
+            else:
+                hctItem = tableHCT.get(hash_id)
+                method = self.operations.getCompressionTypeName(hctItem["type_id"])
+                hashCT[hash_id] = method
+
+            compMethods[ method ] = compMethods.get(method, 0) + 1
+
+            if hash_id in hashSZ:
+                hszItem = hashSZ[hash_id]
+            else:
+                hszItem = tableHS.get(hash_id)
+                hashSZ[hash_id] = hszItem
+                uniqueSize += hszItem["real_size"]
+                compressedUniqueSize += hszItem["compressed_size"]
+
+            dataSize += hszItem["real_size"]
+            compressedSize += hszItem["compressed_size"]
+
+        sparseSize = apparentSize - dataSize
+        dedupSize = dataSize - uniqueSize
+
+        count_all = 0
+        comp_types = {}
+
+        for method, cnt in compMethods.items():
+            count_all += cnt
+            comp_types[ cnt ] = method
+
+        if apparentSize:
+            self.getLogger().info("Apparent size is %s, unique %s.",
+                             format_size(apparentSize), format_size(uniqueSize)
             )
 
-            compressed_size_u = dataSizes["writed_comp"]
+            self.getLogger().info("Deduped size is %s, ratio is %.2f%%.",
+                             format_size(dedupSize),
+                             100.0 * dedupSize / apparentSize)
 
-            sparce_size = apparent_size - real_size
-            dedup_size = real_size - apparent_size_u
+            self.getLogger().info("Sparse size is %s, ratio is %.2f%%.",
+                             format_size(sparseSize),
+                             100.0 * sparseSize / apparentSize)
 
-            self.getLogger().info("Deduped size is %s (ratio is %.2f%%).",
-                             format_size(dedup_size),
-                             100.0 * dedup_size / apparent_size)
-
-            self.getLogger().info("Sparce size is %s (ratio is %.2f%%).",
-                             format_size(sparce_size),
-                             100.0 * sparce_size / apparent_size)
-
-            self.getLogger().info("Databases take up %s (ratio is %.2f%%).",
+            self.getLogger().info("Databases take up %s, ratio is %.2f%%.",
                              format_size(disk_usage),
-                             100.0 * disk_usage / apparent_size_u)
-            self.getLogger().info("Compressed data take up %s (unique %s, ratioA is %.2f%%, ratioD is %.2f%%).",
-                             format_size(compressed_size), format_size(compressed_size_u),
-                             100.0 * (apparent_size - compressed_size) / apparent_size,
-                             100.0 * compressed_size_u / disk_usage,
+                             100.0 * disk_usage / uniqueSize)
+            self.getLogger().info("Compressed data take up %s:\n- unique %s,\n- saved apparent space is %.2f%%,\n- use of database space: %.2f%%).",
+                             format_size(compressedSize), format_size(compressedUniqueSize),
+                             100.0 * (apparentSize - compressedSize) / apparentSize,
+                             100.0 * compressedUniqueSize / disk_usage,
             )
-            self.getLogger().info("Meta data and indexes take up %s (ratioA is %.2f%%, rationD is %.2f%%).",
-                             format_size(disk_usage - compressed_size_u),
-                             100.0 * (disk_usage - compressed_size_u) / apparent_size_u,
-                             100.0 * (disk_usage - compressed_size_u) / disk_usage,
+            self.getLogger().info("Meta data and indexes take up %s:\n- ratio over apparent is %.2f%%,\n- use of database space: %.2f%%).",
+                             format_size(disk_usage - compressedUniqueSize),
+                             100.0 * (disk_usage - compressedUniqueSize) / uniqueSize,
+                             100.0 * (disk_usage - compressedUniqueSize) / disk_usage,
             )
 
         else:
             self.getLogger().info("Apparent size is %s.",
-                             format_size(apparent_size)
+                             format_size(apparentSize)
             )
             self.getLogger().info("Compressed size is %s.",
-                             format_size(compressed_size)
+                             format_size(compressedSize)
             )
             self.getLogger().info("Databases take up %s.",
                              format_size(disk_usage)
             )
 
-        if compressed_size:
-            self.getLogger().info("--" * 79)
+        if compressedSize:
+            self.getLogger().info("--" * 39)
             self.getLogger().info("Compression by types:")
-            count_all = 0
-            comp_types = {}
-
-            hctTable = manager.getTable("hash_compression_type")
-
-            for item in hctTable.count_compression_type():
-                count_all += item["cnt"]
-                comp_types[ item["cnt"] ] = self.operations.getCompressionTypeName( item["type_id"] )
 
             keys = list(comp_types.keys())
             keys.sort(reverse=True)

@@ -31,11 +31,13 @@ class Snapshot(Subvolume):
             return
         else:
             # New subvol
-            subvol_id = tableSubvol.insert(subvol_to, int(time()), subvolItemFrom["updated_at"])
+            subvol_id = tableSubvol.insert(subvol_to, int(time()))
             tableSubvol.readonly(subvol_id)
             subvolItemTo = tableSubvol.get(subvol_id)
 
         subvolItemFrom = tableSubvol.find(subvol_from)
+
+        tableSubvol.update_time(subvolItemTo["id"], subvolItemFrom["updated_t"])
 
         self.getManager().getManager().commit()
 

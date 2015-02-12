@@ -1902,7 +1902,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 if block_data["w"]:
                     block = block_data.get("block")
                     item = self.__write_block_data(int(inode), int(block_number), block)
-                    if item["hash"]:
+                    if item["hash"] and item["new"]:
                         blocksToCompress[ item["hash"] ] = item["data"]
                         del item["data"]
                         blocks[ item["hash"] ] = item
@@ -1925,24 +1925,22 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             cmethod_id = self.getCompressionTypeId(cmethod)
 
-            if dItem["new"]:
+            tableBlock.insert(hash_id, cdata)
 
-                tableBlock.insert(hash_id, cdata)
+            hash_CT = tableHCT.get(hash_id)
+            if hash_CT:
+                if hash_CT["type_id"] != cmethod_id:
+                    tableHCT.update(hash_id, cmethod_id)
+            else:
+                tableHCT.insert(hash_id, cmethod_id)
 
-                hash_CT = tableHCT.get(hash_id)
-                if hash_CT:
-                    if hash_CT["type_id"] != cmethod_id:
-                        tableHCT.update(hash_id, cmethod_id)
-                else:
-                    tableHCT.insert(hash_id, cmethod_id)
+            hash_SZ = tableHSZ.get(hash_id)
+            if hash_SZ:
+                tableHSZ.update(hash_id, real_size, real_comp_size)
+            else:
+                tableHSZ.insert(hash_id, real_size, real_comp_size)
 
-                hash_SZ = tableHSZ.get(hash_id)
-                if hash_SZ:
-                    tableHSZ.update(hash_id, real_size, real_comp_size)
-                else:
-                    tableHSZ.insert(hash_id, real_size, real_comp_size)
-
-                self.bytes_written_compressed += real_comp_size
+            self.bytes_written_compressed += real_comp_size
 
         self.time_spent_compressing += self.getApplication().getCompressTool().time_spent_compressing
 

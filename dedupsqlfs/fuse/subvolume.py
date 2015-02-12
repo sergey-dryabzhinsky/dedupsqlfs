@@ -294,30 +294,25 @@ class Subvolume(object):
 
             if hashTypes:
 
-                method = False
                 if hash_id in hashCT:
                     method = hashCT[hash_id]
                 else:
                     hctItem = tableHCT.get(hash_id)
-                    if hctItem:
-                        method = self.getManager().getCompressionTypeName(hctItem["type_id"])
-                        hashCT[hash_id] = method
+                    method = self.getManager().getCompressionTypeName(hctItem["type_id"])
+                    hashCT[hash_id] = method
 
-                if method:
-                    compMethods[ method ] = compMethods.get(method, 0) + 1
+                compMethods[ method ] = compMethods.get(method, 0) + 1
 
             if hash_id in hashSZ:
                 hszItem = hashSZ[hash_id]
             else:
                 hszItem = tableHS.get(hash_id)
-                if hszItem:
-                    hashSZ[hash_id] = hszItem
-                    uniqueSize += hszItem["real_size"]
-                    compressedUniqueSize += hszItem["compressed_size"]
+                hashSZ[hash_id] = hszItem
+                uniqueSize += hszItem["real_size"]
+                compressedUniqueSize += hszItem["compressed_size"]
 
-            if hszItem:
-                dataSize += hszItem["real_size"]
-                compressedSize += hszItem["compressed_size"]
+            dataSize += hszItem["real_size"]
+            compressedSize += hszItem["compressed_size"]
 
         apparentSize = tableInode.get_sizes()
         sparseSize = apparentSize - dataSize

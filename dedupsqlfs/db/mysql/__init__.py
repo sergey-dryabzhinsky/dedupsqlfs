@@ -4,9 +4,13 @@ import subprocess
 
 def get_table_engines():
 
-    table_engines = ('MyISAM', 'InnoDB',)
+    try:
+        output = subprocess.check_output(["mysqld", "--version"])
+        table_engines = ('MyISAM', 'InnoDB',)
+        if output.find(b'MariaDB'):
+            table_engines += ('Aria', 'TokuDB',)
+    except:
+        # No MySQL?
+        table_engines = ()
 
-    output = subprocess.check_output(["mysqld", "--version"])
-    if output.find(b'MariaDB'):
-        table_engines += ('Aria', 'TokuDB',)
     return table_engines

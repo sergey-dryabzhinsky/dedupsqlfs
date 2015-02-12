@@ -13,7 +13,11 @@ def check_engines():
         pass
     try:
         import pymysql
-        engines += ('mysql',)
+
+        from dedupsqlfs.db.mysql import get_table_engines
+
+        if len(get_table_engines()):
+            engines += ('mysql',)
     except:
         pass
 

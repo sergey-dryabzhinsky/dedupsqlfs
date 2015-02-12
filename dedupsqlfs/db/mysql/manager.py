@@ -213,6 +213,9 @@ class DbManager( object ):
             elif name == "tmp_ids":
                 from dedupsqlfs.db.mysql.table.tmp_ids import TableTmpIds
                 self._table[ name ] = TableTmpIds(self)
+            elif name == "tmp_id_count":
+                from dedupsqlfs.db.mysql.table.tmp_id_count import TableTmpIdCount
+                self._table[ name ] = TableTmpIdCount(self)
             else:
                 raise ValueError("Unknown database %r" % name)
         return self._table[ name ]

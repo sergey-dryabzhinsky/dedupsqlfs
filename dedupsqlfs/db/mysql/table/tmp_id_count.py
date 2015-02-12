@@ -4,9 +4,9 @@ __author__ = 'sergey'
 
 from dedupsqlfs.db.mysql.table import Table
 
-class TableTmpIds( Table ):
+class TableTmpIdCount( Table ):
 
-    _table_name = "tmp_ids"
+    _table_name = "tmp_id_count"
 
     def create( self ):
         c = self.getCursor()
@@ -14,7 +14,8 @@ class TableTmpIds( Table ):
         # Create table
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
-                "`id` BIGINT UNSIGNED PRIMARY KEY"+
+                "`id` BIGINT UNSIGNED PRIMARY KEY,"+
+                "`cnt` BIGINT UNSIGNED"+
             ")"+
             self._getCreationAppendString()
         )
@@ -29,7 +30,7 @@ class TableTmpIds( Table ):
 
         cur.execute(
             "INSERT INTO `%s` " % self.getName()+
-            " (`id`) VALUES (%(id)s)",
+            " (`id`,`cnt`) VALUES (%(id)s, 1)",
             {
                 "id": some_id,
             }
@@ -57,16 +58,22 @@ class TableTmpIds( Table ):
         self.stopTimer('find')
         return item
 
-    def get_ids_by_ids(self, ids):
+    def inc( self, some_id):
+        """
+        :param some_id: int
+        :return: int
+        """
         self.startTimer()
-        ret_ids = ()
-        id_str = ",".join(ids)
-        if id_str:
-            cur = self.getCursor()
-            cur.execute("SELECT `id` FROM `%s` " % self.getName()+
-                        " WHERE `id` IN (%s)" % (id_str,))
-            ret_ids = tuple(str(item["id"]) for item in cur)
-        self.stopTimer('get_ids_by_ids')
-        return ret_ids
+        cur = self.getCursor()
+        cur.execute(
+            "UPDATE FROM `%s` " % self.getName()+
+            " SET `cnt`=`cnt`+1 WHERE `id`=%(id)s",
+            {
+                "id": some_id
+            }
+        )
+        item = cur.fetchone()
+        self.stopTimer('inc')
+        return item
 
     pass

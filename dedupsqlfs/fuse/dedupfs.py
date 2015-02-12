@@ -218,6 +218,10 @@ class DedupFS(object): # {{{1
 
     def report_disk_usage(self): # {{{3
 
+        from dedupsqlfs.fuse.subvolume import Subvolume
+
+        subv = Subvolume(self.operations)
+
         manager = self.operations.getManager()
         disk_usage = manager.getFileSize()
 
@@ -242,14 +246,17 @@ class DedupFS(object): # {{{1
 
         tableHCT = manager.getTable('hash_compression_type')
         tableHS = manager.getTable('hash_sizes')
-        tableH = manager.getTable('hash')
 
-        curH = tableH.getCursor()
-        curH.execute("SELECT `id` FROM `%s`" % tableH.getName())
+        subv.prepareIndexHashIdCount()
+        tableTmp = manager.getTable('tmp_id_count')
+
+        curH = tableTmp.getCursor()
+        curH.execute("SELECT * FROM `%s`" % tableTmp.getName())
 
         for item in iter(curH.fetchone, None):
 
             hash_id = item["id"]
+            hash_cnt = item["cnt"]
 
             if hash_id in hashCT:
                 method = hashCT[hash_id]
@@ -268,8 +275,10 @@ class DedupFS(object): # {{{1
                 uniqueSize += hszItem["real_size"]
                 compressedUniqueSize += hszItem["compressed_size"]
 
-            dataSize += hszItem["real_size"]
-            compressedSize += hszItem["compressed_size"]
+            dataSize += hszItem["real_size"]*hash_cnt
+            compressedSize += hszItem["compressed_size"]*hash_cnt
+
+        tableTmp.drop()
 
         sparseSize = apparentSize - dataSize
         dedupSize = dataSize - uniqueSize

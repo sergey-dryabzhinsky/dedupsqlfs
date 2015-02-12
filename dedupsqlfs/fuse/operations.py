@@ -1404,6 +1404,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             if self.mounted_subvolume["readonly"]:
                 self.getApplication().setReadonly(True)
 
+        subvTable.mount_time(self.mounted_subvolume["id"], int(time.time()))
+
         self.getLogger().debug("__select_snapshot(2): mounted_subvolume=%r" % self.mounted_subvolume_name)
 
         return

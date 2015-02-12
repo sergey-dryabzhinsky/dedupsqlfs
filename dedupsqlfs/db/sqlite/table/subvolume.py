@@ -47,7 +47,7 @@ class TableSubvolume( Table ):
         bname = sqlite3.Binary(name)
 
         cur.execute("INSERT INTO `%s`(hash, name, created_at, mounted_at, updated_at) " % self.getName()+
-                    "VALUES (?, ?, ?, ?, ?)", (digest, bname, created_at, mounted_at, updated_at))
+                    "VALUES (?, ?, ?, ?, ?)", (digest, bname, int(created_at), mounted_at, updated_at))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
@@ -70,20 +70,20 @@ class TableSubvolume( Table ):
     def mount_time(self, subvol_id, mtime=None):
         self.startTimer()
         if mtime is None:
-            mtime = int(time())
+            mtime = time()
         cur = self.getCursor()
         cur.execute("UPDATE `%s` SET mounted_at=? WHERE id=? " % self.getName(),
-                    (mtime, subvol_id,))
+                    (int(mtime), subvol_id,))
         self.stopTimer('mount_time')
         return cur.rowcount
 
     def update_time(self, subvol_id, utime=None):
         self.startTimer()
         if utime is None:
-            utime = int(time())
+            utime = time()
         cur = self.getCursor()
         cur.execute("UPDATE `%s` SET updated_at=? WHERE id=? " % self.getName(),
-                    (utime, subvol_id,))
+                    (int(utime), subvol_id,))
         self.stopTimer('update_time')
         return cur.rowcount
 

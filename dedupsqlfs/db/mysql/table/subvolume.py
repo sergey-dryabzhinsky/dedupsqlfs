@@ -51,7 +51,7 @@ class TableSubvolume( Table ):
             {
                 "hash": digest,
                 "name": name,
-                "created": created_at,
+                "created": int(created_at),
                 "mounted": mounted_at,
                 "updated": updated_at
             }
@@ -81,13 +81,13 @@ class TableSubvolume( Table ):
     def mount_time(self, subvol_id, mtime=None):
         self.startTimer()
         if mtime is None:
-            mtime = int(time())
+            mtime = time()
         cur = self.getCursor()
         cur.execute(
             "UPDATE `%s` " % self.getName()+
             " SET `mounted_at`=%(mounted)s WHERE `id`=%(id)s",
             {
-                "mounted": mtime,
+                "mounted": int(mtime),
                 "id": subvol_id
             }
         )
@@ -97,13 +97,13 @@ class TableSubvolume( Table ):
     def update_time(self, subvol_id, utime=None):
         self.startTimer()
         if utime is None:
-            utime = int(time())
+            utime = time()
         cur = self.getCursor()
         cur.execute(
             "UPDATE `%s` " % self.getName()+
             " SET `updated_at`=%(updated)s WHERE `id`=%(id)s",
             {
-                "updated": utime,
+                "updated": int(utime),
                 "id": subvol_id
             }
         )

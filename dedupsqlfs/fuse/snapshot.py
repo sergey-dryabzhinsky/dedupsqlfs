@@ -37,7 +37,7 @@ class Snapshot(Subvolume):
 
         subvolItemFrom = tableSubvol.find(subvol_from)
 
-        tableSubvol.update_time(subvolItemTo["id"], subvolItemFrom["updated_t"])
+        tableSubvol.update_time(subvolItemTo["id"], subvolItemFrom["updated_at"])
 
         self.getManager().getManager().commit()
 

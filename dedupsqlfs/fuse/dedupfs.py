@@ -223,11 +223,21 @@ class DedupFS(object): # {{{1
         subv = Subvolume(self.operations)
 
         manager = self.operations.getManager()
-        disk_usage = manager.getFileSize()
 
         self.getLogger().info("--" * 39)
 
         tableSubvol = manager.getTable("subvolume")
+
+        disk_usage = 0
+        disk_usage += manager.getTable("hash").getFileSize()
+        disk_usage += manager.getTable("hash_compression_type").getFileSize()
+        disk_usage += manager.getTable("hash_sizes").getFileSize()
+        disk_usage += manager.getTable("compression_type").getFileSize()
+        disk_usage += manager.getTable("name").getFileSize()
+        disk_usage += manager.getTable("name_pattern_option").getFileSize()
+        disk_usage += manager.getTable("option").getFileSize()
+        disk_usage += manager.getTable("subvolume").getFileSize()
+        disk_usage += manager.getTable("block").getFileSize()
 
         apparentSize = 0
         dataSize = 0
@@ -243,6 +253,14 @@ class DedupFS(object): # {{{1
             subvol = tableSubvol.get(subvol_id)
             tableInode = manager.getTable("inode_" + subvol["hash"])
             apparentSize += tableInode.get_sizes()
+
+            disk_usage += manager.getTable("inode_" + subvol["hash"]).getFileSize()
+            disk_usage += manager.getTable("inode_option_" + subvol["hash"]).getFileSize()
+            disk_usage += manager.getTable("inode_hash_block_" + subvol["hash"]).getFileSize()
+            disk_usage += manager.getTable("link_" + subvol["hash"]).getFileSize()
+            disk_usage += manager.getTable("xattr_" + subvol["hash"]).getFileSize()
+            disk_usage += manager.getTable("tree_" + subvol["hash"]).getFileSize()
+
 
         tableHCT = manager.getTable('hash_compression_type')
         tableHS = manager.getTable('hash_sizes')

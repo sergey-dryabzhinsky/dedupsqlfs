@@ -104,6 +104,9 @@ class BaseCompressTool(object):
         elif name == "quicklz":
             from dedupsqlfs.compression.quicklz import QuickLzCompression
             self._compressors[name] = QuickLzCompression()
+        elif name == "zstd":
+            from dedupsqlfs.compression.zstd import ZstdCompression
+            self._compressors[name] = ZstdCompression()
         else:
             raise ValueError("Unknown compression method!")
 

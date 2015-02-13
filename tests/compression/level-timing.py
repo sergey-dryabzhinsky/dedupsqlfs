@@ -7,6 +7,7 @@ import time
 import random
 import struct
 import io
+import hashlib
 
 dirname = "dedupsqlfs"
 
@@ -34,9 +35,12 @@ processDataLength = 0
 
 compressedData = {}
 
+dataHash = ''
+
 def generate_data():
-    global processData, processDataLength
+    global processData, processDataLength, dataHash
     rnd = random.SystemRandom()
+    md5 = hashlib.md5()
     for cnt in range(blockCnt):
         b = io.BytesIO()
         for n in range(blockSize):
@@ -47,11 +51,15 @@ def generate_data():
             b.write(struct.pack('B', rnd.randint(dataMin, dataMax)))
         processData += (b.getvalue(),)
         processDataLength += b.tell()
+        md5.update(b.getvalue())
     print("")
+    dataHash = md5.digest()
     return
 
 def generate_file_data(file_path):
-    global processData, blockCnt, processDataLength
+    global processData, blockCnt, processDataLength, dataHash
+
+    md5 = hashlib.md5()
 
     f = open(file_path, 'rb')
 
@@ -66,6 +74,7 @@ def generate_file_data(file_path):
         if block:
             processData += (block,)
             blockCnt += 1
+            md5.update(block)
         else:
             break
 
@@ -78,6 +87,7 @@ def generate_file_data(file_path):
     f.close()
 
     print("")
+    dataHash = md5.digest()
     return
 
 if len(sys.argv) > 1:
@@ -227,6 +237,8 @@ def do_simple_dtest(method, name):
         sys.stdout.write(".")
         sys.stdout.flush()
 
+        md5 = hashlib.md5()
+
         last_p = 0
         iblk = 0
         for cdata in cdataAll:
@@ -234,6 +246,8 @@ def do_simple_dtest(method, name):
             data = method.decompress(cdata)
             t2 = time.time()
             dt += t2 - t1
+
+            md5.update(data)
 
             ldata += len(data)
 
@@ -244,6 +258,11 @@ def do_simple_dtest(method, name):
                 sys.stdout.flush()
 
             iblk += 1
+
+        dh = md5.digest()
+
+        if dh != dataHash:
+            raise ValueError("Original data hash != decompressed! %r != %r" % (dataHash, dh,))
 
     print("")
     return dt / nROUNDS, ldata / nROUNDS
@@ -262,6 +281,8 @@ def do_level_dtest(method, name, level):
         sys.stdout.write(".")
         sys.stdout.flush()
 
+        md5 = hashlib.md5()
+
         last_p = 0
         iblk = 0
         for cdata in cdataAll:
@@ -269,6 +290,8 @@ def do_level_dtest(method, name, level):
             data = method.decompress(cdata)
             t2 = time.time()
             dt += t2 - t1
+
+            md5.update(data)
 
             ldata += len(data)
 
@@ -280,31 +303,42 @@ def do_level_dtest(method, name, level):
 
             iblk += 1
 
+        dh = md5.digest()
+
+        if dh != dataHash:
+            raise ValueError("Original data hash != decompressed! %r != %r" % (dataHash, dh,))
+
     print("")
     return dt / nROUNDS, ldata / nROUNDS
 
 
-COMPRESSION_SUPPORTED={
-    'lzo' : (False, do_simple_ctest,),
-    'lz4' : (False, do_simple_ctest,),
-    'lz4h' : (False, do_simple_ctest,),
-    'snappy' : (False, do_simple_ctest,),
-    'quicklz' : (False, do_simple_ctest,),
-    'zlib' : (range(0,10), do_level_ctest,),
-    'bz2' : (range(1,10), do_level_ctest,),
-    'lzma' : (range(0,10), do_level_ctest_lzma,),
-    }
+COMPRESSION_SUPPORTED=[
+    ('lzo' , False, do_simple_ctest,),
+    ('lz4' , False, do_simple_ctest,),
+    ('snappy' , False, do_simple_ctest,),
+    ('zstd' , False, do_simple_ctest,),
+    ('quicklz' , False, do_simple_ctest,),
+    ('lz4h' , False, do_simple_ctest,),
+#    ('zlib' , range(1,5), do_level_ctest,),
+    ('zlib' , range(0,10), do_level_ctest,),
+    ('bz2' , range(1,10), do_level_ctest,),
+#    ('lzma' , range(0,2), do_level_ctest_lzma,),
+    ('lzma' , range(0,10), do_level_ctest_lzma,),
+    ]
 
-DECOMPRESSION_SUPPORTED={
-    'lzo' : (False, do_simple_dtest,),
-    'lz4' : (False, do_simple_dtest,),
-    'lz4h' : (False, do_simple_dtest,),
-    'snappy' : (False, do_simple_dtest,),
-    'quicklz' : (False, do_simple_dtest,),
-    'zlib' : (range(0,10), do_level_dtest,),
-    'bz2' : (range(1,10), do_level_dtest,),
-    'lzma' : (range(0,10), do_level_dtest,),
-    }
+DECOMPRESSION_SUPPORTED=[
+    ('lzo' , False, do_simple_dtest,),
+    ('lz4' , False, do_simple_dtest,),
+    ('snappy' , False, do_simple_dtest,),
+    ('zstd' , False, do_simple_dtest,),
+    ('quicklz' , False, do_simple_dtest,),
+    ('lz4h' , False, do_simple_dtest,),
+#    ('zlib' , range(1,5), do_level_dtest,),
+    ('zlib' , range(0,10), do_level_dtest,),
+    ('bz2' , range(1,10), do_level_dtest,),
+#    ('lzma' , range(0,2), do_level_dtest,),
+    ('lzma' , range(0,10), do_level_dtest,),
+    ]
 
 CTIMING={}
 
@@ -317,7 +351,7 @@ else:
 
 print("\n")
 
-for c, data in COMPRESSION_SUPPORTED.items():
+for c, levels, test_func in COMPRESSION_SUPPORTED:
 
     print("Test %r" % c)
 
@@ -325,9 +359,6 @@ for c, data in COMPRESSION_SUPPORTED.items():
         m = __import__('lz4')
     else:
         m = __import__(c)
-
-    levels = data[0]
-    test_func = data[1]
 
     if not levels:
         dt, ldata, ratio_proc = test_func(m, c)
@@ -455,7 +486,7 @@ else:
 
 print("\n")
 
-for c, data in DECOMPRESSION_SUPPORTED.items():
+for c, levels, test_func in DECOMPRESSION_SUPPORTED:
 
     print("Test %r" % c)
 
@@ -463,9 +494,6 @@ for c, data in DECOMPRESSION_SUPPORTED.items():
         m = __import__('lz4')
     else:
         m = __import__(c)
-
-    levels = data[0]
-    test_func = data[1]
 
     if not levels:
         dt, ldata = test_func(m, c)

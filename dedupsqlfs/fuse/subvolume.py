@@ -109,18 +109,27 @@ class Subvolume(object):
 
         self.print_out("Subvolumes:\n")
 
+        nameMaxLen = 1
+        for subvol_id in tableSubvol.get_ids():
+            subvol = tableSubvol.get(subvol_id)
+            nl = len(subvol["name"].decode())
+            if nl > nameMaxLen:
+                nameMaxLen = nl
+
+        nameMaxLen += 1
+
         if not with_stats:
-            self.print_out("-"*(46+11+16+22+22+22+1) + "\n")
-            self.print_out("%-46s| %-9s| %-14s| %-20s| %-20s| %-20s|\n" % (
+            self.print_out("-"*(nameMaxLen+11+16+22+22+22+1) + "\n")
+            self.print_out((("%%-%d" % nameMaxLen) + "s| %-9s| %-14s| %-20s| %-20s| %-20s|\n") % (
                 "Name", "ReadOnly", "Apparent Size", "Created", "Last mounted", "Last updated"))
-            self.print_out("-"*(46+11+16+22+22+22+1) + "\n")
+            self.print_out("-"*(nameMaxLen+11+16+22+22+22+1) + "\n")
         else:
-            self.print_out("-"*(46+11+16+15+19+17+22+22+22+1) + "\n")
-            self.print_out("%-46s| %-9s| %-14s| %-13s| %-17s| %-15s| %-20s| %-20s| %-20s|\n" % (
+            self.print_out("-"*(nameMaxLen+11+16+14+18+16+22+22+22+1) + "\n")
+            self.print_out((("%%-%d" % nameMaxLen) + "s| %-9s| %-14s| %-12s| %-16s| %-14s| %-20s| %-20s| %-20s|\n") % (
                 "Name", "ReadOnly",
                 "Apparent Size", "Unique Size", "Compressed Size", "Dedupped Size",
                 "Created", "Last mounted", "Last updated"))
-            self.print_out("-"*(46+11+16+15+19+17+22+22+22+1) + "\n")
+            self.print_out("-"*(nameMaxLen+11+16+14+18+16+22+22+22+1) + "\n")
 
         for subvol_id in tableSubvol.get_ids():
 
@@ -149,7 +158,7 @@ class Subvolume(object):
                 readonly = True
 
             if not with_stats:
-                self.print_out("%-46s| %-10r| %-14s| %-20s| %-20s| %-20s|\n" % (
+                self.print_out((("%%-%d" % nameMaxLen) + "s| %-9r| %-14s| %-20s| %-20s| %-20s|\n") % (
                     subvol["name"].decode(),
                     readonly,
                     format_size(apparent_size),
@@ -158,7 +167,7 @@ class Subvolume(object):
                     utime,
                     ))
             else:
-                self.print_out("%-46s| %-9s| %-14s| %-13s| %-17s| %-15s| %-20s| %-20s| %-20s|\n" % (
+                self.print_out((("%%-%d" % nameMaxLen) + "s| %-9s| %-14s| %-12s| %-16s| %-14s| %-20s| %-20s| %-20s|\n") % (
                     subvol["name"].decode(),
                     readonly,
                     format_size(usage["apparentSize"]),
@@ -171,9 +180,9 @@ class Subvolume(object):
                     ))
 
         if not with_stats:
-            self.print_out("-"*(46+11+16+22+22+22+1) + "\n")
+            self.print_out("-"*(nameMaxLen+11+16+22+22+22+1) + "\n")
         else:
-            self.print_out("-"*(46+11+16+15+19+17+22+22+22+1) + "\n")
+            self.print_out("-"*(nameMaxLen+11+16+14+18+16+22+22+22+1) + "\n")
 
         return
 

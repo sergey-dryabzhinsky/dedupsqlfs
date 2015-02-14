@@ -69,6 +69,8 @@ class MultiProcCompressTool(BaseCompressTool):
         @return:
         """
 
+        sleep_wait = 0.1
+
         while True:
 
             try:
@@ -77,7 +79,12 @@ class MultiProcCompressTool(BaseCompressTool):
                 task = None
 
             if task is None:
-                sleep(0.01)
+                sleep(sleep_wait)
+                continue
+
+            if type(task) is float:
+                sleep_wait = task
+                in_queue.task_done()
                 continue
 
             if type(task) is str and task == "stop":
@@ -156,6 +163,9 @@ class MultiProcCompressTool(BaseCompressTool):
 
         nkeys = len(dataToCompress.keys())
 
+        for n in range(self._np*2):
+            self._task_queue.put_nowait(0.001)
+
         for key, data in dataToCompress.items():
             task = Task()
             task.key = key
@@ -170,13 +180,16 @@ class MultiProcCompressTool(BaseCompressTool):
                 res = None
 
             if res is None:
-                sleep(0.01)
+                sleep(0.001)
                 continue
 
             if type(res) is Result:
                 self._result_queue.task_done()
                 yield res.key, (res.cdata, res.method,)
                 gotKeys += 1
+
+        for n in range(self._np*2):
+            self._task_queue.put_nowait(0.1)
 
         self.time_spent_compressing = time() - start_time
 

@@ -85,6 +85,7 @@ class MultiProcCompressTool(BaseCompressTool):
             if type(task) is float:
                 sleep_wait = task
                 in_queue.task_done()
+                sleep(sleep_wait)
                 continue
 
             if type(task) is str and task == "stop":

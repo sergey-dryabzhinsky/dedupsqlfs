@@ -1558,7 +1558,11 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.getLogger().debug("ctx.uid=%i, ctx.gid=%i", ctx.uid, ctx.gid)
 
-        o = ctx.uid == attrs['uid'] or ctx.uid == 0 # access by same user id? Or ROOT
+        # Allow ROOT everything
+        if ctx.uid == 0 or ctx.gid == 0:
+            return True
+
+        o = ctx.uid == attrs['uid'] # access by same user id?
         g = ctx.gid == attrs['gid'] and not o # access by same group id?
         # Note: "and not o" added after experimenting with EXT4.
         w = not (o or g) # anything else

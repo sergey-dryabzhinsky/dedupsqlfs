@@ -50,7 +50,8 @@ static PyObject *py_zstd_compress(PyObject *self, PyObject *args) {
         return NULL;
 #endif
 
-    header_size = sizeof(source_size)
+    header_size = sizeof(source_size);
+
     dest_size = ZSTD_compressBound(source_size);
     result = PyBytes_FromStringAndSize(NULL, header_size + dest_size);
     if (result == NULL) {

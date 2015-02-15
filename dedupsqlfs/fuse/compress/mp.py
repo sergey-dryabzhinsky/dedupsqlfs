@@ -15,19 +15,22 @@ class MultiProcCompressTool(BaseCompressTool):
 
     _procs = None
     _np = 0
-    _task_queue = None
+    _task_queues = None
     _result_queue = None
 
     def init(self):
 
         self._procs = []
+        self._task_queues = []
 
         self._np = cpu_count()
         self._task_queue = JoinableQueue()
         self._result_queue = JoinableQueue()
 
         for n in range(self._np):
-            p = Process(target=self._worker, name="Compressor-%s" % n, args=(self._task_queue, self._result_queue,))
+            tq = JoinableQueue()
+            self._task_queues.append(tq)
+            p = Process(target=self._worker, name="Compressor-%s" % n, args=(tq, self._result_queue,))
             p.start()
             self._procs.append(p)
 
@@ -39,7 +42,8 @@ class MultiProcCompressTool(BaseCompressTool):
         alive = True
         while alive:
             for n in range(self._np):
-                self._task_queue.put_nowait("stop")
+                tq = self._task_queues[ n ]
+                tq.put_nowait("stop")
 
             sleep(0.1)
 
@@ -164,14 +168,19 @@ class MultiProcCompressTool(BaseCompressTool):
 
         nkeys = len(dataToCompress.keys())
 
-        for n in range(self._np*2):
-            self._task_queue.put_nowait(0.001)
+        for n in range(self._np):
+            tq = self._task_queues[n]
+            tq.put_nowait(0.001)
 
+        i = 0
         for key, data in dataToCompress.items():
             task = Task()
             task.key = key
             task.data = data
-            self._task_queue.put_nowait(task)
+            nq = i % self._np
+            tq = self._task_queues[ nq ]
+            tq.put_nowait(task)
+            i += 1
 
         gotKeys = 0
         while gotKeys < nkeys:
@@ -189,8 +198,9 @@ class MultiProcCompressTool(BaseCompressTool):
                 yield res.key, (res.cdata, res.method,)
                 gotKeys += 1
 
-        for n in range(self._np*2):
-            self._task_queue.put_nowait(0.1)
+        for n in range(self._np):
+            tq = self._task_queues[n]
+            tq.put_nowait(0.1)
 
         self.time_spent_compressing = time() - start_time
 

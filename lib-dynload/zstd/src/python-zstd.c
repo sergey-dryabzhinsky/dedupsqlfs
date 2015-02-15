@@ -87,7 +87,7 @@ static PyObject *py_zstd_uncompress(PyObject *self, PyObject *args) {
         return NULL;
 #endif
 
-    header_size = sizeof(dest_size)
+    header_size = sizeof(dest_size);
 
     memcpy(&dest_size, source, header_size);
     result = PyBytes_FromStringAndSize(NULL, dest_size);

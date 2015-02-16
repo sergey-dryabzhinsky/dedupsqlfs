@@ -15,6 +15,7 @@ I know about ZFS and Btrfs but them are still complicated to use under linux and
 The following shell commands show how to install and use the DedupFS file system on [Ubuntu](http://www.ubuntu.com/)
  (where it was developed):
 
+    $ sudo apt-get install python3-pip
     $ sudo pip3 install llfuse
     $ git clone https://github.com/sergey-dryabzhinsky/dedupsqlfs.git
     $ mkdir mount_point
@@ -40,7 +41,7 @@ The file system initially stored everything in a multiple [SQLite](http://www.sq
  * Delayed writes for blocks (hashing and compression too).
  * Use "stream"-like writes and read of data blocks, don't store complete files in memory.
  * Cached filesystem tree nodes, inodes and data blocks.
- * New compression methods (some ported for python3): lzo (ported), lz4 (ported), quicklz (ported), lzma, snappy.
+ * New compression methods (some ported for python3): lzo, lz4, quicklz, zstd (ported); lzma, snappy.
  * Support for data storage in localy started MySQL server.
 
 ### Limitations
@@ -89,6 +90,6 @@ The latest version of DedupSqlFS is available at <https://github.com/sergey-drya
 
 This software is licensed under the MIT license.
 
-© 2013-2014 Sergey Dryabzhinsky &lt;<sergey.dryabzhinsky@gmail.com>&gt;.
+© 2013-2015 Sergey Dryabzhinsky &lt;<sergey.dryabzhinsky@gmail.com>&gt;.
 
 © 2010 Peter Odding &lt;<peter@peterodding.com>&gt;.

@@ -187,7 +187,26 @@ def remove_snapshot_older(options, _fuse):
 
     from dedupsqlfs.fuse.snapshot import Snapshot
     snap = Snapshot(_fuse.operations)
-    snap.remove_older_than(options.snapshot_remove_older, options.snapshot_remove_by_last_update_time)
+    snap.remove_older_than(options.snapshot_remove_older, options.snapshot_select_by_last_update_time)
+    return
+
+def count_snapshot_older(options, _fuse):
+    """
+    @param options: Commandline options
+    @type  options: object
+
+    @param _fuse: FUSE wrapper
+    @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
+    """
+    _fuse.setOption("gc_umount_enabled", False)
+    _fuse.setOption("gc_vacuum_enabled", False)
+    _fuse.setOption("gc_enabled", False)
+    _fuse.setOption("use_transactions", True)
+    _fuse.setReadonly(True)
+
+    from dedupsqlfs.fuse.snapshot import Snapshot
+    snap = Snapshot(_fuse.operations)
+    snap.count_older_than(options.snapshot_count_older, options.snapshot_select_by_last_update_time)
     return
 
 def print_snapshot_stats(options, _fuse):
@@ -312,6 +331,9 @@ def do(options, compression_methods=None):
 
         if options.snapshot_remove_older:
             return remove_snapshot_older(options, _fuse)
+
+        if options.snapshot_count_older:
+            return count_snapshot_older(options, _fuse)
 
         if options.snapshot_readonly_set:
             return set_snapshot_readonly(options, _fuse, True)
@@ -450,7 +472,8 @@ def main(): # {{{1
     snapshot.add_argument('--create-snapshot', dest='snapshot_create', metavar='NAME', help="Create new snapshot from selected subvolume")
     snapshot.add_argument('--remove-snapshot', dest='snapshot_remove', metavar='NAME', help="Remove selected snapshot")
     snapshot.add_argument('--remove-snapshots-older-than', dest='snapshot_remove_older', metavar='DATE', help="Remove snapshots older than selected creation date. Date format: 'YYYY-mm-ddTHH:MM:SS'.")
-    snapshot.add_argument('--remove-snapshots-by-last-update-time', dest='snapshot_remove_by_last_update_time', action='store_true', help="Remove snapshots older than selected last update date.")
+    snapshot.add_argument('--count-snapshots-older-than', dest='snapshot_count_older', metavar='DATE', help="Count snapshots older than selected creation date. Date format: 'YYYY-mm-ddTHH:MM:SS'.")
+    snapshot.add_argument('--select-snapshots-by-last-update-time', dest='snapshot_select_by_last_update_time', action='store_true', help="Remove or count snapshots older than selected date by last update time.")
     snapshot.add_argument('--snapshot-stats', dest='snapshot_stats', metavar='NAME', help="Print information about selected snapshot")
     snapshot.add_argument('--set-snapshot-readonly', dest='snapshot_readonly_set', metavar='NAME', help="Set subvolume READONLY flag for selected snapshot.")
     snapshot.add_argument('--unset-snapshot-readonly', dest='snapshot_readonly_unset', metavar='NAME', help="UnSet subvolume READONLY flag for selected snapshot.")

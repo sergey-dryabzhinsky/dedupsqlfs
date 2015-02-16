@@ -18,7 +18,7 @@ class Snapshot(Subvolume):
             return
 
         if not with_name:
-            self.getLogger().error("Define name for subvolume to which you need to copy %r data!" % from_subvol)
+            self.getLogger().error("Define name for snapshot to which you need to copy %r data!" % from_subvol)
             return
 
         subvol_from = from_subvol
@@ -27,7 +27,7 @@ class Snapshot(Subvolume):
         tableSubvol = self.getTable('subvolume')
         subvolItemTo = tableSubvol.find(subvol_to)
         if subvolItemTo:
-            self.getLogger().error("Subvolume with name %r already exists! Can't snapshot into it!", with_name)
+            self.getLogger().error("Snapshot or subvolume with name %r already exists! Can't create snapshot into it!", with_name)
             return
         else:
             # New subvol
@@ -74,9 +74,32 @@ class Snapshot(Subvolume):
                 subvolDate = datetime.fromtimestamp(subvol["updated_at"])
 
             if subvolDate < oldDate:
-                self.print_msg("Remove %r subvolume\n" % subvol["name"])
+                self.print_msg("Remove %r snapshot\n" % subvol["name"])
                 self.remove(subvol["name"])
 
+        return
+
+    def count_older_than(self, dateStr, use_last_update_time=False):
+
+        oldDate = datetime.strptime(dateStr, "%Y-%m-%dT%H:%M:%S")
+
+        tableSubvol = self.getTable('subvolume')
+
+        cnt = 0
+
+        for subvol_id in tableSubvol.get_ids():
+
+            subvol = tableSubvol.get(subvol_id)
+
+            if not use_last_update_time:
+                subvolDate = datetime.fromtimestamp(subvol["created_at"])
+            else:
+                subvolDate = datetime.fromtimestamp(subvol["updated_at"])
+
+            if subvolDate < oldDate:
+                cnt += 1
+
+        self.print_msg("Count old snapshots: %s\n" % cnt)
         return
 
     pass

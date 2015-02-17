@@ -1494,6 +1494,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         treeTable = self.getTable("tree")
         inodeTable = self.getTable("inode")
+        indexTable = self.getTable("inode_hash_block")
 
         attr = self.__get_inode_row(cur_node["inode_id"])
 
@@ -1535,6 +1536,11 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.cached_indexes.expire(cur_node["inode_id"])
 
         self.__cache_meta_hook()
+
+        # Force remove inode data
+        inodeTable.remove_by_ids((cur_node["inode_id"],))
+        indexTable.delete(cur_node["inode_id"])
+
         return
 
 

@@ -5,6 +5,7 @@ __author__ = 'sergey'
 from time import time
 from datetime import datetime
 from dedupsqlfs.fuse.subvolume import Subvolume
+from dedupsqlfs.lib import constants
 
 class Snapshot(Subvolume):
 
@@ -68,6 +69,9 @@ class Snapshot(Subvolume):
 
             subvol = tableSubvol.get(subvol_id)
 
+            if subvol["name"] == constants.ROOT_SUBVOLUME_NAME:
+                continue
+
             if not use_last_update_time:
                 subvolDate = datetime.fromtimestamp(subvol["created_at"])
             else:
@@ -90,6 +94,9 @@ class Snapshot(Subvolume):
         for subvol_id in tableSubvol.get_ids():
 
             subvol = tableSubvol.get(subvol_id)
+
+            if subvol["name"] == constants.ROOT_SUBVOLUME_NAME:
+                continue
 
             if not use_last_update_time:
                 subvolDate = datetime.fromtimestamp(subvol["created_at"])

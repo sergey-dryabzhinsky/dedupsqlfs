@@ -6,7 +6,6 @@ import os
 import stat
 import sys
 import math
-from time import time
 from datetime import datetime
 from dedupsqlfs.my_formats import format_size
 

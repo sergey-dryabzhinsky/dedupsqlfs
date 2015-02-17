@@ -131,7 +131,7 @@ class Subvolume(object):
                 "Created", "Last mounted", "Last updated"))
             self.print_out("-"*(nameMaxLen+11+16+14+18+16+22+22+22+1) + "\n")
 
-        for subvol_id in tableSubvol.get_ids():
+        for subvol_id in tableSubvol.get_ids('created_at'):
 
             subvol = tableSubvol.get(subvol_id)
 

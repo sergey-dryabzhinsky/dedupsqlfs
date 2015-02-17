@@ -157,4 +157,15 @@ class TableSubvolume( Table ):
         self.stopTimer('find')
         return item
 
+    def get_ids(self, order_by=None, order_dir="ASC"):
+        self.startTimer()
+        cur = self.getCursor()
+        sql = "SELECT id FROM `%s`" % self.getName()
+        if order_by:
+            sql += " ORDER BY `%s` %s" % (order_by, order_dir,)
+        cur.execute(sql)
+        items = (item["id"] for item in cur.fetchall())
+        self.stopTimer('get_ids')
+        return items
+
     pass

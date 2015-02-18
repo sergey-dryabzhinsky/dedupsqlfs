@@ -158,15 +158,6 @@ class TableTree( Table ):
             " WHERE `subvol_id`=%s", (node_id,))
         return cursor
 
-    def getCursorForSelectCurrentSubvolInodes(self):
-        cursor = self.getCursor()
-        cursor.execute(
-            "SELECT `inode_id` FROM `%s` " % self.getName()+
-            " WHERE `subvol_id`=%s OR `id`=%s",
-            (self.getSelectedSubvolume(), self.getSelectedSubvolume(),)
-        )
-        return cursor
-
     def get_names_by_names(self, name_ids):
         self.startTimer()
 
@@ -193,6 +184,14 @@ class TableTree( Table ):
             iids = tuple(str(item["inode_id"]) for item in cur)
 
         self.stopTimer('get_inodes_by_inodes')
+        return iids
+
+    def get_inodes(self):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT `inode_id` FROM `%s` " % self.getName())
+        iids = tuple(str(item["inode_id"]) for item in cur)
+        self.stopTimer('get_inodes')
         return iids
 
     pass

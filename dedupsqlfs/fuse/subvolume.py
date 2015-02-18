@@ -346,6 +346,7 @@ class Subvolume(object):
 
         tableInode = self.getTable('inode_' + subvolItem["hash"])
         tableIndex = self.getTable('inode_hash_block_' + subvolItem["hash"])
+        tableTree = self.getTable('tree_' + subvolItem["hash"])
 
         compMethods = {}
         hashCT = {}
@@ -385,7 +386,10 @@ class Subvolume(object):
             dataSize += hszItem["real_size"]
             compressedSize += hszItem["compressed_size"]
 
-        apparentSize = tableInode.get_sizes()
+        apparentSize = 0
+        for inode_id in tableTree.get_inodes():
+            apparentSize += tableInode.get_size(inode_id)
+
         sparseSize = apparentSize - dataSize
         dedupSize = dataSize - uniqueSize
 

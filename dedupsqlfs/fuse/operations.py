@@ -1537,10 +1537,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.__cache_meta_hook()
 
-        # Force remove inode data
-        inodeTable.remove_by_ids((str(cur_node["inode_id"]),))
-        indexTable.delete(cur_node["inode_id"])
-
         return
 
 

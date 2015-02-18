@@ -923,13 +923,17 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not xattrs:
                 newxattr = True
                 xattrs = {}
-            xattrs[name] = value
 
-            if not newxattr:
-                self.getTable("xattr").update(inode, xattrs)
-            else:
-                self.getTable("xattr").insert(inode, xattrs)
+            # Don't do DB write if value not changed
+            if xattrs.get(name) != value:
+                xattrs[name] = value
 
+                if not newxattr:
+                    self.getTable("xattr").update(inode, xattrs)
+                else:
+                    self.getTable("xattr").insert(inode, xattrs)
+
+            # Update cache ttl
             self.cached_xattrs.set(inode, xattrs)
 
             return 0
@@ -2039,6 +2043,13 @@ class DedupOperations(llfuse.Operations): # {{{1
             count += self.getTable("inode").update_data(inode_id, update_data)
         return count
 
+    def __flush_expired_xattrs(self, xattrs):
+        count = 0
+        for inode_id, xattr_data in xattrs.items():
+            self.getLogger().debug("flush xattr: %i = %r", int(inode_id), xattr_data)
+            count += self.getTable("xattr").update(inode_id, xattr_data)
+        return count
+
 
     def __cache_meta_hook(self): # {{{3
 
@@ -2056,8 +2067,9 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             flushed_nodes = self.cached_nodes.clear()
             flushed_names = self.cached_names.clear()
-            flushed_xattrs = self.cached_xattrs.clear()
             flushed_indexes = self.cached_indexes.expired()
+
+            flushed_xattrs = self.cached_xattrs.clear()
 
             # Just readed...
             flushed_attrs += self.cached_attrs.expired(False)

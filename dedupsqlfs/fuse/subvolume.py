@@ -136,7 +136,7 @@ class Subvolume(object):
 
             if not with_stats:
                 tableInode = self.getTable("inode_" + subvol["hash"])
-                apparent_size = tableInode.get_sizes()
+                apparent_size = self.get_apparent_size(subvol)
             else:
                 usage = self.get_usage(subvol["name"])
 
@@ -327,6 +327,23 @@ class Subvolume(object):
 
         return changed > 0
 
+    def get_apparent_size(self, subvolItem):
+        tableTree = self.getTable('tree_' + subvolItem["hash"])
+        tableInode = self.getTable('inode_' + subvolItem["hash"])
+
+        apparentSize = 0
+        nth = 1000
+        chunk = ()
+        for inode_id in tableTree.get_inodes():
+            chunk += (inode_id,)
+            if len(chunk) >= nth:
+                apparentSize += tableInode.get_sizes_by_inodes(chunk)
+                chunk = ()
+        if len(chunk) > 0:
+            apparentSize += tableInode.get_sizes_by_inodes(chunk)
+
+        return apparentSize
+
     def get_usage(self, name, hashTypes=False):
         """
         @param name: Subvolume name
@@ -386,9 +403,7 @@ class Subvolume(object):
             dataSize += hszItem["real_size"]
             compressedSize += hszItem["compressed_size"]
 
-        apparentSize = 0
-        for inode_id in tableTree.get_inodes():
-            apparentSize += tableInode.get_size(inode_id)
+        apparentSize = self.get_apparent_size(subvolItem)
 
         sparseSize = apparentSize - dataSize
         dedupSize = dataSize - uniqueSize

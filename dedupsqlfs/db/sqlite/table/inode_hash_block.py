@@ -198,7 +198,7 @@ class TableInodeHashBlock( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute("SELECT `hash_id` FROM `%s` " % self.getName())
-        iids = tuple(item["hash_id"] for item in iter(cur.fetchone,None))
+        iids = tuple(str(item["hash_id"]) for item in iter(cur.fetchone,None))
         self.stopTimer('get_hash_ids')
         return iids
 

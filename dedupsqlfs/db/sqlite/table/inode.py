@@ -100,7 +100,7 @@ class TableInode( Table ):
     def get_mode(self, inode):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT mode FROM `%s` WHERE id=?" % self.getName(), (inode,))
+        cur.execute("SELECT `mode` FROM `%s` WHERE id=?" % self.getName(), (inode,))
         item = int(cur.fetchone()["mode"])
         self.stopTimer('get_mode')
         return item
@@ -108,7 +108,7 @@ class TableInode( Table ):
     def get_size(self, inode):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT size FROM `%s` WHERE id=?" % self.getName(), (inode,))
+        cur.execute("SELECT `size` FROM `%s` WHERE id=?" % self.getName(), (inode,))
         item = int(cur.fetchone()["size"])
         self.stopTimer('get_size')
         return item

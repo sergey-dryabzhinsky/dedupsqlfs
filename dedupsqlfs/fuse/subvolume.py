@@ -135,7 +135,6 @@ class Subvolume(object):
             subvol = tableSubvol.get(subvol_id)
 
             if not with_stats:
-                tableInode = self.getTable("inode_" + subvol["hash"])
                 apparent_size = self.get_apparent_size(subvol)
             else:
                 usage = self.get_usage(subvol["name"])
@@ -332,15 +331,8 @@ class Subvolume(object):
         tableInode = self.getTable('inode_' + subvolItem["hash"])
 
         apparentSize = 0
-        nth = 1000
-        chunk = ()
         for inode_id in tableTree.get_inodes():
-            chunk += (inode_id,)
-            if len(chunk) >= nth:
-                apparentSize += tableInode.get_sizes_by_inodes(chunk)
-                chunk = ()
-        if len(chunk) > 0:
-            apparentSize += tableInode.get_sizes_by_inodes(chunk)
+            apparentSize += tableInode.get_size(inode_id)
 
         return apparentSize
 
@@ -361,25 +353,20 @@ class Subvolume(object):
             self.getLogger().error("Subvolume with name %r not found!" % name)
             return False
 
-        tableInode = self.getTable('inode_' + subvolItem["hash"])
-        tableIndex = self.getTable('inode_hash_block_' + subvolItem["hash"])
-        tableTree = self.getTable('tree_' + subvolItem["hash"])
-
         compMethods = {}
         hashCT = {}
         hashSZ = {}
 
         tableHCT = self.getTable('hash_compression_type')
         tableHS = self.getTable('hash_sizes')
-
-        hashes = tableIndex.get_hash_ids()
+        tableIndex = self.getTable('inode_hash_block_' + subvolItem["hash"])
 
         dataSize = 0
         compressedSize = 0
         uniqueSize = 0
         compressedUniqueSize = 0
 
-        for hash_id in hashes:
+        for hash_id in tableIndex.get_hash_ids():
 
             if hashTypes:
 

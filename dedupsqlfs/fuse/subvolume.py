@@ -356,17 +356,35 @@ class Subvolume(object):
         compMethods = {}
         hashCT = {}
         hashSZ = {}
+        nodesInodes = {}
 
         tableHCT = self.getTable('hash_compression_type')
         tableHS = self.getTable('hash_sizes')
         tableIndex = self.getTable('inode_hash_block_' + subvolItem["hash"])
+        tableTree = self.getTable('tree_' + subvolItem["hash"])
 
         dataSize = 0
         compressedSize = 0
         uniqueSize = 0
         compressedUniqueSize = 0
 
-        for hash_id in tableIndex.get_hash_ids():
+        for item in tableIndex.get_hash_inode_ids():
+
+            # Check if FS tree has inode
+
+            inode_id = str(item["inode_id"])
+            if inode_id in nodesInodes:
+                if not nodesInodes[inode_id]:
+                    continue
+            else:
+                node = tableTree.find_by_inode(inode_id)
+                if not node:
+                    nodesInodes[inode_id] = False
+                    continue
+                else:
+                    nodesInodes[inode_id] = True
+
+            hash_id = str(item["hash_id"])
 
             if hashTypes:
 

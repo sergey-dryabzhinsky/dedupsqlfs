@@ -8,8 +8,6 @@ class TableTree( Table ):
 
     _table_name = "tree"
 
-    _selected_subvol = None
-
     def create( self ):
         c = self.getCursor()
 
@@ -17,7 +15,6 @@ class TableTree( Table ):
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
-                "subvol_id INTEGER, "+
                 "parent_id INTEGER, "+
                 "name_id INTEGER NOT NULL, "+
                 "inode_id INTEGER NOT NULL, "+
@@ -40,11 +37,6 @@ class TableTree( Table ):
             ");"
         )
         c.execute(
-            "CREATE INDEX IF NOT EXISTS tree_subvol ON `%s` (" % self.getName()+
-                "subvol_id"+
-            ");"
-        )
-        c.execute(
             "CREATE INDEX IF NOT EXISTS tree_name ON `%s` (" % self.getName()+
                 "name_id"+
             ");"
@@ -53,13 +45,6 @@ class TableTree( Table ):
 
     def getRowSize(self):
         return 5 * 13
-
-    def selectSubvolume(self, node_id):
-        self._selected_subvol = node_id
-        return self
-
-    def getSelectedSubvolume(self):
-        return self._selected_subvol
 
     def insert( self, parent_id, name_id, inode_id ):
         """
@@ -70,8 +55,8 @@ class TableTree( Table ):
         """
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("INSERT INTO `%s`(subvol_id, parent_id, name_id, inode_id) " % self.getName()+
-                    "VALUES (?, ?, ?, ?)", (self._selected_subvol, parent_id, name_id, inode_id))
+        cur.execute("INSERT INTO `%s`(parent_id, name_id, inode_id) " % self.getName()+
+                    "VALUES (?, ?, ?)", (parent_id, name_id, inode_id))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
@@ -82,51 +67,6 @@ class TableTree( Table ):
         cur.execute("DELETE FROM `%s` WHERE id=?" % self.getName(), (node_id,))
         item = cur.rowcount
         self.stopTimer('delete')
-        return item
-
-    def delete_subvolume(self, subvol_id):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute("DELETE FROM `%s` WHERE subvol_id=?" % self.getName(), (subvol_id,))
-        item = cur.rowcount
-        self.stopTimer('delete_subvolume')
-        item += self.delete(subvol_id)
-        return item
-
-    def count_subvolume_nodes(self, subvol_id):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute("SELECT COUNT(1) AS cnt FROM `%s` WHERE subvol_id=? OR id=?" % self.getName(), (subvol_id, subvol_id))
-        item = cur.fetchone()
-        if item:
-            item = item["cnt"]
-        else:
-            item = 0
-        self.stopTimer('count_subvolume_nodes')
-        return item
-
-    def count_subvolume_inodes(self, subvol_id):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute("SELECT DISTINCT COUNT(inode_id) AS cnt FROM `%s` WHERE subvol_id=?" % self.getName(), (subvol_id,))
-        item = cur.fetchone()
-        if item:
-            item = item["cnt"]
-        else:
-            item = 0
-        self.stopTimer('count_subvolume_inodes')
-        return item
-
-    def count_subvolume_names(self, subvol_id):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute("SELECT DISTINCT COUNT(name_id) AS cnt FROM `%s` WHERE subvol_id=?" % self.getName(), (subvol_id,))
-        item = cur.fetchone()
-        if item:
-            item = item["cnt"]
-        else:
-            item = 0
-        self.stopTimer('count_subvolume_names')
         return item
 
     def find_by_parent_name(self, parent_id, name_id):
@@ -169,26 +109,6 @@ class TableTree( Table ):
         items = cur.fetchall()
         self.stopTimer('get_children')
         return items
-
-
-    def getCursorForSelectInodes(self):
-        cursor = self.getCursor()
-        cursor.execute("SELECT `inode_id` FROM `%s` " % self.getName())
-        return cursor
-
-    def getCursorForSelectNodeInodes(self, node_id):
-        cursor = self.getCursor()
-        cursor.execute("SELECT `inode_id` FROM `%s` WHERE `subvol_id`=?" % self.getName(), (node_id,))
-        return cursor
-
-    def getCursorForSelectCurrentSubvolInodes(self):
-        cursor = self.getCursor()
-        cursor.execute(
-            "SELECT `inode_id` FROM `%s` " % self.getName()+
-            " WHERE `subvol_id`=? OR `id`=?",
-            (self.getSelectedSubvolume(), self.getSelectedSubvolume(),)
-        )
-        return cursor
 
     def get_names_by_names(self, name_ids):
         self.startTimer()

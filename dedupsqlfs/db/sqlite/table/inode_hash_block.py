@@ -194,11 +194,11 @@ class TableInodeHashBlock( Table ):
         self.stopTimer('get_hashes_by_hashes')
         return iids
 
-    def get_hash_ids(self):
+    def get_hash_inode_ids(self):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT `hash_id` FROM `%s` " % self.getName())
-        iids = tuple(str(item["hash_id"]) for item in iter(cur.fetchone,None))
+        cur.execute("SELECT `hash_id`,`inode_id` FROM `%s` " % self.getName())
+        iids = tuple(item for item in iter(cur.fetchone,None))
         self.stopTimer('get_hash_ids')
         return iids
 

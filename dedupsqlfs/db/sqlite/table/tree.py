@@ -18,7 +18,7 @@ class TableTree( Table ):
                 "parent_id INTEGER, "+
                 "name_id INTEGER NOT NULL, "+
                 "inode_id INTEGER NOT NULL, "+
-                "UNIQUE (subvol_id, parent_id, name_id)"+
+                "UNIQUE (parent_id, name_id)"+
             ");"
         )
         c.execute(
@@ -44,7 +44,7 @@ class TableTree( Table ):
         return
 
     def getRowSize(self):
-        return 5 * 13
+        return 4 * 8
 
     def insert( self, parent_id, name_id, inode_id ):
         """

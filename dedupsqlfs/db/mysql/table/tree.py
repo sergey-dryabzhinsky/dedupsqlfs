@@ -8,8 +8,6 @@ class TableTree( Table ):
 
     _table_name = "tree"
 
-    _selected_subvol = None
-
     def create( self ):
         cur = self.getCursor()
 
@@ -144,19 +142,6 @@ class TableTree( Table ):
         items = cur.fetchall()
         self.stopTimer('get_children')
         return items
-
-
-    def getCursorForSelectInodes(self):
-        cursor = self.getCursor()
-        cursor.execute("SELECT `inode_id` FROM `%s` " % self.getName())
-        return cursor
-
-    def getCursorForSelectNodeInodes(self, node_id):
-        cursor = self.getCursor()
-        cursor.execute(
-            "SELECT `inode_id` FROM `%s` " % self.getName()+
-            " WHERE `subvol_id`=%s", (node_id,))
-        return cursor
 
     def get_names_by_names(self, name_ids):
         self.startTimer()

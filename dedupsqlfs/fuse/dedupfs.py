@@ -247,6 +247,7 @@ class DedupFS(object): # {{{1
         compMethods = {}
         hashCT = {}
         hashSZ = {}
+        nodesInodes = {}
 
         for subvol_id in tableSubvol.get_ids():
 

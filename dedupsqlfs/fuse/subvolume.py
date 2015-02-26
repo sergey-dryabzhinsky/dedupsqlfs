@@ -225,13 +225,31 @@ class Subvolume(object):
             subvol = tableSubvol.get(subvol_id)
 
             tableIndex = self.getTable("inode_hash_block_" + subvol["hash"])
+            tableTree = self.getTable('tree_' + subvol["hash"])
 
             curIndex = tableIndex.getCursor()
             curIndex.execute("SELECT DISTINCT hash_id FROM `%s`" % tableIndex.getName())
 
-            for node in iter(curIndex.fetchone, None):
-                if not tableTmp.find(node["hash_id"]):
-                    tableTmp.insert(node["hash_id"])
+            nodesInodes = {}
+
+            for item in iter(curIndex.fetchone, None):
+
+                # Check if FS tree has inode
+
+                inode_id = str(item["inode_id"])
+                if inode_id in nodesInodes:
+                    if not nodesInodes[inode_id]:
+                        continue
+                else:
+                    node = tableTree.find_by_inode(inode_id)
+                    if not node:
+                        nodesInodes[inode_id] = False
+                        continue
+                    else:
+                        nodesInodes[inode_id] = True
+
+                if not tableTmp.find(item["hash_id"]):
+                    tableTmp.insert(item["hash_id"])
 
         return
 
@@ -251,15 +269,33 @@ class Subvolume(object):
             subvol = tableSubvol.get(subvol_id)
 
             tableIndex = self.getTable("inode_hash_block_" + subvol["hash"])
+            tableTree = self.getTable('tree_' + subvol["hash"])
 
             curIndex = tableIndex.getCursor()
-            curIndex.execute("SELECT hash_id FROM `%s`" % tableIndex.getName())
+            curIndex.execute("SELECT hash_id,inode_id FROM `%s`" % tableIndex.getName())
 
-            for node in iter(curIndex.fetchone, None):
-                if not tableTmp.find(node["hash_id"]):
-                    tableTmp.insert(node["hash_id"])
+            nodesInodes = {}
+
+            for item in iter(curIndex.fetchone, None):
+
+                # Check if FS tree has inode
+
+                inode_id = str(item["inode_id"])
+                if inode_id in nodesInodes:
+                    if not nodesInodes[inode_id]:
+                        continue
                 else:
-                    tableTmp.inc(node["hash_id"])
+                    node = tableTree.find_by_inode(inode_id)
+                    if not node:
+                        nodesInodes[inode_id] = False
+                        continue
+                    else:
+                        nodesInodes[inode_id] = True
+
+                if not tableTmp.find(item["hash_id"]):
+                    tableTmp.insert(item["hash_id"])
+                else:
+                    tableTmp.inc(item["hash_id"])
 
         return
 

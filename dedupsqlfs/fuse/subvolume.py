@@ -228,7 +228,7 @@ class Subvolume(object):
             tableTree = self.getTable('tree_' + subvol["hash"])
 
             curIndex = tableIndex.getCursor()
-            curIndex.execute("SELECT DISTINCT hash_id FROM `%s`" % tableIndex.getName())
+            curIndex.execute("SELECT DISTINCT hash_id,inode_id FROM `%s`" % tableIndex.getName())
 
             nodesInodes = {}
 

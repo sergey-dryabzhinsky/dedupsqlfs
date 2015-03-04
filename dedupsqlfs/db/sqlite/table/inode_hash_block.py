@@ -85,14 +85,6 @@ class TableInodeHashBlock( Table ):
         self.stopTimer('delete_by_inode_number')
         return item
 
-    def get_hashes_by_inode( self, inode):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute("SELECT hash_id FROM `%s` WHERE inode_id=?" % self.getName(), (inode,))
-        items = tuple(str(item["hash_id"]) for item in iter(cur.fetchone,None))
-        self.stopTimer('get_hashes_by_inode')
-        return items
-
     def get_by_inode( self, inode):
         self.startTimer()
         cur = self.getCursor()
@@ -100,38 +92,6 @@ class TableInodeHashBlock( Table ):
         items = cur.fetchall()
         self.stopTimer('get_by_inode')
         return items
-
-    def get_count_by_inode( self, inode):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute("SELECT COUNT(1) as `cnt` FROM `%s` WHERE inode_id=?" % self.getName(), (inode,))
-        item = cur.fetchone()
-        self.stopTimer('get_count_by_inode')
-        return item['cnt']
-
-    def get_count_hash( self, hash_id ):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute("SELECT COUNT(1) as cnt FROM `%s` WHERE hash_id=?" % self.getName(), (hash_id,))
-        item = cur.fetchone()
-        if item:
-            item = item["cnt"]
-        else:
-            item = 0
-        self.stopTimer('get_count_hash')
-        return item
-
-    def get_count_hash_by_inode( self, hash_id, inode_id ):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute("SELECT COUNT(1) as cnt FROM `%s` WHERE hash_id=? AND inode_id=?" % self.getName(), (hash_id, inode_id,))
-        item = cur.fetchone()
-        if item:
-            item = item["cnt"]
-        else:
-            item = 0
-        self.stopTimer('get_count_hash_by_inode')
-        return item
 
     def get_count_uniq_inodes(self):
         self.startTimer()
@@ -143,20 +103,6 @@ class TableInodeHashBlock( Table ):
         else:
             item = 0
         self.stopTimer('get_count_uniq_inodes')
-        return item
-
-    def get_count_block_by_inode(self, inode_id):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute("SELECT COUNT(`block_number`) as `cnt` FROM `%s`" % self.getName()+
-                    " wHERE `inode_id` = ?", (inode_id,)
-        )
-        item = cur.fetchone()
-        if item:
-            item = item["cnt"]
-        else:
-            item = 0
-        self.stopTimer('get_count_block_by_inode')
         return item
 
     def get_inode_ids(self, start_id, end_id):
@@ -179,20 +125,6 @@ class TableInodeHashBlock( Table ):
             count = cur.rowcount
         self.stopTimer('remove_by_inodes')
         return count
-
-    def get_hashes_by_hashes(self, hash_ids):
-        self.startTimer()
-
-        iids = ()
-        id_str = ",".join(hash_ids)
-        if id_str:
-            cur = self.getCursor()
-            cur.execute("SELECT DISTINCT `hash_id` FROM `%s` " % self.getName()+
-                            " WHERE `hash_id` IN (%s)" % (id_str,))
-            iids = tuple(str(item["hash_id"]) for item in iter(cur.fetchone,None))
-
-        self.stopTimer('get_hashes_by_hashes')
-        return iids
 
     def get_hash_inode_ids(self):
         self.startTimer()

@@ -1816,6 +1816,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         block_length = len(data_block)
 
+        self.getLogger().debug("write block: inode=%s, block number=%s, data length=%s" % (inode, block_number, block_length,))
+
         index_hash_id = self.__get_hash_index_from_cache(inode, block_number)
 
         # First sparse files variant = flush zero-bytes string
@@ -1825,9 +1827,11 @@ class DedupOperations(llfuse.Operations): # {{{1
             sparse_block = True
 
         # Second sparse files variant = remove zero-bytes tail
-        data_block.rstrip(b"\x00")
+        data_block = data_block.rstrip(b"\x00")
 
-        self.getLogger().debug("write block: inode=%s, block number=%s, data length=%s, sparse=%r" % (inode, block_number, block_length, sparse_block,))
+        block_length = len(data_block)
+
+        self.getLogger().debug("write block: updated data length=%s, sparse=%r" % (block_length, sparse_block,))
 
         result = {
             "hash": None,
@@ -1851,13 +1855,13 @@ class DedupOperations(llfuse.Operations): # {{{1
         hash_value = self.__hash(data_block)
         hash_id = tableHash.find(hash_value)
 
-        result["data"] = data_block
         result["hash"] = hash_id
 
         # It is new block now?
         if not hash_id:
 
             result["new"] = True
+            result["data"] = data_block
 
             self.getLogger().debug("-- insert new block data")
             hash_id = tableHash.insert(hash_value)
@@ -2042,14 +2046,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.getLogger().debug("flush inode: %i = %r", int(inode_id), update_data)
             count += self.getTable("inode").update_data(inode_id, update_data)
         return count
-
-    def __flush_expired_xattrs(self, xattrs):
-        count = 0
-        for inode_id, xattr_data in xattrs.items():
-            self.getLogger().debug("flush xattr: %i = %r", int(inode_id), xattr_data)
-            count += self.getTable("xattr").update(inode_id, xattr_data)
-        return count
-
 
     def __cache_meta_hook(self): # {{{3
 

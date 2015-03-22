@@ -29,7 +29,7 @@ class TableInodeHashBlock( Table ):
     def insert( self, inode, block_number, hash_id):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("INSERT INTO `%s`(inode_id, block_number, hash_id,) VALUES (?,?,?,)" % self.getName(),
+        cur.execute("INSERT INTO `%s`(inode_id, block_number, hash_id) VALUES (?,?,?,)" % self.getName(),
                     (inode, block_number, hash_id,))
         item = cur.lastrowid
         self.stopTimer('insert')

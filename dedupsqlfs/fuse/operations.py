@@ -1608,10 +1608,15 @@ class DedupOperations(llfuse.Operations): # {{{1
         return digest
 
     def __decompress(self, block_data, compression_type_id):
+        """
+        @param block_data: bytes
+        @param compression_type_id: int
+        @return: bytes
+        """
         start_time = time.time()
         compression = self.getCompressionTypeName( compression_type_id )
         self.getLogger().debug("-- decompress block: type = %s" % compression)
-        result = BytesIO(self.getApplication().decompressData(compression, block_data))
+        result = self.getApplication().decompressData(compression, block_data)
         self.time_spent_decompressing += time.time() - start_time
         return result
 
@@ -1886,7 +1891,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 old_block = self.getTable("block").get(hash_id)
 
                 hash_CT = tableHCT.get(hash_id)
-                old_data = self.__decompress(old_block["data"], hash_CT["type_id"]).getvalue()
+                old_data = self.__decompress(old_block["data"], hash_CT["type_id"])
                 if old_data != data_block:
                     self.getLogger().error("EEE: weird hashed data collision detected! hash id: %s, value: %r, inode: %s, block-number: %s" % (
                         hash_id, hash_value, inode, block_number

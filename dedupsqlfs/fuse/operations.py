@@ -950,16 +950,16 @@ class DedupOperations(llfuse.Operations): # {{{1
         try:
             self.__log_call('statfs', '->()')
             # Use os.statvfs() to report the host file system's storage capacity.
-            # host_fs = os.statvfs(self.getOption("data"))
+            host_fs = os.statvfs(self.getOption("data"))
+
             stats = llfuse.StatvfsData()
 
             subv = Subvolume(self)
 
-            usage = subv.get_usage(self.mounted_subvolume_name)
+            usage = subv.get_apparant_size_fast(self.mounted_subvolume_name)
 
             # The total number of free blocks available to a non privileged process.
-            # stats.f_bavail = host_fs.f_bsize * host_fs.f_bavail / self.block_size
-            stats.f_bavail = int(math.floor(1.0 * (usage["apparentSize"] - usage["compressedSize"]) / self.block_size))
+            stats.f_bavail = host_fs.f_bsize * host_fs.f_bavail / self.block_size
             if stats.f_bavail < 0:
                 stats.f_bavail = 0
             # The total number of free blocks in the file system.
@@ -967,10 +967,10 @@ class DedupOperations(llfuse.Operations): # {{{1
             stats.f_bfree = stats.f_bavail
             # The total number of blocks in the file system in terms of f_frsize.
             # stats.f_blocks = host_fs.f_frsize * host_fs.f_blocks / self.block_size
-            stats.f_blocks = int(math.ceil(1.0 * usage["apparentSize"] / self.block_size))
+            stats.f_blocks = int(math.ceil(1.0 * usage / self.block_size))
             if stats.f_blocks < 0:
                 stats.f_blocks = 0
-            # stats.f_blocks = self.getTable("block").count()
+
             stats.f_bsize = self.block_size # The file system block size in bytes.
             stats.f_favail = 0 # The number of free file serial numbers available to a non privileged process.
             stats.f_ffree = 0 # The total number of free file serial numbers.

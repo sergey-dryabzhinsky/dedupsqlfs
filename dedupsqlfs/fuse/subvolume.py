@@ -374,6 +374,19 @@ class Subvolume(object):
 
         return apparentSize
 
+    def get_apparant_size_fast(self, name):
+
+        tableSubvol = self.getTable('subvolume')
+
+        subvolItem = tableSubvol.find(name)
+        if not subvolItem:
+            self.getLogger().error("Subvolume with name %r not found!" % name)
+            return 0
+
+        tableInode = self.getTable('inode_' + subvolItem["hash"])
+
+        return tableInode.get_sizes()
+
     def get_usage(self, name, hashTypes=False):
         """
         @param name: Subvolume name

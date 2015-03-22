@@ -374,7 +374,7 @@ class Subvolume(object):
 
         return apparentSize
 
-    def get_apparant_size_fast(self, name):
+    def get_apparent_size_fast(self, name):
 
         tableSubvol = self.getTable('subvolume')
 

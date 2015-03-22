@@ -366,9 +366,11 @@ class Subvolume(object):
         tableTree = self.getTable('tree_' + subvolItem["hash"])
         tableInode = self.getTable('inode_' + subvolItem["hash"])
 
+        cur = tableTree.getCursor()
+        cur.execute("SELECT `inode_id` FROM `%s` " % tableTree.getName())
         apparentSize = 0
-        for inode_id in tableTree.get_inodes():
-            apparentSize += tableInode.get_size(inode_id)
+        for item in iter(cur.fetchone,None):
+            apparentSize += tableInode.get_size(item["inode_id"])
 
         return apparentSize
 
@@ -441,10 +443,10 @@ class Subvolume(object):
             else:
                 hszItem = tableHS.get(hash_id)
                 hashSZ[hash_id] = hszItem
-                uniqueSize += hszItem["real_size"]
+                uniqueSize += hszItem["writed_size"]
                 compressedUniqueSize += hszItem["compressed_size"]
 
-            dataSize += hszItem["real_size"]
+            dataSize += hszItem["writed_size"]
             compressedSize += hszItem["compressed_size"]
 
 #        apparentSize = self.get_apparent_size(subvolItem)

@@ -15,34 +15,34 @@ class TableHashSizes( Table ):
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "hash_id INTEGER PRIMARY KEY, "+
-                "`compressed_size` INTEGER NOT NULL, "+
-                "`real_size` INTEGER NOT NULL "+
+                "`writed_size` INTEGER NOT NULL,"+
+                "`compressed_size` INTEGER NOT NULL"+
             ");"
         )
         return
 
-    def insert( self, hash_id, real_size, compressed_size):
+    def insert( self, hash_id, writed_size, compressed_size):
         """
         :return: int
         """
         self.startTimer()
         cur = self.getCursor()
 
-        cur.execute("INSERT INTO `%s`(hash_id, `compressed_size`, `real_size`) VALUES (?,?,?)" % self._table_name,
-                    (hash_id, compressed_size, real_size,))
+        cur.execute("INSERT INTO `%s`(hash_id, `writed_size`, `compressed_size`) VALUES (?,?,?)" % self.getName(),
+                    (hash_id, writed_size, compressed_size,))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
 
-    def update( self, hash_id, real_size, compressed_size):
+    def update( self, hash_id, writed_size, compressed_size):
         """
         :return: int
         """
         self.startTimer()
         cur = self.getCursor()
 
-        cur.execute("UPDATE `%s` SET compressed_size=?, real_size=? WHERE hash_id=?" % self._table_name,
-                    (compressed_size, real_size, hash_id,))
+        cur.execute("UPDATE `%s` SET writed_size=?, compressed_size=? WHERE hash_id=?" % self.getName(),
+                    (writed_size, compressed_size, hash_id,))
         count = cur.rowcount
         self.stopTimer('update')
         return count
@@ -54,7 +54,7 @@ class TableHashSizes( Table ):
         """
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT * FROM `%s` WHERE hash_id=?" % self._table_name, (hash_id,))
+        cur.execute("SELECT * FROM `%s` WHERE hash_id=?" % self.getName(), (hash_id,))
         item = cur.fetchone()
         self.stopTimer('get')
         return item

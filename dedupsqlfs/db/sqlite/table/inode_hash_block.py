@@ -20,28 +20,17 @@ class TableInodeHashBlock( Table ):
                 "PRIMARY KEY (inode_id, block_number)"+
             ")"
         )
-        c.execute(
-            "CREATE INDEX IF NOT EXISTS ihb_hash ON `%s` (" % self.getName()+
-                "hash_id"+
-            ");"
-        )
-        c.execute(
-            "CREATE INDEX IF NOT EXISTS ihb_inode ON `%s` (" % self.getName()+
-                "inode_id"+
-            ");"
-        )
-        c.execute(
-            "CREATE INDEX IF NOT EXISTS ihb_hash_inode ON `%s` (" % self.getName()+
-                "hash_id, inode_id"+
-            ");"
-        )
+
+        self.createIndexIfNotExists('hash', ("hash_id",))
+        self.createIndexIfNotExists('inode', ("inode_id",))
+        self.createIndexIfNotExists('hash_inode', ("hash_id", "inode_id",))
         return
 
     def insert( self, inode, block_number, hash_id):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("INSERT INTO `%s`(inode_id, block_number, hash_id) VALUES (?,?,?)" % self.getName(),
-                    (inode, block_number, hash_id))
+        cur.execute("INSERT INTO `%s`(inode_id, block_number, hash_id,) VALUES (?,?,?,)" % self.getName(),
+                    (inode, block_number, hash_id,))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
@@ -84,14 +73,6 @@ class TableInodeHashBlock( Table ):
         item = cur.rowcount
         self.stopTimer('delete_by_inode_number')
         return item
-
-    def get_by_inode( self, inode):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute("SELECT * FROM `%s` WHERE inode_id=?" % self.getName(), (inode,))
-        items = cur.fetchall()
-        self.stopTimer('get_by_inode')
-        return items
 
     def get_count_uniq_inodes(self):
         self.startTimer()

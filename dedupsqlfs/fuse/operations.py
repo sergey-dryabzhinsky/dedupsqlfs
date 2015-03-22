@@ -1816,35 +1816,42 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         block_length = len(data_block)
 
+        result = {
+            "hash": None,
+            "data": None,
+            "new": False,
+            "update": False,
+            "deleted": False,
+            "inode": inode,
+            "block_number": block_number,
+            "real_size": block_length,
+            "writed_size": block_length,
+        }
+
         self.getLogger().debug("write block: inode=%s, block number=%s, data length=%s" % (inode, block_number, block_length,))
 
         index_hash_id = self.__get_hash_index_from_cache(inode, block_number)
-
-        # First sparse files variant = flush zero-bytes string
-        sparse_block = False
-        if data_block == b"\x00" *block_length:
-            data_block = b''
-            sparse_block = True
 
         # Second sparse files variant = remove zero-bytes tail
         data_block = data_block.rstrip(b"\x00")
 
         block_length = len(data_block)
 
-        self.getLogger().debug("write block: updated data length=%s, sparse=%r" % (block_length, sparse_block,))
+        # First sparse files variant = flush zero-bytes string
+        sparsed_block = False
+        if block_length == 0:
+            sparsed_block = True
 
-        result = {
-            "hash": None,
-            "data": None,
-            "new": False,
-            "update": False,
-            "real_size": block_length,
-        }
+        result["writed_size"] = block_length
 
-        if (block_length == 0 and index_hash_id) or sparse_block:
+        self.getLogger().debug("write block: updated data length=%s, sparse=%r" % (block_length, sparsed_block,))
+
+        if (block_length == 0 and index_hash_id) or sparsed_block:
             self.getLogger().debug("write block: remove empty or zero-filled block")
             tableIndex.delete_by_inode_number(inode, block_number)
             self.cached_indexes.unset(inode, block_number)
+
+            result["deleted"] = True
 
             self.time_spent_writing_blocks += time.time() - start_time
             return result
@@ -1902,6 +1909,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 inode, block_number, hash_id
             )
             self.cached_indexes.set(inode, block_number, hash_id)
+            result["update"] = True
 
         self.time_spent_writing_blocks += time.time() - start_time
         return result
@@ -1911,7 +1919,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         count = 0
 
         blocksToCompress = {}
-        blocks = {}
+        blockSize = {}
 
         for inode, inode_data in cached_blocks.items():
             for block_number, block_data in inode_data.items():
@@ -1920,8 +1928,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                     item = self.__write_block_data(int(inode), int(block_number), block)
                     if item["hash"] and item["new"]:
                         blocksToCompress[ item["hash"] ] = item["data"]
-                        del item["data"]
-                        blocks[ item["hash"] ] = item
+                        blockSize[ item["hash"] ] = item["writed_size"]
                     if writed:
                         count += 1
                 else:
@@ -1934,10 +1941,10 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         for hash_id, cItem in self.getApplication().compressData(blocksToCompress):
             cdata, cmethod = cItem
-            dItem = blocks[ hash_id ]
 
-            real_size = dItem["real_size"]
-            real_comp_size = len(cdata)
+            comp_size = len(cdata)
+
+            writed_size = blockSize[ hash_id ]
 
             cmethod_id = self.getCompressionTypeId(cmethod)
 
@@ -1952,11 +1959,12 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             hash_SZ = tableHSZ.get(hash_id)
             if hash_SZ:
-                tableHSZ.update(hash_id, real_size, real_comp_size)
+                if hash_SZ["compressed_size"] != comp_size or hash_SZ["writed_size"] != writed_size:
+                    tableHSZ.update(hash_id, writed_size, comp_size)
             else:
-                tableHSZ.insert(hash_id, real_size, real_comp_size)
+                tableHSZ.insert(hash_id, writed_size, comp_size)
 
-            self.bytes_written_compressed += real_comp_size
+            self.bytes_written_compressed += comp_size
 
         self.time_spent_compressing += self.getApplication().getCompressTool().time_spent_compressing
 

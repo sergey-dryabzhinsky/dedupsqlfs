@@ -247,7 +247,6 @@ class DedupFS(object): # {{{1
         compMethods = {}
         hashCT = {}
         hashSZ = {}
-        nodesInodes = {}
 
         for subvol_id in tableSubvol.get_ids():
 
@@ -290,10 +289,10 @@ class DedupFS(object): # {{{1
             else:
                 hszItem = tableHS.get(hash_id)
                 hashSZ[hash_id] = hszItem
-                uniqueSize += hszItem["real_size"]
+                uniqueSize += hszItem["writed_size"]
                 compressedUniqueSize += hszItem["compressed_size"]
 
-            dataSize += hszItem["real_size"]*hash_cnt
+            dataSize += hszItem["writed_size"]*hash_cnt
             compressedSize += hszItem["compressed_size"]*hash_cnt
 
         tableTmp.drop()

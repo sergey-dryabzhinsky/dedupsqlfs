@@ -954,20 +954,20 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             stats = llfuse.StatvfsData()
 
-            subv = Subvolume(self)
+            # subv = Subvolume(self)
 
-            usage = subv.get_apparant_size_fast(self.mounted_subvolume_name)
+            # usage = subv.get_apparant_size_fast(self.mounted_subvolume_name)
 
             # The total number of free blocks available to a non privileged process.
             stats.f_bavail = host_fs.f_bsize * host_fs.f_bavail / self.block_size
             if stats.f_bavail < 0:
                 stats.f_bavail = 0
             # The total number of free blocks in the file system.
-            # stats.f_bfree = host_fs.f_frsize * host_fs.f_bfree / self.block_size
-            stats.f_bfree = stats.f_bavail
+            stats.f_bfree = host_fs.f_frsize * host_fs.f_bfree / self.block_size
+            # stats.f_bfree = stats.f_bavail
             # The total number of blocks in the file system in terms of f_frsize.
-            # stats.f_blocks = host_fs.f_frsize * host_fs.f_blocks / self.block_size
-            stats.f_blocks = int(math.ceil(1.0 * usage / self.block_size))
+            stats.f_blocks = host_fs.f_frsize * host_fs.f_blocks / self.block_size
+            # stats.f_blocks = int(math.ceil(1.0 * usage / self.block_size))
             if stats.f_blocks < 0:
                 stats.f_blocks = 0
 

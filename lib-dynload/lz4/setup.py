@@ -3,7 +3,7 @@
 
 from setuptools import setup, find_packages, Extension
 
-VERSION = (0, 7, 0)
+VERSION = (0, 7, 0, 1)
 
 setup(
     name='lz4',
@@ -26,7 +26,7 @@ setup(
             "-Wall",
             "-W",
             "-Wundef",
-            "-DLZ4_VERSION=\"r119\"",
+            "-DLZ4_VERSION=\"r131\"",
             "-DFORTIFY_SOURCE=2", "-fstack-protector",
             "-march=native",
 #            "-floop-interchange", "-floop-block", "-floop-strip-mine", "-ftree-loop-distribution",

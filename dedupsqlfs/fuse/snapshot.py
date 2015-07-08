@@ -106,7 +106,8 @@ class Snapshot(Subvolume):
             if subvolDate < oldDate:
                 cnt += 1
 
-        self.print_out("Count old snapshots: %s\n" % cnt)
+        self.print_msg("Count old snapshots: ")
+        self.print_out("%s\n" % cnt)
         return
 
     pass

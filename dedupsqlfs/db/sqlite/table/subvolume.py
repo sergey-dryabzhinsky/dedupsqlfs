@@ -31,7 +31,7 @@ class TableSubvolume( Table ):
         self.createIndexIfNotExists("hash", ('hash',), unique=True)
         return
 
-    def insert( self, name, created_at, mounted_at=None, updated_at=None ):
+    def insert( self, name, created_at, mounted_at=None, updated_at=None, stats_at=None, stats=None ):
         """
         :param name: str            - subvolume/snapshot name
         :param created_at: int      - creation time
@@ -48,8 +48,8 @@ class TableSubvolume( Table ):
 
         bname = sqlite3.Binary(name)
 
-        cur.execute("INSERT INTO `%s`(hash, name, created_at, mounted_at, updated_at) " % self.getName()+
-                    "VALUES (?, ?, ?, ?, ?)", (digest, bname, int(created_at), mounted_at, updated_at))
+        cur.execute("INSERT INTO `%s`(hash, name, created_at, mounted_at, updated_at, stats_at, stats) " % self.getName()+
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)", (digest, bname, int(created_at), mounted_at, updated_at, stats_at, stats,))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item

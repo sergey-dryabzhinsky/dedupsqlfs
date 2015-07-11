@@ -173,6 +173,9 @@ class DedupOperations(llfuse.Operations): # {{{1
             if migr.isMigrationNeeded():
                 self.getLogger().warn("FS databases need to process migrations.")
                 migr.process()
+            if migr.isMigrationNeeded():
+                self.getLogger().error("FS databases need these migrations! They not applyed!")
+                raise OSError("FS DB not migrated!")
 
         return self.manager
 

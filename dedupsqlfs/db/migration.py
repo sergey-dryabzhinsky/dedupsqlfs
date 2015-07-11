@@ -37,7 +37,7 @@ class DbMigration( object ):
 
     def isMigrationNeeded(self):
 
-        tableOpts = self._manager.getTable("options")
+        tableOpts = self._manager.getTable("option")
 
         migration = tableOpts.get("migration")
         if not migration:
@@ -70,7 +70,7 @@ class DbMigration( object ):
         return
 
     def process(self):
-        tableOpts = self._manager.getTable("options")
+        tableOpts = self._manager.getTable("option")
 
         migration = tableOpts.get("migration")
         if not migration:

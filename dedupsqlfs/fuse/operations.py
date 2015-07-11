@@ -1365,6 +1365,11 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             optTable.insert("mounted_subvolume", self.mounted_subvolume_name)
 
+            from dedupsqlfs.db.migration import DbMigration
+            migr = DbMigration(self.manager, self.getLogger())
+            # Always use last migration number on new FS
+            migr.setLastMigrationNumber()
+
             optTable.insert("mounted", 1)
             optTable.insert("inited", 1)
 

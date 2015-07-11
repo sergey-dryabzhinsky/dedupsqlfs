@@ -61,6 +61,20 @@ class DbMigration( object ):
 
         return False
 
+    def setLastMigrationNumber(self):
+
+        tableOpts = self._manager.getTable("option")
+
+        lastM = self.getMigrationNumber( self.getMigrations()[-1] )
+
+        migration = tableOpts.get("migration")
+        if not migration:
+            tableOpts.insert("migration", lastM)
+        else:
+            tableOpts.update("migration", lastM)
+
+        return
+
     def run_migration(self, migFile):
 
         sys.path.insert(0, self.getMigrationsDir() )

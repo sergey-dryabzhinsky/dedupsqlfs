@@ -20,7 +20,9 @@ class TableSubvolume( Table ):
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
                 "`hash` CHAR(32) NOT NULL, "+
                 "`name` BLOB NOT NULL, "+
+                "`stats` TEXT, "+
                 "`readonly` TINYINT UNSIGNED NOT NULL DEFAULT 0, "+
+                "stats_at INTEGER, "+
                 "created_at INTEGER NOT NULL, "+
                 "mounted_at INTEGER, "+
                 "updated_at INTEGER"
@@ -94,6 +96,24 @@ class TableSubvolume( Table ):
         item = cur.rowcount
         self.stopTimer('delete')
         return item
+
+    def stats_time(self, subvol_id, stime=None):
+        self.startTimer()
+        if stime is None:
+            stime = time()
+        cur = self.getCursor()
+        cur.execute("UPDATE `%s` SET stats_at=? WHERE id=? " % self.getName(),
+                    (int(stime), subvol_id,))
+        self.stopTimer('stats_time')
+        return cur.rowcount
+
+    def set_stats(self, subvol_id, stats):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("UPDATE `%s` SET stats=? WHERE id=? " % self.getName(),
+                    (stats, subvol_id,))
+        self.stopTimer('set_stats')
+        return cur.rowcount
 
     def get(self, subvol_id):
         self.startTimer()

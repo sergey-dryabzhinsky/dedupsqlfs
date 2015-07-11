@@ -167,6 +167,12 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.manager.setAutocommit(self.getOption("use_transactions"))
             self.manager.setBasepath(os.path.expanduser(self.getOption("data")))
             self.manager.begin()
+
+            from dedupsqlfs.db.migration import DbMigration
+            migr = DbMigration(self.manager)
+            if migr.isMigrationNeeded():
+                migr.process()
+
         return self.manager
 
     def getTable(self, table_name):

@@ -38,7 +38,11 @@ class DbMigration( object ):
         if not migrFile:
             return 0
         name = os.path.basename(migrFile)
-        number = int(re.sub(r"[^\d]+", "", name))
+        number = re.sub(r"[^\d]+", "", name)
+        if number.isdigit():
+            number = int(number)
+        else:
+            number = 0
         return number
 
     def isMigrationNeeded(self):

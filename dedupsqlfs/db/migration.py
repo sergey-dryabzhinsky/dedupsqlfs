@@ -79,7 +79,7 @@ class DbMigration( object ):
 
         migration = tableOpts.get("migration")
         if not migration:
-            return True
+            migration = 0
         else:
             migration = int(migration)
 

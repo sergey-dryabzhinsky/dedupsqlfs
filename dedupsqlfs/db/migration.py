@@ -9,12 +9,14 @@ import re
 class DbMigration( object ):
 
     _manager = None
+    _log = None
 
     _migrationsDir = None
     _migrationsList = None
 
-    def __init__( self, manager ):
+    def __init__( self, manager, log ):
         self._manager = manager
+        self._log = log
         pass
 
     def getMigrationsDir(self):
@@ -36,7 +38,7 @@ class DbMigration( object ):
         if not migrFile:
             return 0
         name = os.path.basename(migrFile)
-        number = "%11d" % int(re.sub(r"[^\d]+", "", name))
+        number = int(re.sub(r"[^\d]+", "", name))
         return number
 
     def isMigrationNeeded(self):
@@ -66,8 +68,7 @@ class DbMigration( object ):
         fp, pathname, description = imp.find_module( migMod )
         module = imp.load_module(migMod, fp, pathname, description)
 
-        if hasattr(module, "run"):
-            module.run( self._manager )
+        module.run( self._manager )
 
         sys.path.pop(0)
 
@@ -93,6 +94,8 @@ class DbMigration( object ):
         for mn in migKeys:
             if mn <= migration:
                 continue
+
+            self._log.info("Run migration %r from file %r" % (mn, migSort[mn],))
             self.run_migration( migSort[ mn ] )
 
         return

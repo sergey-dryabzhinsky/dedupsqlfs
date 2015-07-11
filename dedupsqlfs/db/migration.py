@@ -20,7 +20,11 @@ class DbMigration( object ):
     def getMigrationsDir(self):
         if not self._migrationsDir:
             baseDir = os.path.dirname( os.path.dirname( os.path.realpath(sys.argv[0]) ) )
-            self._migrationsDir = os.path.join(baseDir, "db", "migrations")
+            path = os.path.join(baseDir, "dedupsqlfs", "db", "migrations")
+            if os.path.isdir(path):
+                self._migrationsDir = path
+            else:
+                raise NotADirectoryError("Directory for migrations not found: %s" % path)
         return self._migrationsDir
 
     def getMigrations(self):

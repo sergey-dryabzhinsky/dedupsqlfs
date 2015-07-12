@@ -507,7 +507,7 @@ class Subvolume(object):
         }
 
         tableSubvol.stats_time(subvolItem["id"])
-        tableSubvol.set_stats(subvolItem["id"], stats)
+        tableSubvol.set_stats(subvolItem["id"], json.dumps(stats))
 
         return stats
 

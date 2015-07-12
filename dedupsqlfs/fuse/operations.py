@@ -171,10 +171,10 @@ class DedupOperations(llfuse.Operations): # {{{1
             from dedupsqlfs.db.migration import DbMigration
             migr = DbMigration(self.manager, self.getLogger())
             if migr.isMigrationNeeded():
-                self.getLogger().warn("FS databases need to process migrations.")
+                self.getLogger().info("FS databases need to process migrations.")
                 migr.process()
             if migr.isMigrationNeeded():
-                self.getLogger().error("FS databases need these migrations! They not applyed!")
+                self.getLogger().error("FS databases need to process migrations! They not (all) applyed!")
                 raise OSError("FS DB not migrated!")
 
         return self.manager

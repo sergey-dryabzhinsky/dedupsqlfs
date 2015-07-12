@@ -31,7 +31,7 @@ class TableSubvolume( Table ):
         self.createIndexIfNotExists("hash", ('hash',), unique=True)
         return
 
-    def insert( self, name, created_at, mounted_at=None, updated_at=None ):
+    def insert( self, name, created_at, mounted_at=None, updated_at=None, stats_at=None, stats=None ):
         """
         :param name: str            - name for subvolume/snapshot
         :param created_at: int      - creation time
@@ -48,14 +48,16 @@ class TableSubvolume( Table ):
 
         cur.execute(
             "INSERT INTO `%s` " % self.getName()+
-            " (`hash`,`name`,`created_at`, `mounted_at`, `updated_at`) "+
-            "VALUES (%(hash)s, %(name)s, %(created)s, %(mounted)s, %(updated)s)",
+            " (`hash`,`name`,`created_at`, `mounted_at`, `updated_at`, `stats_at`, `stats`) "+
+            "VALUES (%(hash)s, %(name)s, %(created)s, %(mounted)s, %(updated)s, %(statsed)s, %(stats)s)",
             {
                 "hash": digest,
                 "name": name,
                 "created": int(created_at),
                 "mounted": mounted_at,
-                "updated": updated_at
+                "updated": updated_at,
+                "statsed": stats_at,
+                "stats": stats
             }
         )
         item = cur.lastrowid

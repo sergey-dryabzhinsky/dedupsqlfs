@@ -122,6 +122,8 @@ class TableSubvolume( Table ):
         item = cur.fetchone()
         if item:
             item['hash'] = item['hash'].decode()
+            if item['stats']:
+                item['stats'] = item['stats'].decode()
         self.stopTimer('get')
         return item
 
@@ -140,6 +142,8 @@ class TableSubvolume( Table ):
         item = cur.fetchone()
         if item:
             item['hash'] = item['hash'].decode()
+            if item['stats']:
+                item['stats'] = item['stats'].decode()
         self.stopTimer('find')
         return item
 

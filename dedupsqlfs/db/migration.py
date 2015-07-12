@@ -73,6 +73,8 @@ class DbMigration( object ):
         else:
             tableOpts.update("migration", lastM)
 
+        tableOpts.commit()
+
         return
 
     def run_migration(self, migFile):

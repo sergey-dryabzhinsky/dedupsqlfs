@@ -16,6 +16,7 @@ def run(manager):
     cur.execute("ALTER TABLE subvolume ADD COLUMN stats TEXT;")
     cur.execute("ALTER TABLE subvolume ADD COLUMN stats_at INTEGER;")
 
+    tableSubvol.commit()
 
     tableOpts = manager.getTable("option")
 
@@ -25,5 +26,7 @@ def run(manager):
         tableOpts.insert("migration", __NUMBER__)
     else:
         tableOpts.update("migration", __NUMBER__)
+
+    tableOpts.commit()
 
     return

@@ -167,6 +167,16 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.manager.setAutocommit(self.getOption("use_transactions"))
             self.manager.setBasepath(os.path.expanduser(self.getOption("data")))
             self.manager.begin()
+
+            from dedupsqlfs.db.migration import DbMigration
+            migr = DbMigration(self.manager, self.getLogger())
+            if migr.isMigrationNeeded():
+                self.getLogger().info("FS databases need to process migrations.")
+                migr.process()
+            if migr.isMigrationNeeded():
+                self.getLogger().error("FS databases need to process migrations! They not (all) applyed!")
+                raise OSError("FS DB not migrated!")
+
         return self.manager
 
     def getTable(self, table_name):
@@ -1354,6 +1364,11 @@ class DedupOperations(llfuse.Operations): # {{{1
                 optTable.insert(name, "%s" % self.getOption(name))
 
             optTable.insert("mounted_subvolume", self.mounted_subvolume_name)
+
+            from dedupsqlfs.db.migration import DbMigration
+            migr = DbMigration(self.manager, self.getLogger())
+            # Always use last migration number on new FS
+            migr.setLastMigrationNumber()
 
             optTable.insert("mounted", 1)
             optTable.insert("inited", 1)

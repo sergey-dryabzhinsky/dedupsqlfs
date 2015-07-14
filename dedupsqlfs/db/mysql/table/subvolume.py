@@ -19,7 +19,9 @@ class TableSubvolume( Table ):
                 "`id` INT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
                 "`hash` CHAR(32) NOT NULL, "+
                 "`name` BLOB NOT NULL, "+
+                "`stats` BLOB, "+
                 "`readonly` TINYINT UNSIGNED NOT NULL DEFAULT 0, "+
+                "`stats_at` INT UNSIGNED, "+
                 "`created_at` INT UNSIGNED NOT NULL, "+
                 "`mounted_at` INT UNSIGNED, "+
                 "`updated_at` INT UNSIGNED"+
@@ -29,7 +31,7 @@ class TableSubvolume( Table ):
         self.createIndexIfNotExists("hash", ('hash',), unique=True)
         return
 
-    def insert( self, name, created_at, mounted_at=None, updated_at=None ):
+    def insert( self, name, created_at, mounted_at=None, updated_at=None, stats_at=None, stats=None ):
         """
         :param name: str            - name for subvolume/snapshot
         :param created_at: int      - creation time
@@ -46,14 +48,16 @@ class TableSubvolume( Table ):
 
         cur.execute(
             "INSERT INTO `%s` " % self.getName()+
-            " (`hash`,`name`,`created_at`, `mounted_at`, `updated_at`) "+
-            "VALUES (%(hash)s, %(name)s, %(created)s, %(mounted)s, %(updated)s)",
+            " (`hash`,`name`,`created_at`, `mounted_at`, `updated_at`, `stats_at`, `stats`) "+
+            "VALUES (%(hash)s, %(name)s, %(created)s, %(mounted)s, %(updated)s, %(statsed)s, %(stats)s)",
             {
                 "hash": digest,
                 "name": name,
                 "created": int(created_at),
                 "mounted": mounted_at,
-                "updated": updated_at
+                "updated": updated_at,
+                "statsed": stats_at,
+                "stats": stats
             }
         )
         item = cur.lastrowid
@@ -108,6 +112,36 @@ class TableSubvolume( Table ):
             }
         )
         self.stopTimer('update_time')
+        return cur.rowcount
+
+    def stats_time(self, subvol_id, stime=None):
+        self.startTimer()
+        if stime is None:
+            stime = time()
+        cur = self.getCursor()
+        cur.execute(
+            "UPDATE `%s` " % self.getName()+
+            " SET `stats_at`=%(stime)s WHERE `id`=%(id)s",
+            {
+                "stime": int(stime),
+                "id": subvol_id
+            }
+        )
+        self.stopTimer('stats_time')
+        return cur.rowcount
+
+    def set_stats(self, subvol_id, stats):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute(
+            "UPDATE `%s` " % self.getName()+
+            " SET `stats`=%(stats)s WHERE `id`=%(id)s",
+            {
+                "stats": stats,
+                "id": subvol_id
+            }
+        )
+        self.stopTimer('set_stats')
         return cur.rowcount
 
     def delete(self, subvol_id):

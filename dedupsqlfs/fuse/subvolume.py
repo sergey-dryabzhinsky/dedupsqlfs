@@ -8,6 +8,7 @@ import sys
 import math
 from datetime import datetime
 from dedupsqlfs.my_formats import format_size
+import json
 
 class Subvolume(object):
 
@@ -134,6 +135,7 @@ class Subvolume(object):
 
             subvol = tableSubvol.get(subvol_id)
 
+            apparent_size = 0
             if not with_stats:
                 apparent_size = self.get_apparent_size(subvol)
             else:
@@ -363,6 +365,14 @@ class Subvolume(object):
         return changed > 0
 
     def get_apparent_size(self, subvolItem):
+        if subvolItem["stats_at"] and subvolItem["stats"]:
+            stats_at = int(subvolItem["stats_at"])
+            updated_at = int(subvolItem["updated_at"])
+            if not updated_at > stats_at:
+                # No updates since last stats calculated
+                stats = json.loads(subvolItem["stats"])
+                return stats["apparentSize"]
+
         tableTree = self.getTable('tree_' + subvolItem["hash"])
         tableInode = self.getTable('inode_' + subvolItem["hash"])
 
@@ -391,11 +401,13 @@ class Subvolume(object):
         """
         @param name: Subvolume name
         @type  name: bytes
+
+        @rtype: dict|false
         """
 
         if not name:
             self.getLogger().error("Select subvolume which you need to process!")
-            return
+            return False
 
         tableSubvol = self.getTable('subvolume')
 
@@ -403,6 +415,13 @@ class Subvolume(object):
         if not subvolItem:
             self.getLogger().error("Subvolume with name %r not found!" % name)
             return False
+
+        if subvolItem["stats_at"] and subvolItem["stats"]:
+            stats_at = int(subvolItem["stats_at"])
+            updated_at = int(subvolItem["updated_at"])
+            if not updated_at > stats_at:
+                # No updates since last stats calculated
+                return json.loads(subvolItem["stats"])
 
         compMethods = {}
         hashCT = {}
@@ -475,7 +494,7 @@ class Subvolume(object):
                 count_all += cnt
                 comp_types[ cnt ] = method
 
-        return {
+        stats = {
             "apparentSize": apparentSize,
             "dataSize": dataSize,
             "dedupSize": dedupSize,
@@ -486,6 +505,11 @@ class Subvolume(object):
             "compressionTypes": comp_types,
             "compressionTypesAll": count_all
         }
+
+        tableSubvol.stats_time(subvolItem["id"])
+        tableSubvol.set_stats(subvolItem["id"], json.dumps(stats))
+
+        return stats
 
     def report_usage(self, name):
         """

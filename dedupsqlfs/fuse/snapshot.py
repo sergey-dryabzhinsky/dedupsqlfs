@@ -39,6 +39,9 @@ class Snapshot(Subvolume):
         subvolItemFrom = tableSubvol.find(subvol_from)
 
         tableSubvol.update_time(subvolItemTo["id"], subvolItemFrom["updated_at"])
+        if subvolItemFrom["stats_at"] and subvolItemFrom["stats"]:
+            tableSubvol.stats_time(subvolItemTo["id"], subvolItemFrom["stats_at"])
+            tableSubvol.set_stats(subvolItemTo["id"], subvolItemFrom["stats"])
 
         self.getManager().getManager().commit()
 

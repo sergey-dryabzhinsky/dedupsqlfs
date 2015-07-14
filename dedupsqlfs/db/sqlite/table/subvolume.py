@@ -20,7 +20,9 @@ class TableSubvolume( Table ):
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
                 "`hash` CHAR(32) NOT NULL, "+
                 "`name` BLOB NOT NULL, "+
+                "`stats` TEXT, "+
                 "`readonly` TINYINT UNSIGNED NOT NULL DEFAULT 0, "+
+                "stats_at INTEGER, "+
                 "created_at INTEGER NOT NULL, "+
                 "mounted_at INTEGER, "+
                 "updated_at INTEGER"
@@ -29,7 +31,7 @@ class TableSubvolume( Table ):
         self.createIndexIfNotExists("hash", ('hash',), unique=True)
         return
 
-    def insert( self, name, created_at, mounted_at=None, updated_at=None ):
+    def insert( self, name, created_at, mounted_at=None, updated_at=None, stats_at=None, stats=None ):
         """
         :param name: str            - subvolume/snapshot name
         :param created_at: int      - creation time
@@ -46,8 +48,8 @@ class TableSubvolume( Table ):
 
         bname = sqlite3.Binary(name)
 
-        cur.execute("INSERT INTO `%s`(hash, name, created_at, mounted_at, updated_at) " % self.getName()+
-                    "VALUES (?, ?, ?, ?, ?)", (digest, bname, int(created_at), mounted_at, updated_at))
+        cur.execute("INSERT INTO `%s`(hash, name, created_at, mounted_at, updated_at, stats_at, stats) " % self.getName()+
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)", (digest, bname, int(created_at), mounted_at, updated_at, stats_at, stats,))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
@@ -95,6 +97,24 @@ class TableSubvolume( Table ):
         self.stopTimer('delete')
         return item
 
+    def stats_time(self, subvol_id, stime=None):
+        self.startTimer()
+        if stime is None:
+            stime = time()
+        cur = self.getCursor()
+        cur.execute("UPDATE `%s` SET stats_at=? WHERE id=? " % self.getName(),
+                    (int(stime), subvol_id,))
+        self.stopTimer('stats_time')
+        return cur.rowcount
+
+    def set_stats(self, subvol_id, stats):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("UPDATE `%s` SET stats=? WHERE id=? " % self.getName(),
+                    (stats, subvol_id,))
+        self.stopTimer('set_stats')
+        return cur.rowcount
+
     def get(self, subvol_id):
         self.startTimer()
         cur = self.getCursor()
@@ -102,6 +122,8 @@ class TableSubvolume( Table ):
         item = cur.fetchone()
         if item:
             item['hash'] = item['hash'].decode()
+            if item['stats']:
+                item['stats'] = item['stats'].decode()
         self.stopTimer('get')
         return item
 
@@ -120,6 +142,8 @@ class TableSubvolume( Table ):
         item = cur.fetchone()
         if item:
             item['hash'] = item['hash'].decode()
+            if item['stats']:
+                item['stats'] = item['stats'].decode()
         self.stopTimer('find')
         return item
 

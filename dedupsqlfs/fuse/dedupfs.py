@@ -263,7 +263,7 @@ class DedupFS(object): # {{{1
             if not len(items):
                 break
 
-            hash_ids = (str(item["id"]) for item in items)
+            hash_ids = ",".join((str(item["id"]) for item in items))
 
             hashTypes = tableHCT.get_types_by_hash_ids(hash_ids)
             hashSizes = tableHS.get_sizes_by_hash_ids(hash_ids)

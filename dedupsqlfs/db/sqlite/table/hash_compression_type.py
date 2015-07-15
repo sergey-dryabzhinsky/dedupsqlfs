@@ -83,10 +83,9 @@ class TableHashCompressionType( Table ):
         self.stopTimer('remove_by_ids')
         return count
 
-    def get_types_by_hash_ids(self, hash_ids):
+    def get_types_by_hash_ids(self, id_str):
         self.startTimer()
         items = {}
-        id_str = ",".join(hash_ids)
         if id_str:
             cur = self.getCursor()
             cur.execute("SELECT * FROM `%s` " % self.getName()+

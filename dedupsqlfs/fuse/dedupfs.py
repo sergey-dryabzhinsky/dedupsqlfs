@@ -257,7 +257,7 @@ class DedupFS(object): # {{{1
 
         for item in iter(curH.fetchone, None):
 
-            hash_id = item["id"]
+            hash_id = str(item["id"])
             hash_cnt = item["cnt"]
 
             if hash_id in hashCT:

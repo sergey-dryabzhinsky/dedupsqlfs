@@ -266,6 +266,8 @@ class Subvolume(object):
         tableTmp.drop()
         tableTmp.create()
 
+        pageSize = 10000
+
         for subvol_id in tableSubvol.get_ids():
 
             subvol = tableSubvol.get(subvol_id)
@@ -278,26 +280,37 @@ class Subvolume(object):
 
             nodesInodes = {}
 
-            for item in iter(curIndex.fetchone, None):
+            while True:
 
-                # Check if FS tree has inode
+                items = curIndex.fetchmany(pageSize)
+                if not len(items):
+                    break
 
-                inode_id = str(item["inode_id"])
-                if inode_id in nodesInodes:
-                    if not nodesInodes[inode_id]:
-                        continue
-                else:
-                    node = tableTree.find_by_inode(inode_id)
-                    if not node:
-                        nodesInodes[inode_id] = False
-                        continue
+                inode_ids = tuple(str(item["inode_id"]) for item in items)
+
+                inodes_in_tree = tableTree.get_inodes_by_inodes(inode_ids)
+
+                inodes_in_tree = {}.fromkeys(inodes_in_tree, 1)
+
+                for item in items:
+
+                    # Check if FS tree has inode
+
+                    inode_id = str(item["inode_id"])
+                    if inode_id in nodesInodes:
+                        if not nodesInodes[inode_id]:
+                            continue
                     else:
-                        nodesInodes[inode_id] = True
+                        if inode_id not in inodes_in_tree:
+                            nodesInodes[inode_id] = False
+                            continue
+                        else:
+                            nodesInodes[inode_id] = True
 
-                if not tableTmp.find(item["hash_id"]):
-                    tableTmp.insert(item["hash_id"])
-                else:
-                    tableTmp.inc(item["hash_id"])
+                    if not tableTmp.find(item["hash_id"]):
+                        tableTmp.insert(item["hash_id"])
+                    else:
+                        tableTmp.inc(item["hash_id"])
 
         return
 

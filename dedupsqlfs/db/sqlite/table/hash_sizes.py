@@ -71,4 +71,18 @@ class TableHashSizes( Table ):
         self.stopTimer('remove_by_ids')
         return count
 
+    def get_sizes_by_hash_ids(self, hash_ids):
+        self.startTimer()
+        items = {}
+        id_str = ",".join(hash_ids)
+        if id_str:
+            cur = self.getCursor()
+            cur.execute("SELECT * FROM `%s` " % self.getName()+
+                        " WHERE `hash_id` IN (%s)" % (id_str,))
+            for _i in iter(cur.fetchone, None):
+                items[ str(_i["hash_id"]) ] = (_i["writed_size"], _i["compressed_size"], )
+
+        self.stopTimer('get_sizes_by_hash_ids')
+        return items
+
     pass

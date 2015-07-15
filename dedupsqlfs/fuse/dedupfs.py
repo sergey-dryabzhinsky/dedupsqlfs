@@ -255,30 +255,35 @@ class DedupFS(object): # {{{1
         curH = tableTmp.getCursor()
         curH.execute("SELECT * FROM `%s`" % tableTmp.getName())
 
-        for item in iter(curH.fetchone, None):
+        pageSize = 10000
 
-            hash_id = str(item["id"])
-            hash_cnt = item["cnt"]
+        while True:
 
-            if hash_id in hashCT:
-                method = hashCT[hash_id]
-            else:
-                hctItem = tableHCT.get(hash_id)
-                method = self.operations.getCompressionTypeName(hctItem["type_id"])
-                hashCT[hash_id] = method
+            items = curH.fetchmany(pageSize)
+            if not len(items):
+                break
 
-            compMethods[ method ] = compMethods.get(method, 0) + 1
+            hash_ids = (str(item["id"]) for item in items)
 
-            if hash_id in hashSZ:
-                hszItem = hashSZ[hash_id]
-            else:
-                hszItem = tableHS.get(hash_id)
-                hashSZ[hash_id] = hszItem
-                uniqueSize += hszItem["writed_size"]
-                compressedUniqueSize += hszItem["compressed_size"]
+            hashTypes = tableHCT.get_types_by_hash_ids(hash_ids)
+            hashSizes = tableHS.get_sizes_by_hash_ids(hash_ids)
 
-            dataSize += hszItem["writed_size"]*hash_cnt
-            compressedSize += hszItem["compressed_size"]*hash_cnt
+            for item in items:
+
+                hash_id = str(item["id"])
+                hash_cnt = item["cnt"]
+
+                method = self.operations.getCompressionTypeName(hashTypes[ hash_id ])
+                compMethods[ method ] = compMethods.get(method, 0) + 1
+
+                hszItem = hashSizes[ hash_id ]
+
+                if hash_cnt == 1:
+                    uniqueSize += hszItem["writed_size"]
+                    compressedUniqueSize += hszItem["compressed_size"]
+
+                dataSize += hszItem["writed_size"]*hash_cnt
+                compressedSize += hszItem["compressed_size"]*hash_cnt
 
         tableTmp.drop()
 

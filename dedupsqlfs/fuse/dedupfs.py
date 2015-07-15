@@ -279,11 +279,11 @@ class DedupFS(object): # {{{1
                 hszItem = hashSizes[ hash_id ]
 
                 if hash_cnt == 1:
-                    uniqueSize += hszItem["writed_size"]
-                    compressedUniqueSize += hszItem["compressed_size"]
+                    uniqueSize += hszItem[0]
+                    compressedUniqueSize += hszItem[1]
 
-                dataSize += hszItem["writed_size"]*hash_cnt
-                compressedSize += hszItem["compressed_size"]*hash_cnt
+                dataSize += hszItem[0]*hash_cnt
+                compressedSize += hszItem[1]*hash_cnt
 
         tableTmp.drop()
 

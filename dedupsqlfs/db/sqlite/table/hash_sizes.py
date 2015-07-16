@@ -79,7 +79,7 @@ class TableHashSizes( Table ):
             cur.execute("SELECT * FROM `%s` " % self.getName()+
                         " WHERE `hash_id` IN (%s)" % (id_str,))
             for _i in iter(cur.fetchone, None):
-                hash_id = str(_i["hash_id"])
+                hash_id = _i["hash_id"]
                 del _i["hash_id"]
                 items[ hash_id ] = _i
 

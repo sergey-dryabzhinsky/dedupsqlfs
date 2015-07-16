@@ -91,7 +91,7 @@ class TableHashCompressionType( Table ):
             cur.execute("SELECT * FROM `%s` " % self.getName()+
                         " WHERE `hash_id` IN (%s)" % (id_str,))
             for _i in iter(cur.fetchone, None):
-                items[ str(_i["hash_id"]) ] = _i["type_id"]
+                items[ _i["hash_id"] ] = _i["type_id"]
 
         self.stopTimer('get_types_by_hash_ids')
         return items

@@ -268,10 +268,9 @@ class DedupFS(object): # {{{1
             hashTypes = tableHCT.get_types_by_hash_ids(hash_ids)
             hashSizes = tableHS.get_sizes_by_hash_ids(hash_ids)
 
-            for item in items:
+            for hash_id in items:
 
-                hash_id = str(item)
-                hash_cnt = hashCount[ item ]
+                hash_cnt = hashCount[ hash_id ]
 
                 method = self.operations.getCompressionTypeName(hashTypes[ hash_id ])
                 compMethods[ method ] = compMethods.get(method, 0) + 1

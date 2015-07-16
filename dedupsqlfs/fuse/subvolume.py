@@ -307,6 +307,9 @@ class Subvolume(object):
                     hash_id = item["hash_id"]
                     hashCount[ hash_id ] = hashCount.get( hash_id, 0 ) + 1
 
+            tableIndex.close()
+            tableTree.close()
+
         return hashCount
 
 

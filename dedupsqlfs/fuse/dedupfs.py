@@ -249,29 +249,29 @@ class DedupFS(object): # {{{1
         tableHCT = manager.getTable('hash_compression_type')
         tableHS = manager.getTable('hash_sizes')
 
-        subv.prepareIndexHashIdCount()
-        tableTmp = manager.getTable('tmp_id_count')
+        hashCount = subv.prepareIndexHashIdCount()
 
-        curH = tableTmp.getCursor()
-        curH.execute("SELECT * FROM `%s`" % tableTmp.getName())
-
+        hashIds = hashCount.keys()
+        current = 0
         pageSize = 10000
 
         while True:
 
-            items = curH.fetchmany(pageSize)
+            items = hashIds[current:current+pageSize]
             if not len(items):
                 break
 
-            hash_ids = ",".join((str(item["id"]) for item in items))
+            current += pageSize
+
+            hash_ids = ",".join((str(item) for item in items))
 
             hashTypes = tableHCT.get_types_by_hash_ids(hash_ids)
             hashSizes = tableHS.get_sizes_by_hash_ids(hash_ids)
 
             for item in items:
 
-                hash_id = str(item["id"])
-                hash_cnt = item["cnt"]
+                hash_id = str(item)
+                hash_cnt = hashCount[ item ]
 
                 method = self.operations.getCompressionTypeName(hashTypes[ hash_id ])
                 compMethods[ method ] = compMethods.get(method, 0) + 1
@@ -279,13 +279,11 @@ class DedupFS(object): # {{{1
                 hszItem = hashSizes[ hash_id ]
 
                 if hash_cnt == 1:
-                    uniqueSize += hszItem[0]
-                    compressedUniqueSize += hszItem[1]
+                    uniqueSize += hszItem["writed_size"]
+                    compressedUniqueSize += hszItem["compressed_size"]
 
-                dataSize += hszItem[0]*hash_cnt
-                compressedSize += hszItem[1]*hash_cnt
-
-        tableTmp.drop()
+                dataSize += hszItem["writed_size"]*hash_cnt
+                compressedSize += hszItem["compressed_size"]*hash_cnt
 
         sparseSize = apparentSize - dataSize
         dedupSize = dataSize - uniqueSize

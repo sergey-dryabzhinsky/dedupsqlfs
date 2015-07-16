@@ -79,7 +79,9 @@ class TableHashSizes( Table ):
             cur.execute("SELECT * FROM `%s` " % self.getName()+
                         " WHERE `hash_id` IN (%s)" % (id_str,))
             for _i in iter(cur.fetchone, None):
-                items[ str(_i["hash_id"]) ] = (_i["writed_size"], _i["compressed_size"], )
+                hash_id = str(_i["hash_id"])
+                del _i["hash_id"]
+                items[ hash_id ] = _i
 
         self.stopTimer('get_sizes_by_hash_ids')
         return items

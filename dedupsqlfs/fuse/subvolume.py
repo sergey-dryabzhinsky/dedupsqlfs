@@ -262,9 +262,6 @@ class Subvolume(object):
         """
 
         tableSubvol = self.getTable('subvolume')
-        tableTmp = self.getTable('tmp_id_count')
-        tableTmp.drop()
-        tableTmp.create()
 
         pageSize = 10000
 
@@ -310,12 +307,7 @@ class Subvolume(object):
                     hash_id = item["hash_id"]
                     hashCount[ hash_id ] = hashCount.get( hash_id, 0 ) + 1
 
-        for hash_id, cnt in hashCount.items():
-            tableTmp.insertCnt(hash_id, cnt)
-
-        tableTmp.commit()
-
-        return
+        return hashCount
 
 
     def remove(self, name):

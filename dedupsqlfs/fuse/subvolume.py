@@ -274,7 +274,8 @@ class Subvolume(object):
             tableIndex = self.getTable("inode_hash_block_" + subvol["hash"])
             tableTree = self.getTable('tree_' + subvol["hash"])
 
-            self.print_out("-- debug: %s, walk index table %r - begin\n" % (datetime.now(), subvol["hash"]))
+            # DEBUG
+            # self.print_out("-- debug: %s, walk index table %r - begin\n" % (datetime.now(), subvol["hash"]))
 
             curIndex = tableIndex.getCursor()
             curIndex.execute("SELECT hash_id,inode_id FROM `%s`" % tableIndex.getName())
@@ -313,7 +314,8 @@ class Subvolume(object):
             tableIndex.close()
             tableTree.close()
 
-            self.print_out("-- debug: %s, walk index table %r - end\n" % (datetime.now(), subvol["hash"]))
+            # DEBUG
+            # self.print_out("-- debug: %s, walk index table %r - end\n" % (datetime.now(), subvol["hash"]))
 
         return hashCount
 
@@ -460,7 +462,7 @@ class Subvolume(object):
 
             # Check if FS tree has inode
 
-            inode_id = str(item["inode_id"])
+            inode_id = item["inode_id"]
             if inode_id in nodesInodes:
                 if not nodesInodes[inode_id]:
                     continue
@@ -473,7 +475,7 @@ class Subvolume(object):
                     nodesInodes[inode_id] = True
                     apparentSize += tableInode.get_size(inode_id)
 
-            hash_id = str(item["hash_id"])
+            hash_id = item["hash_id"]
 
             if hashTypes:
 

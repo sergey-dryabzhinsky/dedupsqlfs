@@ -268,6 +268,8 @@ class Subvolume(object):
 
         pageSize = 10000
 
+        hashCount = {}
+
         for subvol_id in tableSubvol.get_ids():
 
             subvol = tableSubvol.get(subvol_id)
@@ -288,15 +290,13 @@ class Subvolume(object):
 
                 inode_ids = tuple(str(item["inode_id"]) for item in items)
 
-                inodes_in_tree = tableTree.get_inodes_by_inodes(inode_ids)
-
-                inodes_in_tree = {}.fromkeys(inodes_in_tree, 1)
+                inodes_in_tree = tableTree.get_inodes_by_inodes_intgen(inode_ids)
 
                 for item in items:
 
                     # Check if FS tree has inode
 
-                    inode_id = str(item["inode_id"])
+                    inode_id = item["inode_id"]
                     if inode_id in nodesInodes:
                         if not nodesInodes[inode_id]:
                             continue
@@ -307,10 +307,13 @@ class Subvolume(object):
                         else:
                             nodesInodes[inode_id] = True
 
-                    if not tableTmp.find(item["hash_id"]):
-                        tableTmp.insert(item["hash_id"])
-                    else:
-                        tableTmp.inc(item["hash_id"])
+                    hash_id = item["hash_id"]
+                    hashCount[ hash_id ] = hashCount.get( hash_id, 0 ) + 1
+
+        for hash_id, cnt in hashCount.items():
+            tableTmp.insertCnt(hash_id, cnt)
+
+        tableTmp.commit()
 
         return
 

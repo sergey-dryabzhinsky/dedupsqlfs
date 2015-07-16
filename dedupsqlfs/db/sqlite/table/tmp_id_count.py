@@ -22,7 +22,6 @@ class TableTmpIdCount( Table ):
 
     def insert( self, some_id):
         """
-        :param values: dict | None
         :return: int
         """
         self.startTimer()
@@ -30,6 +29,21 @@ class TableTmpIdCount( Table ):
 
         cur.execute("INSERT INTO `%s`(id, cnt) VALUES (?,1)" % self.getName(), (
             some_id,
+        ))
+
+        item = cur.lastrowid
+        self.stopTimer('insert')
+        return item
+
+    def insertCnt( self, some_id, cnt):
+        """
+        :return: int
+        """
+        self.startTimer()
+        cur = self.getCursor()
+
+        cur.execute("INSERT INTO `%s`(id, cnt) VALUES (?,?)" % self.getName(), (
+            some_id, cnt
         ))
 
         item = cur.lastrowid

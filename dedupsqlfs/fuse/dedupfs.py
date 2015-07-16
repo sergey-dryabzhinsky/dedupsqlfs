@@ -277,9 +277,8 @@ class DedupFS(object): # {{{1
 
                 hszItem = hashSizes[ hash_id ]
 
-                if hash_cnt == 1:
-                    uniqueSize += hszItem["writed_size"]
-                    compressedUniqueSize += hszItem["compressed_size"]
+                uniqueSize += hszItem["writed_size"]
+                compressedUniqueSize += hszItem["compressed_size"]
 
                 dataSize += hszItem["writed_size"]*hash_cnt
                 compressedSize += hszItem["compressed_size"]*hash_cnt

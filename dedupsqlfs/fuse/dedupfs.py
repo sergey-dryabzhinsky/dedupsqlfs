@@ -230,8 +230,6 @@ class DedupFS(object): # {{{1
         compressedSize = 0
         compressedUniqueSize = 0
         compMethods = {}
-        hashCT = {}
-        hashSZ = {}
 
         for subvol_id in tableSubvol.get_ids():
 
@@ -249,38 +247,39 @@ class DedupFS(object): # {{{1
         tableHCT = manager.getTable('hash_compression_type')
         tableHS = manager.getTable('hash_sizes')
 
-        subv.prepareIndexHashIdCount()
-        tableTmp = manager.getTable('tmp_id_count')
+        hashCount = subv.prepareIndexHashIdCount()
 
-        curH = tableTmp.getCursor()
-        curH.execute("SELECT * FROM `%s`" % tableTmp.getName())
+        hashIds = tuple(hashCount.keys())
+        current = 0
+        pageSize = 20000
 
-        for item in iter(curH.fetchone, None):
+        while True:
 
-            hash_id = item["id"]
-            hash_cnt = item["cnt"]
+            items = hashIds[current:current+pageSize]
+            if not len(items):
+                break
 
-            if hash_id in hashCT:
-                method = hashCT[hash_id]
-            else:
-                hctItem = tableHCT.get(hash_id)
-                method = self.operations.getCompressionTypeName(hctItem["type_id"])
-                hashCT[hash_id] = method
+            current += pageSize
 
-            compMethods[ method ] = compMethods.get(method, 0) + 1
+            hash_ids = ",".join(set(str(item) for item in items))
 
-            if hash_id in hashSZ:
-                hszItem = hashSZ[hash_id]
-            else:
-                hszItem = tableHS.get(hash_id)
-                hashSZ[hash_id] = hszItem
-                uniqueSize += hszItem["writed_size"]
-                compressedUniqueSize += hszItem["compressed_size"]
+            hashTypes = tableHCT.get_types_by_hash_ids(hash_ids)
+            hashSizes = tableHS.get_sizes_by_hash_ids(hash_ids)
 
-            dataSize += hszItem["writed_size"]*hash_cnt
-            compressedSize += hszItem["compressed_size"]*hash_cnt
+            for hash_id in items:
 
-        tableTmp.drop()
+                hash_cnt = hashCount[ hash_id ]
+
+                method = self.operations.getCompressionTypeName(hashTypes[ hash_id ])
+                compMethods[ method ] = compMethods.get(method, 0) + 1
+
+                hszItem = hashSizes[ hash_id ]
+
+                uniqueSize += hszItem[0]
+                compressedUniqueSize += hszItem[1]
+
+                dataSize += hszItem[0]*hash_cnt
+                compressedSize += hszItem[1]*hash_cnt
 
         sparseSize = apparentSize - dataSize
         dedupSize = dataSize - uniqueSize

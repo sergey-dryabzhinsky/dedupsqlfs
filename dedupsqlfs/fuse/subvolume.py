@@ -262,9 +262,10 @@ class Subvolume(object):
         """
 
         tableSubvol = self.getTable('subvolume')
-        tableTmp = self.getTable('tmp_id_count')
-        tableTmp.drop()
-        tableTmp.create()
+
+        pageSize = 20000
+
+        hashCount = {}
 
         for subvol_id in tableSubvol.get_ids():
 
@@ -273,33 +274,50 @@ class Subvolume(object):
             tableIndex = self.getTable("inode_hash_block_" + subvol["hash"])
             tableTree = self.getTable('tree_' + subvol["hash"])
 
+            # DEBUG
+            # self.print_out("-- debug: %s, walk index table %r - begin\n" % (datetime.now(), subvol["hash"]))
+
             curIndex = tableIndex.getCursor()
             curIndex.execute("SELECT hash_id,inode_id FROM `%s`" % tableIndex.getName())
 
             nodesInodes = {}
 
-            for item in iter(curIndex.fetchone, None):
+            while True:
 
-                # Check if FS tree has inode
+                items = curIndex.fetchmany(pageSize)
+                if not len(items):
+                    break
 
-                inode_id = str(item["inode_id"])
-                if inode_id in nodesInodes:
-                    if not nodesInodes[inode_id]:
-                        continue
-                else:
-                    node = tableTree.find_by_inode(inode_id)
-                    if not node:
-                        nodesInodes[inode_id] = False
-                        continue
+                inode_ids = ",".join(set(str(item["inode_id"]) for item in items))
+
+                inodes_in_tree = set(tableTree.get_inodes_by_inodes_intgen(inode_ids))
+
+                for item in items:
+
+                    # Check if FS tree has inode
+
+                    inode_id = item["inode_id"]
+                    if inode_id in nodesInodes:
+                        if not nodesInodes[inode_id]:
+                            continue
                     else:
-                        nodesInodes[inode_id] = True
+                        if inode_id not in inodes_in_tree:
+                            nodesInodes[inode_id] = False
+                            continue
+                        else:
+                            nodesInodes[inode_id] = True
 
-                if not tableTmp.find(item["hash_id"]):
-                    tableTmp.insert(item["hash_id"])
-                else:
-                    tableTmp.inc(item["hash_id"])
+                    hash_id = item["hash_id"]
+                    hashCount[ hash_id ] = hashCount.get( hash_id, 0 ) + 1
 
-        return
+            curIndex.close()
+            tableIndex.close()
+            tableTree.close()
+
+            # DEBUG
+            # self.print_out("-- debug: %s, walk index table %r - end\n" % (datetime.now(), subvol["hash"]))
+
+        return hashCount
 
 
     def remove(self, name):
@@ -444,7 +462,7 @@ class Subvolume(object):
 
             # Check if FS tree has inode
 
-            inode_id = str(item["inode_id"])
+            inode_id = item["inode_id"]
             if inode_id in nodesInodes:
                 if not nodesInodes[inode_id]:
                     continue
@@ -457,7 +475,7 @@ class Subvolume(object):
                     nodesInodes[inode_id] = True
                     apparentSize += tableInode.get_size(inode_id)
 
-            hash_id = str(item["hash_id"])
+            hash_id = item["hash_id"]
 
             if hashTypes:
 

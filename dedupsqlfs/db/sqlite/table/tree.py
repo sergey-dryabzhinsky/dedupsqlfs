@@ -138,11 +138,10 @@ class TableTree( Table ):
         self.stopTimer('get_inodes_by_inodes')
         return iids
 
-    def get_inodes_by_inodes_intgen(self, inode_ids):
+    def get_inodes_by_inodes_intgen(self, id_str):
         self.startTimer()
 
         iids = ()
-        id_str = ",".join(inode_ids)
         if id_str:
             cur = self.getCursor()
             cur.execute("SELECT `inode_id` FROM `%s` " % self.getName()+

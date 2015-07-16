@@ -289,7 +289,7 @@ class Subvolume(object):
 
                 inode_ids = ",".join((str(item["inode_id"]) for item in items))
 
-                inodes_in_tree = tableTree.get_inodes_by_inodes_intgen(inode_ids)
+                inodes_in_tree = tuple(tableTree.get_inodes_by_inodes_intgen(inode_ids))
 
                 for item in items:
 

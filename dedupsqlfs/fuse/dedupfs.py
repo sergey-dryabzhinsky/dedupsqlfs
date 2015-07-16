@@ -249,7 +249,7 @@ class DedupFS(object): # {{{1
 
         hashCount = subv.prepareIndexHashIdCount()
 
-        hashIds = tuple(hashCount.keys())
+        hashIds = set(hashCount.keys())
         current = 0
         pageSize = 20000
 
@@ -261,7 +261,7 @@ class DedupFS(object): # {{{1
 
             current += pageSize
 
-            hash_ids = ",".join((str(item) for item in items))
+            hash_ids = ",".join(set(str(item) for item in items))
 
             hashTypes = tableHCT.get_types_by_hash_ids(hash_ids)
             hashSizes = tableHS.get_sizes_by_hash_ids(hash_ids)

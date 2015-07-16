@@ -287,9 +287,9 @@ class Subvolume(object):
                 if not len(items):
                     break
 
-                inode_ids = ",".join((str(item["inode_id"]) for item in items))
+                inode_ids = ",".join(set(str(item["inode_id"]) for item in items))
 
-                inodes_in_tree = tuple(tableTree.get_inodes_by_inodes_intgen(inode_ids))
+                inodes_in_tree = set(tableTree.get_inodes_by_inodes_intgen(inode_ids))
 
                 for item in items:
 

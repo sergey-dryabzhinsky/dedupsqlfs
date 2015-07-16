@@ -249,7 +249,7 @@ class DedupFS(object): # {{{1
 
         hashCount = subv.prepareIndexHashIdCount()
 
-        hashIds = set(hashCount.keys())
+        hashIds = tuple(hashCount.keys())
         current = 0
         pageSize = 20000
 

@@ -212,7 +212,7 @@ class TableInode( Table ):
             cur = self.getCursor()
             cur.execute("SELECT `id` FROM `%s` " % self.getName()+
                             " WHERE `id` IN (%s)" % (id_str,))
-            iids = tuple(str(item["id"]) for item in iter(cur.fetchone,None))
+            iids = set(str(item["id"]) for item in iter(cur.fetchone,None))
 
         self.stopTimer('get_inodes_by_inodes')
         return iids

@@ -230,8 +230,6 @@ class DedupFS(object): # {{{1
         compressedSize = 0
         compressedUniqueSize = 0
         compMethods = {}
-        hashCT = {}
-        hashSZ = {}
 
         for subvol_id in tableSubvol.get_ids():
 

@@ -274,6 +274,8 @@ class Subvolume(object):
             tableIndex = self.getTable("inode_hash_block_" + subvol["hash"])
             tableTree = self.getTable('tree_' + subvol["hash"])
 
+            self.print_msg("-- debug: %s, walk index table %r - begin" % (datetime.now(), subvol["hash"]))
+
             curIndex = tableIndex.getCursor()
             curIndex.execute("SELECT hash_id,inode_id FROM `%s`" % tableIndex.getName())
 
@@ -310,6 +312,8 @@ class Subvolume(object):
             curIndex.close()
             tableIndex.close()
             tableTree.close()
+
+            self.print_msg("-- debug: %s, walk index table %r - end" % (datetime.now(), subvol["hash"]))
 
         return hashCount
 

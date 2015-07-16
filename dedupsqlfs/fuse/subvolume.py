@@ -263,7 +263,7 @@ class Subvolume(object):
 
         tableSubvol = self.getTable('subvolume')
 
-        pageSize = 10000
+        pageSize = 20000
 
         hashCount = {}
 

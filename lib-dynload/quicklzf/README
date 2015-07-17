@@ -7,4 +7,4 @@ http://www.quicklz.com/
 
  * Default compiled options:
    - LEVEL = 1
-   - Buffer = 128k
+   - Buffer = 64k

@@ -3,14 +3,14 @@
 __author__ = 'sergey'
 
 """
-Class for QuickLz compression helper
+Class for QuickLzB(est) compression helper
 """
 
 from dedupsqlfs.compression import BaseCompression
 
-class QuickLzCompression(BaseCompression):
+class QuickLzBCompression(BaseCompression):
 
-    _method_name = "quicklz"
+    _method_name = "quicklzb"
 
     _minimal_size = 17
 

@@ -8,7 +8,7 @@ setup(
             "quicklz",
             ["quicklz.c", "quicklzpy.c"],
             extra_compile_args=[
-                "-O2",
+                "-O3",
                 "-march=native",
                 "-DFORTIFY_SOURCE=2", "-fstack-protector",
                 "-DQLZ_COMPRESSION_LEVEL=2", "-DQLZ_STREAMING_BUFFER=%s" % (256*1024,)

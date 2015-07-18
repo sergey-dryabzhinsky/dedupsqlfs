@@ -11,8 +11,9 @@ setup(
                 "-O3",
                 "-march=native",
                 "-DFORTIFY_SOURCE=2", "-fstack-protector",
-                # GCC Graphite
-                # "-floop-interchange", "-floop-block", "-floop-strip-mine", "-ftree-loop-distribution"
+                "-DQLZ_COMPRESSION_LEVEL=2", "-DQLZ_STREAMING_BUFFER=%s" % (256*1024,),
+#               GCC Graphite
+#               "-floop-interchange", "-floop-block", "-floop-strip-mine", "-ftree-loop-distribution",
             ]
         )
     ]

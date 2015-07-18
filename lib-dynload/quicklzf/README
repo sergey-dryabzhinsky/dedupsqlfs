@@ -1,0 +1,10 @@
+A clone of QuickLZ (the FAST compression library)
+http://www.quicklz.com/
+
+ https://github.com/robottwo/quicklz
+
+@ 2015-07-16
+
+ * Default compiled options:
+   - LEVEL = 1
+   - Buffer = 64k

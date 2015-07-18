@@ -11,11 +11,11 @@ if os.path.islink(curpath):
     curpath = os.readlink(curpath)
 currentdir = os.path.dirname( curpath )
 
-build_dir = os.path.abspath( os.path.join(currentdir, "lib-dynload", "quicklz", "build") )
+build_dir = os.path.abspath( os.path.join(currentdir, "lib-dynload", "quicklzm", "build") )
 if not os.path.isdir(build_dir):
-    build_dir = os.path.abspath( os.path.join(currentdir, "..", "lib-dynload", "quicklz", "build") )
+    build_dir = os.path.abspath( os.path.join(currentdir, "..", "lib-dynload", "quicklzm", "build") )
 if not os.path.isdir(build_dir):
-    build_dir = os.path.abspath( os.path.join(currentdir, "..", "..", "lib-dynload", "quicklz", "build") )
+    build_dir = os.path.abspath( os.path.join(currentdir, "..", "..", "lib-dynload", "quicklzm", "build") )
 
 dirs = os.listdir(build_dir)
 for d in dirs:

@@ -104,6 +104,15 @@ class BaseCompressTool(object):
         elif name == "quicklz":
             from dedupsqlfs.compression.quicklz import QuickLzCompression
             self._compressors[name] = QuickLzCompression()
+        elif name == "quicklzf":
+            from dedupsqlfs.compression.quicklzf import QuickLzFCompression
+            self._compressors[name] = QuickLzFCompression()
+        elif name == "quicklzm":
+            from dedupsqlfs.compression.quicklzm import QuickLzMCompression
+            self._compressors[name] = QuickLzMCompression()
+        elif name == "quicklzb":
+            from dedupsqlfs.compression.quicklzb import QuickLzBCompression
+            self._compressors[name] = QuickLzBCompression()
         elif name == "zstd":
             from dedupsqlfs.compression.zstd import ZstdCompression
             self._compressors[name] = ZstdCompression()

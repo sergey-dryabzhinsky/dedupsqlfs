@@ -15,15 +15,19 @@ __version__ = "0.0.3"
 
 packages = []
 home = os.path.expanduser("~")
-extens = [Extension('_lzma',
-                    ['src/_lzmamodule.c'],
-                    libraries = ['lzma'],
-                    include_dirs = [os.path.join(home, 'include'), '/opt/local/include', '/usr/local/include'],
-                    library_dirs = [os.path.join(home, 'lib'), '/opt/local/lib', '/usr/local/lib'],
-                    extra_compile_args = ["-O2", "-march=native", "-DFORTIFY_SOURCE=2", "-fstack-protector"]
-#                    extra_compile_args = ["-O2", "-march=native"]
-#                    extra_compile_args = ["-O2", "-march=native", "-floop-interchange", "-floop-block", "-floop-strip-mine", "-ftree-loop-distribution"]
-                    )
+extens = [
+    Extension('_lzma',
+        ['src/_lzmamodule.c'],
+        libraries = ['lzma'],
+        include_dirs = [os.path.join(home, 'include'), '/opt/local/include', '/usr/local/include'],
+        library_dirs = [os.path.join(home, 'lib'), '/opt/local/lib', '/usr/local/lib'],
+        extra_compile_args = [
+            "-O3",
+            "-march=native",
+            "-DFORTIFY_SOURCE=2", "-fstack-protector",
+#            "-floop-interchange", "-floop-block", "-floop-strip-mine", "-ftree-loop-distribution"
+        ]
+   )
 ]
 
 descr = "Backport of Python 3.3's 'lzma' module for XZ/LZMA compressed files."

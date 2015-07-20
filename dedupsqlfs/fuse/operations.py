@@ -2392,6 +2392,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.getLogger().debug(" block inodes: %d" % countInodes)
 
         count = 0
+        countTrunc = 0
         current = 0
         proc = ""
 
@@ -2414,16 +2415,32 @@ class DedupOperations(llfuse.Operations): # {{{1
             indexInodeIds = tableInode.get_inodes_by_inodes(inodeIds)
 
             to_delete = ()
+            to_trunc = ()
             for inode_id in inodeIds:
                 if inode_id not in indexInodeIds:
                     to_delete += (inode_id,)
+                else:
+                    to_trunc += (inode_id,)
 
             count += tableIndex.remove_by_inodes(to_delete)
+
+            # Slow?
+            inodeSizes = tableInode.get_sizes_by_id(to_trunc)
+            for inode_id in to_trunc:
+                size = inodeSizes[ inode_id ]
+
+                inblock_offset = size % self.block_size
+                max_block_number = int(math.floor(1.0 * (size - inblock_offset) / self.block_size))
+
+                trunced = tableIndex.delete_by_inode_number_more(inode_id, max_block_number)
+                countTrunc += len(trunced)
 
             p = "%6.2f%%" % (100.0 * current / countInodes)
             if p != proc:
                 proc = p
-                self.getLogger().debug("%s (count=%d)", proc, count)
+                self.getLogger().debug("%s (count=%d, trunced=%d)", proc, count, countTrunc)
+
+        count += countTrunc
 
         if count > 0:
             self.should_vacuum = True

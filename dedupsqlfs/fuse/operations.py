@@ -847,6 +847,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             if attr.st_size is not None:
                 if row["size"] != attr.st_size:
                     new_data["size"] = attr.st_size
+                    if row["size"] > attr.st_size:
+                        new_data["truncated"] = True
                     update_db = True
 
             if attr.st_mode is not None:
@@ -2076,8 +2078,30 @@ class DedupOperations(llfuse.Operations): # {{{1
         count = 0
         for inode_id, update_data in inodes.items():
             self.getLogger().debug("flush inode: %i = %r", int(inode_id), update_data)
+            if "truncated" in update_data:
+                del update_data["truncated"]
+                self.__truncate_inode_blocks(inode_id, update_data["size"])
             count += self.getTable("inode").update_data(inode_id, update_data)
         return count
+
+    def __truncate_inode_blocks(self, inode_id, size):
+
+        inblock_offset = size % self.block_size
+        max_block_number = int(math.floor(1.0 * (size - inblock_offset) / self.block_size))
+
+        # 1. Remove blocks that has number more than MAX by size
+        tableIndex = self.getTable("inode_hash_block")
+        items = tableIndex.delete_by_inode_number_more(max_block_number)
+        for item in items:
+            self.cached_indexes.unset(inode_id, item["block_number"])
+
+        # 2. Truncate last block with zeroes
+        block = self.__get_block_from_cache(inode_id, max_block_number)
+        block.truncate(inblock_offset)
+        # 3. Put to cache, it will be rehashed and compressed
+        self.cached_blocks.set(inode_id, max_block_number, block, writed=True)
+
+        return
 
     def __cache_meta_hook(self): # {{{3
 

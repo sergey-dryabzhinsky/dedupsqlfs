@@ -187,7 +187,7 @@ class TableInode( Table ):
         cur = self.getCursor()
         cur.execute("SELECT `id` FROM `%s` " % self.getName()+
                     " WHERE `id`>=? AND `id`<?", (start_id, end_id,))
-        nameIds = tuple(str(item["id"]) for item in iter(cur.fetchone,None))
+        nameIds = set(str(item["id"]) for item in iter(cur.fetchone,None))
         self.stopTimer('get_inode_ids')
         return nameIds
 

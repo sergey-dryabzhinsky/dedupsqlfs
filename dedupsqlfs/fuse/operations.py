@@ -2091,7 +2091,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         # 1. Remove blocks that has number more than MAX by size
         tableIndex = self.getTable("inode_hash_block")
-        items = tableIndex.delete_by_inode_number_more(max_block_number)
+        items = tableIndex.delete_by_inode_number_more(inode_id, max_block_number)
         for item in items:
             self.cached_indexes.unset(inode_id, item["block_number"])
 

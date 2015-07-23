@@ -215,10 +215,10 @@ class Subvolume(object):
                     break
 
                 for node in items:
+                    nameIds.add(node["name_id"])
 
-                    name_id = node["name_id"]
-
-                    nameIds.add(name_id)
+            curTree.close()
+            tableTree.close()
 
         return nameIds
 

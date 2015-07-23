@@ -1519,7 +1519,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         treeTable = self.getTable("tree")
         inodeTable = self.getTable("inode")
-        indexTable = self.getTable("inode_hash_block")
 
         attr = self.__get_inode_row(cur_node["inode_id"])
 
@@ -2410,25 +2409,27 @@ class DedupOperations(llfuse.Operations): # {{{1
             current += len(inodeIds)
 
             curBlock += maxCnt
-            if not inodeIds:
+            if not len(inodeIds):
                 continue
 
             indexInodeIds = tableInode.get_inodes_by_inodes(inodeIds)
 
-            to_delete = ()
-            to_trunc = ()
+            to_delete = set()
+            to_trunc = set()
             for inode_id in inodeIds:
                 if inode_id not in indexInodeIds:
-                    to_delete += (inode_id,)
+                    to_delete.add(inode_id)
                 else:
-                    to_trunc += (inode_id,)
+                    to_trunc.add(inode_id)
 
             count += tableIndex.remove_by_inodes(to_delete)
 
             # Slow?
             inodeSizes = tableInode.get_sizes_by_id(to_trunc)
             for inode_id in to_trunc:
-                size = inodeSizes[ inode_id ]
+                size = inodeSizes.get(inode_id, -1)
+                if size < 0:
+                    continue
 
                 inblock_offset = size % self.block_size
                 max_block_number = int(math.floor(1.0 * (size - inblock_offset) / self.block_size))

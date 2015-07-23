@@ -2177,9 +2177,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         tableName = self.getTable("name")
 
         subv = Subvolume(self)
-        subv.prepareTreeNameIds()
-
-        tableTmp = self.getTable("tmp_ids")
+        treeNameIds = subv.prepareTreeNameIds()
 
         self.getLogger().debug("Clean unused path segments...")
 
@@ -2206,8 +2204,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not nameIds:
                 continue
 
-            treeNameIds = tableTmp.get_ids_by_ids(nameIds)
-
             to_delete = ()
             for name_id in nameIds:
                 if name_id not in treeNameIds:
@@ -2219,8 +2215,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             if p != proc:
                 proc = p
                 self.getLogger().debug("%s (count=%d)", proc, count)
-
-        tableTmp.drop()
 
         if count > 0:
             self.should_vacuum = True
@@ -2457,9 +2451,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         tableHSZ = self.getTable("hash_sizes")
 
         subv = Subvolume(self)
-        subv.prepareIndexHashIds()
-
-        tableTmp = self.getTable("tmp_ids")
+        indexHashIds = subv.prepareIndexHashIds()
 
         self.getLogger().debug("Clean unused data blocks and hashes...")
 
@@ -2486,8 +2478,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not hashIds:
                 continue
 
-            indexHashIds = tableTmp.get_ids_by_ids(hashIds)
-
             to_delete = ()
             for hash_id in hashIds:
                 if hash_id not in indexHashIds:
@@ -2504,8 +2494,6 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().debug("%s (count=%d)", proc, count)
 
         self.getManager().commit()
-
-        tableTmp.drop()
 
         if count > 0:
             self.should_vacuum = True

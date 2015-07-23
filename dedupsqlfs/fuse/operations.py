@@ -2255,15 +2255,15 @@ class DedupOperations(llfuse.Operations): # {{{1
             current += len(inodeIds)
 
             curBlock += maxCnt
-            if not inodeIds:
+            if not len(inodeIds):
                 continue
 
             treeInodeIds = tableTree.get_inodes_by_inodes(inodeIds)
 
-            to_delete = ()
+            to_delete = set()
             for inode_id in inodeIds:
                 if inode_id not in treeInodeIds:
-                    to_delete += (inode_id,)
+                    to_delete.add(inode_id)
 
             count += tableInode.remove_by_ids(to_delete)
 

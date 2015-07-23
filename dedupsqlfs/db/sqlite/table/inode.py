@@ -148,7 +148,7 @@ class TableInode( Table ):
     def get_count(self):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT COUNT(1) as cnt FROM `%s` WHERE `nlinks` > 0" % self.getName())
+        cur.execute("SELECT COUNT(1) as cnt FROM `%s`" % self.getName())
         item = cur.fetchone()
         self.stopTimer('get_count')
         return item["cnt"]
@@ -172,7 +172,7 @@ class TableInode( Table ):
         if id_str:
             cur = self.getCursor()
             cur.execute("SELECT `id`,`size` FROM `%s`" % self.getName()+
-                        " WHERE id in (%s) AND `nlinks`>0" % id_str)
+                        " WHERE id in (%s)" % id_str)
             for item in iter(cur.fetchone, None):
                 items[ str(item["id"]) ] = item["size"]
 
@@ -200,7 +200,7 @@ class TableInode( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute("SELECT `id` FROM `%s` " % self.getName()+
-                    " WHERE `id`>=? AND `id`<? AND `nlinks`>0", (start_id, end_id,))
+                    " WHERE `id`>=? AND `id`<?", (start_id, end_id,))
         nameIds = set(str(item["id"]) for item in iter(cur.fetchone,None))
         self.stopTimer('get_inode_ids')
         return nameIds
@@ -225,7 +225,7 @@ class TableInode( Table ):
         if id_str:
             cur = self.getCursor()
             cur.execute("SELECT `id` FROM `%s` " % self.getName()+
-                            " WHERE `id` IN (%s) AND `nlinks`>0" % (id_str,))
+                            " WHERE `id` IN (%s)" % (id_str,))
             iids = set(str(item["id"]) for item in iter(cur.fetchone,None))
 
         self.stopTimer('get_inodes_by_inodes')

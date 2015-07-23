@@ -172,7 +172,7 @@ class TableInode( Table ):
         if id_str:
             cur = self.getCursor()
             cur.execute("SELECT `id`,`size` FROM `%s`" % self.getName()+
-                        " WHERE id in (%s) `nlinks`>0" % id_str)
+                        " WHERE id in (%s) AND `nlinks`>0" % id_str)
             for item in iter(cur.fetchone(), None):
                 items[ item["id"] ] = item["size"]
 

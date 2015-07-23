@@ -174,7 +174,7 @@ class TableInode( Table ):
             cur.execute("SELECT `id`,`size` FROM `%s`" % self.getName()+
                         " WHERE id in (%s) AND `nlinks`>0" % id_str)
             for item in iter(cur.fetchone, None):
-                items[ item["id"] ] = item["size"]
+                items[ str(item["id"]) ] = item["size"]
 
         self.stopTimer('get_sizes_by_id')
         return items

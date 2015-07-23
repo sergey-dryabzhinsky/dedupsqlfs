@@ -551,7 +551,28 @@ class Subvolume(object):
         tableSubvol.stats_time(subvolItem["id"])
         tableSubvol.set_stats(subvolItem["id"], json.dumps(stats))
 
+        tableSubvol.commit()
+
         return stats
+
+    def clean_stats(self, name):
+        if not name:
+            self.getLogger().error("Select subvolume which you need to process!")
+            return False
+
+        tableSubvol = self.getTable('subvolume')
+
+        subvolItem = tableSubvol.find(name)
+        if not subvolItem:
+            self.getLogger().error("Subvolume with name %r not found!" % name)
+            return False
+
+        tableSubvol.stats_time(subvolItem["id"], 0)
+        tableSubvol.set_stats(subvolItem["id"], None)
+
+        tableSubvol.commit()
+
+        return
 
     def report_usage(self, name):
         """

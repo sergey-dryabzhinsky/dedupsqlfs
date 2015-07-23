@@ -2157,6 +2157,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             start_time = time.time()
             self.getLogger().debug("Performing garbage collection (this might take a while) ..")
             self.should_vacuum = False
+            clean_stats = False
             for method in self.__collect_strings, \
                           self.__collect_inodes_all, \
                           self.__collect_xattrs, \
@@ -2166,8 +2167,14 @@ class DedupOperations(llfuse.Operations): # {{{1
                 sub_start_time = time.time()
                 msg = method()
                 if msg:
+                    clean_stats = True
                     elapsed_time = time.time() - sub_start_time
                     self.getLogger().info(msg, format_timespan(elapsed_time))
+
+            if clean_stats:
+                subv = Subvolume(self)
+                subv.clean_stats(self.mounted_subvolume_name)
+
             elapsed_time = time.time() - start_time
             self.getLogger().debug("Finished garbage collection in %s.", format_timespan(elapsed_time))
         return

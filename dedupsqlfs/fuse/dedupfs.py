@@ -82,6 +82,7 @@ class DedupFS(object): # {{{1
         except Exception as e:
             error = True
             ex = e
+            self.getLogger().error(traceback.format_exc())
 
         if error:
             try:

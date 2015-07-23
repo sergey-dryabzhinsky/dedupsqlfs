@@ -2204,10 +2204,10 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not nameIds:
                 continue
 
-            to_delete = ()
+            to_delete = set()
             for name_id in nameIds:
                 if name_id not in treeNameIds:
-                    to_delete += (name_id,)
+                    to_delete.add(str(name_id))
 
             count += tableName.remove_by_ids(to_delete)
 
@@ -2478,10 +2478,10 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not hashIds:
                 continue
 
-            to_delete = ()
+            to_delete = set()
             for hash_id in hashIds:
                 if hash_id not in indexHashIds:
-                    to_delete += (hash_id,)
+                    to_delete.add(str(hash_id))
 
             count += tableHash.remove_by_ids(to_delete)
             tableBlock.remove_by_ids(to_delete)

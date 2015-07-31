@@ -74,6 +74,16 @@ class TableInodeHashBlock( Table ):
         self.stopTimer('delete_by_inode_number')
         return item
 
+    def delete_by_inode_number_more( self, inode, block_number ):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT block_number FROM `%s` WHERE inode_id=? AND block_number>?" % self.getName(), (inode, block_number,))
+        items = cur.fetchall()
+        if items:
+            cur.execute("DELETE FROM `%s` WHERE inode_id=? AND block_number>?" % self.getName(), (inode, block_number,))
+        self.stopTimer('delete_by_inode_number_more')
+        return items
+
     def get_count_uniq_inodes(self):
         self.startTimer()
         cur = self.getCursor()
@@ -91,7 +101,7 @@ class TableInodeHashBlock( Table ):
         cur = self.getCursor()
         cur.execute("SELECT DISTINCT `inode_id` FROM `%s` " % self.getName()+
                     " WHERE `inode_id`>=? AND `inode_id`<?", (start_id, end_id,))
-        nameIds = tuple(str(item["inode_id"]) for item in iter(cur.fetchone,None))
+        nameIds = set(str(item["inode_id"]) for item in iter(cur.fetchone,None))
         self.stopTimer('get_inode_ids')
         return nameIds
 

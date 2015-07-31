@@ -84,7 +84,7 @@ class TableHash( Table ):
         cur = self.getCursor()
         cur.execute("SELECT `id` FROM `%s` " % self.getName()+
                     " WHERE `id`>=? AND `id`<?", (start_id, end_id,))
-        nameIds = set(str(item["id"]) for item in iter(cur.fetchone, None))
+        nameIds = set(item["id"] for item in iter(cur.fetchone, None))
         self.stopTimer('get_hash_ids')
         return nameIds
 

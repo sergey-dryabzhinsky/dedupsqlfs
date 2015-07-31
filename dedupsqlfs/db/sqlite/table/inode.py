@@ -165,6 +165,20 @@ class TableInode( Table ):
         self.stopTimer('get_sizes')
         return item
 
+    def get_sizes_by_id(self, inodes):
+        self.startTimer()
+        items = {}
+        id_str = ",".join(inodes)
+        if id_str:
+            cur = self.getCursor()
+            cur.execute("SELECT `id`,`size` FROM `%s`" % self.getName()+
+                        " WHERE id in (%s)" % id_str)
+            for item in iter(cur.fetchone, None):
+                items[ str(item["id"]) ] = item["size"]
+
+        self.stopTimer('get_sizes_by_id')
+        return items
+
     def get_sizes_by_inodes(self, inodes):
         self.startTimer()
 
@@ -187,7 +201,7 @@ class TableInode( Table ):
         cur = self.getCursor()
         cur.execute("SELECT `id` FROM `%s` " % self.getName()+
                     " WHERE `id`>=? AND `id`<?", (start_id, end_id,))
-        nameIds = tuple(str(item["id"]) for item in iter(cur.fetchone,None))
+        nameIds = set(str(item["id"]) for item in iter(cur.fetchone,None))
         self.stopTimer('get_inode_ids')
         return nameIds
 

@@ -51,6 +51,9 @@ class DbMigration( object ):
 
         migration = tableOpts.get("migration")
         if not migration:
+            inited = tableOpts.get("inited")
+            if not inited:
+                return False
             return True
         else:
             migration = int(migration)

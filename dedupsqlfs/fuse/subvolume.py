@@ -190,12 +190,13 @@ class Subvolume(object):
     def prepareTreeNameIds(self):
         """
         List all subvolumes
+        @rtype: set
         """
 
         tableSubvol = self.getTable('subvolume')
-        tableTmp = self.getTable('tmp_ids')
-        tableTmp.drop()
-        tableTmp.create()
+
+        nameIds = set()
+        pageSize = 10000
 
         for subvol_id in tableSubvol.get_ids():
 
@@ -206,21 +207,31 @@ class Subvolume(object):
             curTree = tableTree.getCursor()
             curTree.execute("SELECT DISTINCT name_id FROM `%s`" % tableTree.getName())
 
-            for node in iter(curTree.fetchone, None):
-                if not tableTmp.find(node["name_id"]):
-                    tableTmp.insert(node["name_id"])
+            while True:
 
-        return
+                items = curTree.fetchmany(pageSize)
+
+                if not len(items):
+                    break
+
+                for node in items:
+                    nameIds.add(node["name_id"])
+
+            curTree.close()
+            tableTree.close()
+
+        return nameIds
 
     def prepareIndexHashIds(self):
         """
         List all subvolumes
+        @rtype: set
         """
 
         tableSubvol = self.getTable('subvolume')
-        tableTmp = self.getTable('tmp_ids')
-        tableTmp.drop()
-        tableTmp.create()
+
+        hashIds = set()
+        pageSize = 10000
 
         for subvol_id in tableSubvol.get_ids():
 
@@ -234,26 +245,39 @@ class Subvolume(object):
 
             nodesInodes = {}
 
-            for item in iter(curIndex.fetchone, None):
+            while True:
 
-                # Check if FS tree has inode
+                items = curIndex.fetchmany(pageSize)
+                if not len(items):
+                    break
 
-                inode_id = str(item["inode_id"])
-                if inode_id in nodesInodes:
-                    if not nodesInodes[inode_id]:
-                        continue
-                else:
-                    node = tableTree.find_by_inode(inode_id)
-                    if not node:
-                        nodesInodes[inode_id] = False
-                        continue
+                inode_ids = ",".join(set(str(item["inode_id"]) for item in items))
+
+                inodes_in_tree = set(tableTree.get_inodes_by_inodes_intgen(inode_ids))
+
+                for item in items:
+
+                    # Check if FS tree has inode
+
+                    inode_id = item["inode_id"]
+                    if inode_id in nodesInodes:
+                        if not nodesInodes[inode_id]:
+                            continue
                     else:
-                        nodesInodes[inode_id] = True
+                        if inode_id not in inodes_in_tree:
+                            nodesInodes[inode_id] = False
+                            continue
+                        else:
+                            nodesInodes[inode_id] = True
 
-                if not tableTmp.find(item["hash_id"]):
-                    tableTmp.insert(item["hash_id"])
+                    hash_id = item["hash_id"]
+                    hashIds.add(hash_id)
 
-        return
+            curIndex.close()
+            tableIndex.close()
+            tableTree.close()
+
+        return hashIds
 
 
     def prepareIndexHashIdCount(self):
@@ -527,7 +551,28 @@ class Subvolume(object):
         tableSubvol.stats_time(subvolItem["id"])
         tableSubvol.set_stats(subvolItem["id"], json.dumps(stats))
 
+        tableSubvol.commit()
+
         return stats
+
+    def clean_stats(self, name):
+        if not name:
+            self.getLogger().error("Select subvolume which you need to process!")
+            return False
+
+        tableSubvol = self.getTable('subvolume')
+
+        subvolItem = tableSubvol.find(name)
+        if not subvolItem:
+            self.getLogger().error("Subvolume with name %r not found!" % name)
+            return False
+
+        tableSubvol.stats_time(subvolItem["id"], 0)
+        tableSubvol.set_stats(subvolItem["id"], None)
+
+        tableSubvol.commit()
+
+        return
 
     def report_usage(self, name):
         """

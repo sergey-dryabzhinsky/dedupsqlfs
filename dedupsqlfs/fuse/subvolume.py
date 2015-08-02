@@ -368,7 +368,7 @@ class Subvolume(object):
             self.getTable('inode_option_' + subvolItem["hash"]).drop()
             self.getTable('link_' + subvolItem["hash"]).drop()
             self.getTable('xattr_' + subvolItem["hash"]).drop()
-            self.getTable('subvolume').delete(subvolItem["id"])
+            tableSubvol.delete(subvolItem["id"])
         except Exception as e:
             self.getLogger().warn("Can't remove subvolume!")
             self.getLogger().error("E: %s" % e)

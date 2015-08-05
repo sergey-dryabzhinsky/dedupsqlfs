@@ -244,7 +244,7 @@ class DedupFS(object): # {{{1
         for subvol_id in tableSubvol.get_ids():
 
             subvol = tableSubvol.get(subvol_id)
-            apparentSize += subv.get_apparent_size_fast(subvol)
+            apparentSize += subv.get_apparent_size_fast(subvol["name"])
 
             disk_usage += manager.getTable("inode_" + subvol["hash"]).getFileSize()
             disk_usage += manager.getTable("inode_option_" + subvol["hash"]).getFileSize()

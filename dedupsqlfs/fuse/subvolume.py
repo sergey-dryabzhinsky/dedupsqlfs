@@ -500,19 +500,21 @@ class Subvolume(object):
         for item in tableIndex.get_hash_inode_ids():
 
             # Check if FS tree has inode
-            if checkTree:
-                inode_id = item["inode_id"]
-                if inode_id in nodesInodes:
-                    if not nodesInodes[inode_id]:
-                        continue
-                else:
+            inode_id = item["inode_id"]
+            if inode_id in nodesInodes:
+                if not nodesInodes[inode_id]:
+                    continue
+            else:
+                if checkTree:
                     node = tableTree.find_by_inode(inode_id)
-                    if not node:
-                        nodesInodes[inode_id] = False
-                        continue
-                    else:
-                        nodesInodes[inode_id] = True
-                        apparentSize += tableInode.get_size(inode_id)
+                else:
+                    node = True
+                if not node:
+                    nodesInodes[inode_id] = False
+                    continue
+                else:
+                    nodesInodes[inode_id] = True
+                    apparentSize += tableInode.get_size(inode_id)
 
             hash_id = item["hash_id"]
 

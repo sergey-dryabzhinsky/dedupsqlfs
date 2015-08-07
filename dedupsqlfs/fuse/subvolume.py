@@ -289,6 +289,8 @@ class Subvolume(object):
 
         pageSize = 20000
 
+        checkTree = self.getManager().getOption('check_tree_inodes')
+
         hashCount = {}
 
         for subvol_id in tableSubvol.get_ids():
@@ -296,7 +298,9 @@ class Subvolume(object):
             subvol = tableSubvol.get(subvol_id)
 
             tableIndex = self.getTable("inode_hash_block_" + subvol["hash"])
-            tableTree = self.getTable('tree_' + subvol["hash"])
+
+            if checkTree:
+                tableTree = self.getTable('tree_' + subvol["hash"])
 
             # DEBUG
             # self.print_out("-- debug: %s, walk index table %r - begin\n" % (datetime.now(), subvol["hash"]))
@@ -312,31 +316,32 @@ class Subvolume(object):
                 if not len(items):
                     break
 
-                inode_ids = ",".join(set(str(item["inode_id"]) for item in items))
-
-                inodes_in_tree = set(tableTree.get_inodes_by_inodes_intgen(inode_ids))
+                if checkTree:
+                    inode_ids = ",".join(set(str(item["inode_id"]) for item in items))
+                    inodes_in_tree = set(tableTree.get_inodes_by_inodes_intgen(inode_ids))
 
                 for item in items:
 
                     # Check if FS tree has inode
-
-                    inode_id = item["inode_id"]
-                    if inode_id in nodesInodes:
-                        if not nodesInodes[inode_id]:
-                            continue
-                    else:
-                        if inode_id not in inodes_in_tree:
-                            nodesInodes[inode_id] = False
-                            continue
+                    if checkTree:
+                        inode_id = item["inode_id"]
+                        if inode_id in nodesInodes:
+                            if not nodesInodes[inode_id]:
+                                continue
                         else:
-                            nodesInodes[inode_id] = True
+                            if inode_id not in inodes_in_tree:
+                                nodesInodes[inode_id] = False
+                                continue
+                            else:
+                                nodesInodes[inode_id] = True
 
                     hash_id = item["hash_id"]
                     hashCount[ hash_id ] = hashCount.get( hash_id, 0 ) + 1
 
             curIndex.close()
             tableIndex.close()
-            tableTree.close()
+            if checkTree:
+                tableTree.close()
 
             # DEBUG
             # self.print_out("-- debug: %s, walk index table %r - end\n" % (datetime.now(), subvol["hash"]))
@@ -435,6 +440,14 @@ class Subvolume(object):
             self.getLogger().error("Subvolume with name %r not found!" % name)
             return 0
 
+        if subvolItem["stats_at"] and subvolItem["stats"]:
+            stats_at = int(subvolItem["stats_at"])
+            updated_at = int(subvolItem["updated_at"])
+            if not updated_at > stats_at:
+                # No updates since last stats calculated
+                stats = json.loads(subvolItem["stats"])
+                return stats["apparentSize"]
+
         tableInode = self.getTable('inode_' + subvolItem["hash"])
 
         return tableInode.get_sizes()
@@ -470,6 +483,8 @@ class Subvolume(object):
         hashSZ = {}
         nodesInodes = {}
 
+        checkTree = self.getManager().getOption('check_tree_inodes')
+
         tableHCT = self.getTable('hash_compression_type')
         tableHS = self.getTable('hash_sizes')
         tableIndex = self.getTable('inode_hash_block_' + subvolItem["hash"])
@@ -485,13 +500,15 @@ class Subvolume(object):
         for item in tableIndex.get_hash_inode_ids():
 
             # Check if FS tree has inode
-
             inode_id = item["inode_id"]
             if inode_id in nodesInodes:
                 if not nodesInodes[inode_id]:
                     continue
             else:
-                node = tableTree.find_by_inode(inode_id)
+                if checkTree:
+                    node = tableTree.find_by_inode(inode_id)
+                else:
+                    node = True
                 if not node:
                     nodesInodes[inode_id] = False
                     continue
@@ -522,8 +539,6 @@ class Subvolume(object):
 
             dataSize += hszItem["writed_size"]
             compressedSize += hszItem["compressed_size"]
-
-#        apparentSize = self.get_apparent_size(subvolItem)
 
         sparseSize = apparentSize - dataSize
         dedupSize = dataSize - uniqueSize

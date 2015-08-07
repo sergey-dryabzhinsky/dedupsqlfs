@@ -399,7 +399,8 @@ def main(): # {{{1
         return 1
 
     data = parser.add_argument_group('Data')
-    data.add_argument('--print-stats', dest='print_stats', action='store_true', help="print the total apparent size and the actual disk usage of the file system and exit")
+    data.add_argument('--print-stats', dest='print_stats', action='store_true', help="Print the total apparent size and the actual disk usage of the file system and exit")
+    data.add_argument('--check-tree-inodes', dest='check_tree_inodes', action='store_true', help="Check if inodes exists in fs tree on fs usage calculation. Applies to subvolume and snapshot stats calculation too.")
     data.add_argument('--defragment', dest='defragment', action='store_true', help="Defragment all stored data, do garbage collection.")
     data.add_argument('--vacuum', dest='vacuum', action='store_true', help="Like defragment, but force SQLite to vacuum databases.")
     data.add_argument('--verify', dest='verify', action='store_true', help="Verify all stored data hashes. (@todo)")

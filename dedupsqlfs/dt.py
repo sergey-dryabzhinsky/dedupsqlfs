@@ -52,10 +52,33 @@ class CleanUpPlan:
         self._max_yearly = max_yearly
         return self
 
+    def setCleanUpPlanDaily(self, max_daily):
+        if type(max_daily) is not int:
+            raise ValueError("Value of max_daily must be int")
+        self._max_daily = max_daily
+        return self
+
+    def setCleanUpPlanWeekly(self, max_weekly):
+        if type(max_weekly) is not int:
+            raise ValueError("Value of max_weekly must be int")
+        self._max_weekly = max_weekly
+        return self
+
+    def setCleanUpPlanMonthly(self, max_monthly):
+        if type(max_monthly) is not int:
+            raise ValueError("Value of max_monthly must be int")
+        self._max_monthly = max_monthly
+        return self
+
+    def setCleanUpPlanYearly(self, max_yearly):
+        if type(max_yearly) is not int:
+            raise ValueError("Value of max_yearly must be int")
+        self._max_yearly = max_yearly
+        return self
+
     def setDates(self, dates):
         if type(dates) not in (tuple, list, set):
             raise ValueError("Value of dates must be iteratable: tuple, list, set")
-
         self._dates[:] = dates[:]
         return self
 

@@ -2,10 +2,12 @@
 
 __author__ = 'sergey'
 
+import re
 from time import time
 from datetime import datetime
 from dedupsqlfs.fuse.subvolume import Subvolume
 from dedupsqlfs.lib import constants
+from dedupsqlfs.dt import CleanUpPlan
 
 class Snapshot(Subvolume):
 
@@ -86,6 +88,92 @@ class Snapshot(Subvolume):
 
         return
 
+    def _parseCleanUpPlan(self, cleanUpPlanStr):
+        plan = {
+            "daily": None,
+            "weekly": None,
+            "monthly": None,
+            "yearly": None
+        }
+
+        _ = cleanUpPlanStr.split(",")
+        rx = re.compile("\d+")
+
+        for part in _:
+
+            dig = rx.findall(part)
+            if not len(dig):
+                continue
+
+            if part.find("d") != -1 or part.find("day") != -1:
+                plan["daily"] = int(dig[0])
+            if part.find("w") != -1 or part.find("week") != -1:
+                plan["weekly"] = int(dig[0])
+            if part.find("m") != -1 or part.find("month") != -1:
+                plan["monthly"] = int(dig[0])
+            if part.find("y") != -1 or part.find("year") != -1:
+                plan["yearly"] = int(dig[0])
+
+        return plan
+
+    def _getCleanUpPlanObject(self, cleanUpPlanStr):
+        cleanUp = CleanUpPlan()
+
+        plan = self._parseCleanUpPlan(cleanUpPlanStr)
+        if plan["daily"] is not None:
+            datesCleanUp.setCleanUpPlanDaily(plan["daily"])
+        if plan["weekly"] is not None:
+            datesCleanUp.setCleanUpPlanWeekly(plan["weekly"])
+        if plan["monthly"] is not None:
+            datesCleanUp.setCleanUpPlanMonthly(plan["monthly"])
+        if plan["yearly"] is not None:
+            datesCleanUp.setCleanUpPlanYearly(plan["yearly"])
+
+        return cleanUp
+
+    def remove_plan(self, cleanUpPlanStr, use_last_update_time=False):
+
+        datesCleanUp = self._getCleanUpPlanObject(cleanUpPlanStr)
+
+        tableSubvol = self.getTable('subvolume')
+
+        dates = []
+
+        for subvol_id in tableSubvol.get_ids():
+
+            subvol = tableSubvol.get(subvol_id)
+
+            if subvol["name"] == constants.ROOT_SUBVOLUME_NAME:
+                continue
+
+            if not use_last_update_time:
+                subvolDate = datetime.fromtimestamp(subvol["created_at"])
+            else:
+                subvolDate = datetime.fromtimestamp(subvol["updated_at"])
+
+            dates.append(subvolDate)
+
+        datesCleanUp.setDates(dates)
+        removeDates = datesCleanUp.getRemovedList()
+
+        for subvol_id in tableSubvol.get_ids():
+
+            subvol = tableSubvol.get(subvol_id)
+
+            if subvol["name"] == constants.ROOT_SUBVOLUME_NAME:
+                continue
+
+            if not use_last_update_time:
+                subvolDate = datetime.fromtimestamp(subvol["created_at"])
+            else:
+                subvolDate = datetime.fromtimestamp(subvol["updated_at"])
+
+            if subvolDate in removeDates:
+                self.print_msg("Remove %r snapshot\n" % subvol["name"])
+                self.remove(subvol["name"])
+
+        return
+
     def count_older_than(self, dateStr, use_last_update_time=False):
 
         oldDate = datetime.strptime(dateStr, "%Y-%m-%dT%H:%M:%S")
@@ -108,6 +196,37 @@ class Snapshot(Subvolume):
 
             if subvolDate < oldDate:
                 cnt += 1
+
+        self.print_msg("Count old snapshots: ")
+        self.print_out("%s\n" % cnt)
+        return
+
+    def count_plan(self, cleanUpPlanStr, use_last_update_time=False):
+
+        datesCleanUp = self._getCleanUpPlanObject(cleanUpPlanStr)
+
+        tableSubvol = self.getTable('subvolume')
+
+        dates = []
+
+        for subvol_id in tableSubvol.get_ids():
+
+            subvol = tableSubvol.get(subvol_id)
+
+            if subvol["name"] == constants.ROOT_SUBVOLUME_NAME:
+                continue
+
+            if not use_last_update_time:
+                subvolDate = datetime.fromtimestamp(subvol["created_at"])
+            else:
+                subvolDate = datetime.fromtimestamp(subvol["updated_at"])
+
+            dates.append(subvolDate)
+
+        datesCleanUp.setDates(dates)
+        removeDates = datesCleanUp.getRemovedList()
+
+        cnt = len(removeDates)
 
         self.print_msg("Count old snapshots: ")
         self.print_out("%s\n" % cnt)

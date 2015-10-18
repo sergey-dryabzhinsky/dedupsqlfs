@@ -121,13 +121,13 @@ class Snapshot(Subvolume):
 
         plan = self._parseCleanUpPlan(cleanUpPlanStr)
         if plan["daily"] is not None:
-            datesCleanUp.setCleanUpPlanDaily(plan["daily"])
+            cleanUp.setCleanUpPlanDaily(plan["daily"])
         if plan["weekly"] is not None:
-            datesCleanUp.setCleanUpPlanWeekly(plan["weekly"])
+            cleanUp.setCleanUpPlanWeekly(plan["weekly"])
         if plan["monthly"] is not None:
-            datesCleanUp.setCleanUpPlanMonthly(plan["monthly"])
+            cleanUp.setCleanUpPlanMonthly(plan["monthly"])
         if plan["yearly"] is not None:
-            datesCleanUp.setCleanUpPlanYearly(plan["yearly"])
+            cleanUp.setCleanUpPlanYearly(plan["yearly"])
 
         return cleanUp
 

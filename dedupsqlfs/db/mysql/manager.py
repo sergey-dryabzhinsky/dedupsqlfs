@@ -259,6 +259,11 @@ class DbManager( object ):
             if output.find(b'MariaDB'):
                 is_mariadb = True
 
+            has_tokudb = False
+            output = subprocess.check_output(["mysqld", "--verbose", "--help"], stderr=subprocess.DEVNULL)
+            if output.find(b'tokudb'):
+                has_tokudb = True
+
             cmd_opts = [
                 "--basedir=/usr",
                 "--datadir=%s" % datadir,
@@ -338,13 +343,18 @@ class DbManager( object ):
 
             if is_mariadb:
 
+                if self._table_engine == "InnoDB":
+                    cmd_opts.extend([
+                        "--innodb-flush-neighbors=0",
+                    ])
+
                 if self._table_engine == "TokuDB":
                     cmd_opts.extend([
-                        "--tokudb-block-size=8k",
+                        "--tokudb-block-size=16k",
                         "--tokudb-loader-memory-size=%dM" % (self._buffer_size/1024/1024),
                         "--tokudb-directio=1"
                     ])
-                else:
+                elif has_tokudb:
                     cmd_opts.extend([
                         "--tokudb-loader-memory-size=8k",
                     ])
@@ -352,16 +362,14 @@ class DbManager( object ):
                 if self._table_engine == "Aria":
                     cmd_opts.extend([
                         # Only MariaDB
-                        "--aria-block-size=8k",
+                        "--aria-block-size=16k",
                         "--aria-log-dir-path=%s" % self.getBasePath(),
                         "--aria-log-file-size=32M",
                         "--aria-pagecache-buffer-size=%dM" % (self._buffer_size/1024/1024),
                     ])
                 else:
                     cmd_opts.extend([
-                        "--aria-block-size=8k",
-                        "--aria-log-file-size=8k",
-                        "--aria-pagecache-buffer-size=8k",
+                        "--aria=OFF",
                     ])
 
             if is_new:

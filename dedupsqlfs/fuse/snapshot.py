@@ -153,6 +153,7 @@ class Snapshot(Subvolume):
 
             dates.append(subvolDate)
 
+        dates.sort()
         datesCleanUp.setDates(dates)
         removeDates = datesCleanUp.getRemovedList()
 
@@ -223,6 +224,7 @@ class Snapshot(Subvolume):
 
             dates.append(subvolDate)
 
+        dates.sort()
         datesCleanUp.setDates(dates)
         removeDates = datesCleanUp.getRemovedList()
 

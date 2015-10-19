@@ -130,6 +130,8 @@ class Table( object ):
         filePageSize = fileSize / 2147483646.0 * 1.05
         while pageSize < filePageSize:
             pageSize *= 2
+            if pageSize >= 64*1024:
+                break
 
         cacheSize = 64*1024*1024 / pageSize
 

@@ -256,13 +256,13 @@ class DbManager( object ):
 
             tmpdir = self.getBasePath() + "/tmp"
             if not os.path.isdir(tmpdir):
-                os.makedirs(tmpdir, 0o0770)
+                os.makedirs(tmpdir, 0o0750)
 
             is_new = False
             datadir = self.getBasePath() + "/mysql-db-data"
             if not os.path.isdir(datadir):
                 is_new = True
-                os.makedirs(datadir, 0o0770)
+                os.makedirs(datadir, 0o0750)
 
             is_mariadb = False
             has_tokudb = False
@@ -304,10 +304,6 @@ class DbManager( object ):
                             "mysql:mysql",
                             f
                         ]).wait()
-                        if os.path.isdir(f):
-                            os.chmod(f, 0o0770)
-                        else:
-                            os.chmod(f, 0o0660)
 
             if self.getAutocommit():
                 cmd_opts.append("--autocommit")
@@ -389,7 +385,11 @@ class DbManager( object ):
                     ])
                 else:
                     cmd_opts.extend([
-                        "--aria=OFF",
+                        # "--aria=OFF",         # Can't do this - TMP tables gone
+                        "--aria-block-size=4k",
+                        "--aria-log-dir-path=%s" % self.getBasePath(),
+                        "--aria-log-file-size=4k",
+                        "--aria-pagecache-buffer-size=4k",
                     ])
 
             if is_new:

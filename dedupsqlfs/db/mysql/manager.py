@@ -243,7 +243,9 @@ class DbManager( object ):
     def startMysqld(self):
         if self._mysqld_proc is None:
 
-            logfile = self.getBasePath() + "/error.log"
+            setupfile = self.getBasePath() + "/setup.log"
+            outputfile = self.getBasePath() + "/error.log"
+            errorfile = self.getBasePath() + "/error.log"
             slowlogfile = self.getBasePath() + "/slow.log"
             pidfile = self.getBasePath() + "/mysql.pid"
             self._socket = self.getBasePath() + "/mysql.sock"
@@ -277,7 +279,7 @@ class DbManager( object ):
                 "--datadir=%s" % datadir,
                 "--tmpdir=%s" % tmpdir,
                 "--plugin-dir=/usr/lib/mysql/plugin",       # Linux / Debian specific?
-                "--log-error=%s" % logfile,
+                "--log-error=%s" % errorfile,
                 "--slow-query-log",
                 "--slow-query-log-file=%s" % slowlogfile,
                 "--pid-file=%s" % pidfile,
@@ -295,7 +297,7 @@ class DbManager( object ):
 
             if os.geteuid() == 0:
                 cmd_opts.append("--user=mysql")
-                for f in (self.getBasePath(), tmpdir, datadir, logfile, slowlogfile, pidfile, self.getSocket(),):
+                for f in (self.getBasePath(), tmpdir, datadir, setupfile, errorfile, outputfile, slowlogfile, pidfile, self.getSocket(),):
                     if os.path.exists(f):
                         subprocess.Popen([
                             "chown",
@@ -395,12 +397,14 @@ class DbManager( object ):
 
                 self.getLogger().debug("CMD: %r" % (cmd,))
 
+                sf = open(setupfile, 'w')
                 retcode = subprocess.Popen(
                     cmd,
                     cwd=self.getBasePath(),
-                    stdout=open(os.devnull, 'w'),
-                    stderr=open(os.devnull, 'w')
+                    stdout=sf,
+                    stderr=sf
                 ).wait()
+                sf.close()
                 if retcode:
                     print("Something wrong! Return code: %s" % retcode)
                     return False
@@ -412,11 +416,12 @@ class DbManager( object ):
 
             self.getLogger().debug("CMD: %r" % (cmd,))
 
+            of = open(outputfile, 'w')
             self._mysqld_proc = subprocess.Popen(
                 cmd,
                 cwd=self.getBasePath(),
-                stdout=open(os.devnull, 'w'),
-                stderr=open(os.devnull, 'w')
+                stdout=of,
+                stderr=of
             )
 
             print("Wait up 10 sec for it to start...")
@@ -437,6 +442,7 @@ class DbManager( object ):
             if self._mysqld_proc.poll() is not None:
                 print("Something wrong? mysqld exited with: %s" % self._mysqld_proc.poll() )
                 self._mysqld_proc = None
+                of.close()
                 return False
 
             print("Done")

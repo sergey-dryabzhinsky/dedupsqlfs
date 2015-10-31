@@ -442,7 +442,7 @@ def main(): # {{{1
         logger.error("No storage engines available! Please install sqlite or pymysql python module!")
         return 1
 
-    parser.add_argument('--storage-engine', dest='storage_engine', metavar='ENGINE', choices=engines, default=engines[0],
+    generic.add_argument('--storage-engine', dest='storage_engine', metavar='ENGINE', choices=engines, default=engines[0],
                         help=msg)
 
     if "mysql" in engines:
@@ -452,7 +452,7 @@ def main(): # {{{1
         table_engines = get_table_engines()
 
         msg = "One of MySQL table engines: "+", ".join(table_engines)+". Default: %r. Aria and TokuDB engine can be used only with MariaDB or Percona server." % table_engines[0]
-        parser.add_argument('--table-engine', dest='table_engine', metavar='ENGINE',
+        generic.add_argument('--table-engine', dest='table_engine', metavar='ENGINE',
                             choices=table_engines, default=table_engines[0],
                             help=msg)
 

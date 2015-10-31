@@ -580,7 +580,7 @@ class DbManager( object ):
         )
         row = cur.fetchone()
 
-        exists = (row is not None) and int(row[0]["DbIsThere"]) > 0
+        exists = (row is not None) and int(row[0]) > 0
 
         return exists
 

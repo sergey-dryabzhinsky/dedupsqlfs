@@ -348,55 +348,55 @@ def do(options, compression_methods=None):
         # Actions
 
         if options.subvol_create:
-            return create_subvolume(options, _fuse)
+            create_subvolume(options, _fuse)
 
         if options.subvol_list:
-            return list_subvolume(options, _fuse)
+            list_subvolume(options, _fuse)
 
         if options.subvol_remove:
-            return remove_subvolume(options, _fuse)
+            remove_subvolume(options, _fuse)
 
         if options.subvol_stats:
-            return print_subvol_stats(options, _fuse)
+            print_subvol_stats(options, _fuse)
 
         if options.snapshot_create:
-            return create_snapshot(options, _fuse)
+            create_snapshot(options, _fuse)
 
         if options.snapshot_list:
-            return list_subvolume(options, _fuse)
+            list_subvolume(options, _fuse)
 
         if options.snapshot_remove:
-            return remove_snapshot(options, _fuse)
+            remove_snapshot(options, _fuse)
 
         if options.snapshot_remove_older:
-            return remove_snapshot_older(options, _fuse)
+            remove_snapshot_older(options, _fuse)
 
         if options.snapshot_remove_plan:
-            return remove_snapshot_plan(options, _fuse)
+            remove_snapshot_plan(options, _fuse)
 
         if options.snapshot_count_older:
-            return count_snapshot_older(options, _fuse)
+            count_snapshot_older(options, _fuse)
 
         if options.snapshot_count_plan:
-            return count_snapshot_plan(options, _fuse)
+            count_snapshot_plan(options, _fuse)
 
         if options.snapshot_readonly_set:
-            return set_snapshot_readonly(options, _fuse, True)
+            set_snapshot_readonly(options, _fuse, True)
 
         if options.snapshot_readonly_unset:
-            return set_snapshot_readonly(options, _fuse, False)
+            set_snapshot_readonly(options, _fuse, False)
 
         if options.snapshot_stats:
-            return print_snapshot_stats(options, _fuse)
+            print_snapshot_stats(options, _fuse)
 
         if options.defragment:
-            return data_defragment(options, _fuse)
+            data_defragment(options, _fuse)
 
         if options.vacuum:
-            return data_vacuum(options, _fuse)
+            data_vacuum(options, _fuse)
 
         if options.print_stats:
-            return print_fs_stats(options, _fuse)
+            print_fs_stats(options, _fuse)
 
         ret = 0
     except Exception:

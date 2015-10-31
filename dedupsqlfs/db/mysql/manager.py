@@ -381,6 +381,7 @@ class DbManager( object ):
                         "--aria-block-size=16k",
                         "--aria-log-dir-path=%s" % self.getBasePath(),
                         "--aria-log-file-size=32M",
+                        "--aria-sort-buffer-size=32M",
                         "--aria-pagecache-buffer-size=%dM" % (self._buffer_size/1024/1024),
                     ])
                 else:
@@ -389,6 +390,7 @@ class DbManager( object ):
                         "--aria-block-size=4k",
                         "--aria-log-dir-path=%s" % self.getBasePath(),
                         "--aria-log-file-size=4k",
+                        "--aria-sort-buffer-size=4k",
                         "--aria-pagecache-buffer-size=4k",
                     ])
 

@@ -68,9 +68,9 @@ class TableOption( Table ):
         item = cur.fetchone()
         if item:
             if raw:
-                item = item["value"]
+                item = item["value"].encode()
             else:
-                item = item["value"].decode()
+                item = item["value"]
         self.stopTimer('get')
         return item
 

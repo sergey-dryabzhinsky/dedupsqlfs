@@ -304,6 +304,10 @@ class DbManager( object ):
                             "mysql:mysql",
                             f
                         ]).wait()
+                        if os.path.isdir(f):
+                            os.chmod(f, 0o0770)
+                        else:
+                            os.chmod(f, 0o0660)
 
             if self.getAutocommit():
                 cmd_opts.append("--autocommit")

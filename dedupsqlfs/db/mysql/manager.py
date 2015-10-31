@@ -399,7 +399,7 @@ class DbManager( object ):
 
             if is_new:
 
-                print("Setup new MySQL system databases")
+                self.getLogger().info("Setup new MySQL system databases")
 
                 cmd = ["mysql_install_db"]
                 cmd.extend(cmd_opts)
@@ -415,13 +415,13 @@ class DbManager( object ):
                 ).wait()
                 sf.close()
                 if retcode:
-                    print("Something wrong! Return code: %s" % retcode)
+                    self.getLogger().error("Something wrong! Return code: %s" % retcode)
                     return False
 
             cmd = ["mysqld"]
             cmd.extend(cmd_opts)
 
-            print("Starting up MySQLd...")
+            self.getLogger().info("Starting up MySQLd...")
 
             self.getLogger().debug("CMD: %r" % (cmd,))
 
@@ -433,7 +433,7 @@ class DbManager( object ):
                 stderr=of
             )
 
-            print("Wait up 10 sec for it to start...")
+            self.getLogger().info("Wait up 10 sec for it to start...")
 
             t = 10
             while (t>0):
@@ -449,12 +449,12 @@ class DbManager( object ):
 
 
             if self._mysqld_proc.poll() is not None:
-                print("Something wrong? mysqld exited with: %s" % self._mysqld_proc.poll() )
+                self.getLogger().error("Something wrong? mysqld exited with: %s" % self._mysqld_proc.poll() )
                 self._mysqld_proc = None
                 of.close()
                 return False
 
-            print("Done")
+            self.getLogger().info("Done")
 
             self.createDb()
 
@@ -468,14 +468,24 @@ class DbManager( object ):
                 self._notmeStarted = False
                 return True
 
+            outputfile = self.getBasePath() + "/mysqladmin.log"
+
             cmd = [
                 "mysqladmin",
                 "--socket=%s" % self.getSocket(),
                 "shutdown"
             ]
 
-            print("Call MySQLd shutdown")
-            subprocess.Popen(cmd).wait()
+            self.getLogger().info("Call MySQLd shutdown")
+
+            of = open(outputfile, "w")
+            ret = subprocess.Popen(cmd, stdout=of, stderr=of).wait()
+            of.close()
+
+            if ret:
+                self.getLogger().info("Call MySQLadmin returned code=%r! Something wrong!" % ret)
+
+            self.getLogger().info("Wait up 10 sec for it to stop...")
 
             t = 10
             while (t>0):
@@ -485,7 +495,7 @@ class DbManager( object ):
                 t -= 0.1
 
             if self._mysqld_proc.poll() is None:
-                print("Terminate MySQLd")
+                self.getLogger().warning("Terminate MySQLd")
                 self._mysqld_proc.terminate()
 
                 t = 5
@@ -496,10 +506,10 @@ class DbManager( object ):
                     t -= 0.1
 
             if self._mysqld_proc.poll() is None:
-                print("Can't :'(")
+                self.getLogger().error("Can't stop mysqld!")
                 return False
 
-            print("Done")
+            self.getLogger().info("Done")
 
             self._mysqld_proc = None
             self._socket = None

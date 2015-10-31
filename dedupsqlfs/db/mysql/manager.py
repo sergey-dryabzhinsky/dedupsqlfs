@@ -329,12 +329,16 @@ class DbManager( object ):
                     "--innodb-file-per-table",
                     "--innodb-flush-method=O_DIRECT",
                     "--innodb-file-format=Barracuda",
+                    "--innodb-file-format-max=Barracuda",
                     "--skip-innodb-doublewrite",
                     "--innodb-buffer-pool-size=%dM" % (self._buffer_size/1024/1024),
                     "--innodb-log-file-size=32M",
-                    "--innodb-log-buffer-size=4M",
+                    "--innodb-log-buffer-size=8M",
                     "--innodb-autoextend-increment=1",
                 ])
+                if is_mariadb:
+                    cmd_opts.extend(["--innodb-flush-neighbors=0"])
+
             else:
                 cmd_opts.extend([
                     "--skip-innodb",
@@ -342,6 +346,8 @@ class DbManager( object ):
 
             if self._table_engine == "MyISAM":
                 cmd_opts.extend([
+                    "--myisam-use-mmap=1",
+                    "--myisam-block-size=4k",
                     "--key-buffer-size=%dM" % (self._buffer_size/1024/1024),
                 ])
             else:
@@ -364,7 +370,7 @@ class DbManager( object ):
                     ])
                 elif has_tokudb:
                     cmd_opts.extend([
-                        "--tokudb-loader-memory-size=8k",
+                        "--tokudb=OFF",
                     ])
 
                 if self._table_engine == "Aria":

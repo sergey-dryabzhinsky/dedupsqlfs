@@ -442,6 +442,20 @@ def main(): # {{{1
         logger.error("No storage engines available! Please install sqlite or pymysql python module!")
         return 1
 
+    parser.add_argument('--storage-engine', dest='storage_engine', metavar='ENGINE', choices=engines, default=engines[0],
+                        help=msg)
+
+    if "mysql" in engines:
+
+        from dedupsqlfs.db.mysql import get_table_engines
+
+        table_engines = get_table_engines()
+
+        msg = "One of MySQL table engines: "+", ".join(table_engines)+". Default: %r. Aria and TokuDB engine can be used only with MariaDB or Percona server." % table_engines[0]
+        parser.add_argument('--table-engine', dest='table_engine', metavar='ENGINE',
+                            choices=table_engines, default=table_engines[0],
+                            help=msg)
+
     data = parser.add_argument_group('Data')
     data.add_argument('--print-stats', dest='print_stats', action='store_true', help="Print the total apparent size and the actual disk usage of the file system and exit")
     data.add_argument('--check-tree-inodes', dest='check_tree_inodes', action='store_true', help="Check if inodes exists in fs tree on fs usage calculation. Applies to subvolume and snapshot stats calculation too.")

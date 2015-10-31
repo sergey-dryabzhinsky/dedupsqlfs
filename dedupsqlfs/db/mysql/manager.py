@@ -250,7 +250,7 @@ class DbManager( object ):
         if self._mysqld_proc is None:
 
             setupfile = self.getBasePath() + "/setup.log"
-            outputfile = self.getBasePath() + "/error.log"
+            outputfile = self.getBasePath() + "/console.log"
             errorfile = self.getBasePath() + "/error.log"
             slowlogfile = self.getBasePath() + "/slow.log"
             pidfile = self.getBasePath() + "/mysql.pid"

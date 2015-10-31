@@ -10,6 +10,7 @@ class TableBlock( Table ):
 
     _compressed = False
     _toku_compression = "uncompressed"
+    _key_block_size = 16
 
     def create( self ):
         c = self.getCursor()

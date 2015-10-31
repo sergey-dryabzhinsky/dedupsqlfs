@@ -17,6 +17,7 @@ class Table( object ):
     _compressed = True
     # Only for TokuDB: default, zlib, fast, quicklz, small, lzma, uncompressed
     _toku_compression = "small"
+    # Only InnoDB
     _key_block_size = 8
 
     _table_name = None
@@ -38,17 +39,20 @@ class Table( object ):
 
     def _getCreationAppendString(self):
         _cs = " Engine=" + self._engine
-        if self._engine == "InnoDB" and self._compressed:
-            _cs += " ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=%d;" % self._key_block_size
+        if self._engine == "InnoDB":
+            _cs += " KEY_BLOCK_SIZE=%d" % self._key_block_size
+            if self._compressed:
+                _cs += " ROW_FORMAT=COMPRESSED"
+            _cs += ";"
         if self._engine == "TokuDB":
             if not self._compressed:
                 _cs += " COMPRESSION=tokudb_uncompressed;"
             elif self._toku_compression:
                 _cs += " COMPRESSION=tokudb_%s;" % self._toku_compression
         if self._engine == "Aria":
-            _cs += " ROW_FORMAT=DYNAMIC TRANSACTIONAL=0 PAGE_CHECKSUM=0 TABLE_CHECKSUM=0;"
+            _cs += " ROW_FORMAT=COMPACT TRANSACTIONAL=0 PAGE_CHECKSUM=0 TABLE_CHECKSUM=0;"
         if self._engine == "MyISAM":
-            _cs += " ROW_FORMAT=DYNAMIC;"
+            _cs += " ROW_FORMAT=COMPACT CHECKSUM=0;"
         return _cs
 
     def getOperationsCount(self):

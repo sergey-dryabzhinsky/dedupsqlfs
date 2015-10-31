@@ -32,11 +32,6 @@ class TableTree( Table ):
             ");"
         )
         c.execute(
-            "CREATE INDEX IF NOT EXISTS tree_parent_name ON `%s` (" % self.getName()+
-                "parent_id,name_id"+
-            ");"
-        )
-        c.execute(
             "CREATE INDEX IF NOT EXISTS tree_name ON `%s` (" % self.getName()+
                 "name_id"+
             ");"
@@ -109,20 +104,6 @@ class TableTree( Table ):
         items = cur.fetchall()
         self.stopTimer('get_children')
         return items
-
-    def get_names_by_names(self, name_ids):
-        self.startTimer()
-
-        nids = ()
-        id_str = ",".join(name_ids)
-        if id_str:
-            cur = self.getCursor()
-            cur.execute("SELECT `name_id` FROM `%s` " % self.getName()+
-                            " WHERE `name_id` IN (%s)" % (id_str,))
-            nids = tuple(str(item["name_id"]) for item in iter(cur.fetchone,None))
-
-        self.stopTimer('get_names_by_names')
-        return nids
 
     def get_inodes_by_inodes(self, inode_ids):
         self.startTimer()

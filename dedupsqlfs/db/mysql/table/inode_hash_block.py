@@ -109,86 +109,6 @@ class TableInodeHashBlock( Table ):
         self.stopTimer('delete_by_inode_number')
         return item
 
-    def get_hashes_by_inode( self, inode):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute(
-            "SELECT `hash_id` FROM `%s` " % self.getName()+
-            " WHERE `inode_id`=%(inode)s",
-            {
-                "inode": inode
-            }
-        )
-        items = tuple(str(item["hash_id"]) for item in cur.fetchall())
-        self.stopTimer('get_hashes_by_inode')
-        return items
-
-    def get_by_inode( self, inode):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute(
-            "SELECT * FROM `%s` " % self.getName()+
-            " WHERE `inode_id`=%(inode)s",
-            {
-                "inode": inode
-            }
-        )
-        self.stopTimer('get_by_inode')
-        def fetchone():
-            self.startTimer()
-            item = cur.fetchone()
-            self.stopTimer('get_by_inode')
-            return item
-        for row in iter(fetchone, None):
-            yield row
-        return
-
-    def get_count_by_inode( self, inode):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute("SELECT COUNT(1) as `cnt` FROM `%s` " % self.getName()+
-                    " WHERE inode_id=%s", (inode,))
-        item = cur.fetchone()
-        self.stopTimer('get_count_by_inode')
-        return item['cnt']
-
-    def get_count_hash( self, hash_id ):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute(
-            "SELECT COUNT(1) as `cnt` FROM `%s` " % self.getName()+
-            " WHERE `hash_id`=%(hash)s",
-            {
-                "hash": hash_id
-            }
-        )
-        item = cur.fetchone()
-        if item:
-            item = item["cnt"]
-        else:
-            item = 0
-        self.stopTimer('get_count_hash')
-        return item
-
-    def get_count_hash_by_inode( self, hash_id, inode_id ):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute(
-            "SELECT COUNT(1) as `cnt` FROM `%s` " % self.getName()+
-            " WHERE `hash_id`=%(hash)s AND `inode_id`=%(inode)s",
-            {
-                "hash": hash_id,
-                "inode": inode_id
-            }
-        )
-        item = cur.fetchone()
-        if item:
-            item = item["cnt"]
-        else:
-            item = 0
-        self.stopTimer('get_count_hash_by_inode')
-        return item
-
     def get_count_uniq_inodes(self):
         self.startTimer()
         cur = self.getCursor()
@@ -206,7 +126,7 @@ class TableInodeHashBlock( Table ):
         cur = self.getCursor()
         cur.execute("SELECT DISTINCT `inode_id` FROM `%s` " % self.getName()+
                     " WHERE `inode_id`>=%s AND `inode_id`<%s", (start_id, end_id,))
-        nameIds = tuple(str(item["inode_id"]) for item in cur)
+        nameIds = set(str(item["inode_id"]) for item in cur)
         self.stopTimer('get_inode_ids')
         return nameIds
 
@@ -222,25 +142,11 @@ class TableInodeHashBlock( Table ):
         self.stopTimer('remove_by_inodes')
         return count
 
-    def get_hashes_by_hashes(self, hash_ids):
-        self.startTimer()
-
-        iids = ()
-        id_str = ",".join(hash_ids)
-        if id_str:
-            cur = self.getCursor()
-            cur.execute("SELECT DISTINCT `hash_id` FROM `%s` " % self.getName()+
-                            " WHERE `hash_id` IN (%s)" % (id_str,))
-            iids = tuple(str(item["hash_id"]) for item in cur)
-
-        self.stopTimer('get_hashes_by_hashes')
-        return iids
-
-    def get_hash_ids(self):
+    def get_hash_inode_ids(self):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT `hash_id` FROM `%s` " % self.getName())
-        iids = tuple(str(item["hash_id"]) for item in cur)
+        cur.execute("SELECT `hash_id`,`inode_id` FROM `%s` " % self.getName())
+        iids = (item for item in cur)
         self.stopTimer('get_hash_ids')
         return iids
 

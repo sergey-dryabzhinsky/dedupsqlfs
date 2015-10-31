@@ -78,6 +78,9 @@ class DbManager( object ):
 
 
     def setSynchronous(self, flag=True):
+        """
+        Change startup defaults
+        """
         self._synchronous = flag == True
         if self._mysqld_proc:
             conn = self.getConnection(True)
@@ -95,6 +98,9 @@ class DbManager( object ):
         return self._synchronous
 
     def setAutocommit(self, flag=True):
+        """
+        Change startup defaults
+        """
         self._autocommit = flag == True
         if self._mysqld_proc:
             conn = self.getConnection(True)
@@ -160,7 +166,9 @@ class DbManager( object ):
             elif name == "inode":
                 from dedupsqlfs.db.mysql.table.inode import TableInode
                 self._table[ name ] = TableInode(self)
-            elif name.startswith("inode_") and not name.startswith("inode_hash_block"):
+            elif name.startswith("inode_") \
+                    and not name.startswith("inode_hash_block") \
+                    and not name.startswith("inode_option"):
                 from dedupsqlfs.db.mysql.table.inode import TableInode
                 self._table[ name ] = TableInode(self)
                 self._table[ name ].setName(name)
@@ -268,12 +276,12 @@ class DbManager( object ):
                 "--basedir=/usr",
                 "--datadir=%s" % datadir,
                 "--tmpdir=%s" % tmpdir,
-                "--plugin-dir=/usr/lib/mysql/plugin",
+                "--plugin-dir=/usr/lib/mysql/plugin",       # Linux / Debian specific?
                 "--log-error=%s" % logfile,
                 "--slow-query-log",
                 "--slow-query-log-file=%s" % slowlogfile,
                 "--pid-file=%s" % pidfile,
-                "--skip-grant-tables",
+                "--skip-grant-tables",                      # Grant root-access
                 "--skip-bind-address",
                 "--skip-networking",
                 "--skip-name-resolve",

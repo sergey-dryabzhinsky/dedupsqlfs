@@ -106,7 +106,7 @@ class TableName( Table ):
         cur = self.getCursor()
         cur.execute("SELECT `id` FROM `%s` " % self.getName()+
                     " WHERE `id`>=%s AND `id`<%s", (start_id, end_id,))
-        nameIds = tuple(str(item["id"]) for item in cur)
+        nameIds = set(item["id"] for item in cur)
         self.stopTimer('get_name_ids')
         return nameIds
 

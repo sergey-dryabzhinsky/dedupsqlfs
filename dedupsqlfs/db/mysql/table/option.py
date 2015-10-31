@@ -55,7 +55,7 @@ class TableOption( Table ):
         self.stopTimer('update')
         return count
 
-    def get( self, name ):
+    def get( self, name, raw=False):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
@@ -67,7 +67,10 @@ class TableOption( Table ):
         )
         item = cur.fetchone()
         if item:
-            item = item["value"]
+            if raw:
+                item = item["value"]
+            else:
+                item = item["value"].decode()
         self.stopTimer('get')
         return item
 

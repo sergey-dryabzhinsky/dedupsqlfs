@@ -49,7 +49,8 @@ class TableInode( Table ):
 
         cur.execute("INSERT INTO `%s`" % self.getName() +
                     "(`nlinks`, `mode`, `uid`, `gid`, `rdev`, `size`, `atime`, `mtime`, `ctime`, `atime_ns`, `mtime_ns`, `ctime_ns`) " +
-                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (
+                    "VALUES "+
+                    "(%s,       %s,     %s,    %s,    %s,     %s,     %s,      %s,      %s,      %s,         %s,         %s)", (
             nlinks, mode, uid, gid, rdev, size,
             atime, mtime, ctime, atime_ns, mtime_ns, ctime_ns
         ))

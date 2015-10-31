@@ -379,7 +379,6 @@ class DbManager( object ):
                     cmd_opts.extend([
                         # Only MariaDB
                         "--aria-block-size=16k",
-                        "--aria-log-dir-path=%s" % self.getBasePath(),
                         "--aria-log-file-size=32M",
                         "--aria-sort-buffer-size=32M",
                         "--aria-pagecache-buffer-size=%dM" % (self._buffer_size/1024/1024),
@@ -388,10 +387,9 @@ class DbManager( object ):
                     cmd_opts.extend([
                         # "--aria=OFF",         # Can't do this - TMP tables gone
                         "--aria-block-size=4k",
-                        "--aria-log-dir-path=%s" % self.getBasePath(),
-                        "--aria-log-file-size=4k",
+                        "--aria-log-file-size=8M",
                         "--aria-sort-buffer-size=4k",
-                        "--aria-pagecache-buffer-size=4k",
+                        "--aria-pagecache-buffer-size=128k",
                     ])
 
             if is_new:

@@ -162,6 +162,9 @@ class DbManager( object ):
                 self._table[ name ] = TableTmpIdCount(self)
             else:
                 raise ValueError("Unknown database %r" % name)
+
+            self._table[ name ].create()
+
         return self._table[ name ]
 
 
@@ -227,8 +230,8 @@ class DbManager( object ):
         return s
 
     def create(self):
-        for t in self.tables:
-            self.getTable(t).create()
+        #for t in self.tables:
+        #    self.getTable(t).create()
         return self
 
     def copy(self, oldTableName, newTableName):

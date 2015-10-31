@@ -621,21 +621,21 @@ class DbManager( object ):
     def getFileSize(self):
         s = 0
         for name in self.tables:
-            t = self.getTable(name)
+            t = self.getTable(name, True)
             s += t.getFileSize()
         return s
 
     def getOperationsCount(self):
         s = 0
         for name in self.tables:
-            t = self.getTable(name)
+            t = self.getTable(name, True)
             s += t.getAllOperationsCount()
         return s
 
     def getTimeSpent(self):
         s = 0
         for name in self.tables:
-            t = self.getTable(name)
+            t = self.getTable(name, True)
             s += t.getAllTimeSpent()
         return s
 
@@ -645,11 +645,8 @@ class DbManager( object ):
         return self
 
     def copy(self, oldTableName, newTableName):
-        t1 = self.getTable(oldTableName)
+        self.getTable(oldTableName)
         t2 = self.getTable(newTableName)
-
-        t1.create()
-        t2.create()
 
         # Rename files
         t2.getCursor().execute("INSERT `%s` SELECT * FROM `%s`;" % (newTableName, oldTableName,))

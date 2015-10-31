@@ -203,7 +203,7 @@ class DbManager( object ):
     def isSupportedStorage(self):
         s = False
         for name in self.tables:
-            t = self.getTable(name, False)
+            t = self.getTable(name, True)
             f = t.getDbFilePath()
             if os.path.isfile(f):
                 s = True
@@ -212,21 +212,21 @@ class DbManager( object ):
     def getFileSize(self):
         s = 0
         for name in self.tables:
-            t = self.getTable(name, False)
+            t = self.getTable(name, True)
             s += t.getFileSize()
         return s
 
     def getOperationsCount(self):
         s = 0
         for name in self.tables:
-            t = self.getTable(name, False)
+            t = self.getTable(name, True)
             s += t.getAllOperationsCount()
         return s
 
     def getTimeSpent(self):
         s = 0
         for name in self.tables:
-            t = self.getTable(name, False)
+            t = self.getTable(name, True)
             s += t.getAllTimeSpent()
         return s
 
@@ -236,8 +236,8 @@ class DbManager( object ):
         return self
 
     def copy(self, oldTableName, newTableName):
-        t1 = self.getTable(oldTableName, False)
-        t2 = self.getTable(newTableName, False)
+        t1 = self.getTable(oldTableName, True)
+        t2 = self.getTable(newTableName, True)
 
         t1.create()
         t1.close()

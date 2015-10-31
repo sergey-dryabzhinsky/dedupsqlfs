@@ -337,7 +337,8 @@ def do(options, compression_methods=None):
 
         basePath = os.path.expanduser(_fuse.getOption("data"))
         if os.path.exists(basePath):
-            _fuse.setOption("storage_engine", "auto")
+            if not _fuse.getOption("storage_engine"):
+                _fuse.setOption("storage_engine", "auto")
 
         _fuse.saveCompressionMethods(compression_methods)
 

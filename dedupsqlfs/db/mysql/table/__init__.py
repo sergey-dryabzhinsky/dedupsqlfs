@@ -156,7 +156,7 @@ class Table( object ):
         )
         row = cur.fetchone()
 
-        exists = (row is not None) and int(row[0]) > 0
+        exists = (row is not None) and int(row['TableIsThere']) > 0
 
         return exists
 
@@ -187,7 +187,7 @@ class Table( object ):
         )
         row = cur.fetchone()
 
-        exists = (row is not None) and int(row[0]) > 0
+        exists = (row is not None) and int(row['IndexIsThere']) > 0
 
         if not exists:
             _u = ""

@@ -570,7 +570,7 @@ class DbManager( object ):
         return cursor
 
     def hasDb(self, conn):
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_type)
 
         cur.execute(
             "SELECT COUNT(1) AS `DbIsThere` "+
@@ -580,7 +580,7 @@ class DbManager( object ):
         )
         row = cur.fetchone()
 
-        exists = (row is not None) and int(row[0]) > 0
+        exists = (row is not None) and int(row['DbIsThere']) > 0
 
         return exists
 
@@ -590,7 +590,7 @@ class DbManager( object ):
 
         if not self.hasDb(conn):
 
-            cur = conn.cursor()
+            cur = conn.cursor(cursor_type)
             cur.execute("CREATE DATABASE IF NOT EXISTS `%s` COLLATE utf8_bin;" % self.getDbName())
             cur.close()
 

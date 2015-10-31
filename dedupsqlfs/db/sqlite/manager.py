@@ -81,7 +81,7 @@ class DbManager( object ):
     def getDbName(self):
         return self._db_name
 
-    def getTable(self, name):
+    def getTable(self, name, nocreate=False):
         if name not in self._table:
             if name == "option":
                 from dedupsqlfs.db.sqlite.table.option import TableOption
@@ -163,7 +163,8 @@ class DbManager( object ):
             else:
                 raise ValueError("Unknown database %r" % name)
 
-            self._table[ name ].create()
+            if not nocreate:
+                self._table[ name ].create()
 
         return self._table[ name ]
 
@@ -202,7 +203,7 @@ class DbManager( object ):
     def isSupportedStorage(self):
         s = False
         for name in self.tables:
-            t = self.getTable(name)
+            t = self.getTable(name, False)
             f = t.getDbFilePath()
             if os.path.isfile(f):
                 s = True
@@ -211,21 +212,21 @@ class DbManager( object ):
     def getFileSize(self):
         s = 0
         for name in self.tables:
-            t = self.getTable(name)
+            t = self.getTable(name, False)
             s += t.getFileSize()
         return s
 
     def getOperationsCount(self):
         s = 0
         for name in self.tables:
-            t = self.getTable(name)
+            t = self.getTable(name, False)
             s += t.getAllOperationsCount()
         return s
 
     def getTimeSpent(self):
         s = 0
         for name in self.tables:
-            t = self.getTable(name)
+            t = self.getTable(name, False)
             s += t.getAllTimeSpent()
         return s
 
@@ -235,8 +236,8 @@ class DbManager( object ):
         return self
 
     def copy(self, oldTableName, newTableName):
-        t1 = self.getTable(oldTableName)
-        t2 = self.getTable(newTableName)
+        t1 = self.getTable(oldTableName, False)
+        t2 = self.getTable(newTableName, False)
 
         t1.create()
         t1.close()

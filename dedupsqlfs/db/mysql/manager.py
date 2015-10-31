@@ -148,7 +148,7 @@ class DbManager( object ):
         return self._pass
 
 
-    def getTable(self, name):
+    def getTable(self, name, nocreate=False):
         if name not in self._table:
             if name == "option":
                 from dedupsqlfs.db.mysql.table.option import TableOption
@@ -230,7 +230,8 @@ class DbManager( object ):
             else:
                 raise ValueError("Unknown database %r" % name)
 
-            self._table[ name ].create()
+            if not nocreate:
+                self._table[ name ].create()
 
         return self._table[ name ]
 

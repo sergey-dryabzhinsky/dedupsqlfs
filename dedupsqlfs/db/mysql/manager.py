@@ -256,21 +256,21 @@ class DbManager( object ):
 
             tmpdir = self.getBasePath() + "/tmp"
             if not os.path.isdir(tmpdir):
-                os.makedirs(tmpdir, 0o0750)
+                os.makedirs(tmpdir, 0o0770)
 
             is_new = False
             datadir = self.getBasePath() + "/mysql-db-data"
             if not os.path.isdir(datadir):
                 is_new = True
-                os.makedirs(datadir, 0o0750)
+                os.makedirs(datadir, 0o0770)
 
             is_mariadb = False
-            output = subprocess.check_output(["mysqld", "--version"])
+            has_tokudb = False
+
+            output = subprocess.check_output(["mysqld", "--verbose", "--help"], stderr=subprocess.DEVNULL)
+
             if output.find(b'MariaDB'):
                 is_mariadb = True
-
-            has_tokudb = False
-            output = subprocess.check_output(["mysqld", "--verbose", "--help"], stderr=subprocess.DEVNULL)
             if output.find(b'tokudb'):
                 has_tokudb = True
 

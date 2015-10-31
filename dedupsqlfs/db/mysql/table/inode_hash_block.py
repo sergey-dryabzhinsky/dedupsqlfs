@@ -109,6 +109,30 @@ class TableInodeHashBlock( Table ):
         self.stopTimer('delete_by_inode_number')
         return item
 
+    def delete_by_inode_number_more( self, inode, block_number ):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute(
+            "SELECT block_number FROM `%s` " % self.getName() +
+            " WHERE `inode_id`=%(inode)s AND `block_number`>%(block)s",
+            {
+                "inode": inode,
+                "block": block_number
+            }
+        )
+        items = cur.fetchall()
+        if items:
+            cur.execute(
+                "DELETE FROM `%s` " % self.getName() +
+                " WHERE `inode_id`=%(inode)s AND `block_number`>%(block)s",
+                {
+                    "inode": inode,
+                    "block": block_number
+                }
+            )
+        self.stopTimer('delete_by_inode_number_more')
+        return items
+
     def get_count_uniq_inodes(self):
         self.startTimer()
         cur = self.getCursor()

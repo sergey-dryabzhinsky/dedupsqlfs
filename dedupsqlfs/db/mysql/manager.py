@@ -4,6 +4,7 @@ __author__ = 'sergey'
 
 import os
 from time import sleep
+from datetime import datetime
 import subprocess
 import pymysql
 import pymysql.err
@@ -406,7 +407,8 @@ class DbManager( object ):
 
                 self.getLogger().debug("CMD: %r" % (cmd,))
 
-                sf = open(setupfile, 'w')
+                sf = open(setupfile, 'a')
+                sf.write("\n---=== %s ===---\n" % datetime.now())
                 retcode = subprocess.Popen(
                     cmd,
                     cwd=self.getBasePath(),
@@ -425,7 +427,8 @@ class DbManager( object ):
 
             self.getLogger().debug("CMD: %r" % (cmd,))
 
-            of = open(outputfile, 'w')
+            of = open(outputfile, 'a')
+            of.write("\n---=== %s ===---\n" % datetime.now())
             self._mysqld_proc = subprocess.Popen(
                 cmd,
                 cwd=self.getBasePath(),
@@ -479,7 +482,8 @@ class DbManager( object ):
 
             self.getLogger().info("Call MySQLd shutdown")
 
-            of = open(outputfile, "w")
+            of = open(outputfile, "a")
+            of.write("\n---=== %s ===---\n" % datetime.now())
             ret = subprocess.Popen(
                 cmd,
                 cwd=self.getBasePath(),
@@ -488,7 +492,8 @@ class DbManager( object ):
             of.close()
 
             if ret:
-                self.getLogger().info("Call MySQLadmin returned code=%r! Something wrong!" % ret)
+                self.getLogger().warning("Call MySQLadmin returned code=%r! Something wrong!" % ret)
+                return False
 
             self.getLogger().info("Wait up 10 sec for it to stop...")
 

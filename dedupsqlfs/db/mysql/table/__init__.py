@@ -144,6 +144,22 @@ class Table( object ):
             return int(row["size"])
         return 0
 
+    def hasTable(self):
+        cur = self.getCursor()
+
+        cur.execute(
+            "SELECT COUNT(1) AS `TableIsThere` "+
+            "FROM `INFORMATION_SCHEMA`.`STATISTICS` "+
+            "WHERE `table_schema` = %s "+
+            "AND   `table_name`   = %s;",
+            (self.getManager().getDbName(), self.getName())
+        )
+        row = cur.fetchone()
+
+        exists = (row is not None) and int(row["TableIsThere"]) > 0
+
+        return exists
+
     def createIndexIfNotExists(self, indexName, fieldList, unique=False, indexSizes=None):
         """
         @param indexName: Index name

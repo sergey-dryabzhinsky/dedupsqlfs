@@ -231,7 +231,8 @@ class DbManager( object ):
                 raise ValueError("Unknown database %r" % name)
 
             if not nocreate:
-                self._table[ name ].create()
+                if not self._table[ name ].hasTable():
+                    self._table[ name ].create()
 
         return self._table[ name ]
 
@@ -456,7 +457,6 @@ class DbManager( object ):
             print("Done")
 
             self.createDb()
-            self.create()
 
         return True
 
@@ -569,13 +569,30 @@ class DbManager( object ):
             pass
         return cursor
 
+    def hasDb(self, conn):
+        cur = conn.cursor()
+
+        cur.execute(
+            "SELECT COUNT(1) AS `DbIsThere` "+
+            "FROM `INFORMATION_SCHEMA`.`STATISTICS` "+
+            "WHERE `table_schema` = %s;",
+            (self.getDbName(),)
+        )
+        row = cur.fetchone()
+
+        exists = (row is not None) and int(row["DbIsThere"]) > 0
+
+        return exists
+
     def createDb(self):
 
         conn = self.getConnection(True)
 
-        cur = conn.cursor()
-        cur.execute("CREATE DATABASE IF NOT EXISTS `%s` COLLATE utf8_bin;" % self.getDbName())
-        cur.close()
+        if not self.hasDb(conn):
+
+            cur = conn.cursor()
+            cur.execute("CREATE DATABASE IF NOT EXISTS `%s` COLLATE utf8_bin;" % self.getDbName())
+            cur.close()
 
         conn.close()
         return True
@@ -640,8 +657,6 @@ class DbManager( object ):
         return s
 
     def create(self):
-        #for t in self.tables:
-        #    self.getTable(t).create()
         return self
 
     def copy(self, oldTableName, newTableName):

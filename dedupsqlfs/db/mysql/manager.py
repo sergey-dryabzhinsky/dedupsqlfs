@@ -472,6 +472,7 @@ class DbManager( object ):
 
             cmd = [
                 "mysqladmin",
+                "--user=root",
                 "--socket=%s" % self.getSocket(),
                 "shutdown"
             ]
@@ -479,7 +480,11 @@ class DbManager( object ):
             self.getLogger().info("Call MySQLd shutdown")
 
             of = open(outputfile, "w")
-            ret = subprocess.Popen(cmd, stdout=of, stderr=of).wait()
+            ret = subprocess.Popen(
+                cmd,
+                cwd=self.getBasePath(),
+                stdout=of, stderr=of
+            ).wait()
             of.close()
 
             if ret:

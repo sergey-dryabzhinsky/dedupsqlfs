@@ -413,7 +413,7 @@ class DbManager( object ):
                     cmd,
                     cwd=self.getBasePath(),
                     stdout=sf,
-                    stderr=sf
+                    stderr=subprocess.STDOUT
                 ).wait()
                 sf.close()
                 if retcode:
@@ -433,7 +433,7 @@ class DbManager( object ):
                 cmd,
                 cwd=self.getBasePath(),
                 stdout=of,
-                stderr=of
+                stderr=subprocess.STDOUT
             )
 
             self.getLogger().info("Wait up 10 sec for it to start...")
@@ -487,7 +487,7 @@ class DbManager( object ):
             ret = subprocess.Popen(
                 cmd,
                 cwd=self.getBasePath(),
-                stdout=of, stderr=of
+                stdout=of, stderr=subprocess.STDOUT
             ).wait()
             of.close()
 

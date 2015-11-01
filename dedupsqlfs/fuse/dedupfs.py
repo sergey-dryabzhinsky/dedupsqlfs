@@ -92,6 +92,7 @@ class DedupFS(object): # {{{1
         else:
             fuse.close()
         self._compressTool.stop()
+        self.operations.getManager().close()
         if ex:
             raise ex
 

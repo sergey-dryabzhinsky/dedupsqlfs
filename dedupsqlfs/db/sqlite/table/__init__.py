@@ -251,15 +251,7 @@ class Table( object ):
         os.rename(fn, bkp_fn)
 
         p1 = subprocess.Popen(["sqlite3", bkp_fn, ".dump"], stdout=subprocess.PIPE)
-        p2 = subprocess.Popen(["sqlite3", fn], stdin=subprocess.PIPE)
-        while True:
-            data = p1.stdout.read(1024)
-            if not data:
-                break
-            p2.stdin.write(data)
-
-        p2.stdin.flush()
-        p2.stdin.close()
+        p2 = subprocess.Popen(["sqlite3", fn], stdin=p1.stdout, stdout=open(os.devnull,"w"))
 
         ret = p1.wait() > 0 or p2.wait() > 0
         if ret:

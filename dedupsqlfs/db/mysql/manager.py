@@ -4,6 +4,7 @@ __author__ = 'sergey'
 
 import os
 from time import sleep
+from datetime import datetime
 import subprocess
 import pymysql
 import pymysql.err
@@ -78,6 +79,9 @@ class DbManager( object ):
 
 
     def setSynchronous(self, flag=True):
+        """
+        Change startup defaults
+        """
         self._synchronous = flag == True
         if self._mysqld_proc:
             conn = self.getConnection(True)
@@ -95,6 +99,9 @@ class DbManager( object ):
         return self._synchronous
 
     def setAutocommit(self, flag=True):
+        """
+        Change startup defaults
+        """
         self._autocommit = flag == True
         if self._mysqld_proc:
             conn = self.getConnection(True)
@@ -142,7 +149,7 @@ class DbManager( object ):
         return self._pass
 
 
-    def getTable(self, name):
+    def getTable(self, name, nocreate=False):
         if name not in self._table:
             if name == "option":
                 from dedupsqlfs.db.mysql.table.option import TableOption
@@ -160,7 +167,9 @@ class DbManager( object ):
             elif name == "inode":
                 from dedupsqlfs.db.mysql.table.inode import TableInode
                 self._table[ name ] = TableInode(self)
-            elif name.startswith("inode_") and not name.startswith("inode_hash_block"):
+            elif name.startswith("inode_") \
+                    and not name.startswith("inode_hash_block") \
+                    and not name.startswith("inode_option"):
                 from dedupsqlfs.db.mysql.table.inode import TableInode
                 self._table[ name ] = TableInode(self)
                 self._table[ name ].setName(name)
@@ -221,6 +230,11 @@ class DbManager( object ):
                 self._table[ name ] = TableTmpIdCount(self)
             else:
                 raise ValueError("Unknown database %r" % name)
+
+            if not nocreate:
+                if not self._table[ name ].hasTable():
+                    self._table[ name ].create()
+
         return self._table[ name ]
 
 
@@ -235,7 +249,9 @@ class DbManager( object ):
     def startMysqld(self):
         if self._mysqld_proc is None:
 
-            logfile = self.getBasePath() + "/error.log"
+            setupfile = self.getBasePath() + "/setup.log"
+            outputfile = self.getBasePath() + "/console.log"
+            errorfile = self.getBasePath() + "/error.log"
             slowlogfile = self.getBasePath() + "/slow.log"
             pidfile = self.getBasePath() + "/mysql.pid"
             self._socket = self.getBasePath() + "/mysql.sock"
@@ -255,12 +271,12 @@ class DbManager( object ):
                 os.makedirs(datadir, 0o0750)
 
             is_mariadb = False
-            output = subprocess.check_output(["mysqld", "--version"])
+            has_tokudb = False
+
+            output = subprocess.check_output(["mysqld", "--verbose", "--help"], stderr=subprocess.DEVNULL)
+
             if output.find(b'MariaDB'):
                 is_mariadb = True
-
-            has_tokudb = False
-            output = subprocess.check_output(["mysqld", "--verbose", "--help"], stderr=subprocess.DEVNULL)
             if output.find(b'tokudb'):
                 has_tokudb = True
 
@@ -268,12 +284,12 @@ class DbManager( object ):
                 "--basedir=/usr",
                 "--datadir=%s" % datadir,
                 "--tmpdir=%s" % tmpdir,
-                "--plugin-dir=/usr/lib/mysql/plugin",
-                "--log-error=%s" % logfile,
+                "--plugin-dir=/usr/lib/mysql/plugin",       # Linux / Debian specific?
+                "--log-error=%s" % errorfile,
                 "--slow-query-log",
                 "--slow-query-log-file=%s" % slowlogfile,
                 "--pid-file=%s" % pidfile,
-                "--skip-grant-tables",
+                "--skip-grant-tables",                      # Grant root-access
                 "--skip-bind-address",
                 "--skip-networking",
                 "--skip-name-resolve",
@@ -287,7 +303,7 @@ class DbManager( object ):
 
             if os.geteuid() == 0:
                 cmd_opts.append("--user=mysql")
-                for f in (self.getBasePath(), tmpdir, datadir, logfile, slowlogfile, pidfile, self.getSocket(),):
+                for f in (self.getBasePath(), tmpdir, datadir, setupfile, errorfile, outputfile, slowlogfile, pidfile, self.getSocket(),):
                     if os.path.exists(f):
                         subprocess.Popen([
                             "chown",
@@ -321,12 +337,16 @@ class DbManager( object ):
                     "--innodb-file-per-table",
                     "--innodb-flush-method=O_DIRECT",
                     "--innodb-file-format=Barracuda",
+                    "--innodb-file-format-max=Barracuda",
                     "--skip-innodb-doublewrite",
                     "--innodb-buffer-pool-size=%dM" % (self._buffer_size/1024/1024),
                     "--innodb-log-file-size=32M",
-                    "--innodb-log-buffer-size=4M",
+                    "--innodb-log-buffer-size=8M",
                     "--innodb-autoextend-increment=1",
                 ])
+                if is_mariadb:
+                    cmd_opts.extend(["--innodb-flush-neighbors=0"])
+
             else:
                 cmd_opts.extend([
                     "--skip-innodb",
@@ -334,6 +354,8 @@ class DbManager( object ):
 
             if self._table_engine == "MyISAM":
                 cmd_opts.extend([
+                    "--myisam-use-mmap=1",
+                    "--myisam-block-size=4k",
                     "--key-buffer-size=%dM" % (self._buffer_size/1024/1024),
                 ])
             else:
@@ -356,56 +378,65 @@ class DbManager( object ):
                     ])
                 elif has_tokudb:
                     cmd_opts.extend([
-                        "--tokudb-loader-memory-size=8k",
+                        "--tokudb=OFF",
                     ])
 
                 if self._table_engine == "Aria":
                     cmd_opts.extend([
                         # Only MariaDB
                         "--aria-block-size=16k",
-                        "--aria-log-dir-path=%s" % self.getBasePath(),
                         "--aria-log-file-size=32M",
+                        "--aria-sort-buffer-size=32M",
                         "--aria-pagecache-buffer-size=%dM" % (self._buffer_size/1024/1024),
                     ])
                 else:
                     cmd_opts.extend([
-                        "--aria=OFF",
+                        # "--aria=OFF",         # Can't do this - TMP tables gone
+                        "--aria-block-size=4k",
+                        "--aria-log-file-size=8M",
+                        "--aria-sort-buffer-size=4k",
+                        "--aria-pagecache-buffer-size=128k",
                     ])
 
             if is_new:
 
-                print("Setup new MySQL system databases")
+                self.getLogger().info("Setup new MySQL system databases")
 
                 cmd = ["mysql_install_db"]
                 cmd.extend(cmd_opts)
 
                 self.getLogger().debug("CMD: %r" % (cmd,))
 
+                sf = open(setupfile, 'a')
+                sf.write("\n---=== %s ===---\n" % datetime.now())
                 retcode = subprocess.Popen(
                     cmd,
                     cwd=self.getBasePath(),
-                    stdout=open(os.devnull, 'w'),
-                    stderr=open(os.devnull, 'w')
+                    stdout=sf,
+                    stderr=subprocess.STDOUT
                 ).wait()
+                sf.close()
                 if retcode:
-                    print("Something wrong! Return code: %s" % retcode)
+                    self.getLogger().error("Something wrong! Return code: %s" % retcode)
                     return False
 
             cmd = ["mysqld"]
             cmd.extend(cmd_opts)
 
-            print("Starting up MySQLd...")
+            self.getLogger().info("Starting up MySQLd...")
 
             self.getLogger().debug("CMD: %r" % (cmd,))
 
+            of = open(outputfile, 'a')
+            of.write("\n---=== %s ===---\n" % datetime.now())
             self._mysqld_proc = subprocess.Popen(
                 cmd,
                 cwd=self.getBasePath(),
-                stdout=open(os.devnull, 'w'),
-                stderr=open(os.devnull, 'w')
+                stdout=of,
+                stderr=subprocess.STDOUT
             )
 
-            print("Wait up 10 sec for it to start...")
+            self.getLogger().info("Wait up 10 sec for it to start...")
 
             t = 10
             while (t>0):
@@ -421,14 +452,14 @@ class DbManager( object ):
 
 
             if self._mysqld_proc.poll() is not None:
-                print("Something wrong? mysqld exited with: %s" % self._mysqld_proc.poll() )
+                self.getLogger().error("Something wrong? mysqld exited with: %s" % self._mysqld_proc.poll() )
                 self._mysqld_proc = None
+                of.close()
                 return False
 
-            print("Done")
+            self.getLogger().info("Done")
 
             self.createDb()
-            self.create()
 
         return True
 
@@ -440,14 +471,31 @@ class DbManager( object ):
                 self._notmeStarted = False
                 return True
 
+            outputfile = self.getBasePath() + "/mysqladmin.log"
+
             cmd = [
                 "mysqladmin",
+                "--user=root",
                 "--socket=%s" % self.getSocket(),
                 "shutdown"
             ]
 
-            print("Call MySQLd shutdown")
-            subprocess.Popen(cmd).wait()
+            self.getLogger().info("Call MySQLd shutdown")
+
+            of = open(outputfile, "a")
+            of.write("\n---=== %s ===---\n" % datetime.now())
+            ret = subprocess.Popen(
+                cmd,
+                cwd=self.getBasePath(),
+                stdout=of, stderr=subprocess.STDOUT
+            ).wait()
+            of.close()
+
+            if ret:
+                self.getLogger().warning("Call MySQLadmin returned code=%r! Something wrong!" % ret)
+                return False
+
+            self.getLogger().info("Wait up 10 sec for it to stop...")
 
             t = 10
             while (t>0):
@@ -457,7 +505,7 @@ class DbManager( object ):
                 t -= 0.1
 
             if self._mysqld_proc.poll() is None:
-                print("Terminate MySQLd")
+                self.getLogger().warning("Terminate MySQLd")
                 self._mysqld_proc.terminate()
 
                 t = 5
@@ -468,10 +516,10 @@ class DbManager( object ):
                     t -= 0.1
 
             if self._mysqld_proc.poll() is None:
-                print("Can't :'(")
+                self.getLogger().error("Can't stop mysqld!")
                 return False
 
-            print("Done")
+            self.getLogger().info("Done")
 
             self._mysqld_proc = None
             self._socket = None
@@ -541,13 +589,30 @@ class DbManager( object ):
             pass
         return cursor
 
+    def hasDb(self, conn):
+        cur = conn.cursor(cursor_type)
+
+        cur.execute(
+            "SELECT COUNT(1) AS `DbIsThere` "+
+            "FROM `INFORMATION_SCHEMA`.`STATISTICS` "+
+            "WHERE `table_schema` = %s;",
+            (self.getDbName(),)
+        )
+        row = cur.fetchone()
+
+        exists = (row is not None) and int(row['DbIsThere']) > 0
+
+        return exists
+
     def createDb(self):
 
         conn = self.getConnection(True)
 
-        cur = conn.cursor()
-        cur.execute("CREATE DATABASE IF NOT EXISTS `%s` COLLATE utf8_bin;" % self.getDbName())
-        cur.close()
+        if not self.hasDb(conn):
+
+            cur = conn.cursor(cursor_type)
+            cur.execute("CREATE DATABASE IF NOT EXISTS `%s` COLLATE utf8_bin;" % self.getDbName())
+            cur.close()
 
         conn.close()
         return True
@@ -593,35 +658,30 @@ class DbManager( object ):
     def getFileSize(self):
         s = 0
         for name in self.tables:
-            t = self.getTable(name)
+            t = self.getTable(name, True)
             s += t.getFileSize()
         return s
 
     def getOperationsCount(self):
         s = 0
         for name in self.tables:
-            t = self.getTable(name)
+            t = self.getTable(name, True)
             s += t.getAllOperationsCount()
         return s
 
     def getTimeSpent(self):
         s = 0
         for name in self.tables:
-            t = self.getTable(name)
+            t = self.getTable(name, True)
             s += t.getAllTimeSpent()
         return s
 
     def create(self):
-        for t in self.tables:
-            self.getTable(t).create()
         return self
 
     def copy(self, oldTableName, newTableName):
-        t1 = self.getTable(oldTableName)
+        self.getTable(oldTableName)
         t2 = self.getTable(newTableName)
-
-        t1.create()
-        t2.create()
 
         # Rename files
         t2.getCursor().execute("INSERT `%s` SELECT * FROM `%s`;" % (newTableName, oldTableName,))

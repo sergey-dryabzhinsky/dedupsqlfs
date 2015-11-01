@@ -49,7 +49,8 @@ class TableInode( Table ):
 
         cur.execute("INSERT INTO `%s`" % self.getName() +
                     "(`nlinks`, `mode`, `uid`, `gid`, `rdev`, `size`, `atime`, `mtime`, `ctime`, `atime_ns`, `mtime_ns`, `ctime_ns`) " +
-                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (
+                    "VALUES "+
+                    "(%s,       %s,     %s,    %s,    %s,     %s,     %s,      %s,      %s,      %s,         %s,         %s)", (
             nlinks, mode, uid, gid, rdev, size,
             atime, mtime, ctime, atime_ns, mtime_ns, ctime_ns
         ))
@@ -196,6 +197,20 @@ class TableInode( Table ):
         self.stopTimer('get_sizes')
         return item
 
+    def get_sizes_by_id(self, inodes):
+        self.startTimer()
+        items = {}
+        id_str = ",".join(inodes)
+        if id_str:
+            cur = self.getCursor()
+            cur.execute("SELECT `id`,`size` FROM `%s`" % self.getName()+
+                        " WHERE id in (%s)" % id_str)
+            for item in cur:
+                items[ str(item["id"]) ] = item["size"]
+
+        self.stopTimer('get_sizes_by_id')
+        return items
+
     def get_sizes_by_inodes(self, inodes):
         self.startTimer()
 
@@ -213,25 +228,12 @@ class TableInode( Table ):
         self.stopTimer('get_sizes_by_inodes')
         return item
 
-    def get_size_by_id_nlinks(self, inode_id):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute("SELECT `size` FROM `%s` " % self.getName()+
-                    " WHERE `id`=%s AND `nlinks`>0", (inode_id,))
-        item = cur.fetchone()
-        if item:
-            item = item["size"]
-        else:
-            item = 0
-        self.stopTimer('get_size_by_id_nlinks')
-        return item
-
     def get_inode_ids(self, start_id, end_id):
         self.startTimer()
         cur = self.getCursor()
         cur.execute("SELECT `id` FROM `%s` " % self.getName()+
                     " WHERE `id`>=%s AND `id`<%s", (start_id, end_id,))
-        nameIds = tuple(str(item["id"]) for item in cur)
+        nameIds = set(str(item["id"]) for item in cur)
         self.stopTimer('get_inode_ids')
         return nameIds
 
@@ -256,7 +258,7 @@ class TableInode( Table ):
             cur = self.getCursor()
             cur.execute("SELECT `id` FROM `%s` " % self.getName()+
                             " WHERE `id` IN (%s)" % (id_str,))
-            iids = tuple(str(item["id"]) for item in cur)
+            iids = set(str(item["id"]) for item in cur)
 
         self.stopTimer('get_inodes_by_inodes')
         return iids

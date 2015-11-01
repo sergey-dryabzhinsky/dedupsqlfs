@@ -81,7 +81,7 @@ class DbManager( object ):
     def getDbName(self):
         return self._db_name
 
-    def getTable(self, name):
+    def getTable(self, name, nocreate=False):
         if name not in self._table:
             if name == "option":
                 from dedupsqlfs.db.sqlite.table.option import TableOption
@@ -99,7 +99,9 @@ class DbManager( object ):
             elif name == "inode":
                 from dedupsqlfs.db.sqlite.table.inode import TableInode
                 self._table[ name ] = TableInode(self)
-            elif name.startswith("inode_") and not name.startswith("inode_hash_block"):
+            elif name.startswith("inode_") \
+                    and not name.startswith("inode_hash_block") \
+                    and not name.startswith("inode_option"):
                 from dedupsqlfs.db.sqlite.table.inode import TableInode
                 self._table[ name ] = TableInode(self)
                 self._table[ name ].setName(name)
@@ -160,6 +162,10 @@ class DbManager( object ):
                 self._table[ name ] = TableTmpIdCount(self)
             else:
                 raise ValueError("Unknown database %r" % name)
+
+            if not nocreate:
+                self._table[ name ].create()
+
         return self._table[ name ]
 
 
@@ -197,7 +203,7 @@ class DbManager( object ):
     def isSupportedStorage(self):
         s = False
         for name in self.tables:
-            t = self.getTable(name)
+            t = self.getTable(name, True)
             f = t.getDbFilePath()
             if os.path.isfile(f):
                 s = True
@@ -206,32 +212,32 @@ class DbManager( object ):
     def getFileSize(self):
         s = 0
         for name in self.tables:
-            t = self.getTable(name)
+            t = self.getTable(name, True)
             s += t.getFileSize()
         return s
 
     def getOperationsCount(self):
         s = 0
         for name in self.tables:
-            t = self.getTable(name)
+            t = self.getTable(name, True)
             s += t.getAllOperationsCount()
         return s
 
     def getTimeSpent(self):
         s = 0
         for name in self.tables:
-            t = self.getTable(name)
+            t = self.getTable(name, True)
             s += t.getAllTimeSpent()
         return s
 
     def create(self):
-        for t in self.tables:
-            self.getTable(t).create()
+        #for t in self.tables:
+        #    self.getTable(t).create()
         return self
 
     def copy(self, oldTableName, newTableName):
-        t1 = self.getTable(oldTableName)
-        t2 = self.getTable(newTableName)
+        t1 = self.getTable(oldTableName, True)
+        t2 = self.getTable(newTableName, True)
 
         t1.create()
         t1.close()

@@ -19,7 +19,7 @@ class TableSubvolume( Table ):
                 "`id` INT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
                 "`hash` CHAR(32) NOT NULL, "+
                 "`name` BLOB NOT NULL, "+
-                "`stats` BLOB, "+
+                "`stats` TEXT, "+
                 "`readonly` TINYINT UNSIGNED NOT NULL DEFAULT 0, "+
                 "`stats_at` INT UNSIGNED, "+
                 "`created_at` INT UNSIGNED NOT NULL, "+

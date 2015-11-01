@@ -35,21 +35,6 @@ class TableTmpIdCount( Table ):
         self.stopTimer('insert')
         return item
 
-    def insertCnt( self, some_id, cnt):
-        """
-        :return: int
-        """
-        self.startTimer()
-        cur = self.getCursor()
-
-        cur.execute("INSERT INTO `%s`(id, cnt) VALUES (?,?)" % self.getName(), (
-            some_id, cnt
-        ))
-
-        item = cur.lastrowid
-        self.stopTimer('insert')
-        return item
-
     def find( self, some_id):
         """
         :param inode: int

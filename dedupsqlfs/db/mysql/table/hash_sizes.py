@@ -15,14 +15,14 @@ class TableHashSizes( Table ):
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`hash_id` BIGINT UNSIGNED PRIMARY KEY, "+
-                "`compressed_size` INT UNSIGNED NOT NULL, "+
-                "`real_size` INT UNSIGNED NOT NULL "+
+                "`writed_size` INT UNSIGNED NOT NULL, "+
+                "`compressed_size` INT UNSIGNED NOT NULL "+
             ")"+
             self._getCreationAppendString()
         )
         return
 
-    def insert( self, hash_id, real_size, compressed_size):
+    def insert( self, hash_id, writed_size, compressed_size):
         """
         :return: int
         """
@@ -31,18 +31,18 @@ class TableHashSizes( Table ):
 
         cur.execute(
             "INSERT INTO `%s` " % self.getName()+
-            " (`hash_id`, `compressed_size`, `real_size`) VALUES (%(id)s, %(cs)s, %(rs)s)",
+            " (`hash_id`, `writed_size`, `compressed_size`) VALUES (%(id)s, %(ws)s, %(cs)s)",
             {
                 "id": hash_id,
-                "cs": compressed_size,
-                "rs": real_size
+                "ws": writed_size,
+                "cs": compressed_size
             }
         )
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
 
-    def update( self, hash_id, real_size, compressed_size):
+    def update( self, hash_id, writed_size, compressed_size):
         """
         :return: int
         """
@@ -51,10 +51,10 @@ class TableHashSizes( Table ):
 
         cur.execute(
             "UPDATE `%s` " % self.getName() +
-            " SET `compressed_size`=%(cs)s, `real_size`=%(rs)s WHERE `hash_id`=%(id)s",
+            " SET `compressed_size`=%(cs)s, `writed_size`=%(ws)s WHERE `hash_id`=%(id)s",
             {
                 "cs": compressed_size,
-                "rs": real_size,
+                "ws": writed_size,
                 "id": hash_id
             }
 
@@ -92,5 +92,18 @@ class TableHashSizes( Table ):
             count = cur.rowcount
         self.stopTimer('remove_by_ids')
         return count
+
+    def get_sizes_by_hash_ids(self, id_str):
+        self.startTimer()
+        items = {}
+        if id_str:
+            cur = self.getCursor()
+            cur.execute("SELECT * FROM `%s` " % self.getName()+
+                        " WHERE `hash_id` IN (%s)" % (id_str,))
+            for _i in cur:
+                items[ _i["hash_id"] ] = (_i["writed_size"], _i["compressed_size"],)
+
+        self.stopTimer('get_sizes_by_hash_ids')
+        return items
 
     pass

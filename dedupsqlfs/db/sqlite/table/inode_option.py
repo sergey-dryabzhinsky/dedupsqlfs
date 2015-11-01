@@ -93,18 +93,4 @@ class TableInodeOption( Table ):
         self.stopTimer('get')
         return item
 
-    def getAll( self ):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute("SELECT * FROM `%s`" % self.getName())
-        items = cur.fetchall()
-        opts = {}
-        for item in items:
-            opts[ item["inode"] ] = {
-                "block_size": item["block_size"],
-                "compression": item["compression"]
-            }
-        self.stopTimer('getAll')
-        return opts
-
     pass

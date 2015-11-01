@@ -8,8 +8,8 @@ class TableBlock( Table ):
 
     _table_name = "block"
 
-    _compressed = False
-    _toku_compression = "uncompressed"
+    _compressed = True
+    _toku_compression = "fast"
     _key_block_size = 16
 
     def create( self ):

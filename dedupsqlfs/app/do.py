@@ -292,6 +292,7 @@ def print_fs_stats(options, _fuse):
     _fuse.setReadonly(True)
     _fuse.getLogger().setLevel(logging.INFO)
     _fuse.report_disk_usage()
+    _fuse.getLogger().setLevel(logging.ERROR)
     _fuse.operations.destroy()
     return 0
 

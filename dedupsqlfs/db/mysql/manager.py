@@ -436,9 +436,8 @@ class DbManager( object ):
                 stderr=subprocess.STDOUT
             )
 
-            self.getLogger().info("Wait up 10 sec for it to start...")
-
-            t = 10
+            t = 30
+            self.getLogger().info("Wait up %s sec for server to start, or til ping is pong..." % t)
             while (t>0):
                 sleep(0.1)
 
@@ -448,7 +447,7 @@ class DbManager( object ):
                 if self._mysqld_proc.poll() is not None:
                     break
 
-                t-= 0.1
+                t -= 0.1
 
 
             if self._mysqld_proc.poll() is not None:
@@ -457,7 +456,7 @@ class DbManager( object ):
                 of.close()
                 return False
 
-            self.getLogger().info("Done")
+            self.getLogger().info("Done in %s seconds." % t)
 
             self.createDb()
 
@@ -495,9 +494,8 @@ class DbManager( object ):
                 self.getLogger().warning("Call MySQLadmin returned code=%r! Something wrong!" % ret)
                 return False
 
-            self.getLogger().info("Wait up 10 sec for it to stop...")
-
-            t = 10
+            t = 30
+            self.getLogger().info("Wait up %s sec for it to stop..." % t)
             while (t>0):
                 sleep(0.1)
                 if self._mysqld_proc.poll() is not None:
@@ -508,18 +506,18 @@ class DbManager( object ):
                 self.getLogger().warning("Terminate MySQLd")
                 self._mysqld_proc.terminate()
 
-                t = 5
-                while (t>0):
+                t2 = 5
+                while (t2>0):
                     sleep(0.1)
                     if self._mysqld_proc.poll() is not None:
                         break
-                    t -= 0.1
+                    t2 -= 0.1
 
             if self._mysqld_proc.poll() is None:
                 self.getLogger().error("Can't stop mysqld!")
                 return False
 
-            self.getLogger().info("Done")
+            self.getLogger().info("Done in %s seconds" % t)
 
             self._mysqld_proc = None
             self._socket = None

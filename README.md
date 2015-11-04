@@ -55,7 +55,7 @@ And there is limit of SQLite database size: about 2 TB with default settings of 
 Note: dynamic subvolume and snapshot creation available only with MySQL storage enagine.
  SQLite is keeping database locked.
  Though dynamic working subvolume switching not available.
- For now MySQL table engine hardcoded to MyISAM - it's fast and not bloated.
+ For now MySQL table engine is MyISAM by default - it's fast and not bloated.
  InnoDB working strange:
  - I get about twice sized database: 2.8Gb data + ~1.6Gb something with indexes,
  - while MyISAM working predictable: 2.8Gb data + ~100Mb indexes.
@@ -63,6 +63,34 @@ Note: dynamic subvolume and snapshot creation available only with MySQL storage 
  MariaDB's Aria working slowly than MyISAM - doing too much logging...
 
  MariaDB's TokuDB looks interesting and promising. Compression over data and indexes.
+
+#### Engines Tests:
+
+Real data:
+
+ - 50.40 Gb data of web-developers virtual machine
+ - 1 snapshot after sync
+
+
+ * Sqlite engine:
+    * Databases: 25.23 Gb
+    * Indexes and metadata: 1.24 Gb
+    * Sync time: ~ 10h:12m 
+ * MyISAM:
+    * Databases: 25.65 Gb
+    * Indexes and metadata: 1.66 Gb
+    * Sync time: ~ 16h:40m 
+ * InnoDB:
+    * Databases: 27.66 Gb
+    * Indexes and metadata: 3.68 Gb
+    * Sync time: ~ 16h:00m 
+ * TokuDB:
+    * Databases: 25.37 Gb
+    * Indexes and metadata: 1.38 Gb
+    * Sync time: ~ 16h:30m
+
+Sqlite wins!
+
 
 ## Dependencies
 

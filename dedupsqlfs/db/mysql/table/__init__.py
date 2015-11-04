@@ -50,9 +50,9 @@ class Table( object ):
             elif self._toku_compression:
                 _cs += " COMPRESSION=tokudb_%s;" % self._toku_compression
         if self._engine == "Aria":
-            _cs += " ROW_FORMAT=COMPACT TRANSACTIONAL=0 PAGE_CHECKSUM=0 TABLE_CHECKSUM=0;"
+            _cs += " TRANSACTIONAL=0 PAGE_CHECKSUM=0 TABLE_CHECKSUM=0;"
         if self._engine == "MyISAM":
-            _cs += " ROW_FORMAT=COMPACT CHECKSUM=0;"
+            _cs += " CHECKSUM=0;"
         return _cs
 
     def getOperationsCount(self):

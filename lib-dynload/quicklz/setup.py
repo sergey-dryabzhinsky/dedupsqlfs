@@ -9,10 +9,12 @@ setup(
             ["quicklz.c", "quicklzpy.c"],
             extra_compile_args=[
                 "-O3",
-                "-march=native",
-                "-DFORTIFY_SOURCE=2", "-fstack-protector",
-                # GCC Graphite
-                # "-floop-interchange", "-floop-block", "-floop-strip-mine", "-ftree-loop-distribution"
+# Hardening
+            "-DFORTIFY_SOURCE=2", "-fstack-protector",
+# Full CPU optimization, for custom build by hand
+#            "-march=native",
+# GCC Graphite
+#            "-floop-interchange", "-floop-block", "-floop-strip-mine", "-ftree-loop-distribution",
             ]
         )
     ]

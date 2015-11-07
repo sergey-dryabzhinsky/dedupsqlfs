@@ -1,18 +1,23 @@
-#!/usr/bin/env python
+import sys
 
+from distutils.command.build_ext import build_ext
+from distutils.core import setup
+from distutils.extension import Extension
 
-from setuptools import setup, find_packages, Extension
+__version__ = "0.0.1"
 
-VERSION = (0, 0, 1)
+if sys.version_info < (2,6):
+    sys.stderr.write("ERROR: Python 2.5 and older are not supported, and probably never will be.\n")
+    sys.exit(1)
 
 setup(
     name='zstd',
-    version=".".join([str(x) for x in VERSION]),
+    version=__version__,
     description="ZSTD Bindings for Python",
     author='Sergey Dryabzhinsky',
     author_email='sergey.dryabzhinsky@gmail.com',
     url='https://github.com/sergey-dryabzhinsky/python-zstd',
-    packages=find_packages('src'),
+    packages=[],
     package_dir={'': 'src'},
     ext_modules=[
         Extension('zstd', [
@@ -24,11 +29,17 @@ setup(
             "-Wall",
             "-W",
             "-Wundef",
+# Hardening
             "-DFORTIFY_SOURCE=2", "-fstack-protector",
-            "-march=native",
+# Full CPU optimization, for custom build by hand
+#            "-march=native",
+# GCC Graphite
 #            "-floop-interchange", "-floop-block", "-floop-strip-mine", "-ftree-loop-distribution",
-        ])
+       ])
     ],
+    cmdclass = {
+        'build_ext': build_ext,
+    },
     classifiers=[
         'License :: OSI Approved :: BSD License',
         'Intended Audience :: Developers',

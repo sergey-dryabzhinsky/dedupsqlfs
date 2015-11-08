@@ -68,8 +68,6 @@ def stripExtension(extName):
 # get the list of extensions
 extNames = scandir("dedupsqlfs")
 
-args = sys.argv[1:]
-
 # Make a `cleanall` rule to get rid of intermediate and library files
 if "cleanall" in args:
     print("Deleting cython files...")
@@ -78,8 +76,6 @@ if "cleanall" in args:
         cleanAllExtension(n.replace(".", os.path.sep) + ".py")
 
     sys.exit(0)
-    # Now do a normal clean
-    sys.argv[1] = "clean"
 
 # Make a `cleanpy` rule to get rid of old raw python files
 if "cleanpy" in args:
@@ -89,8 +85,6 @@ if "cleanpy" in args:
         cleanPyExtension(n.replace(".", os.path.sep) + ".py")
 
     sys.exit(0)
-    # Now do a normal clean
-    sys.argv[1] = "clean"
 
 # Make a `stripall` rule to get rid of old raw python files
 if "stripall" in args:

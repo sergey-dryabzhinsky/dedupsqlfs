@@ -2154,7 +2154,7 @@ class DedupOperations(llfuse.Operations): # {{{1
     def __collect_garbage(self): # {{{3
         if self.gc_enabled and not self.isReadonly():
             start_time = time.time()
-            self.getLogger().debug("Performing garbage collection (this might take a while) ..")
+            self.getLogger().info("Performing garbage collection (this might take a while) ..")
             self.should_vacuum = False
             clean_stats = False
             gc_funcs = [
@@ -2179,7 +2179,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 subv.clean_stats(self.mounted_subvolume_name)
 
             elapsed_time = time.time() - start_time
-            self.getLogger().debug("Finished garbage collection in %s.", format_timespan(elapsed_time))
+            self.getLogger().info("Finished garbage collection in %s.", format_timespan(elapsed_time))
         return
 
     def __collect_strings(self): # {{{4

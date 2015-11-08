@@ -439,6 +439,9 @@ def main(): # {{{1
 
     generic.add_argument('--memory-limit', dest='memory_limit', action='store_true', help="Use some lower values for less memory consumption.")
 
+    generic.add_argument('--cpu-limit', dest='cpu_limit', metavar='NUMBER', default=0, type=int, help="Specify the maximum CPU count to use in multiprocess compression. Defaults to 0 (auto).")
+
+
     engines, msg = check_engines()
     if not engines:
         logger.error("No storage engines available! Please install sqlite or pymysql python module!")

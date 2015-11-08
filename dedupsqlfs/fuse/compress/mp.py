@@ -15,15 +15,27 @@ class MultiProcCompressTool(BaseCompressTool):
 
     _procs = None
     _np = 0
+    _np_limit = 0
     _task_queues = None
     _result_queue = None
+
+
+    def checkCpuLimit(self):
+        if self.getOption("cpu_limit"):
+            self._np_limit = int(self.getOption("cpu_limit"))
+        self._np = cpu_count()
+        if self._np_limit > 0:
+            if self._np > self._np_limit:
+                self._np = self._np_limit
+        return self._np
 
     def init(self):
 
         self._procs = []
         self._task_queues = []
 
-        self._np = cpu_count()
+        self._np = self.checkCpuLimit()
+
         self._task_queue = JoinableQueue()
         self._result_queue = JoinableQueue()
 
@@ -109,7 +121,6 @@ class MultiProcCompressTool(BaseCompressTool):
         """
         Compress data and returns back
 
-        @param key: int|str - task key
         @param data: bytes  - task data
 
         @return
@@ -205,14 +216,5 @@ class MultiProcCompressTool(BaseCompressTool):
         self.time_spent_compressing = time() - start_time
 
         return
-
-    def decompressData(self, method, data):
-        """
-        deCompress data and returns back
-
-        @return bytes
-        """
-        comp = self._compressors[ method ]
-        return comp.decompressData(data)
 
     pass

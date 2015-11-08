@@ -32,3 +32,7 @@ if sys.version_info[0] < 3 or \
         (sys.version_info[0] == 3 and sys.version_info[1] < 2):
     msg = "Warning: %s(%s, $s) has only been tested on Python 3.2, while you're running Python %d.%d!\n"
     sys.stderr.write(msg % (__name__, __fsversion__, __version__, sys.version_info[0], sys.version_info[1]))
+
+# Do not abuse GC - wee generate alot objects
+import gc
+gc.set_threshold(10000, 200, 200)

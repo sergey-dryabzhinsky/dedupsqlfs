@@ -74,6 +74,7 @@ if "cleanall" in args:
 
     for n in extNames:
         cleanAllExtension(n.replace(".", os.path.sep) + ".py")
+    subprocess.Popen("rm -rf build", shell=True, executable="/bin/bash")
 
     sys.exit(0)
 
@@ -83,6 +84,7 @@ if "cleanpy" in args:
 
     for n in extNames:
         cleanPyExtension(n.replace(".", os.path.sep) + ".py")
+    subprocess.Popen("rm -rf build", shell=True, executable="/bin/bash")
 
     sys.exit(0)
 

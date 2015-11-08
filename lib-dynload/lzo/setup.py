@@ -3,10 +3,12 @@ from distutils.core import setup, Extension
 setup(
     name = "LZO",
     version = "1.0",
+    packages=[],
+    package_dir={'': 'src'},
     ext_modules = [
         Extension(
             "lzo",
-            ["lzomodule.c"],
+            ["src/lzomodule.c"],
             libraries=['lzo2'],
             extra_compile_args=[
                 "-O3",

@@ -36,7 +36,7 @@ More details about Snappy library: http://code.google.com/p/snappy
 snappymodule = Extension(
     'snappy',
     libraries=['snappy'],
-    sources=['snappymodule.cc', 'crc32c.c'],
+    sources=['src/snappymodule.cc', 'src/crc32c.c'],
     extra_compile_args = [
         "-O3",
 # Hardening
@@ -77,5 +77,7 @@ setup(
                  'Programming Language :: Python :: 3.1',
                  'Programming Language :: Python :: 3.2',
                  ],
+    packages=[],
+    package_dir={'': 'src'},
     ext_modules=[snappymodule]
 )

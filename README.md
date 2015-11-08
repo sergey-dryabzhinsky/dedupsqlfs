@@ -105,11 +105,26 @@ Additional compression modules can be builded with commands:
     $ cd lzo
     $ python3 setup.py clean -a
     $ python3 setup.py build
-    # ... same for lz4, snappy,..
+    ## ... same for lz4, snappy,..
 
 Additional storage engine via MySQL can be accessed with commands:
 
     $ sudo pip3 install pymysql
+
+Additional performance gain about 1-3% via Cython:
+
+    ## Setup tools If not installed
+    $ sudo pip3 install setuptools
+    $ sudo pip3 install cython
+    $ python3 setup.py build_ext
+    $ python3 setup.py stripall
+    ## Warning! This deletes all .py files
+    $ python3 setup.py cleanpy
+
+### Notes about Cython
+
+1. Profiling via cProfile not working for compiled code.
+2. Always keep copy of dedupsqlfs directory if you will run ```cleanpy``` command.
 
 ## Contact
 

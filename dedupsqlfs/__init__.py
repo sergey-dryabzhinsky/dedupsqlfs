@@ -35,4 +35,4 @@ if sys.version_info[0] < 3 or \
 
 # Do not abuse GC - wee generate alot objects
 import gc
-gc.set_threshold(10000, 200, 200)
+gc.set_threshold(100000, 2000, 200)

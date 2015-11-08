@@ -7,7 +7,7 @@ import os
 import sys
 import subprocess
 
-from dedupsqlfs.db.sqlite import dict_factory
+from dedupsqlfs.db.sqlite.row import dict_factory
 from dedupsqlfs.log import logging
 
 class Table( object ):

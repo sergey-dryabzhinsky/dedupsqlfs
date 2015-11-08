@@ -28,7 +28,7 @@ except ImportError:
 # Local modules that are mostly useful for debugging.
 from dedupsqlfs.my_formats import format_size
 from dedupsqlfs.log import logging, DEBUG_VERBOSE
-from dedupsqlfs.fuse.compress.mp import MultiProcCompressTool
+from dedupsqlfs.fuse.compress.mp import MultiProcCompressTool, BaseCompressTool
 
 # Storage for options and DB interface
 # Implements FUSE interface
@@ -64,7 +64,11 @@ class DedupFS(object): # {{{1
         self.getLogger().debug("DedupFS mount options: %r" % (self._opts,))
         self.getLogger().debug("DedupFS mountpoint: %r" % (self.mountpoint,))
 
+
         self._compressTool = MultiProcCompressTool()
+        self._compressTool.setOption("cpu_limit", self.getOption("cpu_limit"))
+        if self._compressTool.checkCpuLimit() <= 1:
+            self._compressTool = BaseCompressTool()
 
         pass
 

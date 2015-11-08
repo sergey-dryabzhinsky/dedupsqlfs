@@ -130,14 +130,12 @@ class BaseCompressTool(object):
         else:
             raise ValueError("Unknown compression method: %r" % (name,))
 
-    def compressData(self, data):
+    def _compressData(self, data):
         """
         Compress data and returns back
 
         @return tuple (compressed data (bytes), compresion method (string) )
         """
-
-        start_time = time()
 
         method = self.getOption("compression_method")
         forced = self.getOption("compression_forced")
@@ -148,7 +146,6 @@ class BaseCompressTool(object):
         cmethod = constants.COMPRESSION_TYPE_NONE
 
         if data_length <= self.getOption("compression_minimal_size") and not forced:
-            self.time_spent_compressing += time() - start_time
             return cdata, cmethod
 
         if method != constants.COMPRESSION_TYPE_NONE:
@@ -180,9 +177,25 @@ class BaseCompressTool(object):
                     cdata = data
                     cmethod = constants.COMPRESSION_TYPE_NONE
 
+        return cdata, cmethod
+
+    def compressData(self, dataToCompress):
+        """
+        Compress data and returns back
+
+        @param dataToCompress: dict { hash id: bytes data }
+
+        @return dict { hash id: (compressed data (bytes), compresion method (string) ) }
+        """
+
+        start_time = time()
+
+        for hash_id, data in dataToCompress.items():
+            yield  hash_id, self._compressData(data)
+
         self.time_spent_compressing = time() - start_time
 
-        return cdata, cmethod
+        return
 
     def decompressData(self, method, data):
         """

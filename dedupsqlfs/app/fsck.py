@@ -70,6 +70,10 @@ def main(): # {{{1
     parser.add_argument('--name', dest='name', metavar='DATABASE', default="dedupsqlfs", help="Specify the name for the database directory in which metadata and blocks data is stored. Defaults to dedupsqlfs")
     parser.add_argument('--temp', dest='temp', metavar='DIRECTORY', help="Specify the location for the files in which temporary data is stored. By default honour TMPDIR environment variable value.")
     parser.add_argument('--block-size', dest='block_size', metavar='BYTES', default=1024*128, type=int, help="Specify the maximum block size in bytes" + option_stored_in_db + ". Defaults to 128kB.")
+
+    parser.add_argument('--cpu-limit', dest='cpu_limit', metavar='NUMBER', default=0, type=int, help="Specify the maximum CPU count to use in multiprocess compression. Defaults to 0 (auto).")
+
+
     parser.add_argument('--mount-subvolume', dest='subvolume', metavar='NAME', help="Use subvolume as root fs.")
     parser.add_argument('--inmemory', dest='inmemory', action='store_true', help="Use memory storage for databases (@todo). Alot of memory.")
     parser.add_argument('--no-cache', dest='use_cache', action='store_false', help="Don't use cache in memory and delayed write to storage files (@todo).")

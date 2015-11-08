@@ -268,12 +268,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         @return: @raise FUSEError:
         @rtype: tuple
         """
-        c = {}
-        for key in ctx.__slots__:
-            c[ key ] = getattr(ctx, key)
-
-        self.__log_call('create', '->(inode_parent=%i, name=%r, mode=%o, flags=%o, ctx=%r)',
-                        inode_parent, name, mode, flags, c)
+        self.__log_call('create', '->(inode_parent=%i, name=%r, mode=%o, flags=%o)',
+                        inode_parent, name, mode, flags)
         if self.isReadonly(): return errno.EROFS
 
         try:

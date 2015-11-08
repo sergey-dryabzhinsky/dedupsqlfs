@@ -2157,12 +2157,16 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.getLogger().debug("Performing garbage collection (this might take a while) ..")
             self.should_vacuum = False
             clean_stats = False
-            for method in self.__collect_strings, \
-                          self.__collect_inodes_all, \
-                          self.__collect_xattrs, \
-                          self.__collect_links, \
-                          self.__collect_indexes, \
-                          self.__collect_blocks:
+            gc_funcs = [
+                self.__collect_strings,
+                self.__collect_inodes_all,
+                self.__collect_xattrs,
+                self.__collect_links,
+                self.__collect_indexes,
+            ]
+            if not self.getOption("gc_fast_enabled"):
+                gc_funcs.append(self.__collect_blocks)
+            for method in gc_funcs:
                 sub_start_time = time.time()
                 msg = method()
                 if msg:

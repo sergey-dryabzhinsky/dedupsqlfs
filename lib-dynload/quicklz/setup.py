@@ -3,10 +3,12 @@ from distutils.core import setup, Extension
 setup(
     name = "quicklz",
     version = "1.0",
+    packages=[],
+    package_dir={'': 'src'},
     ext_modules = [
         Extension(
             "quicklz",
-            ["quicklz.c", "quicklzpy.c"],
+            ["src/quicklz.c", "src/quicklzpy.c"],
             extra_compile_args=[
                 "-O3",
 # Hardening

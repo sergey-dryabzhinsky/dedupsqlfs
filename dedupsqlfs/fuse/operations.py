@@ -9,10 +9,10 @@ try:
     from io import BytesIO
     import errno
     import hashlib
-    import math
+    from math import floor, ceil, modf
     import os
     import stat
-    import time
+    from time import time
     import traceback
 except ImportError as e:
     msg = "Error: Failed to load one of the required Python modules! (%s)\n"
@@ -57,11 +57,11 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.bytes_deduped_last = 0
 
         self.cache_enabled = True
-        self.cache_gc_meta_last_run = time.time()
-        self.cache_gc_block_write_last_run = time.time()
-        self.cache_gc_block_writeSize_last_run = time.time()
-        self.cache_gc_block_read_last_run = time.time()
-        self.cache_gc_block_readSize_last_run = time.time()
+        self.cache_gc_meta_last_run = time()
+        self.cache_gc_block_write_last_run = time()
+        self.cache_gc_block_writeSize_last_run = time()
+        self.cache_gc_block_read_last_run = time()
+        self.cache_gc_block_readSize_last_run = time()
         self.cache_meta_timeout = 20
         self.cache_block_write_timeout = 10
         self.cache_block_read_timeout = 10
@@ -70,7 +70,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.flush_interval = 5
         self.flushBlockSize_interval = 1
 
-        self.subvol_uptate_last_run = time.time()
+        self.subvol_uptate_last_run = time()
 
         self.cached_names = CacheTTLseconds()
         self.cached_nodes = CacheTTLseconds()
@@ -80,16 +80,16 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.cached_blocks = StorageTimeSize()
         self.cached_indexes = IndexTime()
 
-        self.calls_log_filter = []
+        self.calls_log_filter = set()
 
-        self.fs_mounted_at = time.time()
+        self.fs_mounted_at = time()
         self.mounted_subvolume = None
         self.mounted_subvolume_name = None
 
         self.gc_enabled = True
         self.gc_umount_enabled = True
         self.gc_vacuum_enabled = False
-        self.gc_hook_last_run = time.time()
+        self.gc_hook_last_run = time()
         self.gc_interval = 60
 
         self.link_mode = stat.S_IFLNK | 0o777
@@ -101,7 +101,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.root_mode = stat.S_IFDIR | 0o755
 
-        self.timing_report_last_run = time.time()
+        self.timing_report_last_run = time()
 
         self.time_spent_caching_nodes = 0
         self.time_spent_hashing = 0
@@ -191,17 +191,17 @@ class DedupOperations(llfuse.Operations): # {{{1
         return self.application
 
     def setReadonly(self, flag=True):
-        self.getApplication().setReadonly(flag)
+        self.application.setReadonly(flag)
         return self
 
     def isReadonly(self):
-        return self.getApplication().isReadonly()
+        return self.application.isReadonly()
 
     def getOption(self, key):
-        return self.getApplication().getOption(key)
+        return self.application.getOption(key)
 
     def getLogger(self):
-        return self.getApplication().getLogger()
+        return self.application.logger
 
     def flushCaches(self):
         return self.__cache_meta_hook() + self.__cache_block_hook()
@@ -427,6 +427,10 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def init(self): # {{{3
         try:
+            # Disable log for fuse functions
+            if self.getOption("verbosity") < 2:
+                self.calls_log_filter.add("none")
+
             # Process the custom command line options defined in __init__().
             if self.getOption("block_size") is not None:
                 self.block_size = self.getOption("block_size")
@@ -681,7 +685,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         @type  fh: int
         """
         try:
-            start_time = time.time()
+            start_time = time()
 
             self.__log_call('read', '->(fh=%i, offset=%i, size=%i)', fh, offset, size, )
 
@@ -702,7 +706,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.__cache_block_hook()
 
-            self.time_spent_reading += time.time() - start_time
+            self.time_spent_reading += time() - start_time
             return data
         except Exception as e:
             return self.__except_to_status('read', e, code=errno.EIO)
@@ -1036,7 +1040,7 @@ class DedupOperations(llfuse.Operations): # {{{1
     def write(self, fh, offset, buf): # {{{3
         if self.isReadonly(): raise FUSEError(errno.EROFS)
         try:
-            start_time = time.time()
+            start_time = time()
 
             # Too much output
             # self.__log_call('write', 'write(fh=%i, offset=%i, buf=%r)', fh, offset, buf)
@@ -1059,7 +1063,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.__cache_meta_hook()
             self.__cache_block_hook()
 
-            self.time_spent_writing += time.time() - start_time
+            self.time_spent_writing += time() - start_time
             return length
         except Exception as e:
             self.__rollback_changes()
@@ -1079,7 +1083,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         return xattrs
 
     def __update_mounted_subvolume_time(self):
-        t_now = time.time()
+        t_now = time()
         if t_now - self.subvol_uptate_last_run < 1:
             return self
 
@@ -1096,7 +1100,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         if not node:
 
-            start_time = time.time()
+            start_time = time()
 
             name_id = self.cached_names.get(name)
             if not name_id:
@@ -1119,7 +1123,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.cached_nodes.set((parent_inode, name), node)
 
-            self.time_spent_caching_nodes += time.time() - start_time
+            self.time_spent_caching_nodes += time() - start_time
 
         return node
 
@@ -1130,7 +1134,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         if not node:
 
-            start_time = time.time()
+            start_time = time()
 
             node = self.getTable("tree").find_by_inode(inode)
             if not node:
@@ -1139,7 +1143,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.cached_nodes.set(inode, node)
 
-            self.time_spent_caching_nodes += time.time() - start_time
+            self.time_spent_caching_nodes += time() - start_time
 
         return node
 
@@ -1147,7 +1151,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.__log_call('__get_inode_row', '->(inode=%i)', inode_id)
         row = self.cached_attrs.get(inode_id)
         if not row:
-            start_time = time.time()
+            start_time = time()
 
             row = self.getTable("inode").get(inode_id)
             if not row:
@@ -1156,7 +1160,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.cached_attrs.set(inode_id, row)
 
-            self.time_spent_caching_nodes += time.time() - start_time
+            self.time_spent_caching_nodes += time() - start_time
 
         return row
 
@@ -1258,11 +1262,11 @@ class DedupOperations(llfuse.Operations): # {{{1
             return b''
 
         inblock_offset = offset % self.block_size
-        first_block_number = int(math.floor(1.0 * (offset - inblock_offset) / self.block_size))
+        first_block_number = int(floor(1.0 * (offset - inblock_offset) / self.block_size))
         raw_data = BytesIO()
 
         # if we in the middle of a block by offset and read blocksize - need to read more then one...
-        read_blocks = int(math.ceil(1.0 * (size + inblock_offset) / self.block_size))
+        read_blocks = int(ceil(1.0 * (size + inblock_offset) / self.block_size))
         if not read_blocks:
             read_blocks = 1
 
@@ -1306,11 +1310,11 @@ class DedupOperations(llfuse.Operations): # {{{1
             return 0
 
         inblock_offset = offset % self.block_size
-        first_block_number = int(math.floor(1.0 * (offset - inblock_offset) / self.block_size))
+        first_block_number = int(floor(1.0 * (offset - inblock_offset) / self.block_size))
 
         io_data = BytesIO(block_data)
 
-        write_blocks = int(math.ceil(1.0 * size / self.block_size))
+        write_blocks = int(ceil(1.0 * size / self.block_size))
         if not write_blocks:
             write_blocks = 1
 
@@ -1430,9 +1434,9 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.mounted_subvolume = subv.create(self.mounted_subvolume_name)
 
             if self.mounted_subvolume["readonly"]:
-                self.getApplication().setReadonly(True)
+                self.application.setReadonly(True)
 
-        subvTable.mount_time(self.mounted_subvolume["id"], int(time.time()))
+        subvTable.mount_time(self.mounted_subvolume["id"], int(time()))
 
         self.getLogger().debug("__select_snapshot(2): mounted_subvolume=%r" % self.mounted_subvolume_name)
 
@@ -1444,7 +1448,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         #  :%s/^\(\s\+\)\(self\.__log_call\)/\1#\2
         # To re enable them:
         #  :%s/^\(\s\+\)#\(self\.__log_call\)/\1\2
-        if self.calls_log_filter == [] or fun in self.calls_log_filter:
+        if not self.calls_log_filter or fun in self.calls_log_filter:
             self.getLogger().debugv("%s %s" % (fun, msg,), *args)
 
 
@@ -1497,17 +1501,17 @@ class DedupOperations(llfuse.Operations): # {{{1
 
 
     def __intern(self, string): # {{{3
-        start_time = time.time()
-
         result = self.cached_names.get(string)
         if not result:
+            start_time = time()
+
             nameTable = self.getTable("name")
             result = nameTable.find(string)
             if not result:
                 result = nameTable.insert(string)
             self.cached_names.set(string, result)
 
-        self.time_spent_interning += time.time() - start_time
+            self.time_spent_interning += time() - start_time
         return int(result)
 
 
@@ -1606,7 +1610,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
 
     def __newctime(self): # {{{3
-        return time.time()
+        return time()
 
     def __newctime_tuple(self): # {{{3
         return self.__get_time_tuple( self.__newctime() )
@@ -1615,17 +1619,17 @@ class DedupOperations(llfuse.Operations): # {{{1
         return self.__newctime_tuple()
 
     def __get_time_tuple(self, t): # {{{3
-        t_ns, t_i = math.modf(t)
+        t_ns, t_i = modf(t)
         t_ns = int(t_ns * 10**9)
         return int(t_i), t_ns
 
 
     def __hash(self, data): # {{{3
-        start_time = time.time()
+        start_time = time()
         context = hashlib.new(self.hash_function)
         context.update(data)
         digest = context.digest()
-        self.time_spent_hashing += time.time() - start_time
+        self.time_spent_hashing += time() - start_time
         return digest
 
     def __decompress(self, block_data, compression_type_id):
@@ -1634,11 +1638,11 @@ class DedupOperations(llfuse.Operations): # {{{1
         @param compression_type_id: int
         @return: bytes
         """
-        start_time = time.time()
+        start_time = time()
         compression = self.getCompressionTypeName( compression_type_id )
         self.getLogger().debug("-- decompress block: type = %s" % compression)
-        result = self.getApplication().decompressData(compression, block_data)
-        self.time_spent_decompressing += time.time() - start_time
+        result = self.application.decompressData(compression, block_data)
+        self.time_spent_decompressing += time() - start_time
         return result
 
 
@@ -1681,7 +1685,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         maxdescwidth = max([len(l) for t, l in timings]) + 3
         timings.sort(reverse=True)
 
-        uptime = time.time() - self.fs_mounted_at
+        uptime = time() - self.fs_mounted_at
         self.getLogger().info("Filesystem mounted: %s", format_timespan(uptime))
 
         printed_heading = False
@@ -1810,17 +1814,19 @@ class DedupOperations(llfuse.Operations): # {{{1
 
 
     def __gc_hook(self): # {{{3
-        if time.time() - self.gc_hook_last_run >= self.gc_interval:
-            self.gc_hook_last_run = time.time()
+        t_now = time()
+        if t_now - self.gc_hook_last_run >= self.gc_interval:
+            self.gc_hook_last_run = t_now
             self.__collect_garbage()
             self.__timing_report_hook()
-            self.gc_hook_last_run = time.time()
+            self.gc_hook_last_run = time()
         return
 
     def __timing_report_hook(self): # {{{3
-        if time.time() - self.timing_report_last_run >= self.gc_interval:
+        t_now = time()
+        if t_now - self.timing_report_last_run >= self.gc_interval:
+            self.timing_report_last_run = t_now
             self.__print_stats()
-            self.timing_report_last_run = time.time()
         return
 
 
@@ -1835,7 +1841,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         @param  block: Block data
         @type   block: BytesIO
         """
-        start_time = time.time()
+        start_time = time()
 
         tableIndex = self.getTable("inode_hash_block")
 
@@ -1881,7 +1887,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             result["deleted"] = True
 
-            self.time_spent_writing_blocks += time.time() - start_time
+            self.time_spent_writing_blocks += time() - start_time
             return result
 
         tableHash = self.getTable("hash")
@@ -1939,7 +1945,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.cached_indexes.set(inode, block_number, hash_id)
             result["update"] = True
 
-        self.time_spent_writing_blocks += time.time() - start_time
+        self.time_spent_writing_blocks += time() - start_time
         return result
 
 
@@ -1967,7 +1973,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         tableHCT = self.getTable("hash_compression_type")
         tableHSZ = self.getTable("hash_sizes")
 
-        for hash_id, cItem in self.getApplication().compressData(blocksToCompress):
+        for hash_id, cItem in self.application.compressData(blocksToCompress):
             cdata, cmethod = cItem
 
             comp_size = len(cdata)
@@ -1994,7 +2000,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.bytes_written_compressed += comp_size
 
-        self.time_spent_compressing += self.getApplication().getCompressTool().time_spent_compressing
+        self.time_spent_compressing += self.application.getCompressTool().time_spent_compressing
 
         return count
 
@@ -2002,7 +2008,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.__update_mounted_subvolume_time()
 
-        start_time = time.time()
+        start_time = time()
         flushed_writed_blocks = 0
         flushed_readed_blocks = 0
         flushed_writed_expiredByTime_blocks = 0
@@ -2010,65 +2016,65 @@ class DedupOperations(llfuse.Operations): # {{{1
         flushed_writed_expiredBySize_blocks = 0
         flushed_readed_expiredBySize_blocks = 0
 
-        start_time1 = time.time()
-        if time.time() - self.cache_gc_block_write_last_run >= self.flush_interval:
+        start_time1 = time()
+        if start_time1 - self.cache_gc_block_write_last_run >= self.flush_interval:
             flushed = self.__flush_old_cached_blocks(self.cached_blocks.expired(True), True)
             flushed_writed_blocks += flushed
             flushed_writed_expiredByTime_blocks += flushed
 
-            self.cache_gc_block_write_last_run = time.time()
+            self.cache_gc_block_write_last_run = time()
 
-        elapsed_time1 = time.time() - start_time1
-        self.time_spent_flushing_writed_block_cache += elapsed_time1
-        self.time_spent_flushing_writedByTime_block_cache += elapsed_time1
+            elapsed_time1 = self.cache_gc_block_write_last_run - start_time1
+            self.time_spent_flushing_writed_block_cache += elapsed_time1
+            self.time_spent_flushing_writedByTime_block_cache += elapsed_time1
 
 
-        start_time1 = time.time()
-        if time.time() - self.cache_gc_block_writeSize_last_run >= self.flushBlockSize_interval:
+        start_time1 = time()
+        if start_time1 - self.cache_gc_block_writeSize_last_run >= self.flushBlockSize_interval:
             if self.cached_blocks.isWritedCacheFull():
                 flushed = self.__flush_old_cached_blocks(self.cached_blocks.expireByCount(True), True)
                 flushed_writed_blocks += flushed
                 flushed_writed_expiredBySize_blocks += flushed
 
-            self.cache_gc_block_writeSize_last_run = time.time()
+            self.cache_gc_block_writeSize_last_run = time()
 
-        elapsed_time1 = time.time() - start_time1
-        self.time_spent_flushing_writed_block_cache += elapsed_time1
-        self.time_spent_flushing_writedBySize_block_cache += elapsed_time1
+            elapsed_time1 = self.cache_gc_block_writeSize_last_run - start_time1
+            self.time_spent_flushing_writed_block_cache += elapsed_time1
+            self.time_spent_flushing_writedBySize_block_cache += elapsed_time1
 
 
-        start_time1 = time.time()
-        if time.time() - self.cache_gc_block_read_last_run >= self.flush_interval:
+        start_time1 = time()
+        if start_time1 - self.cache_gc_block_read_last_run >= self.flush_interval:
             flushed = self.cached_blocks.expired(False)
             flushed_readed_blocks += flushed
             flushed_readed_expiredByTime_blocks += flushed
 
-            self.cache_gc_block_read_last_run = time.time()
+            self.cache_gc_block_read_last_run = time()
 
-        elapsed_time1 = time.time() - start_time1
-        self.time_spent_flushing_readed_block_cache += elapsed_time1
-        self.time_spent_flushing_readedByTime_block_cache += elapsed_time1
+            elapsed_time1 = self.cache_gc_block_read_last_run - start_time1
+            self.time_spent_flushing_readed_block_cache += elapsed_time1
+            self.time_spent_flushing_readedByTime_block_cache += elapsed_time1
 
 
-        start_time1 = time.time()
-        if time.time() - self.cache_gc_block_readSize_last_run >= self.flushBlockSize_interval:
+        start_time1 = time()
+        if start_time1 - self.cache_gc_block_readSize_last_run >= self.flushBlockSize_interval:
             if self.cached_blocks.isReadCacheFull():
                 flushed = self.cached_blocks.expireByCount(False)
                 flushed_readed_blocks += flushed
                 flushed_readed_expiredBySize_blocks += flushed
 
-            self.cache_gc_block_readSize_last_run = time.time()
+            self.cache_gc_block_readSize_last_run = time()
 
-        elapsed_time1 = time.time() - start_time1
-        self.time_spent_flushing_readed_block_cache += elapsed_time1
-        self.time_spent_flushing_readedBySize_block_cache += elapsed_time1
+            elapsed_time1 = self.cache_gc_block_readSize_last_run - start_time1
+            self.time_spent_flushing_readed_block_cache += elapsed_time1
+            self.time_spent_flushing_readedBySize_block_cache += elapsed_time1
 
 
         if flushed_writed_blocks + flushed_readed_blocks > 0:
 
             self.__commit_changes()
 
-            elapsed_time = time.time() - start_time
+            elapsed_time = time() - start_time
 
             self.time_spent_flushing_block_cache += elapsed_time
 
@@ -2095,7 +2101,7 @@ class DedupOperations(llfuse.Operations): # {{{1
     def __truncate_inode_blocks(self, inode_id, size):
 
         inblock_offset = size % self.block_size
-        max_block_number = int(math.floor(1.0 * (size - inblock_offset) / self.block_size))
+        max_block_number = int(floor(1.0 * (size - inblock_offset) / self.block_size))
 
         # 1. Remove blocks that has number more than MAX by size
         tableIndex = self.getTable("inode_hash_block")
@@ -2121,8 +2127,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         flushed_xattrs = 0
         flushed_indexes = 0
 
-        start_time = time.time()
-
+        start_time = time()
         if start_time - self.cache_gc_meta_last_run >= self.flush_interval:
 
             flushed_nodes = self.cached_nodes.clear()
@@ -2138,10 +2143,10 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.__commit_changes()
 
-            self.cache_gc_meta_last_run = time.time()
+            self.cache_gc_meta_last_run = time()
 
         if flushed_attrs + flushed_nodes + flushed_names + flushed_indexes + flushed_xattrs > 0:
-            elapsed_time = time.time() - start_time
+            elapsed_time = self.cache_gc_meta_last_run - start_time
             self.getLogger().debug("Meta cache cleanup: flushed %i nodes, %i attrs,  %i xattrs, %i names, %i indexes in %s.",
                                   flushed_nodes, flushed_attrs, flushed_xattrs, flushed_names, flushed_indexes,
                                   format_timespan(elapsed_time))
@@ -2152,17 +2157,17 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def forced_vacuum(self): # {{{3
         if not self.isReadonly():
-            start_time = time.time()
+            start_time = time()
             self.getLogger().debug("Performing data vacuum (this might take a while) ..")
             for table_name in self.getManager().tables:
                 self.__vacuum_datatable(table_name)
-            elapsed_time = time.time() - start_time
+            elapsed_time = time() - start_time
             self.getLogger().debug("Finished data vacuum in %s.", format_timespan(elapsed_time))
         return
 
     def __collect_garbage(self): # {{{3
         if self.gc_enabled and not self.isReadonly():
-            start_time = time.time()
+            start_time = time()
             self.getLogger().info("Performing garbage collection (this might take a while) ..")
             self.should_vacuum = False
             clean_stats = False
@@ -2176,18 +2181,18 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not self.getOption("gc_fast_enabled"):
                 gc_funcs.append(self.__collect_blocks)
             for method in gc_funcs:
-                sub_start_time = time.time()
+                sub_start_time = time()
                 msg = method()
                 if msg:
                     clean_stats = True
-                    elapsed_time = time.time() - sub_start_time
+                    elapsed_time = time() - sub_start_time
                     self.getLogger().info(msg, format_timespan(elapsed_time))
 
             if clean_stats:
                 subv = Subvolume(self)
                 subv.clean_stats(self.mounted_subvolume_name)
 
-            elapsed_time = time.time() - start_time
+            elapsed_time = time() - start_time
             self.getLogger().info("Finished garbage collection in %s.", format_timespan(elapsed_time))
         return
 
@@ -2445,7 +2450,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                     continue
 
                 inblock_offset = size % self.block_size
-                max_block_number = int(math.floor(1.0 * (size - inblock_offset) / self.block_size))
+                max_block_number = int(floor(1.0 * (size - inblock_offset) / self.block_size))
 
                 trunced = tableIndex.delete_by_inode_number_more(inode_id, max_block_number)
                 countTrunc += len(trunced)
@@ -2534,13 +2539,13 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __vacuum_datatable(self, tableName): # {{{4
         msg = ""
-        sub_start_time = time.time()
+        sub_start_time = time()
         if self.should_vacuum and self.gc_vacuum_enabled:
             self.getLogger().debug(" vacuum %s table" % tableName)
             self.getTable(tableName).vacuum()
             msg = "  vacuumed SQLite data store in %s."
         if msg:
-            elapsed_time = time.time() - sub_start_time
+            elapsed_time = time() - sub_start_time
             self.getLogger().debug(msg, format_timespan(elapsed_time))
         return msg
 

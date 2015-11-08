@@ -9,7 +9,7 @@ try:
     import os
     import traceback
     import argparse
-    import time
+    from time import time
     import hashlib
     from dedupsqlfs.lib import constants
     from dedupsqlfs.db import check_engines
@@ -188,12 +188,15 @@ def main(): # {{{1
     if args.profile:
         sys.stderr.write("Enabling profiling..\n")
         import cProfile, pstats
-        profile = '.dedupsqlfs.cprofile-%i' % time.time()
-        cProfile.run('fuse_mount(args, compression_methods, hash_functions)', profile)
+        profile = '.dedupsqlfs.cprofile-%i' % time()
+        profiler = cProfile.Profile()
+        result = profiler.runcall(fuse_mount, args, compression_methods, hash_functions)
+        profiler.dump_stats(profile)
         sys.stderr.write("\n Profiling statistics:\n\n")
         s = pstats.Stats(profile)
-        s.sort_stats('time')
-        s.print_stats(0.1)
+        s.sort_stats('calls').print_stats(0.1)
+        s.sort_stats('cumtime').print_stats(0.1)
+        s.sort_stats('tottime').print_stats(0.1)
         os.unlink(profile)
     else:
         return fuse_mount(args, compression_methods, hash_functions)

@@ -7,7 +7,7 @@ Used in single or multi process compression classes
 
 __author__ = 'sergey'
 
-import time
+from time import time
 from dedupsqlfs.lib import constants
 
 class Task(object):
@@ -137,7 +137,7 @@ class BaseCompressTool(object):
         @return tuple (compressed data (bytes), compresion method (string) )
         """
 
-        start_time = time.time()
+        start_time = time()
 
         method = self.getOption("compression_method")
         forced = self.getOption("compression_forced")
@@ -148,7 +148,7 @@ class BaseCompressTool(object):
         cmethod = constants.COMPRESSION_TYPE_NONE
 
         if data_length <= self.getOption("compression_minimal_size") and not forced:
-            self.time_spent_compressing += time.time() - start_time
+            self.time_spent_compressing += time() - start_time
             return cdata, cmethod
 
         if method != constants.COMPRESSION_TYPE_NONE:
@@ -180,7 +180,7 @@ class BaseCompressTool(object):
                     cdata = data
                     cmethod = constants.COMPRESSION_TYPE_NONE
 
-        self.time_spent_compressing = time.time() - start_time
+        self.time_spent_compressing = time() - start_time
 
         return cdata, cmethod
 

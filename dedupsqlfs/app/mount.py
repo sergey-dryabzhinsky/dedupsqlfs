@@ -65,6 +65,7 @@ def main(): # {{{1
 
     parser.add_argument('-h', '--help', action='help', help="show this help message followed by the command line options defined by the Python FUSE binding and exit")
     parser.add_argument('-v', '--verbose', action='count', dest='verbosity', default=0, help="increase verbosity")
+    parser.add_argument('--verbose-stats', dest='verbose_stats', action='store_true', help="Enable FS opterations statistic output. Verbosity level must be 1+.")
     parser.add_argument('--log-file', dest='log_file', help="specify log file location")
     parser.add_argument('--data', dest='data', metavar='DIRECTORY', default="~/data", help="Specify the base location for the files in which metadata and blocks data is stored. Defaults to ~/data")
     parser.add_argument('--name', dest='name', metavar='DATABASE', default="dedupsqlfs", help="Specify the name for the database directory in which metadata and blocks data is stored. Defaults to dedupsqlfs")

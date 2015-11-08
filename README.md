@@ -111,7 +111,7 @@ Additional storage engine via MySQL can be accessed with commands:
 
     $ sudo pip3 install pymysql
 
-Additional performance gain via Cython:
+Additional performance gain about 5-20% via Cython:
 
     ## Setup tools If not installed
     $ sudo pip3 install setuptools
@@ -120,6 +120,11 @@ Additional performance gain via Cython:
     $ python3 setup.py stripall
     ## Warning! This deletes all .py files
     $ python3 setup.py cleanpy
+
+### Notes about Cython
+
+1. Profiling via cProfile not working for compiled code.
+2. Always keep copy of dedupsqlfs directory if you will run ```cleanpy``` command.
 
 ## Contact
 

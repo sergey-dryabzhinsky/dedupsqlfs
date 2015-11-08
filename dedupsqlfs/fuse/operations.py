@@ -59,13 +59,16 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.cache_enabled = True
         self.cache_gc_meta_last_run = time.time()
         self.cache_gc_block_write_last_run = time.time()
+        self.cache_gc_block_writeSize_last_run = time.time()
         self.cache_gc_block_read_last_run = time.time()
+        self.cache_gc_block_readSize_last_run = time.time()
         self.cache_meta_timeout = 20
         self.cache_block_write_timeout = 10
         self.cache_block_read_timeout = 10
         self.cache_block_write_size = -1
         self.cache_block_read_size = -1
         self.flush_interval = 5
+        self.flushBlockSize_interval = 1
 
         self.subvol_uptate_last_run = time.time()
 
@@ -2021,10 +2024,13 @@ class DedupOperations(llfuse.Operations): # {{{1
 
 
         start_time1 = time.time()
-        if self.cached_blocks.isWritedCacheFull():
-            flushed = self.__flush_old_cached_blocks(self.cached_blocks.expireByCount(True), True)
-            flushed_writed_blocks += flushed
-            flushed_writed_expiredBySize_blocks += flushed
+        if time.time() - self.cache_gc_block_writeSize_last_run >= self.flushBlockSize_interval:
+            if self.cached_blocks.isWritedCacheFull():
+                flushed = self.__flush_old_cached_blocks(self.cached_blocks.expireByCount(True), True)
+                flushed_writed_blocks += flushed
+                flushed_writed_expiredBySize_blocks += flushed
+
+            self.cache_gc_block_writeSize_last_run = time.time()
 
         elapsed_time1 = time.time() - start_time1
         self.time_spent_flushing_writed_block_cache += elapsed_time1
@@ -2045,10 +2051,13 @@ class DedupOperations(llfuse.Operations): # {{{1
 
 
         start_time1 = time.time()
-        if self.cached_blocks.isReadCacheFull():
-            flushed = self.cached_blocks.expireByCount(False)
-            flushed_readed_blocks += flushed
-            flushed_readed_expiredBySize_blocks += flushed
+        if time.time() - self.cache_gc_block_readSize_last_run >= self.flushBlockSize_interval:
+            if self.cached_blocks.isReadCacheFull():
+                flushed = self.cached_blocks.expireByCount(False)
+                flushed_readed_blocks += flushed
+                flushed_readed_expiredBySize_blocks += flushed
+
+            self.cache_gc_block_readSize_last_run = time.time()
 
         elapsed_time1 = time.time() - start_time1
         self.time_spent_flushing_readed_block_cache += elapsed_time1

@@ -22,7 +22,7 @@ class StorageTimeSize(object):
     _cur_read_cache_size = 0
 
     # Expired maximum cache size in %
-    _max_size_trsh = 10
+    _max_size_trsh = 5
 
     _inodes = None
     _block_size = 128*1024

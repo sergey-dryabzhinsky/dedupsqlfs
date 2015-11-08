@@ -111,7 +111,7 @@ Additional storage engine via MySQL can be accessed with commands:
 
     $ sudo pip3 install pymysql
 
-Additional performance gain about 5-20% via Cython:
+Additional performance gain about 1-3% via Cython:
 
     ## Setup tools If not installed
     $ sudo pip3 install setuptools

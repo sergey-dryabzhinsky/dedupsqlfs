@@ -48,17 +48,17 @@ if not imported:
             break
 
 if not imported:
-    try:
-        path = sys.path.pop(0)
+    path = sys.path.pop(0)
 
+    try:
         fp, pathname, description = imp.find_module("lzma")
         module = imp.load_module("lzma", fp, pathname, description)
 
         compress = module.compress
         decompress = module.decompress
 
-        sys.path.insert(0, path)
-
         imported = True
     except:
         pass
+
+    sys.path.insert(0, path)

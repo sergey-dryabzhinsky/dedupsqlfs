@@ -566,10 +566,10 @@ class DedupOperations(llfuse.Operations): # {{{1
         attr["nlinks"] += 1
         self.cached_attrs.set(inode, attr, writed=True)
 
-        if attr["mode"] & stat.S_IFDIR:
-            attr = self.__get_inode_row(new_parent_inode)
-            attr["nlinks"] += 1
-            self.cached_attrs.set(new_parent_inode, attr, writed=True)
+        #if attr["mode"] & stat.S_IFDIR:
+            #attr = self.__get_inode_row(new_parent_inode)
+            #attr["nlinks"] += 1
+        #    self.cached_attrs.set(new_parent_inode, attr, writed=True)
 
         self.__cache_meta_hook()
 
@@ -784,33 +784,43 @@ class DedupOperations(llfuse.Operations): # {{{1
             if self.isReadonly():
                 raise FUSEError(errno.EROFS)
 
-            node = self.__get_tree_node_by_parent_inode_and_name(inode_parent_old, name_old)
-
             # Try to remove the existing target path (if if exists).
             # NB: This also makes sure target directories are empty.
             try:
                 # Node exists?
                 self.__get_tree_node_by_parent_inode_and_name(inode_parent_new, name_new)
                 # Then unlink
-                self.unlink(inode_parent_new, name_new)
+                self.__remove(inode_parent_new, name_new, True)
             except FUSEError as e:
                 # Ignore errno.ENOENT, re raise other exceptions.
                 if e.errno != errno.ENOENT: raise
 
+            node_old = self.__get_tree_node_by_parent_inode_and_name(inode_parent_old, name_old)
+
             # Link the new path to the same inode as the old path.
-            self.link(node["inode_id"], inode_parent_new, name_new)
+#            self.link(node["inode_id"], inode_parent_new, name_new)
 
             # Finally unlink the old path.
-            self.unlink(inode_parent_old, name_old)
+#            self.__remove(inode_parent_old, name_old)
+
+            node_parent_new = self.__get_tree_node_by_inode(inode_parent_new)
+            string_id = self.__intern(name_new)
+
+            treeTable = self.getTable("tree")
+            treeTable.rename_inode(node_old["id"], node_parent_new["id"], string_id)
+
+            self.cached_nodes.unset((inode_parent_old, name_old))
+            self.cached_names.unset(name_old)
+
+            self.__cache_meta_hook()
 
             self.__gc_hook()
-            self.__cache_meta_hook()
-            return 0
         except FUSEError:
             raise
         except Exception as e:
             self.__rollback_changes()
             raise self.__except_to_status('rename', e, errno.ENOENT)
+        return 0
 
     def rmdir(self, inode_parent, name): # {{{3
         try:
@@ -1026,6 +1036,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 raise FUSEError(errno.EROFS)
 
             self.__remove(parent_inode, name)
+            self.__cache_meta_hook()
             self.__gc_hook()
         except FUSEError:
             raise
@@ -1158,6 +1169,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.time_spent_caching_nodes += time() - start_time
 
+        self.__log_call('__get_inode_row', '<-(row=%r)', row)
         return row
 
     def __fill_attr_inode_row(self, row): # {{{3
@@ -1520,6 +1532,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         cur_node = self.__get_tree_node_by_parent_inode_and_name(parent_inode, name)
 
+        self.getLogger().debug("__remove -- (cur_node=%r)" % (cur_node,))
+
         treeTable = self.getTable("tree")
         inodeTable = self.getTable("inode")
 
@@ -1536,6 +1550,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                     attr["nlinks"] -= 1
                     self.cached_attrs.set(cur_node["inode_id"], attr, writed=True)
 
+        self.getLogger().debug("__remove -- (del tree node)")
         treeTable.delete(cur_node["id"])
 
         if attr["nlinks"] > 0:
@@ -1545,17 +1560,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         # Inodes with nlinks = 0 are purged periodically from __collect_garbage() so
         # we don't have to do that here.
 
-        if attr["mode"] & stat.S_IFDIR:
-            par_attr = self.__get_inode_row(parent_inode)
-            if par_attr["nlinks"] > 0:
-                par_attr["nlinks"] -= 1
-                self.cached_attrs.set(parent_inode, par_attr, writed=True)
-            self.cached_xattrs.unset(parent_inode)
-            self.cached_attrs.unset(parent_inode)
-            self.cached_nodes.unset(parent_inode)
-            self.cached_indexes.expire(parent_inode)
-
-        self.cached_attrs.unset(cur_node["inode_id"])
+        self.cached_attrs.expire(cur_node["inode_id"])
         self.cached_xattrs.unset(cur_node["inode_id"])
         self.cached_nodes.unset((parent_inode, name))
         self.cached_nodes.unset(cur_node["inode_id"])

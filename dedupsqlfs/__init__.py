@@ -23,7 +23,7 @@ Copyright 2013-2015 Sergey Dryabzhinsky <sergey.dryabzhinsky@gmail.com>.
 
 __name__ = "DedupSQLfs"
 __fsversion__ = "3.1"
-__version__ = "1.2.16"
+__version__ = "1.2.17"
 
 # Check the Python version, warn the user if untested.
 import sys

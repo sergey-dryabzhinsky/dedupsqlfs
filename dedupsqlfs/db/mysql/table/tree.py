@@ -55,6 +55,27 @@ class TableTree( Table ):
         self.stopTimer('insert')
         return item
 
+    def rename_inode( self, node_id, new_parent_id, new_name_id):
+        """
+        :param parent_id: int|None
+        :param name_id: int
+        :param inode_id: int
+        :return: int
+        """
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("UPDATE `%s` " % self.getName()+
+                    "SET parent_id=%(parent)s, name_id=%(name)s WHERE id=%(id)s",
+                    {
+                        "parent": new_parent_id,
+                        "name": new_name_id,
+                        "id": node_id
+                     })
+        item = cur.lastrowid
+        self.stopTimer('rename_inode')
+        return item
+
+
     def delete(self, node_id):
         self.startTimer()
         cur = self.getCursor()

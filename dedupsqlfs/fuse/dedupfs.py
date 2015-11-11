@@ -73,10 +73,17 @@ class DedupFS(object): # {{{1
         pass
 
 
-    def main(self):
+    def preInit(self):
         self._fixCompressionOptions()
-
         self._compressTool.init()
+
+    def postDestroy(self):
+        self._compressTool.stop()
+        self.operations.getManager().close()
+
+    def main(self):
+
+        self.preInit()
 
         error = False
         ex = None
@@ -95,8 +102,7 @@ class DedupFS(object): # {{{1
                 pass
         else:
             fuse.close()
-        self._compressTool.stop()
-        self.operations.getManager().close()
+        self.postDestroy()
         if ex:
             raise ex
 

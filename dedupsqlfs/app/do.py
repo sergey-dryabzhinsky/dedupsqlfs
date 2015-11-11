@@ -329,12 +329,15 @@ def do(options, compression_methods=None):
     from dedupsqlfs.fuse.operations import DedupOperations
 
     ops = None
+    _fuse = None
     try:
         ops = DedupOperations()
         _fuse = DedupFS(
             ops, "",
             options,
             use_ino=True, default_permissions=True, fsname="dedupsqlfs")
+
+        _fuse.preInit()
 
         basePath = os.path.expanduser(_fuse.getOption("data"))
         if os.path.exists(basePath):
@@ -404,6 +407,9 @@ def do(options, compression_methods=None):
         import traceback
         traceback.print_exc()
         ret = 1
+
+    if _fuse:
+        _fuse.postDestroy()
 
     if ops:
         ops.getManager().close()

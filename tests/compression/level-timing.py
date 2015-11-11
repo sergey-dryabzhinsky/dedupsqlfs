@@ -316,7 +316,8 @@ COMPRESSION_SUPPORTED=[
     ('lzo' , False, do_simple_ctest,),
     ('lz4' , False, do_simple_ctest,),
     ('snappy' , False, do_simple_ctest,),
-    ('zstd' , False, do_simple_ctest,),
+#    ('zstd' , False, do_simple_ctest,),
+    ('zstd' , range(1,21), do_level_ctest,),
     ('quicklzf' , False, do_simple_ctest,),
     ('quicklzm' , False, do_simple_ctest,),
     ('quicklzb' , False, do_simple_ctest,),
@@ -332,7 +333,8 @@ DECOMPRESSION_SUPPORTED=[
     ('lzo' , False, do_simple_dtest,),
     ('lz4' , False, do_simple_dtest,),
     ('snappy' , False, do_simple_dtest,),
-    ('zstd' , False, do_simple_dtest,),
+#    ('zstd' , False, do_simple_dtest,),
+    ('zstd' , range(1,21), do_level_dtest,),
     ('quicklzf' , False, do_simple_dtest,),
     ('quicklzm' , False, do_simple_dtest,),
     ('quicklzb' , False, do_simple_dtest,),
@@ -439,7 +441,7 @@ print("\nTable of ratio in %:")
 
 print("\t".join("%-9s" % c for c in _cmps))
 
-for level in range(0,10):
+for level in range(0,21):
     row = ["%8s" % level]
     for c in cmps:
         results = CTIMING[c]
@@ -462,7 +464,7 @@ print("\nTable of speed in Mb/s:")
 
 print("\t".join("%-9s" % c for c in _cmps))
 
-for level in range(0,10):
+for level in range(0,21):
     row = ["%8s" % level]
     for c in cmps:
         results = CTIMING[c]
@@ -550,7 +552,7 @@ _cmps.extend(cmps)
 
 print("\t".join("%-9s" % c for c in _cmps))
 
-for level in range(0,10):
+for level in range(0,21):
     row = ["%8s" % level]
     for c in cmps:
         results = DTIMING[c]
@@ -571,7 +573,7 @@ print("\nTable of speed in Mb/s:")
 
 print("\t".join("%-9s" % c for c in _cmps))
 
-for level in range(0,10):
+for level in range(0,21):
     row = ["%8s" % level]
     for c in cmps:
         results = DTIMING[c]

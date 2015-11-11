@@ -1,7 +1,7 @@
 /*
-    zstd - standard compression library
+    zstd_v02 - decoder for 0.2 format
     Header File
-    Copyright (C) 2014-2015, Yann Collet.
+    Copyright (C) 2015, Yann Collet.
 
     BSD 2-Clause License (http://www.opensource.org/licenses/bsd-license.php)
 
@@ -36,56 +36,62 @@
 extern "C" {
 #endif
 
-/**************************************
+/* *************************************
 *  Includes
-**************************************/
+***************************************/
 #include <stddef.h>   /* size_t */
 
 
-/**************************************
-*  Version
-**************************************/
-#define ZSTD_VERSION_MAJOR    0    /* for breaking interface changes  */
-#define ZSTD_VERSION_MINOR    0    /* for new (non-breaking) interface capabilities */
-#define ZSTD_VERSION_RELEASE  2    /* for tweaks, bug-fixes, or development */
-#define ZSTD_VERSION_NUMBER  (ZSTD_VERSION_MAJOR *100*100 + ZSTD_VERSION_MINOR *100 + ZSTD_VERSION_RELEASE)
-unsigned ZSTD_versionNumber (void);
-
-
-/**************************************
-*  Simple one-step functions
-**************************************/
-size_t ZSTD_compress(   void* dst, size_t maxDstSize,
-                  const void* src, size_t srcSize);
-
-size_t ZSTD_decompress( void* dst, size_t maxOriginalSize,
-                  const void* src, size_t compressedSize);
-
-/*
-ZSTD_compress() :
-    Compresses 'srcSize' bytes from buffer 'src' into buffer 'dst', of maximum size 'dstSize'.
-    Destination buffer should be sized to handle worst cases situations (input data not compressible).
-    Worst case size evaluation is provided by function ZSTD_compressBound().
-    return : the number of bytes written into buffer 'dst'
-             or an error code if it fails (which can be tested using ZSTD_isError())
-
-ZSTD_decompress() :
+/* *************************************
+*  Simple one-step function
+***************************************/
+/**
+ZSTDv02_decompress() : decompress ZSTD frames compliant with v0.2.x format
     compressedSize : is the exact source size
     maxOriginalSize : is the size of the 'dst' buffer, which must be already allocated.
                       It must be equal or larger than originalSize, otherwise decompression will fail.
     return : the number of bytes decompressed into destination buffer (originalSize)
-             or an errorCode if it fails (which can be tested using ZSTD_isError())
+             or an errorCode if it fails (which can be tested using ZSTDv01_isError())
+*/
+size_t ZSTDv02_decompress( void* dst, size_t maxOriginalSize,
+                     const void* src, size_t compressedSize);
+
+/**
+ZSTDv02_isError() : tells if the result of ZSTDv02_decompress() is an error
+*/
+unsigned ZSTDv02_isError(size_t code);
+
+
+/* *************************************
+*  Advanced functions
+***************************************/
+typedef struct ZSTDv02_Dctx_s ZSTDv02_Dctx;
+ZSTDv02_Dctx* ZSTDv02_createDCtx(void);
+size_t ZSTDv02_freeDCtx(ZSTDv02_Dctx* dctx);
+
+size_t ZSTDv02_decompressDCtx(void* ctx,
+                              void* dst, size_t maxOriginalSize,
+                        const void* src, size_t compressedSize);
+
+/* *************************************
+*  Streaming functions
+***************************************/
+size_t ZSTDv02_resetDCtx(ZSTDv02_Dctx* dctx);
+
+size_t ZSTDv02_nextSrcSizeToDecompress(ZSTDv02_Dctx* dctx);
+size_t ZSTDv02_decompressContinue(ZSTDv02_Dctx* dctx, void* dst, size_t maxDstSize, const void* src, size_t srcSize);
+/**
+  Use above functions alternatively.
+  ZSTD_nextSrcSizeToDecompress() tells how much bytes to provide as 'srcSize' to ZSTD_decompressContinue().
+  ZSTD_decompressContinue() will use previous data blocks to improve compression if they are located prior to current block.
+  Result is the number of bytes regenerated within 'dst'.
+  It can be zero, which is not an error; it just means ZSTD_decompressContinue() has decoded some header.
 */
 
-
-/**************************************
-*  Tool functions
-**************************************/
-size_t      ZSTD_compressBound(size_t srcSize);   /* maximum compressed size (worst case scenario) */
-
-/* Error Management */
-unsigned    ZSTD_isError(size_t code);         /* tells if a return value is an error code */
-const char* ZSTD_getErrorName(size_t code);    /* provides error code string (useful for debugging) */
+/* *************************************
+*  Prefix - version detection
+***************************************/
+#define ZSTDv02_magicNumber 0xFD2FB522   /* v0.2 */
 
 
 #if defined (__cplusplus)

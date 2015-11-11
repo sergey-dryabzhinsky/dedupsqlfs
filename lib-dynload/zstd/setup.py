@@ -1,48 +1,56 @@
-import sys
+#!/usr/bin/env python
 
-from distutils.command.build_ext import build_ext
-from distutils.core import setup
-from distutils.extension import Extension
+from setuptools import setup, find_packages, Extension
+from setuptools.command.build_ext import build_ext
 
-__version__ = "0.0.1"
+VERSION = (0, 3, 6)
+VERSION_STR = ".".join([str(x) for x in VERSION])
 
-if sys.version_info < (2,6):
-    sys.stderr.write("ERROR: Python 2.5 and older are not supported, and probably never will be.\n")
-    sys.exit(1)
+COPT =  {'msvc': ['/Ox', '/Izstd\\lib', '/Izstd\\lib\\legacy', '/DVERSION=\"\\\"%s\\\"\"' % VERSION_STR],
+     'mingw32' : ['-O3', '-Izstd/lib', '-Izstd/lib/legacy', '-DVERSION="%s"' % VERSION_STR],
+     'unix' : ['-O3', '-Izstd/lib', '-Izstd/lib/legacy', '-DVERSION="%s"' % VERSION_STR],
+     'clang' : ['-O3', '-Izstd/lib', '-Izstd/lib/legacy', '-DVERSION="%s"' % VERSION_STR],
+     'gcc' : ['-O3', '-Izstd/lib', '-Izstd/lib/legacy', '-DVERSION="%s"' % VERSION_STR]}
+
+class build_ext_subclass( build_ext ):
+    def build_extensions(self):
+        c = self.compiler.compiler_type
+        if c in COPT:
+           for e in self.extensions:
+               e.extra_compile_args = COPT[c]
+        build_ext.build_extensions(self)
 
 setup(
     name='zstd',
-    version=__version__,
+    version=VERSION_STR,
     description="ZSTD Bindings for Python",
-    author='Sergey Dryabzhinsky',
+    long_description=open('README.rst', 'r').read(),
+    author='Sergey Dryabzhinsky, Anton Stuk',
     author_email='sergey.dryabzhinsky@gmail.com',
+    maintainer='Sergey Dryabzhinsky',
+    maintainer_email='sergey.dryabzhinsky@gmail.com',
     url='https://github.com/sergey-dryabzhinsky/python-zstd',
-    packages=[],
+    keywords='zstd, zstandard, compression',
+    license='BSD',
+    packages=find_packages('src'),
     package_dir={'': 'src'},
     ext_modules=[
         Extension('zstd', [
-            'src/zstd.c',
+            'zstd/lib/huff0.c',
+            'zstd/lib/fse.c',
+            'zstd/lib/legacy/zstd_v01.c',
+            'zstd/lib/legacy/zstd_v02.c',
+            'zstd/lib/zstd.c',
+            'zstd/lib/zstdhc.c',
             'src/python-zstd.c'
-        ], extra_compile_args=[
-            "-std=c99",
-            "-O3",
-            "-Wall",
-            "-W",
-            "-Wundef",
-# Hardening
-            "-DFORTIFY_SOURCE=2", "-fstack-protector",
-# Full CPU optimization, for custom build by hand
-#            "-march=native",
-# GCC Graphite
-#            "-floop-interchange", "-floop-block", "-floop-strip-mine", "-ftree-loop-distribution",
-       ])
+        ])
     ],
-    cmdclass = {
-        'build_ext': build_ext,
-    },
+    cmdclass = {'build_ext': build_ext_subclass },
     classifiers=[
         'License :: OSI Approved :: BSD License',
         'Intended Audience :: Developers',
+        'Development Status :: 4 - Beta',
+        'Operating System :: POSIX',
         'Programming Language :: C',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2.6',

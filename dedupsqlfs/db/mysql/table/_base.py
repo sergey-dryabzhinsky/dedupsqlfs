@@ -5,6 +5,8 @@ __author__ = 'sergey'
 from time import time
 import pymysql
 import pymysql.cursors
+from dedupsqlfs.log import logging
+from dedupsqlfs.my_formats import format_size
 
 class Table( object ):
 
@@ -36,6 +38,15 @@ class Table( object ):
         self._op_count = {}
         self._engine = manager.getTableEngine()
         pass
+
+    def getLogger(self):
+        if not self._log:
+            self._log = self.getManager().getLogger()
+        if not self._log:
+            self._log = logging.getLogger(self.__class__.__name__)
+            self._log.setLevel(logging.ERROR)
+            self._log.addHandler(logging.StreamHandler(sys.stderr))
+        return self._log
 
     def _getCreationAppendString(self):
         _cs = " Engine=" + self._engine
@@ -253,8 +264,21 @@ class Table( object ):
 
     def vacuum(self):
         self.startTimer()
+
+        oldSize = self.getSize()
+
         cur = self.getCursor()
         cur.execute("OPTIMIZE TABLE `%s`" % self.getName())
+
+        newSize = self.getSize()
+
+        diffSign = newSize > oldSize and '+' or '-'
+
+        sz = format_size(abs(newSize - oldSize))
+
+        self.getLogger().info("DB '%s' size change after vacuum: %s%.2f%% (%s%s)" % (
+            self.getName(), diffSign, abs(newSize - oldSize) * 100.0 / oldSize, diffSign, sz,))
+
         self.stopTimer("vacuum")
         return self
 

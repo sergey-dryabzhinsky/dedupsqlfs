@@ -9,6 +9,7 @@ import subprocess
 
 from dedupsqlfs.db.sqlite.row import dict_factory
 from dedupsqlfs.log import logging
+from dedupsqlfs.my_formats import format_size
 
 class Table( object ):
 
@@ -265,7 +266,12 @@ class Table( object ):
 
         newSize = os.path.getsize(fn)
 
-        self.getLogger().info("DB '%s' size change after vacuum: %.2f%%" % (self.getName(), (oldSize - newSize) * 100.0 / oldSize,))
+        diffSign = newSize > oldSize and '+' or '-'
+
+        sz = format_size(abs(newSize - oldSize))
+
+        self.getLogger().info("DB '%s' size change after vacuum: %s%.2f%% (%s%s)" % (
+            self.getName(), diffSign, abs(newSize - oldSize) * 100.0 / oldSize, diffSign, sz,))
 
         self.stopTimer("vacuum")
         return self

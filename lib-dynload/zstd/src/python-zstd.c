@@ -32,6 +32,8 @@
 #include "python-zstd.h"
 #include "zstd.h"
 #include "zstdhc.h"
+#include "zstd_v02.h"
+#include "zstd_v01.h"
 
 // workaround
 #if !(defined(__clang__) || defined(__GNUC__))
@@ -115,6 +117,10 @@ static PyObject *py_zstd_uncompress(PyObject* self, PyObject *args) {
         char *dest = PyBytes_AS_STRING(result);
 
         cSize = ZSTD_decompress(dest, dest_size, source, source_size - header_size);
+        if (ZSTD_isError(cSize))
+            cSize = ZSTDv02_decompress(dest, dest_size, source, source_size - header_size);
+        if (ZSTD_isError(cSize))
+            cSize = ZSTDv01_decompress(dest, dest_size, source, source_size - header_size);
         if (ZSTD_isError(cSize))
             PyErr_Format(ZstdError, "Decompression error: %s", ZSTD_getErrorName(cSize));
     }

@@ -16,6 +16,16 @@ class Zstd001Compression(BaseCompression):
 
     _has_comp_level_options = False
 
+    _func_decomp_new = None
+
+    def _init_module(self):
+        super()._init_module()
+
+        module = __import__('zstd')
+        self._func_decomp_new = getattr(module, "decompress")
+        return
+
+
     def isDataMayBeCompressed(self, data):
         """
         Disallow compression
@@ -26,4 +36,23 @@ class Zstd001Compression(BaseCompression):
         """
         return False
 
-    pass
+    def decompressData(self, cdata):
+        """
+        Try to decompress by old version
+        If can't - try new version
+
+        Thats because maybe some data was compressed before migrations arraived
+
+        @param cdata:
+        @return:
+        """
+        try:
+            data = super().decompressData(cdata)
+        except (Exception):
+            data = False
+            pass
+
+        if data is False:
+            data = self._func_decomp_new(cdata)
+
+        return data

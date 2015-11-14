@@ -4,6 +4,7 @@ __author__ = 'sergey'
 
 """
 Class for Zstd compression helper
+New version 0.3+
 """
 
 from dedupsqlfs.compression import BaseCompression

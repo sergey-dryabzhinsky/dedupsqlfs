@@ -31,7 +31,8 @@ class DbMigration( object ):
 
     def getMigrations(self):
         if not self._migrationsList:
-            self._migrationsList = os.listdir(self.getMigrationsDir())
+            self._migrationsList = [name for name in os.listdir(self.getMigrationsDir()) if name.endswith(".py") ]
+            self._migrationsList.sort()
         return self._migrationsList
 
     def getMigrationNumber(self, migrFile):

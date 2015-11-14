@@ -2,23 +2,24 @@
 #
 # DB migration 001 by 2015-07-12
 #
-# Add two fields to subvol table
+# - Rename current ZSTD compression into 'zstd001'
+# - Add new 'zstd' compression for 0.3+
 #
 __author__ = 'sergey'
 
-__NUMBER__ = 20150712001
+__NUMBER__ = 20151113001
 
 def run(manager):
 
-    tableSubvol = manager.getTable("subvolume")
+    tableCT = manager.getTable("compression_type")
 
     try:
-        cur = tableSubvol.getCursor()
+        cur = tableCT.getCursor()
 
-        cur.execute("ALTER TABLE subvolume ADD COLUMN stats TEXT;")
-        cur.execute("ALTER TABLE subvolume ADD COLUMN stats_at INTEGER;")
+        cur.execute("UPDATE compression_type SET value='zstd001' WHERE value='zstd';")
+        cur.execute("INSERT INTO compression_type (value) VALUES ('zstd');")
 
-        tableSubvol.commit()
+        tableCT.commit()
     except Exception:
         pass
 

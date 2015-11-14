@@ -8,7 +8,7 @@ Used in single or multi process compression classes
 __author__ = 'sergey'
 
 from time import sleep, time
-from .base import BaseCompressTool, Task, Result, constants
+from .base import BaseCompressTool, Task, Result
 from multiprocessing import JoinableQueue, Process, cpu_count
 
 class MultiProcCompressTool(BaseCompressTool):
@@ -116,56 +116,6 @@ class MultiProcCompressTool(BaseCompressTool):
                 in_queue.task_done()
 
         return
-
-    def _compressData(self, data):
-        """
-        Compress data and returns back
-
-        @param data: bytes  - task data
-
-        @return
-        """
-        method = self.getOption("compression_method")
-        forced = self.getOption("compression_forced")
-        level = self.getOption("compression_level")
-
-        cdata = data
-        data_length = len(data)
-        cmethod = constants.COMPRESSION_TYPE_NONE
-
-        if data_length <= self.getOption("compression_minimal_size") and not forced:
-            return cdata, cmethod
-
-        if method != constants.COMPRESSION_TYPE_NONE:
-            if method not in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_CUSTOM,):
-                comp = self._compressors[ method ]
-                if comp.isDataMayBeCompressed(data):
-                    cdata = comp.compressData(data, level)
-                    cmethod = method
-                    if data_length <= len(cdata) and not forced:
-                        cdata = data
-                        cmethod = constants.COMPRESSION_TYPE_NONE
-            else:
-                min_len = data_length * 2
-                # BEST
-                methods = self._compressors.keys()
-                if method == constants.COMPRESSION_TYPE_CUSTOM:
-                    methods = self.getOption("compression_custom")
-                for m in methods:
-                    comp = self._compressors[ m ]
-                    if comp.isDataMayBeCompressed(data):
-                        _cdata = comp.compressData(data, level)
-                        cdata_length = len(_cdata)
-                        if min_len > cdata_length:
-                            min_len = cdata_length
-                            cdata = _cdata
-                            cmethod = m
-
-                if data_length <= min_len and not forced:
-                    cdata = data
-                    cmethod = constants.COMPRESSION_TYPE_NONE
-
-        return cdata, cmethod
 
     def compressData(self, dataToCompress):
         """

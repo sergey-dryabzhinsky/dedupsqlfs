@@ -24,7 +24,7 @@ class TableCompressionType( Table ):
     def insert( self, value ):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("INSERT INTO `%s`(value) VALUES (?)" % self._table_name, (value,))
+        cur.execute("INSERT INTO `%s` (value) VALUES (?)" % self._table_name, (value,))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item

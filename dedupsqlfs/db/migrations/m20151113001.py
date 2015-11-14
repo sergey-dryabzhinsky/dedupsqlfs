@@ -13,11 +13,15 @@ def run(manager):
 
     tableCT = manager.getTable("compression_type")
 
-    cur = tableCT.getCursor()
-    cur.execute("UPDATE compression_type SET value='zstd001' WHERE value='zstd';")
-    cur.execute("INSERT INTO compression_type (value) VALUES ('zstd');")
+    try:
+        cur = tableCT.getCursor()
 
-    tableCT.commit()
+        cur.execute("UPDATE compression_type SET value='zstd001' WHERE value='zstd';")
+        cur.execute("INSERT INTO compression_type (value) VALUES ('zstd');")
+
+        tableCT.commit()
+    except Exception:
+        pass
 
     tableOpts = manager.getTable("option")
 

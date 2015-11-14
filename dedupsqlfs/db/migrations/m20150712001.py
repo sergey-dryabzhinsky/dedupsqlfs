@@ -12,11 +12,15 @@ def run(manager):
 
     tableSubvol = manager.getTable("subvolume")
 
-    cur = tableSubvol.getCursor()
-    cur.execute("ALTER TABLE subvolume ADD COLUMN stats TEXT;")
-    cur.execute("ALTER TABLE subvolume ADD COLUMN stats_at INTEGER;")
+    try:
+        cur = tableSubvol.getCursor()
 
-    tableSubvol.commit()
+        cur.execute("ALTER TABLE subvolume ADD COLUMN stats TEXT;")
+        cur.execute("ALTER TABLE subvolume ADD COLUMN stats_at INTEGER;")
+
+        tableSubvol.commit()
+    except Exception:
+        pass
 
     tableOpts = manager.getTable("option")
 

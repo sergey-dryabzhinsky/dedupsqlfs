@@ -17,6 +17,15 @@ class ZstdCompression(BaseCompression):
 
     _has_comp_level_options = True
 
+    _func_decomp_old = None
+
+    def _init_module(self):
+        super()._init_module()
+
+        module = __import__('zstd001')
+        self._func_decomp_old = getattr(module, "decompress")
+        return
+
     def getFastCompressionOptions(self):
         return ( 1, )
 
@@ -41,5 +50,28 @@ class ZstdCompression(BaseCompression):
             opts = False
             pass
         return opts
+
+    def decompressData(self, cdata):
+        """
+        Try to decompress by new version
+        If can't - try old version
+
+        Thats because maybe some data was compressed before migrations arraived
+
+        @param cdata:
+        @return:
+        """
+        try:
+            data = super().decompressData(cdata)
+        except Exception as e:
+            if str(e).find("wrongMagicNumber") != -1:
+                raise e
+            data = False
+            pass
+
+        if data is False:
+            data = self._func_decomp_old(cdata)
+
+        return data
 
     pass

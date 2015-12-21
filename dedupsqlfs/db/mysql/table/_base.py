@@ -3,6 +3,7 @@
 __author__ = 'sergey'
 
 from time import time
+import sys
 import pymysql
 import pymysql.cursors
 from dedupsqlfs.log import logging

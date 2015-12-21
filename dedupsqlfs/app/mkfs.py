@@ -111,29 +111,32 @@ def main(): # {{{1
 
     # Dynamically check for supported compression methods.
     compression_methods = [constants.COMPRESSION_TYPE_NONE]
+    compression_methods_cmd = [constants.COMPRESSION_TYPE_NONE]
     for modname in constants.COMPRESSION_SUPPORTED:
         try:
             module = __import__(modname)
             if hasattr(module, 'compress') and hasattr(module, 'decompress'):
                 compression_methods.append(modname)
+                if modname not in constants.COMPRESSION_READONLY:
+                    compression_methods_cmd.append(modname)
         except ImportError:
             pass
     if len(compression_methods) > 1:
-        compression_methods.append(constants.COMPRESSION_TYPE_BEST)
-        compression_methods.append(constants.COMPRESSION_TYPE_CUSTOM)
+        compression_methods_cmd.append(constants.COMPRESSION_TYPE_BEST)
+        compression_methods_cmd.append(constants.COMPRESSION_TYPE_CUSTOM)
 
     msg = "Enable compression of data blocks using one of the supported compression methods: one of %s"
-    msg %= ', '.join('%r' % mth for mth in compression_methods)
+    msg %= ', '.join('%r' % mth for mth in compression_methods_cmd)
     msg += ". Defaults to %r." % constants.COMPRESSION_TYPE_NONE
     msg += " You can use <method>=<level> syntax, <level> can be integer or value from --compression-level."
-    if len(compression_methods) > 1:
+    if len(compression_methods_cmd) > 1:
         msg += " %r will try all compression methods and choose one with smaller result data." % constants.COMPRESSION_TYPE_BEST
         msg += " %r will try selected compression methods (--custom-compress) and choose one with smaller result data." % constants.COMPRESSION_TYPE_CUSTOM
 
     parser.add_argument('--compress', dest='compression_method', metavar='METHOD', default=constants.COMPRESSION_TYPE_NONE, help=msg)
 
     msg = "Enable compression of data blocks using one or more of the supported compression methods: %s"
-    msg %= ', '.join('%r' % mth for mth in compression_methods[:-2])
+    msg %= ', '.join('%r' % mth for mth in compression_methods_cmd[:-2])
     msg += ". To use two or more methods select this option in command line for each compression method."
     msg += " You can use <method>=<level> syntax, <level> can be integer or value from --compression-level."
 
@@ -159,10 +162,6 @@ def main(): # {{{1
         logger.warning("If you're on Ubuntu try 'sudo apt-get install python-profiler'.")
 
     args = parser.parse_args()
-
-    # Do not want 'best' after help setup
-    compression_methods.pop()
-    compression_methods.pop()
 
     if args.profile:
         sys.stderr.write("Enabling profiling..\n")

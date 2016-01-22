@@ -31,13 +31,20 @@
 #  - Public forum : https://groups.google.com/forum/#!forum/lz4c
 # ################################################################
 
-# Version number
-export VERSION := 0.3.6
+# force a version number : uncomment below export (otherwise, default to the one declared into zstd.h)
+#export VERSION := 0.4.6
 
 PRGDIR  = programs
 ZSTDDIR = lib
 
-.PHONY: clean
+# Define nul output
+ifneq (,$(filter Windows%,$(OS)))
+VOID = nul
+else
+VOID = /dev/null
+endif
+
+.PHONY: default all zstdprogram clean install uninstall travis-install test clangtest gpptest armtest usan asan uasan
 
 default: zstdprogram
 
@@ -49,8 +56,8 @@ zstdprogram:
 	$(MAKE) -C $(PRGDIR)
 
 clean:
-	$(MAKE) -C $(ZSTDDIR) $@
-	$(MAKE) -C $(PRGDIR) $@
+	@$(MAKE) -C $(ZSTDDIR) $@ > $(VOID)
+	@$(MAKE) -C $(PRGDIR) $@ > $(VOID)
 	@echo Cleaning completed
 
 
@@ -67,10 +74,13 @@ uninstall:
 	$(MAKE) -C $(PRGDIR) $@
 
 travis-install:
-	sudo $(MAKE) install
+	$(MAKE) install PREFIX=~/install_test_dir
 
 test:
 	$(MAKE) -C $(PRGDIR) $@
+
+cmaketest:
+	cd contrib/cmake ; cmake . ; $(MAKE)
 
 clangtest: clean
 	clang -v
@@ -80,14 +90,17 @@ gpptest: clean
 	$(MAKE) all CC=g++ CFLAGS="-O3 -Wall -Wextra -Wundef -Wshadow -Wcast-align -Werror"
 
 armtest: clean
-	$(MAKE) -C $(ZSTDDIR) -e all CC=arm-linux-gnueabi-gcc MOREFLAGS="-Werror"
-	$(MAKE) -C $(PRGDIR) -e CC=arm-linux-gnueabi-gcc MOREFLAGS="-Werror"
+	$(MAKE) -C $(ZSTDDIR) all CC=arm-linux-gnueabi-gcc MOREFLAGS="-Werror"
+	$(MAKE) -C $(PRGDIR) CC=arm-linux-gnueabi-gcc MOREFLAGS="-Werror -static"
 
 usan: clean
 	$(MAKE) test CC=clang MOREFLAGS="-g -fsanitize=undefined"
 
 asan: clean
 	$(MAKE) test CC=clang MOREFLAGS="-g -fsanitize=address"
+
+asan32: clean
+	$(MAKE) -C $(PRGDIR) test32 CC=clang MOREFLAGS="-g -fsanitize=address"
 
 uasan: clean
 	$(MAKE) test CC=clang MOREFLAGS="-g -fsanitize=address -fsanitize=undefined"

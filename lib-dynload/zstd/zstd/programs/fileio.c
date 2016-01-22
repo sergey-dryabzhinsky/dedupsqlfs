@@ -49,8 +49,6 @@
 #  pragma warning(disable : 4127)      /* disable: C4127: conditional expression is constant */
 #endif
 
-#define GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
-
 #define _FILE_OFFSET_BITS 64   /* Large file support on 32-bits unix */
 #define _POSIX_SOURCE 1        /* enable fileno() within <stdio.h> on unix */
 
@@ -67,11 +65,11 @@
 #include <sys/stat.h>   /* stat64 */
 #include "mem.h"
 #include "fileio.h"
-#include "zstd_static.h"
-#include "zstdhc_static.h"
+#include "zstd_static.h"   /* ZSTD_magicNumber */
+#include "zstd_buffered_static.h"
 
 #if defined(ZSTD_LEGACY_SUPPORT) && (ZSTD_LEGACY_SUPPORT==1)
-#  include "zstd_legacy.h"  /* legacy */
+#  include "zstd_legacy.h"    /* legacy */
 #  include "fileio_legacy.h"  /* legacy */
 #endif
 
@@ -83,7 +81,7 @@
 #  include <fcntl.h>    /* _O_BINARY */
 #  include <io.h>       /* _setmode, _isatty */
 #  ifdef __MINGW32__
-   /* int _fileno(FILE *stream);   // seems no longer useful // MINGW somehow forgets to include this windows declaration into <stdio.h> */
+   // int _fileno(FILE *stream);   /* seems no longer useful /* MINGW somehow forgets to include this windows declaration into <stdio.h> */
 #  endif
 #  define SET_BINARY_MODE(file) { int unused = _setmode(_fileno(file), _O_BINARY); (void)unused; }
 #  define IS_CONSOLE(stdStream) _isatty(_fileno(stdStream))
@@ -115,14 +113,15 @@
 #define BIT6  0x40
 #define BIT7  0x80
 
-//static const unsigned FIO_maxBlockSizeID = 0xB;   /* => 2MB block */
-static const unsigned FIO_blockHeaderSize = 3;
+#define BLOCKSIZE      (128 KB)
+#define ROLLBUFFERSIZE (BLOCKSIZE*8*64)
 
 #define FIO_FRAMEHEADERSIZE 5        /* as a define, because needed to allocated table on stack */
 #define FSE_CHECKSUM_SEED        0
 
 #define CACHELINE 64
 
+#define MAX_DICT_SIZE (512 KB)
 
 /* *************************************
 *  Macros
@@ -176,52 +175,6 @@ static unsigned FIO_GetMilliSpan(clock_t nPrevious)
 }
 
 
-static void FIO_getFileHandles(FILE** pfinput, FILE** pfoutput, const char* input_filename, const char* output_filename)
-{
-    if (!strcmp (input_filename, stdinmark))
-    {
-        DISPLAYLEVEL(4,"Using stdin for input\n");
-        *pfinput = stdin;
-        SET_BINARY_MODE(stdin);
-    }
-    else
-    {
-        *pfinput = fopen(input_filename, "rb");
-    }
-
-    if (!strcmp (output_filename, stdoutmark))
-    {
-        DISPLAYLEVEL(4,"Using stdout for output\n");
-        *pfoutput = stdout;
-        SET_BINARY_MODE(stdout);
-    }
-    else
-    {
-        /* Check if destination file already exists */
-        *pfoutput=0;
-        if (strcmp(output_filename,nulmark)) *pfoutput = fopen( output_filename, "rb" );
-        if (*pfoutput!=0)
-        {
-            fclose(*pfoutput);
-            if (!g_overwrite)
-            {
-                char ch;
-                if (g_displayLevel <= 1)   /* No interaction possible */
-                    EXM_THROW(11, "Operation aborted : %s already exists", output_filename);
-                DISPLAYLEVEL(2, "Warning : %s already exists\n", output_filename);
-                DISPLAYLEVEL(2, "Overwrite ? (Y/N) : ");
-                ch = (char)getchar();
-                if ((ch!='Y') && (ch!='y')) EXM_THROW(11, "Operation aborted : %s already exists", output_filename);
-            }
-        }
-        *pfoutput = fopen( output_filename, "wb" );
-    }
-
-    if ( *pfinput==0 ) EXM_THROW(12, "Pb opening src : %s", input_filename);
-    if ( *pfoutput==0) EXM_THROW(13, "Pb opening dst : %s", output_filename);
-}
-
-
 static U64 FIO_getFileSize(const char* infilename)
 {
     int r;
@@ -237,137 +190,218 @@ static U64 FIO_getFileSize(const char* infilename)
 }
 
 
-typedef void* (*FIO_createC) (void);
-static void* local_ZSTD_createCCtx(void) { return (void*) ZSTD_createCCtx(); }
-static void* local_ZSTD_HC_createCCtx(void) { return (void*) ZSTD_HC_createCCtx(); }
-
-typedef size_t (*FIO_initC) (void* ctx, void* dst, size_t maxDstSize, int cLevel, U64 srcSizeHint);
-static size_t local_ZSTD_compressBegin (void* ctx, void* dst, size_t maxDstSize, int cLevel, U64 srcSizeHint)
+static int FIO_getFiles(FILE** fileOutPtr, FILE** fileInPtr,
+                        const char* dstFileName, const char* srcFileName)
 {
-    (void)cLevel; (void)srcSizeHint;
-    return ZSTD_compressBegin((ZSTD_CCtx*)ctx, dst, maxDstSize);
-}
-static size_t local_ZSTD_HC_compressBegin (void* ctx, void* dst, size_t maxDstSize, int cLevel, U64 srcSizeHint)
-{
-    return ZSTD_HC_compressBegin((ZSTD_HC_CCtx*)ctx, dst, maxDstSize, cLevel, srcSizeHint);
-}
-
-typedef size_t (*FIO_continueC) (void* ctx, void* dst, size_t maxDstSize, const void* src, size_t srcSize);
-static size_t local_ZSTD_compressContinue (void* ctx, void* dst, size_t maxDstSize, const void* src, size_t srcSize)
-{
-    return ZSTD_compressContinue((ZSTD_CCtx*)ctx, dst, maxDstSize, src, srcSize);
-}
-static size_t local_ZSTD_HC_compressContinue (void* ctx, void* dst, size_t maxDstSize, const void* src, size_t srcSize)
-{
-    return ZSTD_HC_compressContinue((ZSTD_HC_CCtx*)ctx, dst, maxDstSize, src, srcSize);
-}
-
-typedef size_t (*FIO_endC) (void* ctx, void* dst, size_t maxDstSize);
-static size_t local_ZSTD_compressEnd (void* ctx, void* dst, size_t maxDstSize)
-{
-    return ZSTD_compressEnd((ZSTD_CCtx*)ctx, dst, maxDstSize);
-}
-static size_t local_ZSTD_HC_compressEnd (void* ctx, void* dst, size_t maxDstSize)
-{
-    return ZSTD_HC_compressEnd((ZSTD_HC_CCtx*)ctx, dst, maxDstSize);
-}
-
-typedef void (*FIO_freeC) (void* ctx);
-static void local_ZSTD_freeCCtx(void* ctx) { ZSTD_freeCCtx((ZSTD_CCtx*)ctx); }
-static void local_ZSTD_HC_freeCCtx(void* ctx) { ZSTD_HC_freeCCtx((ZSTD_HC_CCtx*)ctx); }
-
-
-unsigned long long FIO_compressFilename(const char* output_filename, const char* input_filename, int cLevel)
-{
-    U64 filesize = 0;
-    U64 compressedfilesize = 0;
-    BYTE* inBuff;
-    BYTE* inSlot;
-    BYTE* inEnd;
-    BYTE* outBuff;
-    size_t blockSize = 128 KB;
-    size_t inBuffSize = 4 * blockSize;
-    size_t outBuffSize = ZSTD_compressBound(blockSize);
-    FILE* finput;
-    FILE* foutput;
-    size_t sizeCheck, cSize;
-    void* ctx;
-    FIO_createC createC=NULL;
-    FIO_initC initC=NULL;
-    FIO_continueC continueC = NULL;
-    FIO_endC endC = NULL;
-    FIO_freeC freeC = NULL;
-
-    /* Init */
-    if (cLevel <= 1)
+    if (!strcmp (srcFileName, stdinmark))
     {
-        createC = local_ZSTD_createCCtx;
-        initC = local_ZSTD_compressBegin;
-        continueC = local_ZSTD_compressContinue;
-        endC = local_ZSTD_compressEnd;
-        freeC = local_ZSTD_freeCCtx;
+        DISPLAYLEVEL(4,"Using stdin for input\n");
+        *fileInPtr = stdin;
+        SET_BINARY_MODE(stdin);
     }
     else
     {
-        createC = local_ZSTD_HC_createCCtx;
-        initC = local_ZSTD_HC_compressBegin;
-        continueC = local_ZSTD_HC_compressContinue;
-        endC = local_ZSTD_HC_compressEnd;
-        freeC = local_ZSTD_HC_freeCCtx;
+        *fileInPtr = fopen(srcFileName, "rb");
     }
-    FIO_getFileHandles(&finput, &foutput, input_filename, output_filename);
-    filesize = FIO_getFileSize(input_filename);
+
+    if ( *fileInPtr==0 )
+    {
+        DISPLAYLEVEL(1, "Unable to access file for processing: %s\n", srcFileName);
+        return 1;
+    }
+
+    if (!strcmp (dstFileName, stdoutmark))
+    {
+        DISPLAYLEVEL(4,"Using stdout for output\n");
+        *fileOutPtr = stdout;
+        SET_BINARY_MODE(stdout);
+    }
+    else
+    {
+        /* Check if destination file already exists */
+        if (!g_overwrite)
+        {
+            *fileOutPtr = fopen( dstFileName, "rb" );
+            if (*fileOutPtr != 0)
+            {
+                /* prompt for overwrite authorization */
+                fclose(*fileOutPtr);
+                DISPLAY("Warning : %s already exists \n", dstFileName);
+                if ((g_displayLevel <= 1) || (*fileInPtr == stdin))
+                {
+                    /* No interaction possible */
+                    DISPLAY("Operation aborted : %s already exists \n", dstFileName);
+                    return 1;
+                }
+                DISPLAY("Overwrite ? (y/N) : ");
+                {
+                    int ch = getchar();
+                    if ((ch!='Y') && (ch!='y'))
+                    {
+                        DISPLAY("No. Operation aborted : %s already exists \n", dstFileName);
+                        return 1;
+                    }
+                    while ((ch!=EOF) && (ch!='\n')) ch = getchar();  /* flush rest of input line */
+                }
+            }
+        }
+        *fileOutPtr = fopen( dstFileName, "wb" );
+    }
+
+    if (*fileOutPtr==0) EXM_THROW(13, "Pb opening %s", dstFileName);
+
+    return 0;
+}
+
+/*!FIO_loadFile
+*  creates a buffer, pointed by *bufferPtr,
+*  loads "filename" content into it
+*  up to MAX_DICT_SIZE bytes
+*/
+static size_t FIO_loadFile(void** bufferPtr, const char* fileName)
+{
+    FILE* fileHandle;
+    size_t readSize;
+    U64 fileSize;
+
+    *bufferPtr = NULL;
+    if (fileName == NULL)
+        return 0;
+
+    DISPLAYLEVEL(4,"Loading %s as dictionary \n", fileName);
+    fileHandle = fopen(fileName, "rb");
+    if (fileHandle==0) EXM_THROW(31, "Error opening file %s", fileName);
+    fileSize = FIO_getFileSize(fileName);
+    if (fileSize > MAX_DICT_SIZE)
+    {
+        int seekResult;
+        if (fileSize > 1 GB) EXM_THROW(32, "Dictionary file %s is too large", fileName);   /* avoid extreme cases */
+        DISPLAYLEVEL(2,"Dictionary %s is too large : using last %u bytes only \n", fileName, MAX_DICT_SIZE);
+        seekResult = fseek(fileHandle, (long int)(fileSize-MAX_DICT_SIZE), SEEK_SET);   /* use end of file */
+        if (seekResult != 0) EXM_THROW(33, "Error seeking into file %s", fileName);
+        fileSize = MAX_DICT_SIZE;
+    }
+    *bufferPtr = (BYTE*)malloc((size_t)fileSize);
+    if (*bufferPtr==NULL) EXM_THROW(34, "Allocation error : not enough memory for dictBuffer");
+    readSize = fread(*bufferPtr, 1, (size_t)fileSize, fileHandle);
+    if (readSize!=fileSize) EXM_THROW(35, "Error reading dictionary file %s", fileName);
+    fclose(fileHandle);
+    return (size_t)fileSize;
+}
+
+
+/* **********************************************************************
+*  Compression
+************************************************************************/
+typedef struct {
+    void*  srcBuffer;
+    size_t srcBufferSize;
+    void*  dstBuffer;
+    size_t dstBufferSize;
+    void*  dictBuffer;
+    size_t dictBufferSize;
+    ZBUFF_CCtx* ctx;
+} cRess_t;
+
+static cRess_t FIO_createCResources(const char* dictFileName)
+{
+    cRess_t ress;
+
+    ress.ctx = ZBUFF_createCCtx();
+    if (ress.ctx == NULL) EXM_THROW(30, "Allocation error : can't create ZBUFF context");
 
     /* Allocate Memory */
-    ctx = createC();
-    inBuff  = (BYTE*)malloc(inBuffSize);
-    outBuff = (BYTE*)malloc(outBuffSize);
-    if (!inBuff || !outBuff || !ctx) EXM_THROW(21, "Allocation error : not enough memory");
-    inSlot = inBuff;
-    inEnd = inBuff + inBuffSize;
+    ress.srcBufferSize = ZBUFF_recommendedCInSize();
+    ress.srcBuffer = malloc(ress.srcBufferSize);
+    ress.dstBufferSize = ZBUFF_recommendedCOutSize();
+    ress.dstBuffer = malloc(ress.dstBufferSize);
+    if (!ress.srcBuffer || !ress.dstBuffer) EXM_THROW(31, "Allocation error : not enough memory");
 
-    /* Write Frame Header */
-    cSize = initC(ctx, outBuff, outBuffSize, cLevel, filesize);
-    if (ZSTD_isError(cSize)) EXM_THROW(22, "Compression error : cannot create frame header");
+    /* dictionary */
+    ress.dictBufferSize = FIO_loadFile(&(ress.dictBuffer), dictFileName);
 
-    sizeCheck = fwrite(outBuff, 1, cSize, foutput);
-    if (sizeCheck!=cSize) EXM_THROW(23, "Write error : cannot write header into %s", output_filename);
-    compressedfilesize += cSize;
-    filesize = 0;
+    return ress;
+}
+
+static void FIO_freeCResources(cRess_t ress)
+{
+    size_t errorCode;
+    free(ress.srcBuffer);
+    free(ress.dstBuffer);
+    free(ress.dictBuffer);
+    errorCode = ZBUFF_freeCCtx(ress.ctx);
+    if (ZBUFF_isError(errorCode)) EXM_THROW(38, "Error : can't release ZBUFF context resource : %s", ZBUFF_getErrorName(errorCode));
+}
+
+
+/*
+ * FIO_compressFilename_extRess()
+ * result : 0 : compression completed correctly
+ *          1 : missing or pb opening srcFileName
+ */
+static int FIO_compressFilename_extRess(cRess_t ress,
+                                        const char* dstFileName, const char* srcFileName,
+                                        int cLevel)
+{
+    FILE* srcFile;
+    FILE* dstFile;
+    U64 filesize = 0;
+    U64 compressedfilesize = 0;
+    size_t dictSize = ress.dictBufferSize;
+    size_t sizeCheck, errorCode;
+
+    /* File check */
+    if (FIO_getFiles(&dstFile, &srcFile, dstFileName, srcFileName)) return 1;
+
+    /* init */
+    filesize = FIO_getFileSize(srcFileName) + dictSize;
+    errorCode = ZBUFF_compressInit_advanced(ress.ctx, ZSTD_getParams(cLevel, filesize));
+    if (ZBUFF_isError(errorCode)) EXM_THROW(21, "Error initializing compression");
+    errorCode = ZBUFF_compressWithDictionary(ress.ctx, ress.dictBuffer, ress.dictBufferSize);
+    if (ZBUFF_isError(errorCode)) EXM_THROW(22, "Error initializing dictionary");
 
     /* Main compression loop */
+    filesize = 0;
     while (1)
     {
         size_t inSize;
 
         /* Fill input Buffer */
-        if (inSlot + blockSize > inEnd) inSlot = inBuff;
-        inSize = fread(inSlot, (size_t)1, blockSize, finput);
+        inSize = fread(ress.srcBuffer, (size_t)1, ress.srcBufferSize, srcFile);
         if (inSize==0) break;
         filesize += inSize;
-        DISPLAYUPDATE(2, "\rRead : %u MB   ", (U32)(filesize>>20));
+        DISPLAYUPDATE(2, "\rRead : %u MB  ", (U32)(filesize>>20));
 
-        /* Compress Block */
-        cSize = continueC(ctx, outBuff, outBuffSize, inSlot, inSize);
-        if (ZSTD_isError(cSize))
-            EXM_THROW(24, "Compression error : %s ", ZSTD_getErrorName(cSize));
+        {
+            /* Compress (buffered streaming ensures appropriate formatting) */
+            size_t usedInSize = inSize;
+            size_t cSize = ress.dstBufferSize;
+            size_t result = ZBUFF_compressContinue(ress.ctx, ress.dstBuffer, &cSize, ress.srcBuffer, &usedInSize);
+            if (ZBUFF_isError(result))
+                EXM_THROW(23, "Compression error : %s ", ZBUFF_getErrorName(result));
+            if (inSize != usedInSize)
+                /* inBuff should be entirely consumed since buffer sizes are recommended ones */
+                EXM_THROW(24, "Compression error : input block not fully consumed");
 
-        /* Write cBlock */
-        sizeCheck = fwrite(outBuff, 1, cSize, foutput);
-        if (sizeCheck!=cSize) EXM_THROW(25, "Write error : cannot write compressed block into %s", output_filename);
-        compressedfilesize += cSize;
-        inSlot += inSize;
+            /* Write cBlock */
+            sizeCheck = fwrite(ress.dstBuffer, 1, cSize, dstFile);
+            if (sizeCheck!=cSize) EXM_THROW(25, "Write error : cannot write compressed block into %s", dstFileName);
+            compressedfilesize += cSize;
+        }
 
         DISPLAYUPDATE(2, "\rRead : %u MB  ==> %.2f%%   ", (U32)(filesize>>20), (double)compressedfilesize/filesize*100);
     }
 
     /* End of Frame */
-    cSize = endC(ctx, outBuff, outBuffSize);
-    if (ZSTD_isError(cSize)) EXM_THROW(26, "Compression error : cannot create frame end");
+    {
+        size_t cSize = ress.dstBufferSize;
+        size_t result = ZBUFF_compressEnd(ress.ctx, ress.dstBuffer, &cSize);
+        if (result!=0) EXM_THROW(26, "Compression error : cannot create frame end");
 
-    sizeCheck = fwrite(outBuff, 1, cSize, foutput);
-    if (sizeCheck!=cSize) EXM_THROW(27, "Write error : cannot write frame end into %s", output_filename);
-    compressedfilesize += cSize;
+        sizeCheck = fwrite(ress.dstBuffer, 1, cSize, dstFile);
+        if (sizeCheck!=cSize) EXM_THROW(27, "Write error : cannot write frame end into %s", dstFileName);
+        compressedfilesize += cSize;
+    }
 
     /* Status */
     DISPLAYLEVEL(2, "\r%79s\r", "");
@@ -375,219 +409,246 @@ unsigned long long FIO_compressFilename(const char* output_filename, const char*
         (unsigned long long) filesize, (unsigned long long) compressedfilesize, (double)compressedfilesize/filesize*100);
 
     /* clean */
-    free(inBuff);
-    free(outBuff);
-    freeC(ctx);
-    fclose(finput);
-    if (fclose(foutput)) EXM_THROW(28, "Write error : cannot properly close %s", output_filename);
+    fclose(srcFile);
+    if (fclose(dstFile)) EXM_THROW(28, "Write error : cannot properly close %s", dstFileName);
 
-    return compressedfilesize;
+    return 0;
 }
 
 
-unsigned long long FIO_decompressFrame(FILE* foutput, FILE* finput,
-                                       BYTE* inBuff, size_t inBuffSize,
-                                       BYTE* outBuff, size_t outBuffSize,
-                                       ZSTD_DCtx* dctx)
+int FIO_compressFilename(const char* dstFileName, const char* srcFileName,
+                         const char* dictFileName, int compressionLevel)
 {
-    BYTE* op = outBuff;
-    BYTE* const oend = outBuff + outBuffSize;
-    U64   filesize = 0;
-    size_t toRead;
-    size_t sizeCheck;
-
-
-    /* Main decompression Loop */
-    toRead = ZSTD_nextSrcSizeToDecompress(dctx);
-    while (toRead)
-    {
-        size_t readSize, decodedSize;
-
-        /* Fill input buffer */
-        if (toRead > inBuffSize)
-            EXM_THROW(34, "too large block");
-        readSize = fread(inBuff, 1, toRead, finput);
-        if (readSize != toRead)
-            EXM_THROW(35, "Read error");
-
-        /* Decode block */
-        decodedSize = ZSTD_decompressContinue(dctx, op, oend-op, inBuff, readSize);
-        if (ZSTD_isError(decodedSize)) EXM_THROW(36, "Decoding error : input corrupted");
-
-        if (decodedSize)   /* not a header */
-        {
-            /* Write block */
-            sizeCheck = fwrite(op, 1, decodedSize, foutput);
-            if (sizeCheck != decodedSize) EXM_THROW(37, "Write error : unable to write data block to destination file");
-            filesize += decodedSize;
-            op += decodedSize;
-            if (op==oend) op = outBuff;
-            DISPLAYUPDATE(2, "\rDecoded : %u MB...     ", (U32)(filesize>>20) );
-        }
-
-        /* prepare for next Block */
-        toRead = ZSTD_nextSrcSizeToDecompress(dctx);
-    }
-
-    return filesize;
-}
-
-
-#define MAXHEADERSIZE (FIO_FRAMEHEADERSIZE+3)
-unsigned long long FIO_decompressFilename(const char* output_filename, const char* input_filename)
-{
-    FILE* finput, *foutput;
-    BYTE* inBuff=NULL;
-    size_t inBuffSize = 0;
-    BYTE* outBuff=NULL;
-    size_t outBuffSize = 0;
-    U32   blockSize = 128 KB;
-    U32   wNbBlocks = 4;
-    U64   filesize = 0;
-    BYTE* header[MAXHEADERSIZE];
-    size_t toRead;
-    size_t sizeCheck;
-
+    clock_t start, end;
+    cRess_t ress;
+    int issueWithSrcFile = 0;
 
     /* Init */
-    ZSTD_DCtx* dctx = ZSTD_createDCtx();
-    FIO_getFileHandles(&finput, &foutput, input_filename, output_filename);
+    start = clock();
+    ress = FIO_createCResources(dictFileName);
+
+    /* Compress File */
+    issueWithSrcFile += FIO_compressFilename_extRess(ress, dstFileName, srcFileName, compressionLevel);
+
+    /* Free resources */
+    FIO_freeCResources(ress);
+
+    /* Final Status */
+    end = clock();
+    {
+        double seconds = (double)(end - start) / CLOCKS_PER_SEC;
+        DISPLAYLEVEL(4, "Completed in %.2f sec \n", seconds);
+    }
+
+    return issueWithSrcFile;
+}
+
+
+#define FNSPACE 30
+int FIO_compressMultipleFilenames(const char** inFileNamesTable, unsigned nbFiles,
+                                  const char* suffix,
+                                  const char* dictFileName, int compressionLevel)
+{
+    unsigned u;
+    int missed_files = 0;
+    char* dstFileName = (char*)malloc(FNSPACE);
+    size_t dfnSize = FNSPACE;
+    const size_t suffixSize = strlen(suffix);
+    cRess_t ress;
+
+    /* init */
+    ress = FIO_createCResources(dictFileName);
+
+    /* loop on each file */
+    for (u=0; u<nbFiles; u++)
+    {
+        size_t ifnSize = strlen(inFileNamesTable[u]);
+        if (dfnSize <= ifnSize+suffixSize+1) { free(dstFileName); dfnSize = ifnSize + 20; dstFileName = (char*)malloc(dfnSize); }
+        strcpy(dstFileName, inFileNamesTable[u]);
+        strcat(dstFileName, suffix);
+
+        missed_files += FIO_compressFilename_extRess(ress, dstFileName, inFileNamesTable[u], compressionLevel);
+    }
+
+    /* Close & Free */
+    FIO_freeCResources(ress);
+    free(dstFileName);
+
+    return missed_files;
+}
+
+
+/* **************************************************************************
+*  Decompression
+****************************************************************************/
+typedef struct {
+    void*  srcBuffer;
+    size_t srcBufferSize;
+    void*  dstBuffer;
+    size_t dstBufferSize;
+    void*  dictBuffer;
+    size_t dictBufferSize;
+    ZBUFF_DCtx* dctx;
+} dRess_t;
+
+static dRess_t FIO_createDResources(const char* dictFileName)
+{
+    dRess_t ress;
+
+    /* init */
+    ress.dctx = ZBUFF_createDCtx();
+    if (ress.dctx==NULL) EXM_THROW(60, "Can't create ZBUFF decompression context");
+
+    /* Allocate Memory */
+    ress.srcBufferSize = ZBUFF_recommendedDInSize();
+    ress.srcBuffer = malloc(ress.srcBufferSize);
+    ress.dstBufferSize = ZBUFF_recommendedDOutSize();
+    ress.dstBuffer = malloc(ress.dstBufferSize);
+    if (!ress.srcBuffer || !ress.dstBuffer) EXM_THROW(61, "Allocation error : not enough memory");
+
+    /* dictionary */
+    ress.dictBufferSize = FIO_loadFile(&(ress.dictBuffer), dictFileName);
+
+    return ress;
+}
+
+static void FIO_freeDResources(dRess_t ress)
+{
+    size_t errorCode = ZBUFF_freeDCtx(ress.dctx);
+    if (ZBUFF_isError(errorCode)) EXM_THROW(69, "Error : can't free ZBUFF context resource : %s", ZBUFF_getErrorName(errorCode));
+    free(ress.srcBuffer);
+    free(ress.dstBuffer);
+    free(ress.dictBuffer);
+}
+
+
+unsigned long long FIO_decompressFrame(dRess_t ress,
+                                       FILE* foutput, FILE* finput, size_t alreadyLoaded)
+{
+    U64    frameSize = 0;
+    size_t readSize=alreadyLoaded;
+
+    /* Main decompression Loop */
+    ZBUFF_decompressInit(ress.dctx);
+    ZBUFF_decompressWithDictionary(ress.dctx, ress.dictBuffer, ress.dictBufferSize);
+    while (1)
+    {
+        /* Decode */
+        size_t sizeCheck;
+        size_t inSize=readSize, decodedSize=ress.dstBufferSize;
+        size_t toRead = ZBUFF_decompressContinue(ress.dctx, ress.dstBuffer, &decodedSize, ress.srcBuffer, &inSize);
+        if (ZBUFF_isError(toRead)) EXM_THROW(36, "Decoding error : %s", ZBUFF_getErrorName(toRead));
+        readSize -= inSize;
+
+        /* Write block */
+        sizeCheck = fwrite(ress.dstBuffer, 1, decodedSize, foutput);
+        if (sizeCheck != decodedSize) EXM_THROW(37, "Write error : unable to write data block to destination file");
+        frameSize += decodedSize;
+        DISPLAYUPDATE(2, "\rDecoded : %u MB...     ", (U32)(frameSize>>20) );
+
+        if (toRead == 0) break;
+        if (readSize) EXM_THROW(38, "Decoding error : should consume entire input");
+
+        /* Fill input buffer */
+        if (toRead > ress.srcBufferSize) EXM_THROW(34, "too large block");
+        readSize = fread(ress.srcBuffer, 1, toRead, finput);
+        if (readSize != toRead) EXM_THROW(35, "Read error");
+    }
+
+    return frameSize;
+}
+
+
+static int FIO_decompressFile_extRess(dRess_t ress,
+                                      const char* dstFileName, const char* srcFileName)
+{
+    unsigned long long filesize = 0;
+    FILE* srcFile;
+    FILE* dstFile;
+
+    /* Init */
+    if (FIO_getFiles(&dstFile, &srcFile, dstFileName, srcFileName)) return 1;
 
     /* for each frame */
     for ( ; ; )
     {
+        size_t sizeCheck;
         /* check magic number -> version */
-        U32 magicNumber;
-        toRead = sizeof(ZSTD_magicNumber);;
-        sizeCheck = fread(header, (size_t)1, toRead, finput);
+        size_t toRead = 4;
+        sizeCheck = fread(ress.srcBuffer, (size_t)1, toRead, srcFile);
         if (sizeCheck==0) break;   /* no more input */
         if (sizeCheck != toRead) EXM_THROW(31, "Read error : cannot read header");
-
-        magicNumber = MEM_readLE32(header);
 #if defined(ZSTD_LEGACY_SUPPORT) && (ZSTD_LEGACY_SUPPORT==1)
-        if (ZSTD_isLegacy(magicNumber))
+        if (ZSTD_isLegacy(MEM_readLE32(ress.srcBuffer)))
         {
-            filesize += FIO_decompressLegacyFrame(foutput, finput, magicNumber);
+            filesize += FIO_decompressLegacyFrame(dstFile, srcFile, MEM_readLE32(ress.srcBuffer));
             continue;
         }
 #endif   /* ZSTD_LEGACY_SUPPORT */
-        if (magicNumber != ZSTD_magicNumber) EXM_THROW(32, "Error : unknown frame prefix");
 
-        /* prepare frame decompression, by completing header */
-        ZSTD_resetDCtx(dctx);
-        toRead = ZSTD_nextSrcSizeToDecompress(dctx) - sizeof(ZSTD_magicNumber);
-        if (toRead > MAXHEADERSIZE) EXM_THROW(30, "Not enough memory to read header");
-        sizeCheck = fread(&header[sizeof(ZSTD_magicNumber)], 1, toRead, finput);
-        if (sizeCheck != toRead) EXM_THROW(31, "Read error : cannot read header");
-        sizeCheck = ZSTD_decompressContinue(dctx, NULL, 0, header, sizeof(ZSTD_magicNumber)+toRead);   // Decode frame header
-        if (ZSTD_isError(sizeCheck)) EXM_THROW(32, "Error decoding header");
-
-        /* Here later : blockSize determination */
-
-        /* Allocate Memory (if needed) */
-        {
-            size_t newInBuffSize = blockSize + FIO_blockHeaderSize;
-            size_t newOutBuffSize = wNbBlocks * blockSize;
-            if (newInBuffSize > inBuffSize)
-            {
-                free(inBuff);
-                inBuffSize = newInBuffSize;
-                inBuff  = (BYTE*)malloc(inBuffSize);
-            }
-            if (newOutBuffSize > outBuffSize)
-            {
-                free(outBuff);
-                outBuffSize = newOutBuffSize;
-                outBuff  = (BYTE*)malloc(outBuffSize);
-            }
-        }
-        if (!inBuff || !outBuff) EXM_THROW(33, "Allocation error : not enough memory");
-
-        filesize += FIO_decompressFrame(foutput, finput, inBuff, inBuffSize, outBuff, outBuffSize, dctx);
+        filesize += FIO_decompressFrame(ress, dstFile, srcFile, toRead);
     }
 
+    /* Final Status */
     DISPLAYLEVEL(2, "\r%79s\r", "");
-    DISPLAYLEVEL(2, "Decoded %llu bytes   \n", (long long unsigned)filesize);
+    DISPLAYLEVEL(2, "Successfully decoded %llu bytes \n", filesize);
 
-    /* clean */
-    free(inBuff);
-    free(outBuff);
-    ZSTD_freeDCtx(dctx);
-    fclose(finput);
-    if (fclose(foutput)) EXM_THROW(38, "Write error : cannot properly close %s", output_filename);
+    /* Close */
+    fclose(srcFile);
+    if (fclose(dstFile)) EXM_THROW(38, "Write error : cannot properly close %s", dstFileName);
 
-    return filesize;
+    return 0;
 }
 
 
-#if 0
-unsigned long long FIO_decompressFilename(const char* output_filename, const char* input_filename)
+int FIO_decompressFilename(const char* dstFileName, const char* srcFileName,
+                           const char* dictFileName)
 {
-    FILE* finput, *foutput;
-    BYTE* inBuff=NULL;
-    size_t inBuffSize = 0;
-    BYTE* outBuff=NULL;
-    size_t outBuffSize = 0;
-    U32   blockSize = 128 KB;
-    U32   wNbBlocks = 4;
-    U64   filesize = 0;
-    BYTE* header[MAXHEADERSIZE];
-    ZSTD_Dctx* dctx;
-    size_t toRead;
-    size_t sizeCheck;
+    int missingFiles = 0;
+    dRess_t ress = FIO_createDResources(dictFileName);
+
+    missingFiles += FIO_decompressFile_extRess(ress, dstFileName, srcFileName);
+
+    FIO_freeDResources(ress);
+    return missingFiles;
+}
 
 
-    /* Init */
-    FIO_getFileHandles(&finput, &foutput, input_filename, output_filename);
-    dctx = ZSTD_createDCtx();
+#define MAXSUFFIXSIZE 8
+int FIO_decompressMultipleFilenames(const char** srcNamesTable, unsigned nbFiles,
+                                    const char* suffix,
+                                    const char* dictFileName)
+{
+    unsigned u;
+    int skippedFiles = 0;
+    int missingFiles = 0;
+    char* dstFileName = (char*)malloc(FNSPACE);
+    size_t dfnSize = FNSPACE;
+    const size_t suffixSize = strlen(suffix);
+    dRess_t ress;
 
-    /* for each frame */
-    for ( ; ; )
+	if (dstFileName==NULL) EXM_THROW(70, "not enough memory for dstFileName");
+    ress = FIO_createDResources(dictFileName);
+
+    for (u=0; u<nbFiles; u++)
     {
-        /* check header */
-        ZSTD_resetDCtx(dctx);
-        toRead = ZSTD_nextSrcSizeToDecompress(dctx);
-        if (toRead > MAXHEADERSIZE) EXM_THROW(30, "Not enough memory to read header");
-        sizeCheck = fread(header, (size_t)1, toRead, finput);
-        if (sizeCheck==0) break;   /* no more input */
-        if (sizeCheck != toRead) EXM_THROW(31, "Read error : cannot read header");
-        sizeCheck = ZSTD_decompressContinue(dctx, NULL, 0, header, toRead);   // Decode frame header
-        if (ZSTD_isError(sizeCheck)) EXM_THROW(32, "Error decoding header");
-
-        /* Here later : blockSize determination */
-
-        /* Allocate Memory (if needed) */
+        const char* srcFileName = srcNamesTable[u];
+        size_t sfnSize = strlen(srcFileName);
+        const char* suffixPtr = srcFileName + sfnSize - suffixSize;
+        if (dfnSize <= sfnSize-suffixSize+1) { free(dstFileName); dfnSize = sfnSize + 20; dstFileName = (char*)malloc(dfnSize); if (dstFileName==NULL) EXM_THROW(71, "not enough memory for dstFileName"); }
+        if (sfnSize <= suffixSize  ||  strcmp(suffixPtr, suffix) != 0)
         {
-            size_t newInBuffSize = blockSize + FIO_blockHeaderSize;
-            size_t newOutBuffSize = wNbBlocks * blockSize;
-            if (newInBuffSize > inBuffSize)
-            {
-                free(inBuff);
-                inBuffSize = newInBuffSize;
-                inBuff  = (BYTE*)malloc(inBuffSize);
-            }
-            if (newOutBuffSize > outBuffSize)
-            {
-                free(outBuff);
-                outBuffSize = newOutBuffSize;
-                outBuff  = (BYTE*)malloc(outBuffSize);
-            }
+            DISPLAYLEVEL(1, "File extension doesn't match expected extension (%4s); will not process file: %s\n", suffix, srcFileName);
+            skippedFiles++;
+            continue;
         }
-        if (!inBuff || !outBuff) EXM_THROW(33, "Allocation error : not enough memory");
+        memcpy(dstFileName, srcFileName, sfnSize - suffixSize);
+        dstFileName[sfnSize-suffixSize] = '\0';
 
-        filesize += FIO_decompressFrame(foutput, finput, inBuff, inBuffSize, outBuff, outBuffSize, dctx);
+        missingFiles += FIO_decompressFile_extRess(ress, dstFileName, srcFileName);
     }
 
-    DISPLAYLEVEL(2, "\r%79s\r", "");
-    DISPLAYLEVEL(2, "Decoded %llu bytes   \n", (long long unsigned)filesize);
-
-    /* clean */
-    free(inBuff);
-    free(outBuff);
-    ZSTD_freeDCtx(dctx);
-    fclose(finput);
-    if (fclose(foutput)) EXM_THROW(38, "Write error : cannot properly close %s", output_filename);
-
-    return filesize;
+    FIO_freeDResources(ress);
+    free(dstFileName);
+    return missingFiles + skippedFiles;
 }
-#endif

@@ -116,6 +116,9 @@ class BaseCompressTool(object):
         elif name == "zstd":
             from dedupsqlfs.compression.zstd import ZstdCompression
             self._compressors[name] = ZstdCompression()
+        elif name == "zstd036":
+            from dedupsqlfs.compression.zstd036 import Zstd036Compression
+            self._compressors[name] = Zstd036Compression()
         elif name == "zstd001":
             from dedupsqlfs.compression.zstd001 import Zstd001Compression
             self._compressors[name] = Zstd001Compression()

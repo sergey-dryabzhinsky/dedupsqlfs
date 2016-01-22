@@ -29,7 +29,7 @@ class Zstd001Compression(BaseCompression):
     def isDataMayBeCompressed(self, data):
         """
         Disallow compression
-        It's deprecated version is ZSTD
+        It's deprecated version of ZSTD
 
         @param data:
         @return:

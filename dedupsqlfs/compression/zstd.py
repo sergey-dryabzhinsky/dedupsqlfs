@@ -4,7 +4,7 @@ __author__ = 'sergey'
 
 """
 Class for Zstd compression helper
-New version 0.3+
+New version 0.4+
 """
 
 from dedupsqlfs.compression import BaseCompression
@@ -21,9 +21,6 @@ class ZstdCompression(BaseCompression):
 
     def _init_module(self):
         super()._init_module()
-
-        module = __import__('zstd001')
-        self._func_decomp_old = getattr(module, "decompress")
         return
 
     def getFastCompressionOptions(self):
@@ -53,11 +50,6 @@ class ZstdCompression(BaseCompression):
 
     def decompressData(self, cdata):
         """
-        Try to decompress by new version
-        If can't - try old version
-
-        Thats because maybe some data was compressed before migrations arraived
-
         @param cdata:
         @return:
         """
@@ -68,10 +60,6 @@ class ZstdCompression(BaseCompression):
                 raise e
             data = False
             pass
-
-        if data is False:
-            data = self._func_decomp_old(cdata)
-
         return data
 
     pass

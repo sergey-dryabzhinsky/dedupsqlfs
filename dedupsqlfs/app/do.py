@@ -305,7 +305,9 @@ def data_vacuum(options, _fuse):
 
     _fuse.operations.init()
     _fuse.operations.should_vacuum = True
+    _fuse.getLogger().setLevel(logging.INFO)
     _fuse.operations.forced_vacuum()
+    _fuse.getLogger().setLevel(logging.ERROR)
     _fuse.operations.destroy()
     return 0
 

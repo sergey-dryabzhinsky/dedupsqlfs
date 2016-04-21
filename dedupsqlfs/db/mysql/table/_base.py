@@ -277,7 +277,7 @@ class Table( object ):
 
         sz = format_size(abs(newSize - oldSize))
 
-        self.getLogger().info("DB '%s' size change after vacuum: %s%.2f%% (%s%s)" % (
+        self.getLogger().info("DB table '%s' size change after vacuum: %s%.2f%% (%s%s)" % (
             self.getName(), diffSign, abs(newSize - oldSize) * 100.0 / oldSize, diffSign, sz,))
 
         self.stopTimer("vacuum")

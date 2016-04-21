@@ -112,6 +112,21 @@ class Table( object ):
             self._db_file_path = os.path.abspath(self._db_file_path)
         return self._db_file_path
 
+    def calcFilePageSize(self):
+        db_path = self.getDbFilePath()
+
+        pageSize = self._page_size
+        if os.path.isfile(db_path):
+            fileSize = os.path.getsize(db_path)
+        else:
+            fileSize = 0
+        filePageSize = fileSize * 1.05 / 2 / 1000 / 1000 / 1000
+        while pageSize < filePageSize:
+            pageSize *= 2
+            if pageSize >= 64 * 1024:
+                break
+        return pageSize
+
     def connect( self ):
         import sqlite3
 
@@ -122,17 +137,10 @@ class Table( object ):
             os.makedirs(db_dir)
 
         isNew = False
-        pageSize = self._page_size
-        if os.path.isfile(db_path):
-            fileSize = os.path.getsize(db_path)
-        else:
+        if not os.path.isfile(db_path):
             isNew = True
-            fileSize = 0
-        filePageSize = fileSize / 2147483646.0 * 1.05
-        while pageSize < filePageSize:
-            pageSize *= 2
-            if pageSize >= 64*1024:
-                break
+
+        pageSize = self.calcFilePageSize()
 
         cacheSize = 64*1024*1024 / pageSize
 
@@ -245,6 +253,8 @@ class Table( object ):
             # Nothing to do
             return self
 
+        pageSize = self.calcFilePageSize()
+
         oldSize = os.path.getsize(fn)
 
         bkp_fn = fn + ".bkp"
@@ -252,7 +262,12 @@ class Table( object ):
         os.rename(fn, bkp_fn)
 
         p1 = subprocess.Popen(["sqlite3", bkp_fn, ".dump"], stdout=subprocess.PIPE)
-        p2 = subprocess.Popen(["sqlite3", fn], stdin=p1.stdout, stdout=open(os.devnull,"w"))
+        p2 = subprocess.Popen([
+            "sqlite3",
+            "-cmd",
+            "PRAGMA page_size=%i; PRAGMA synchronous=OFF; PRAGMA max_page_count=2147483646;" % pageSize,
+            fn
+        ], stdin=p1.stdout, stdout=open(os.devnull,"w"))
 
         ret = p1.wait() > 0 or p2.wait() > 0
         if ret:
@@ -270,7 +285,7 @@ class Table( object ):
 
         sz = format_size(abs(newSize - oldSize))
 
-        self.getLogger().info("DB '%s' size change after vacuum: %s%.2f%% (%s%s)" % (
+        self.getLogger().info("DB table '%s' size change after vacuum: %s%.2f%% (%s%s)" % (
             self.getName(), diffSign, abs(newSize - oldSize) * 100.0 / oldSize, diffSign, sz,))
 
         self.stopTimer("vacuum")

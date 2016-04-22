@@ -18,6 +18,7 @@ class Table( object ):
 
     _db_file_path = None
     _table_name = None
+    _table_file_name = None
     _manager = None
     _autocommit = True
 
@@ -99,6 +100,15 @@ class Table( object ):
         self._table_name = tableName
         return self
 
+    def getFileName(self):
+        if self._table_file_name:
+            return self._table_file_name
+        return self._table_name
+
+    def setFileName(self, tableFileName):
+        self._table_file_name = tableFileName
+        return self
+
     def getManager(self):
         return self._manager
 
@@ -107,7 +117,7 @@ class Table( object ):
             self._db_file_path = os.path.join(
                 self.getManager().getBasePath(),
                 self.getManager().getDbName(),
-                "%s.sqlite3" % self.getName()
+                "%s.sqlite3" % self.getFileName()
             )
             self._db_file_path = os.path.abspath(self._db_file_path)
         return self._db_file_path

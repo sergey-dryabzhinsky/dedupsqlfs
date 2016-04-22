@@ -7,6 +7,8 @@ import shutil
 
 class DbManager( object ):
 
+    TYPE = "sqlite"
+
     _table = None
     _db_name = "dedupsqlfs"
     _base_path = "/dev/shm/db"
@@ -92,7 +94,7 @@ class DbManager( object ):
             elif name.startswith("tree_"):
                 from dedupsqlfs.db.sqlite.table.tree import TableTree
                 self._table[ name ] = TableTree(self)
-                self._table[ name ].setName(name)
+                self._table[ name ].setFileName(name)
             elif name == "name":
                 from dedupsqlfs.db.sqlite.table.name import TableName
                 self._table[ name ] = TableName(self)
@@ -104,14 +106,14 @@ class DbManager( object ):
                     and not name.startswith("inode_option"):
                 from dedupsqlfs.db.sqlite.table.inode import TableInode
                 self._table[ name ] = TableInode(self)
-                self._table[ name ].setName(name)
+                self._table[ name ].setFileName(name)
             elif name == "link":
                 from dedupsqlfs.db.sqlite.table.link import TableLink
                 self._table[ name ] = TableLink(self)
             elif name.startswith("link_"):
                 from dedupsqlfs.db.sqlite.table.link import TableLink
                 self._table[ name ] = TableLink(self)
-                self._table[ name ].setName(name)
+                self._table[ name ].setFileName(name)
             elif name == "block":
                 from dedupsqlfs.db.sqlite.table.block import TableBlock
                 self._table[ name ] = TableBlock(self)
@@ -121,7 +123,7 @@ class DbManager( object ):
             elif name.startswith("xattr_"):
                 from dedupsqlfs.db.sqlite.table.xattr import TableInodeXattr
                 self._table[ name ] = TableInodeXattr(self)
-                self._table[ name ].setName(name)
+                self._table[ name ].setFileName(name)
             elif name == "compression_type":
                 from dedupsqlfs.db.sqlite.table.compression_type import TableCompressionType
                 self._table[ name ] = TableCompressionType(self)
@@ -140,7 +142,7 @@ class DbManager( object ):
             elif name.startswith("inode_option_"):
                 from dedupsqlfs.db.sqlite.table.inode_option import TableInodeOption
                 self._table[ name ] = TableInodeOption(self)
-                self._table[ name ].setName(name)
+                self._table[ name ].setFileName(name)
             elif name == "hash":
                 from dedupsqlfs.db.sqlite.table.hash import TableHash
                 self._table[ name ] = TableHash(self)
@@ -150,7 +152,7 @@ class DbManager( object ):
             elif name.startswith("inode_hash_block_"):
                 from dedupsqlfs.db.sqlite.table.inode_hash_block import TableInodeHashBlock
                 self._table[ name ] = TableInodeHashBlock(self)
-                self._table[ name ].setName(name)
+                self._table[ name ].setFileName(name)
             elif name == "subvolume":
                 from dedupsqlfs.db.sqlite.table.subvolume import TableSubvolume
                 self._table[ name ] = TableSubvolume(self)

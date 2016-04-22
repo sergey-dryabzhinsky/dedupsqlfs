@@ -14,6 +14,8 @@ cursor_type = pymysql.cursors.DictCursor
 
 class DbManager( object ):
 
+    TYPE = "mysql"
+
     _table = None
     _table_engine = 'MyISAM'
     _db_name = "dedupsqlfs"

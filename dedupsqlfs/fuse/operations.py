@@ -1250,7 +1250,12 @@ class DedupOperations(llfuse.Operations): # {{{1
 
                 block.seek(0)
                 block.write(self.__decompress(item["data"], compType["type_id"]))
-                if self.getOption('compression_recompress_now') and self.__is_deprecated(compType["type_id"]):
+
+                compression = self.getCompressionTypeName(compType["type_id"])
+
+                if self.getOption('compression_recompress_now') and self.application.isDeprecated(compression):
+                    recompress = True
+                if self.getOption('compression_recompress_current') and not self.application.isMethodSelected(compression):
                     recompress = True
 
                 self.getLogger().debug("-- decomp size: %s" % len(block.getvalue()))
@@ -1650,14 +1655,6 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.time_spent_decompressing += time() - start_time
         return result
 
-    def __is_deprecated(self, compression_type_id):
-        """
-        @param compression_type_id: int
-        @return: bool
-        """
-        compression = self.getCompressionTypeName(compression_type_id)
-        return self.application.isDeprecated(compression)
-
     def __print_stats(self): # {{{3
         if self.getLogger().isEnabledFor(logging.INFO) and self.getOption("verbose_stats"):
             self.getLogger().info('-' * 79)
@@ -1925,10 +1922,19 @@ class DedupOperations(llfuse.Operations): # {{{1
         else:
 #           hash_count = tableIndex.get_count_hash(hash_id)
 #           self.getLogger().debug("-- deduped by hash = %s, count in index db = %s" % (hash_id, hash_count,))
+            hash_CT = tableHCT.get(hash_id)
+            compression = self.getCompressionTypeName(hash_CT["type_id"])
+
             if self.getOption('compression_recompress_now'):
 
-                hash_CT = tableHCT.get(hash_id)
-                if self.__is_deprecated(hash_CT["type_id"]):
+                if self.application.isDeprecated(compression):
+                    result["recompress"] = True
+                    result["data"] = data_block
+
+
+            if self.getOption('compression_recompress_current'):
+
+                if not self.application.isMethodSelected(compression):
                     result["recompress"] = True
                     result["data"] = data_block
 
@@ -1936,7 +1942,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
                 old_block = self.getTable("block").get(hash_id)
 
-                hash_CT = tableHCT.get(hash_id)
                 old_data = self.__decompress(old_block["data"], hash_CT["type_id"])
                 if old_data != data_block:
                     self.getLogger().error("EEE: weird hashed data collision detected! hash id: %s, value: %r, inode: %s, block-number: %s" % (

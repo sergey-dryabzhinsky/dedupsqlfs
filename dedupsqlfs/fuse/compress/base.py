@@ -136,6 +136,25 @@ class BaseCompressTool(object):
         else:
             raise ValueError("Unknown compression method: %r" % (name,))
 
+    def isMethodSelected(self, name):
+        selected = False
+
+        method = self.getOption("compression_method")
+
+        if method != constants.COMPRESSION_TYPE_NONE:
+            if method not in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_CUSTOM,):
+                if method == name:
+                    selected = True
+            else:
+                methods = ()
+                if method == constants.COMPRESSION_TYPE_CUSTOM:
+                    methods = self.getOption("compression_custom")
+                for m in methods:
+                    if m == name:
+                        selected = True
+
+        return selected
+
     def _compressData(self, data):
         """
         Compress data and returns back

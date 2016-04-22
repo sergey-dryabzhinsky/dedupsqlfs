@@ -141,17 +141,16 @@ class BaseCompressTool(object):
 
         method = self.getOption("compression_method")
 
-        if method != constants.COMPRESSION_TYPE_NONE:
-            if method not in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_CUSTOM,):
-                if method == name:
+        if method not in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_CUSTOM,):
+            if method == name:
+                selected = True
+        else:
+            methods = self._compressors.keys()
+            if method == constants.COMPRESSION_TYPE_CUSTOM:
+                methods = self.getOption("compression_custom")
+            for m in methods:
+                if m == name:
                     selected = True
-            else:
-                methods = ()
-                if method == constants.COMPRESSION_TYPE_CUSTOM:
-                    methods = self.getOption("compression_custom")
-                for m in methods:
-                    if m == name:
-                        selected = True
 
         return selected
 

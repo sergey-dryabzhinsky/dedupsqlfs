@@ -22,6 +22,8 @@ class BaseCompression:
     _func_comp = None
     _func_decomp = None
 
+    _deprecated = False
+
     def __init__(self):
         if self._method_name is None:
             raise AttributeError("Attribute _method_name must be set!")
@@ -84,6 +86,13 @@ class BaseCompression:
         if self._minimal_size > data_len:
             return False
         return True
+
+    def isDeprecated(self):
+        """
+        Is (de)compression method deprecated and should not be used
+        @return: bool
+        """
+        return self._deprecated
 
     def compressData(self, data, comp_level=None):
         """

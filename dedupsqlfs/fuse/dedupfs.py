@@ -178,6 +178,8 @@ class DedupFS(object): # {{{1
     def decompressData(self, method, compressedBlock):
         return self._compressTool.decompressData(method, compressedBlock)
 
+    def isDeprecated(self, method):
+        return self._compressTool.isDeprecated(method)
 
     def setDataDirectory(self, data_dir_path):
         self.operations.getManager().setBasepath(data_dir_path)

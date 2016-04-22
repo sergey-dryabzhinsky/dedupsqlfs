@@ -16,6 +16,8 @@ class QuickLzCompression(BaseCompression):
 
     _minimal_size = 17
 
+    _deprecated = True
+
     _has_comp_level_options = False
 
     def isDataMayBeCompressed(self, data):

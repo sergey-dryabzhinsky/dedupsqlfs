@@ -169,7 +169,8 @@ def main(): # {{{1
                         help="Compression level ratio: one of %s; or INT. Defaults to %r. Not all methods support this option." % (
                             ', '.join('%r' % lvl for lvl in levels), constants.COMPRESSION_LEVEL_DEFAULT
                         ))
-    # Do not want 'best' after help setup
+
+    parser.add_argument('--recompress-on-fly', dest='compression_recompress_now', action="store_true", help="Do recompress blocks which compressed with deprecated compression method.")
 
     # Dynamically check for profiling support.
     try:

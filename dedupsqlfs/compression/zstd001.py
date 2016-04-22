@@ -16,6 +16,8 @@ class Zstd001Compression(BaseCompression):
 
     _has_comp_level_options = False
 
+    _deprecated = True
+
     _func_decomp_new = None
 
     def _init_module(self):

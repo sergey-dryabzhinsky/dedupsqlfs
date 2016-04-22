@@ -212,4 +212,13 @@ class BaseCompressTool(object):
         comp = self._compressors[ method ]
         return comp.decompressData(data)
 
+    def isDeprecated(self, method):
+        """
+        Is (de)compression method deprecated and should not be used
+
+        @return bool
+        """
+        comp = self._compressors[method]
+        return comp.isDeprecated()
+
     pass

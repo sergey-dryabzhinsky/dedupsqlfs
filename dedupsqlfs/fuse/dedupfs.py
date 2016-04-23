@@ -207,7 +207,7 @@ class DedupFS(object): # {{{1
         return self
 
     def saveCompressionMethods(self, methods=None):
-        if methods and type(methods) is list:
+        if methods and type(methods) in (list, tuple, set,):
             manager = self.operations.getManager()
             table = manager.getTable("compression_type")
             for m in methods:

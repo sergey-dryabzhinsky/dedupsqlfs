@@ -57,6 +57,9 @@ class BaseCompressTool(object):
         self._options = {}
         pass
 
+    def checkCpuLimit(self):
+        return 1
+
     def init(self):
         self.time_spent_compressing = 0
         return self

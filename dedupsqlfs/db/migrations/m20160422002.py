@@ -30,8 +30,11 @@ def run(manager):
 
             cur = table_sv.getCursor()
 
-            cur.execute("SELECT hash FROM %s WHERE name != '%s'" % (table_sv.getName(), ROOT_SUBVOLUME_NAME,))
+            cur.execute("SELECT hash, name FROM %s WHERE name != '%s'" % (table_sv.getName(), ROOT_SUBVOLUME_NAME,))
             svHashes = cur.fetchall()
+
+            manager.getLogger().info("Migration #%s: subvolumes to process = %r" % (__NUMBER__, svHashes,))
+
             for item in svHashes:
 
                 h = item["hash"].decode()
@@ -47,9 +50,9 @@ def run(manager):
                     """
                     table.setName(old_tn)
                     if table.hasTable():
+                        manager.getLogger().info("Migration #%s: alter table name %r => %r" % (__NUMBER__, old_tn, tn,))
                         cur = table.getCursor()
                         cur.execute("ALTER TABLE `%s` RENAME TO `%s`;" % (old_tn, tn,))
-                        table.commit()
                     table.setName(tn)
 
         except Exception as e:

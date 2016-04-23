@@ -36,7 +36,7 @@ def run(manager):
 
                 h = item["hash"].decode()
 
-                for tn in ("inode", "xattr", "tree", "link", "inode_option", "inode_hash_block",):
+                for tn in ["inode", "xattr", "tree", "link", "inode_option", "inode_hash_block",]:
 
                     old_tn = "%s_%s" % (tn, h,)
 

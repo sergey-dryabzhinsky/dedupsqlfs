@@ -85,6 +85,10 @@ class DedupFS(object): # {{{1
         self._fixCompressionOptions()
         self._compressTool.init()
 
+        # Do migrations here, before fs.init callback
+        self.operations.getManager()
+
+
     def postDestroy(self):
         if self.getOption('lock_file'):
             try:

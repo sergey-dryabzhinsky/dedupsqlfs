@@ -22,9 +22,11 @@ Copyright 2013-2015 Sergey Dryabzhinsky <sergey.dryabzhinsky@gmail.com>.
 """
 
 __name__ = "DedupSQLfs"
+# for fuse mount
+__fsname__ = "dedupsqlfs"
 __fsversion__ = "3.1"
 # Future 1.3
-__version__ = "1.2.902"
+__version__ = "1.2.903"
 
 # Check the Python version, warn the user if untested.
 import sys

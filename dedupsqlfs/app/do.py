@@ -33,13 +33,15 @@ try:
     import argparse
     from time import time
     import hashlib
-    import logging
-    from dedupsqlfs.lib import constants
-    from dedupsqlfs.db import check_engines
 except ImportError as e:
     msg = "Error: Failed to load one of the required Python modules! (%s)\n"
     sys.stderr.write(msg % str(e))
     sys.exit(1)
+
+from dedupsqlfs.log import logging
+from dedupsqlfs.lib import constants
+from dedupsqlfs.db import check_engines
+import dedupsqlfs
 
 def create_subvolume(options, _fuse):
     """
@@ -428,7 +430,9 @@ def main(): # {{{1
     logger.setLevel(logging.INFO)
     logger.addHandler(logging.StreamHandler(sys.stderr))
 
-    parser = argparse.ArgumentParser(conflict_handler="resolve")
+    parser = argparse.ArgumentParser(
+        prog="%s/%s do/%s" % (dedupsqlfs.__name__, dedupsqlfs.__version__, dedupsqlfs.__fsversion__),
+        conflict_handler="resolve")
 
     # Register some custom command line options with the option parser.
     generic = parser.add_argument_group('Generic')

@@ -11,14 +11,15 @@ try:
     import argparse
     from time import time
     import hashlib
-    from dedupsqlfs.lib import constants
-    from dedupsqlfs.db import check_engines
-    from dedupsqlfs.log import logging
 except ImportError as e:
     msg = "Error: Failed to load one of the required Python modules! (%s)\n"
     sys.stderr.write(msg % str(e))
     sys.exit(1)
 
+from dedupsqlfs.lib import constants
+from dedupsqlfs.db import check_engines
+from dedupsqlfs.log import logging
+import dedupsqlfs
 
 def fuse_mount(options, compression_methods=None, hash_functions=None):
     from dedupsqlfs.fuse.dedupfs import DedupFS
@@ -58,7 +59,9 @@ def main(): # {{{1
     logger.setLevel(logging.INFO)
     logger.addHandler(logging.StreamHandler(sys.stderr))
 
-    parser = argparse.ArgumentParser(conflict_handler="resolve")
+    parser = argparse.ArgumentParser(
+        prog="%s/%s mount/%s" % (dedupsqlfs.__name__, dedupsqlfs.__version__, dedupsqlfs.__fsversion__),
+        conflict_handler="resolve")
 
     # Register some custom command line options with the option parser.
     option_stored_in_db = " (this option is only useful when creating a new database, because your choice is stored in the database and can't be changed after that)"

@@ -1997,6 +1997,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         tableHCT = self.getTable("hash_compression_type")
         tableHSZ = self.getTable("hash_sizes")
 
+        wrtd_count = 0
         for hash_id, cItem in self.application.compressData(blocksToCompress):
             cdata, cmethod = cItem
 
@@ -2007,6 +2008,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             cmethod_id = self.getCompressionTypeId(cmethod)
 
             tableBlock.insert(hash_id, cdata)
+
+            wrtd_count += 1
 
             hash_CT = tableHCT.get(hash_id)
             if hash_CT:
@@ -2023,6 +2026,11 @@ class DedupOperations(llfuse.Operations): # {{{1
                 tableHSZ.insert(hash_id, writed_size, comp_size)
 
             self.bytes_written_compressed += comp_size
+
+        if wrtd_count:
+            tableBlock.commit()
+            tableHCT.commit()
+            tableHSZ.commit()
 
         self.time_spent_compressing += self.application.getCompressTool().time_spent_compressing
 

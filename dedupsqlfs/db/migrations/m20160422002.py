@@ -17,7 +17,9 @@ def run(manager):
     :return: bool
     """
 
-    if manager.TYPE in ("sqlite",):
+    manager.getLogger().info("Migration #%s: manager type = %r" % (__NUMBER__, manager.TYPE,))
+
+    if manager.TYPE == "sqlite":
 
         try:
             table_sv = manager.getTable("subvolume")

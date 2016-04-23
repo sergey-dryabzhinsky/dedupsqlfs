@@ -246,7 +246,6 @@ class DbManager( object ):
 
         # Rename files
         shutil.copyfile(t1.getDbFilePath(), t2.getDbFilePath())
-        t2.getCursor().execute("ALTER TABLE `%s` RENAME TO `%s`" % (oldTableName, newTableName,))
         return self
 
     pass

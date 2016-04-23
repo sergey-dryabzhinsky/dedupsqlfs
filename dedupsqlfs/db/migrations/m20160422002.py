@@ -9,18 +9,24 @@ __author__ = 'sergey'
 
 __NUMBER__ = 20160422002
 
+
 def run(manager):
+    """
+    :param manager: Database manager
+    :type  manager: dedupsqlfs.db.sqlite.manager.DbManager|dedupsqlfs.db.mysql.manager.DbManager
+    :return: bool
+    """
 
     if manager.TYPE in ("sqlite3",):
 
         try:
-            tableSV = manager.getTable("subvolume")
+            table_sv = manager.getTable("subvolume")
 
             from dedupsqlfs.lib.constants import ROOT_SUBVOLUME_NAME
 
-            cur = tableSV.getCursor()
+            cur = table_sv.getCursor()
 
-            cur.execute("SELECT hash FROM %s WHERE name != '%s'" % (tableSV.getName(), ROOT_SUBVOLUME_NAME,))
+            cur.execute("SELECT hash FROM %s WHERE name != '%s'" % (table_sv.getName(), ROOT_SUBVOLUME_NAME,))
             svHashes = cur.fetchall()
             for item in svHashes:
 
@@ -33,20 +39,20 @@ def run(manager):
                     table = manager.getTable(old_tn, True)
                     cur = table.getCursor()
                     cur.execute("ALTER TABLE %s RENAME TO %s;" % (old_tn, tn,))
-                    table.commit()
 
-        except Exception:
+        except Exception as e:
+            manager.getLogger().error("Migration #%s error: %s" % (__NUMBER__, e,))
             return False
 
-    tableOpts = manager.getTable("option")
+    table_opts = manager.getTable("option")
 
-    tableOpts.getCursor()
-    mignumber = tableOpts.get("migration")
+    table_opts.getCursor()
+    mignumber = table_opts.get("migration")
     if not mignumber:
-        tableOpts.insert("migration", __NUMBER__)
+        table_opts.insert("migration", __NUMBER__)
     else:
-        tableOpts.update("migration", __NUMBER__)
+        table_opts.update("migration", __NUMBER__)
 
-    tableOpts.commit()
+    table_opts.commit()
 
     return True

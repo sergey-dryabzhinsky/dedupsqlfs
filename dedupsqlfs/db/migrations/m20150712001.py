@@ -8,29 +8,36 @@ __author__ = 'sergey'
 
 __NUMBER__ = 20150712001
 
-def run(manager):
 
-    tableSubvol = manager.getTable("subvolume")
+def run(manager):
+    """
+    :param manager: Database manager
+    :type  manager: dedupsqlfs.db.sqlite.manager.DbManager|dedupsqlfs.db.mysql.manager.DbManager
+    :return: bool
+    """
+
+    table_subvol = manager.getTable("subvolume")
 
     try:
-        cur = tableSubvol.getCursor()
+        cur = table_subvol.getCursor()
 
         cur.execute("ALTER TABLE subvolume ADD COLUMN stats TEXT;")
         cur.execute("ALTER TABLE subvolume ADD COLUMN stats_at INTEGER;")
 
-        tableSubvol.commit()
-    except Exception:
+        table_subvol.commit()
+    except Exception as e:
+        manager.getLogger().error("Migration #%s error: %s" % (__NUMBER__, e,))
         return False
 
-    tableOpts = manager.getTable("option")
+    table_opts = manager.getTable("option")
 
-    tableOpts.getCursor()
-    mignumber = tableOpts.get("migration")
+    table_opts.getCursor()
+    mignumber = table_opts.get("migration")
     if not mignumber:
-        tableOpts.insert("migration", __NUMBER__)
+        table_opts.insert("migration", __NUMBER__)
     else:
-        tableOpts.update("migration", __NUMBER__)
+        table_opts.update("migration", __NUMBER__)
 
-    tableOpts.commit()
+    table_opts.commit()
 
     return True

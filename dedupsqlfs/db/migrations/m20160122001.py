@@ -9,29 +9,36 @@ __author__ = 'sergey'
 
 __NUMBER__ = 20160122001
 
-def run(manager):
 
-    tableCT = manager.getTable("compression_type")
+def run(manager):
+    """
+    :param manager: Database manager
+    :type  manager: dedupsqlfs.db.sqlite.manager.DbManager|dedupsqlfs.db.mysql.manager.DbManager
+    :return: bool
+    """
+
+    table_ct = manager.getTable("compression_type")
 
     try:
-        cur = tableCT.getCursor()
+        cur = table_ct.getCursor()
 
         cur.execute("UPDATE compression_type SET value='zstd036' WHERE value='zstd';")
         cur.execute("INSERT INTO compression_type (value) VALUES ('zstd');")
 
-        tableCT.commit()
-    except Exception:
+        table_ct.commit()
+    except Exception as e:
+        manager.getLogger().error("Migration #%s error: %s" % (__NUMBER__, e,))
         return False
 
-    tableOpts = manager.getTable("option")
+    table_opts = manager.getTable("option")
 
-    tableOpts.getCursor()
-    mignumber = tableOpts.get("migration")
+    table_opts.getCursor()
+    mignumber = table_opts.get("migration")
     if not mignumber:
-        tableOpts.insert("migration", __NUMBER__)
+        table_opts.insert("migration", __NUMBER__)
     else:
-        tableOpts.update("migration", __NUMBER__)
+        table_opts.update("migration", __NUMBER__)
 
-    tableOpts.commit()
+    table_opts.commit()
 
     return True

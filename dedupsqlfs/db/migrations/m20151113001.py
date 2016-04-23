@@ -21,7 +21,7 @@ def run(manager):
 
         tableCT.commit()
     except Exception:
-        return
+        return False
 
     tableOpts = manager.getTable("option")
 
@@ -34,4 +34,4 @@ def run(manager):
 
     tableOpts.commit()
 
-    return
+    return True

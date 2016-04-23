@@ -82,6 +82,10 @@ class DbMigration( object ):
         return
 
     def run_migration(self, migFile):
+        """
+        @param migFile: str
+        @return: bool
+        """
 
         sys.path.insert(0, self.getMigrationsDir() )
 
@@ -92,11 +96,11 @@ class DbMigration( object ):
         fp, pathname, description = imp.find_module( migMod )
         module = imp.load_module(migMod, fp, pathname, description)
 
-        module.run( self._manager )
+        ret = module.run( self._manager )
 
         sys.path.pop(0)
 
-        return
+        return ret
 
     def process(self):
         tableOpts = self._manager.getTable("option")
@@ -120,7 +124,9 @@ class DbMigration( object ):
                 continue
 
             self._log.info("Run migration %r from file %r" % (mn, migSort[mn],))
-            self.run_migration( migSort[ mn ] )
+            if not self.run_migration( migSort[ mn ] ):
+                self._log.warn("Migration %r from file %r not done!" % (mn, migSort[mn],))
+                break
 
         return
 

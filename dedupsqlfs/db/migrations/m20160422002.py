@@ -36,7 +36,7 @@ def run(manager):
                     table.commit()
 
         except Exception:
-            pass
+            return
 
     tableOpts = manager.getTable("option")
 

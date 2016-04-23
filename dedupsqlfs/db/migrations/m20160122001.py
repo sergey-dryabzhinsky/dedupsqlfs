@@ -21,7 +21,7 @@ def run(manager):
 
         tableCT.commit()
     except Exception:
-        pass
+        return
 
     tableOpts = manager.getTable("option")
 

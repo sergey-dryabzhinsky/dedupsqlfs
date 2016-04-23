@@ -20,7 +20,7 @@ def run(manager):
 
         tableSubvol.commit()
     except Exception:
-        pass
+        return
 
     tableOpts = manager.getTable("option")
 

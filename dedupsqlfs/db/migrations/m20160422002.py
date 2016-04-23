@@ -28,8 +28,6 @@ def run(manager):
 
             from dedupsqlfs.lib.constants import ROOT_SUBVOLUME_NAME
 
-            root_sv = table_sv.find(ROOT_SUBVOLUME_NAME)
-
             cur = table_sv.getCursor()
 
             cur.execute("SELECT `hash` FROM `%s`" % table_sv.getName())
@@ -40,8 +38,6 @@ def run(manager):
             for item in svHashes:
 
                 h = item["hash"].decode()
-                if h == root_sv['hash']:
-                    continue
 
                 for tn in ["inode", "xattr", "tree", "link", "inode_option", "inode_hash_block",]:
 

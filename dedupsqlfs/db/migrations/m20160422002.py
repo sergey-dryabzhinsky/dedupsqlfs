@@ -17,8 +17,6 @@ def run(manager):
     :return: bool
     """
 
-    manager.getLogger().info("Migration #%s: manager type = %r" % (__NUMBER__, manager.TYPE,))
-
     if manager.TYPE == "sqlite":
 
         try:
@@ -30,9 +28,11 @@ def run(manager):
 
             from dedupsqlfs.lib.constants import ROOT_SUBVOLUME_NAME
 
+            root_sv = table_sv.find(ROOT_SUBVOLUME_NAME)
+
             cur = table_sv.getCursor()
 
-            cur.execute("SELECT hash, name FROM %s WHERE name != '%s'" % (table_sv.getName(), ROOT_SUBVOLUME_NAME,))
+            cur.execute("SELECT `hash` FROM `%s`" % table_sv.getName())
             svHashes = cur.fetchall()
 
             manager.getLogger().info("Migration #%s: subvolumes to process = %r" % (__NUMBER__, svHashes,))
@@ -40,6 +40,8 @@ def run(manager):
             for item in svHashes:
 
                 h = item["hash"].decode()
+                if h == root_sv['hash']:
+                    continue
 
                 for tn in ["inode", "xattr", "tree", "link", "inode_option", "inode_hash_block",]:
 
@@ -58,7 +60,9 @@ def run(manager):
                     table.setName(tn)
 
         except Exception as e:
+            import traceback
             manager.getLogger().error("Migration #%s error: %s" % (__NUMBER__, e,))
+            manager.getLogger().error("Migration #%s trace:\n%s" % (__NUMBER__, traceback.format_exc(),))
             return False
 
     table_opts = manager.getTable("option")

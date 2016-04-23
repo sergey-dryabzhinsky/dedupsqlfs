@@ -2001,6 +2001,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         count = 0
 
         blocksToCompress = {}
+        blocksReCompress = {}
         blockSize = {}
 
         for inode, inode_data in cached_blocks.items():
@@ -2010,6 +2011,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                     item = self.__write_block_data(int(inode), int(block_number), block)
                     if item["hash"] and (item["new"] or item["recompress"]):
                         blocksToCompress[ item["hash"] ] = item["data"]
+                        blocksReCompress[ item["hash"] ] = item["recompress"]
                         blockSize[ item["hash"] ] = item["writed_size"]
                     if writed:
                         count += 1
@@ -2030,7 +2032,10 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             cmethod_id = self.getCompressionTypeId(cmethod)
 
-            tableBlock.insert(hash_id, cdata)
+            if blocksReCompress.get(hash_id):
+                tableBlock.update(hash_id, cdata)
+            else:
+                tableBlock.insert(hash_id, cdata)
 
             hash_CT = tableHCT.get(hash_id)
             if hash_CT:

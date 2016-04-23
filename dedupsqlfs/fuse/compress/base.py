@@ -147,7 +147,8 @@ class BaseCompressTool(object):
         else:
             methods = self._compressors.keys()
             if method == constants.COMPRESSION_TYPE_CUSTOM:
-                methods = self.getOption("compression_custom")
+                methods = tuple(self.getOption("compression_custom"))
+                methods += (constants.COMPRESSION_TYPE_NONE,)
             for m in methods:
                 if m == name:
                     selected = True

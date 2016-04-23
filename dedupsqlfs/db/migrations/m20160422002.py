@@ -13,25 +13,29 @@ def run(manager):
 
     if manager.TYPE in ("sqlite3",):
 
-        tableSV = manager.getTable("subvolume")
+        try:
+            tableSV = manager.getTable("subvolume")
 
-        from dedupsqlfs.lib.constants import ROOT_SUBVOLUME_NAME
+            from dedupsqlfs.lib.constants import ROOT_SUBVOLUME_NAME
 
-        cur = tableSV.getCursor()
+            cur = tableSV.getCursor()
 
-        cur.execute("SELECT hash FROM %s WHERE name != '%s'" % (tableSV.getName(), ROOT_SUBVOLUME_NAME,))
-        svHashes = cur.fetchall()
-        for item in svHashes:
+            cur.execute("SELECT hash FROM %s WHERE name != '%s'" % (tableSV.getName(), ROOT_SUBVOLUME_NAME,))
+            svHashes = cur.fetchall()
+            for item in svHashes:
 
-            h = item["hash"].decode()
+                h = item["hash"].decode()
 
-            for tn in ("inode", "xattr", "tree", "link", "inode_option", "inode_hash_block",):
+                for tn in ("inode", "xattr", "tree", "link", "inode_option", "inode_hash_block",):
 
-                old_tn = "%s_%s" % (tn, h,)
+                    old_tn = "%s_%s" % (tn, h,)
 
-                table = manager.getTable(old_tn)
-                cur.execute("ALTER TABLE %s RENAME TO %s;" % (old_tn, tn,))
-                table.commit()
+                    table = manager.getTable(old_tn)
+                    cur.execute("ALTER TABLE %s RENAME TO %s;" % (old_tn, tn,))
+                    table.commit()
+
+        except Exception:
+            pass
 
     tableOpts = manager.getTable("option")
 

@@ -17,7 +17,7 @@ def run(manager):
     :return: bool
     """
 
-    if manager.TYPE in ("sqlite3",):
+    if manager.TYPE in ("sqlite",):
 
         try:
             table_sv = manager.getTable("subvolume")

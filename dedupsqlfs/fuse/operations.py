@@ -306,7 +306,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 f.write("destroy\n")
                 f.close()
             except:
-                self.getLogger().debug("DedupFS: can't write to %r" % self.getOption('lock_file'))
+                self.getLogger().warning("DedupFS: can't write to %r" % self.getOption('lock_file'))
                 pass
 
         try:
@@ -555,7 +555,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                     f.write("inited\n")
                     f.close()
                 except:
-                    self.getLogger().debug("DedupFS: can't write to %r" % self.getOption('lock_file'))
+                    self.getLogger().warning("DedupFS: can't write to %r" % self.getOption('lock_file'))
                     pass
 
             # Select the compression method (if any) after potentially reading the

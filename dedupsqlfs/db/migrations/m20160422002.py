@@ -48,7 +48,8 @@ def run(manager):
                     table.setName(old_tn)
                     if table.hasTable():
                         cur = table.getCursor()
-                        cur.execute("ALTER TABLE %s RENAME TO %s;" % (old_tn, tn,))
+                        cur.execute("ALTER TABLE `%s` RENAME TO `%s`;" % (old_tn, tn,))
+                        table.commit()
                     table.setName(tn)
 
         except Exception as e:

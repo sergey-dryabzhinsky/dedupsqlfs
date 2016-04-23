@@ -1258,6 +1258,9 @@ class DedupOperations(llfuse.Operations): # {{{1
                 if self.getOption('compression_recompress_current') and not self.application.isMethodSelected(compression):
                     recompress = True
 
+                if recompress:
+                    self.getLogger().debug("-- will recompress block")
+
                 self.getLogger().debug("-- decomp size: %s" % len(block.getvalue()))
 
             self.cached_blocks.set(inode, block_number, block, writed=recompress)
@@ -1920,39 +1923,41 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.bytes_written += block_length
         else:
-#           hash_count = tableIndex.get_count_hash(hash_id)
-#           self.getLogger().debug("-- deduped by hash = %s, count in index db = %s" % (hash_id, hash_count,))
             hash_CT = tableHCT.get(hash_id)
-            compression = self.getCompressionTypeName(hash_CT["type_id"])
 
-            if self.getOption('compression_recompress_now'):
+            # It may not be at this time because at first time only hashes
+            # stored in DB. Compression and indexes are stored later.
+            if hash_CT:
+                compression = self.getCompressionTypeName(hash_CT["type_id"])
 
-                if self.application.isDeprecated(compression):
-                    result["recompress"] = True
-                    result["data"] = data_block
+                if self.getOption('compression_recompress_now'):
+
+                    if self.application.isDeprecated(compression):
+                        result["recompress"] = True
+                        result["data"] = data_block
 
 
-            if self.getOption('compression_recompress_current'):
+                if self.getOption('compression_recompress_current'):
 
-                if not self.application.isMethodSelected(compression):
-                    result["recompress"] = True
-                    result["data"] = data_block
+                    if not self.application.isMethodSelected(compression):
+                        result["recompress"] = True
+                        result["data"] = data_block
 
-            if self.getOption('collision_check_enabled'):
+                if self.getOption('collision_check_enabled'):
 
-                old_block = self.getTable("block").get(hash_id)
+                    old_block = self.getTable("block").get(hash_id)
 
-                old_data = self.__decompress(old_block["data"], hash_CT["type_id"])
-                if old_data != data_block:
-                    self.getLogger().error("EEE: weird hashed data collision detected! hash id: %s, value: %r, inode: %s, block-number: %s" % (
-                        hash_id, hash_value, inode, block_number
-                    ))
-                    self.getLogger().warn("Use more strong hashing algo! I'm continue, but you are warned...")
-                old_hash = self.__hash(old_data)
-                if old_hash != hash_value:
-                    self.getLogger().error("Decompressed block data hash not equal with stored!")
-                    self.getLogger().error("FS data corruption? Something wrong with db layer? I'm done with that!")
-                    raise RuntimeError("Data corruption!")
+                    old_data = self.__decompress(old_block["data"], hash_CT["type_id"])
+                    if old_data != data_block:
+                        self.getLogger().error("EEE: weird hashed data collision detected! hash id: %s, value: %r, inode: %s, block-number: %s" % (
+                            hash_id, hash_value, inode, block_number
+                        ))
+                        self.getLogger().warn("Use more strong hashing algo! I'm continue, but you are warned...")
+                    old_hash = self.__hash(old_data)
+                    if old_hash != hash_value:
+                        self.getLogger().error("Decompressed block data hash not equal with stored!")
+                        self.getLogger().error("FS data corruption? Something wrong with db layer? I'm done with that!")
+                        raise RuntimeError("Data corruption!")
 
             # Old hash found
             self.bytes_deduped += block_length
@@ -1997,7 +2002,6 @@ class DedupOperations(llfuse.Operations): # {{{1
         tableHCT = self.getTable("hash_compression_type")
         tableHSZ = self.getTable("hash_sizes")
 
-        wrtd_count = 0
         for hash_id, cItem in self.application.compressData(blocksToCompress):
             cdata, cmethod = cItem
 
@@ -2008,8 +2012,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             cmethod_id = self.getCompressionTypeId(cmethod)
 
             tableBlock.insert(hash_id, cdata)
-
-            wrtd_count += 1
 
             hash_CT = tableHCT.get(hash_id)
             if hash_CT:
@@ -2026,11 +2028,6 @@ class DedupOperations(llfuse.Operations): # {{{1
                 tableHSZ.insert(hash_id, writed_size, comp_size)
 
             self.bytes_written_compressed += comp_size
-
-        if wrtd_count:
-            tableBlock.commit()
-            tableHCT.commit()
-            tableHSZ.commit()
 
         self.time_spent_compressing += self.application.getCompressTool().time_spent_compressing
 

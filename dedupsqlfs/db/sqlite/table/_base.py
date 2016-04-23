@@ -214,6 +214,21 @@ class Table( object ):
                 break
         return has
 
+    def hasField(self, fname):
+        """
+        Table has field?
+        :param fname: Field name
+        :type  fname: str
+        :return: bool
+        """
+        result = self.getConnection().execute("PRAGMA table_info('%s');" % self.getName()).fetchall()
+        has = False
+        for item in result:
+            if item["name"] == fname:
+                has = True
+                break
+        return has
+
     def getFileSize(self):
         db_path = self.getDbFilePath()
         if os.path.isfile(db_path):

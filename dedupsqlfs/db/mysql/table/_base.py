@@ -172,6 +172,23 @@ class Table( object ):
 
         return exists
 
+    def hasField(self, fname):
+        cur = self.getCursor()
+
+        cur.execute(
+            "SELECT COUNT(1) AS `FieldIsThere` " +
+            "FROM `INFORMATION_SCHEMA`.`COLUMNS` " +
+            "WHERE `TABLE_SCHEMA` = %s " +
+            "AND   `TABLE_NAME`   = %s " +
+            "AND   `COLUMN_NAME`  = %s;",
+            (self.getManager().getDbName(), self.getName(), fname,)
+        )
+        row = cur.fetchone()
+
+        exists = (row is not None) and int(row['FieldIsThere']) > 0
+
+        return exists
+
     def createIndexIfNotExists(self, indexName, fieldList, unique=False, indexSizes=None):
         """
         @param indexName: Index name

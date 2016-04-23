@@ -16,15 +16,21 @@ def run(manager):
     :return: bool
     """
 
-    table_subvol = manager.getTable("subvolume")
-
     try:
-        cur = table_subvol.getCursor()
+        table_sv = manager.getTable("subvolume")
+        """
+        :type table_sv: dedupsqlfs.db.sqlite.table.subvolume.TableSubvolume |
+                        dedupsqlfs.db.mysql.table.subvolume.TableSubvolume
+        """
 
-        cur.execute("ALTER TABLE subvolume ADD COLUMN stats TEXT;")
-        cur.execute("ALTER TABLE subvolume ADD COLUMN stats_at INTEGER;")
+        cur = table_sv.getCursor()
 
-        table_subvol.commit()
+        if not table_sv.hasField('stats'):
+            cur.execute("ALTER TABLE subvolume ADD COLUMN stats TEXT;")
+        if not table_sv.hasField('stats_at'):
+            cur.execute("ALTER TABLE subvolume ADD COLUMN stats_at INTEGER;")
+
+        table_sv.commit()
     except Exception as e:
         manager.getLogger().error("Migration #%s error: %s" % (__NUMBER__, e,))
         return False

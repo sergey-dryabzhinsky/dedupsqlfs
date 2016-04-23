@@ -21,6 +21,10 @@ def run(manager):
 
         try:
             table_sv = manager.getTable("subvolume")
+            """
+            :type table_sv: dedupsqlfs.db.sqlite.table.subvolume.TableSubvolume |
+                            dedupsqlfs.db.mysql.table.subvolume.TableSubvolume
+            """
 
             from dedupsqlfs.lib.constants import ROOT_SUBVOLUME_NAME
 
@@ -37,8 +41,15 @@ def run(manager):
                     old_tn = "%s_%s" % (tn, h,)
 
                     table = manager.getTable(old_tn, True)
-                    cur = table.getCursor()
-                    cur.execute("ALTER TABLE %s RENAME TO %s;" % (old_tn, tn,))
+                    """
+                    :type table: dedupsqlfs.db.sqlite.table._base.Table |
+                                    dedupsqlfs.db.mysql.table_base.Table
+                    """
+                    table.setName(old_tn)
+                    if table.hasTable():
+                        cur = table.getCursor()
+                        cur.execute("ALTER TABLE %s RENAME TO %s;" % (old_tn, tn,))
+                    table.setName(tn)
 
         except Exception as e:
             manager.getLogger().error("Migration #%s error: %s" % (__NUMBER__, e,))

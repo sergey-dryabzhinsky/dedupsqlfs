@@ -74,10 +74,24 @@ class DedupFS(object): # {{{1
 
 
     def preInit(self):
+        if self.getOption('lock_file'):
+            try:
+                f = open(self.getOption('lock_file'), 'w')
+                f.write("pre-init\n")
+                f.close()
+            except:
+                self.getLogger().debug("DedupFS: can't write to %r" % self.getOption('lock_file'))
+                pass
         self._fixCompressionOptions()
         self._compressTool.init()
 
     def postDestroy(self):
+        if self.getOption('lock_file'):
+            try:
+                os.unlink(self.getOption('lock_file'))
+            except:
+                self.getLogger().debug("DedupFS: can't remove %r" % self.getOption('lock_file'))
+                pass
         self._compressTool.stop()
         self.operations.getManager().close()
 

@@ -299,6 +299,16 @@ class DedupOperations(llfuse.Operations): # {{{1
         return (fh, attrs,)
 
     def destroy(self): # {{{3
+
+        if self.getOption('lock_file'):
+            try:
+                f = open(self.getOption('lock_file'), 'w')
+                f.write("destroy\n")
+                f.close()
+            except:
+                self.getLogger().debug("DedupFS: can't write to %r" % self.getOption('lock_file'))
+                pass
+
         try:
             self.__log_call('destroy', '->()')
             self.getLogger().debug("Umount file system in process...")
@@ -538,6 +548,15 @@ class DedupOperations(llfuse.Operations): # {{{1
             # Make sure the hash function is (still) valid (since the database was created).
 
             self.getManager().getTable('option').update('mounted', 1)
+
+            if self.getOption('lock_file'):
+                try:
+                    f = open(self.getOption('lock_file'), 'w')
+                    f.write("inited\n")
+                    f.close()
+                except:
+                    self.getLogger().debug("DedupFS: can't write to %r" % self.getOption('lock_file'))
+                    pass
 
             # Select the compression method (if any) after potentially reading the
             # configured block size that was used to create the database (see the

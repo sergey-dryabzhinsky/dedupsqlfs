@@ -534,7 +534,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             # MUCH better but it has to be enabled wit --nosync because you might
             # lose data when the file system isn't cleanly unmounted...
             if not self.synchronous and not self.isReadonly():
-                self.getLogger().warning("Warning: Disabling synchronous operation, you might lose data..")
+                self.getLogger().warning("Warning: Disabling synchronous operation, you might lose data!")
 
             if not self.isReadonly():
                 self.__init_store()
@@ -1456,10 +1456,10 @@ class DedupOperations(llfuse.Operations): # {{{1
         else:
             check = optTable.get("mounted_subvolume", True)
             if check:
-                self.getLogger().warning("__select_subvolume(1.2): subvolume not found, select previous: %r" % check)
+                self.getLogger().debug("__select_subvolume(1.2): subvolume not found, select previous: %r" % check)
                 self.mounted_subvolume_name = check
             else:
-                self.getLogger().warning("__select_subvolume(1.2): subvolume not found, select default")
+                self.getLogger().warning("__select_subvolume(1.2): previous mounted subvolume not found, select default")
                 self.mounted_subvolume_name = constants.ROOT_SUBVOLUME_NAME
 
         if self.mounted_subvolume_name:

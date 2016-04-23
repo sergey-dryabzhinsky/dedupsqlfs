@@ -547,7 +547,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.__get_opts_from_db()
             # Make sure the hash function is (still) valid (since the database was created).
 
-            self.getManager().getTable('option').update('mounted', 1)
+            if self.getApplication().mountpoint:
+                self.getManager().getTable('option').update('mounted', 1)
 
             if self.getOption('lock_file'):
                 try:
@@ -1475,7 +1476,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             if self.mounted_subvolume["readonly"]:
                 self.application.setReadonly(True)
 
-        subvTable.mount_time(self.mounted_subvolume["id"], int(time()))
+        if self.getApplication().mountpoint:
+            subvTable.mount_time(self.mounted_subvolume["id"], int(time()))
 
         self.getLogger().debug("__select_snapshot(2): mounted_subvolume=%r" % self.mounted_subvolume_name)
 

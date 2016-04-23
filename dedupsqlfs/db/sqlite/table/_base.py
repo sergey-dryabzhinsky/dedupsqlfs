@@ -205,6 +205,15 @@ class Table( object ):
         # print("%s::getPageCount()=%r" % (self.getName(), result,))
         return result["page_count"]
 
+    def hasTable(self):
+        result = self.getConnection().execute("SELECT name FROM sqlite_master WHERE type = 'table';").fetchall()
+        has = False
+        for item in result:
+            if item["name"] == self.getName():
+                has = True
+                break
+        return has
+
     def getFileSize(self):
         db_path = self.getDbFilePath()
         if os.path.isfile(db_path):

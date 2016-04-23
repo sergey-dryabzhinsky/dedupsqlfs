@@ -166,7 +166,8 @@ class DbManager( object ):
                 raise ValueError("Unknown database %r" % name)
 
             if not nocreate:
-                self._table[ name ].create()
+                if not self._table[ name ].hasTable():
+                    self._table[ name ].create()
 
         return self._table[ name ]
 

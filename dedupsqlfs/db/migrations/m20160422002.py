@@ -30,7 +30,8 @@ def run(manager):
 
                     old_tn = "%s_%s" % (tn, h,)
 
-                    table = manager.getTable(old_tn)
+                    table = manager.getTable(old_tn, True)
+                    cur = table.getCursor()
                     cur.execute("ALTER TABLE %s RENAME TO %s;" % (old_tn, tn,))
                     table.commit()
 

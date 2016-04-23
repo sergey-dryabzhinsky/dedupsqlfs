@@ -209,7 +209,7 @@ class Table( object ):
         result = self.getConnection().execute("SELECT name FROM sqlite_master WHERE type = 'table';").fetchall()
         has = False
         for item in result:
-            if item["name"] == self.getName():
+            if item["name"].decode() == self.getName():
                 has = True
                 break
         return has
@@ -224,7 +224,7 @@ class Table( object ):
         result = self.getConnection().execute("PRAGMA table_info('%s');" % self.getName()).fetchall()
         has = False
         for item in result:
-            if item["name"] == fname:
+            if item["name"].decode() == fname:
                 has = True
                 break
         return has

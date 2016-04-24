@@ -678,6 +678,13 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.__log_call('open', '->(inode=%i, flags=%o)', inode, flags)
         # Make sure the file exists?
 
+        if not self.isReadonly():
+            attr = llfuse.EntryAttributes()
+            ctime_i, ctime_ns = self.__newctime_tuple()
+            attr.st_atime = ctime_i
+            attr.st_atime_ns = ctime_ns
+            self.setattr(inode, attr)
+
         if flags & os.O_TRUNC:
             if self.isReadonly(): raise FUSEError(errno.EROFS)
             self.__log_call('open', '-- truncate file!')
@@ -693,6 +700,14 @@ class DedupOperations(llfuse.Operations): # {{{1
         # Make sure the file exists?
         self.__get_tree_node_by_inode(inode)
         # Make sure the file is readable and/or writable.
+
+        if not self.isReadonly():
+            attr = llfuse.EntryAttributes()
+            ctime_i, ctime_ns = self.__newctime_tuple()
+            attr.st_atime = ctime_i
+            attr.st_atime_ns = ctime_ns
+            self.setattr(inode, attr)
+
         return inode
 
     def read(self, fh, offset, size): # {{{3
@@ -714,11 +729,20 @@ class DedupOperations(llfuse.Operations): # {{{1
                     size = row["size"] - offset
                     self.__log_call('read', '-- oversized! inode(size)=%i, corrected read size: %i', row["size"], size )
                 data = self.__get_block_data_by_offset(fh, offset, size)
-            self.bytes_read += len(data)
+            lr = len(data)
+            self.bytes_read += lr
 
             # Too much output
             # self.__log_call('read', 'readed: size=%s, data=%r', len(data), data, )
-            self.__log_call('read', '<-readed: size=%s', len(data), )
+            self.__log_call('read', '<-readed: size=%s', lr, )
+
+            if lr:
+                if not self.isReadonly():
+                    attr = llfuse.EntryAttributes()
+                    ctime_i, ctime_ns = self.__newctime_tuple()
+                    attr.st_ctime = ctime_i
+                    attr.st_ctime_ns = ctime_ns
+                    self.setattr(fh, attr)
 
             self.__cache_block_hook()
 
@@ -1085,6 +1109,12 @@ class DedupOperations(llfuse.Operations): # {{{1
                 # self.getTable("inode").set_size(fh, offset + length)
                 attrs["size"] = offset + length
                 self.cached_attrs.set(fh, attrs, writed=True)
+
+            attr = llfuse.EntryAttributes()
+            ctime_i, ctime_ns = self.__newctime_tuple()
+            attr.st_mtime = ctime_i
+            attr.st_mtime_ns = ctime_ns
+            self.setattr(fh, attr)
 
             # self.bytes_written is incremented from release().
             self.__cache_meta_hook()

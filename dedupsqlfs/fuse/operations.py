@@ -559,10 +559,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                     self.getLogger().warning("DedupFS: can't write to %r" % self.getOption('lock_file'))
                     pass
 
-            # Select the compression method (if any) after potentially reading the
-            # configured block size that was used to create the database (see the
-            # set_block_size() call).
-            #self.__select_compress_method(options, silent)
+            self.getLogger().debug("DedupFS: inited and mounted")
             return 0
         except Exception as e:
             self.__except_to_status('init', e, errno.EIO)

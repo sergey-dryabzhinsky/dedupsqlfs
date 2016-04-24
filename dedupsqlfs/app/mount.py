@@ -70,11 +70,14 @@ def main(): # {{{1
     parser.add_argument('-v', '--verbose', action='count', dest='verbosity', default=0, help="increase verbosity")
     parser.add_argument('--verbose-stats', dest='verbose_stats', action='store_true', help="Enable FS opterations statistic output. Verbosity level must be 1+.")
     parser.add_argument('--log-file', dest='log_file', help="specify log file location")
+    parser.add_argument('--log-file-only', dest='log_file_only', action='store_true',
+                        help="Don't send log messages to stderr.")
+
     parser.add_argument('--lock-file', dest='lock_file', help="Specify lock file location. Useful to check fs status via content or existsnce.")
     parser.add_argument('--data', dest='data', metavar='DIRECTORY', default="~/data", help="Specify the base location for the files in which metadata and blocks data is stored. Defaults to ~/data")
     parser.add_argument('--name', dest='name', metavar='DATABASE', default="dedupsqlfs", help="Specify the name for the database directory in which metadata and blocks data is stored. Defaults to dedupsqlfs")
     parser.add_argument('--temp', dest='temp', metavar='DIRECTORY', help="Specify the location for the files in which temporary data is stored. By default honour TMPDIR environment variable value.")
-    parser.add_argument('--block-size', dest='block_size', metavar='BYTES', default=1024*128, type=int, help="Specify the maximum block size in bytes" + option_stored_in_db + ". Defaults to 128kB.")
+    parser.add_argument('-b', '--block-size', dest='block_size', metavar='BYTES', default=1024*128, type=int, help="Specify the maximum block size in bytes" + option_stored_in_db + ". Defaults to 128kB.")
     parser.add_argument('--mount-subvolume', dest='mounted_subvolume', metavar='NAME', default=None, help="Use subvolume NAME as root fs.")
 
     parser.add_argument('--memory-limit', dest='memory_limit', action='store_true', help="Use some lower values for less memory consumption.")

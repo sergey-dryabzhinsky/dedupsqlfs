@@ -8,7 +8,7 @@ import sys
 try:
     import os
     import argparse
-    import time
+    from time import time
     import hashlib
 except ImportError as e:
     msg = "Error: Failed to load one of the required Python modules! (%s)\n"
@@ -74,10 +74,15 @@ def main(): # {{{1
     parser.add_argument('-h', '--help', action='help', help="show this help message followed by the command line options defined by the Python FUSE binding and exit")
     parser.add_argument('-v', '--verbose', action='count', dest='verbosity', default=0, help="increase verbosity")
     parser.add_argument('--log-file', dest='log_file', help="specify log file location")
+    parser.add_argument('--log-file-only', dest='log_file_only', action='store_true',
+                        help="Don't send log messages to stderr.")
+
     parser.add_argument('--data', dest='data', metavar='DIRECTORY', default="~/data", help="Specify the base location for the files in which metadata and blocks data is stored. Defaults to ~/data")
     parser.add_argument('--name', dest='name', metavar='DATABASE', default="dedupsqlfs", help="Specify the name for the database directory in which metadata and blocks data is stored. Defaults to dedupsqlfs")
     parser.add_argument('--temp', dest='temp', metavar='DIRECTORY', help="Specify the location for the files in which temporary data is stored. By default honour TMPDIR environment variable value.")
-    parser.add_argument('--block-size', dest='block_size', metavar='BYTES', default=1024*128, type=int, help="Specify the maximum block size in bytes" + option_stored_in_db + ". Defaults to 128kB.")
+    parser.add_argument('-b', '--block-size', dest='block_size', metavar='BYTES', default=1024*128, type=int, help="Specify the maximum block size in bytes" + option_stored_in_db + ". Defaults to 128kB.")
+
+    parser.add_argument('--memory-limit', dest='memory_limit', action='store_true', help="Use some lower values for less memory consumption.")
 
     parser.add_argument('--cpu-limit', dest='cpu_limit', metavar='NUMBER', default=0, type=int, help="Specify the maximum CPU count to use in multiprocess compression. Defaults to 0 (auto).")
 
@@ -96,11 +101,12 @@ def main(): # {{{1
 
         table_engines = get_table_engines()
 
-        msg = "One of MySQL table engines: "+", ".join(table_engines)+". Default: MyISAM. Aria and TokuDB engine can be used only with MariaDB or Percona server."
+        msg = "One of MySQL table engines: "+", ".join(table_engines)+". Default: %r. Aria and TokuDB engine can be used only with MariaDB or Percona server." % table_engines[0]
         parser.add_argument('--table-engine', dest='table_engine', metavar='ENGINE',
                             choices=table_engines, default=table_engines[0],
                             help=msg)
 
+    parser.add_argument('--no-cache', dest='use_cache', action='store_false', help="Don't use cache in memory and delayed write to storage.")
     parser.add_argument('--no-transactions', dest='use_transactions', action='store_false', help="Don't use transactions when making multiple related changes, this might make the file system faster or slower (?).")
     parser.add_argument('--nosync', dest='synchronous', action='store_false', help="Disable SQLite's normal synchronous behavior which guarantees that data is written to disk immediately, because it slows down the file system too much (this means you might lose data when the mount point isn't cleanly unmounted).")
 
@@ -109,8 +115,8 @@ def main(): # {{{1
     hash_functions = list({}.fromkeys([h.lower() for h in hashlib.algorithms_available]).keys())
     hash_functions.sort()
     msg %= ', '.join('%r' % fun for fun in hash_functions)
-    msg += option_stored_in_db + ". Defaults to 'sha1'. Data can be rehashed by do.dedupsqlfs @todo."
-    parser.add_argument('--hash', dest='hash_function', metavar='FUNCTION', choices=hash_functions, default='md5', help=msg)
+    msg += ". Defaults to 'sha1'."
+    parser.add_argument('--hash', dest='hash_function', metavar='FUNCTION', choices=hash_functions, default='sha1', help=msg)
 
     # Dynamically check for supported compression methods.
     compression_methods = [constants.COMPRESSION_TYPE_NONE]
@@ -169,12 +175,15 @@ def main(): # {{{1
     if args.profile:
         sys.stderr.write("Enabling profiling..\n")
         import cProfile, pstats
-        profile = '.dedupsqlfs.cprofile-%i' % time.time()
-        cProfile.run('mkfs(args, compression_methods, hash_functions)', profile)
+        profile = '.dedupsqlfs.cprofile-%i' % time()
+        profiler = cProfile.Profile()
+        result = profiler.runcall(mkfs, args, compression_methods, hash_functions)
+        profiler.dump_stats(profile)
         sys.stderr.write("\n Profiling statistics:\n\n")
         s = pstats.Stats(profile)
-        s.sort_stats('time')
-        s.print_stats(0.1)
+        s.sort_stats('calls').print_stats(0.1)
+        s.sort_stats('cumtime').print_stats(0.1)
+        s.sort_stats('tottime').print_stats(0.1)
         os.unlink(profile)
     else:
         return mkfs(args, compression_methods, hash_functions)

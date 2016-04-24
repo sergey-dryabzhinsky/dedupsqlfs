@@ -227,7 +227,9 @@ class DedupFS(object): # {{{1
         # Initialize a Logger() object to handle logging.
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(logging.ERROR)
-        self.logger.addHandler(logging.StreamHandler(sys.stderr))
+
+        if not self.getOption("log_file_only"):
+            self.logger.addHandler(logging.StreamHandler(sys.stderr))
         # Configure logging of messages to a file.
         if self.getOption("log_file"):
             handler = logging.StreamHandler(open(self.getOption("log_file"), 'a'))

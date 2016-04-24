@@ -440,6 +440,9 @@ def main(): # {{{1
     generic.add_argument('-h', '--help', action='help', help="show this help message followed by the command line options defined by the Python FUSE binding and exit")
     generic.add_argument('-v', '--verbose', action='count', dest='verbosity', default=0, help="increase verbosity")
     generic.add_argument('--log-file', dest='log_file', metavar='PATH', help="specify log file location")
+    generic.add_argument('--log-file-only', dest='log_file_only', action='store_true',
+                        help="Don't send log messages to stderr.")
+
     generic.add_argument('--data', dest='data', metavar='DIRECTORY', default="~/data", help="Specify the base location for the files in which metadata and blocks data is stored. Defaults to ~/data")
     generic.add_argument('--name', dest='name', metavar='DATABASE', default="dedupsqlfs", help="Specify the name for the database directory in which metadata and blocks data is stored. Defaults to dedupsqlfs")
     generic.add_argument('--temp', dest='temp', metavar='DIRECTORY', help="Specify the location for the files in which temporary data is stored. By default honour TMPDIR environment variable value.")
@@ -447,7 +450,9 @@ def main(): # {{{1
     generic.add_argument('--nosync', dest='synchronous', action='store_false', help="Disable SQLite's normal synchronous behavior which guarantees that data is written to disk immediately, because it slows down the file system too much (this means you might lose data when the mount point isn't cleanly unmounted).")
     generic.add_argument('--nogc-on-umount', dest='gc_umount_enabled', action='store_false', help="Disable garbage collection on umount operation (only do this when you've got disk space to waste or you know that nothing will be be deleted from the file system, which means little to no garbage will be produced).")
     generic.add_argument('--gc', dest='gc_enabled', action='store_true', help="Enable the periodic garbage collection because it degrades performance (only do this when you've got disk space to waste or you know that nothing will be be deleted from the file system, which means little to no garbage will be produced).")
-    generic.add_argument('--verify-writes', dest='verify_writes', action='store_true', help="After writing a new data block to the database, check that the block was written correctly by reading it back again and checking for differences.")
+    parser.add_argument('--gc-vacuum', dest='gc_vacuum_enabled', action='store_true', help="Enable data vacuum after the periodic garbage collection.")
+    parser.add_argument('--gc-fast', dest='gc_fast_enabled', action='store_true', help="Enable faster periodic garbage collection. Don't collect hash and block garbage.")
+    parser.add_argument('--gc-interval', dest='gc_interval', metavar="N", type=int, default=60, help="Call garbage callector after Nth seconds on FUSE operations, if GC enabled. Defaults to 60.")
 
     generic.add_argument('--memory-limit', dest='memory_limit', action='store_true', help="Use some lower values for less memory consumption.")
 
@@ -515,7 +520,7 @@ def main(): # {{{1
         msg += " %r will try selected compression methods (--custom-compress) and choose one with smaller result data." % constants.COMPRESSION_TYPE_CUSTOM
 
     data.add_argument('--compress-method', dest='compression_method', metavar='METHOD', default=constants.COMPRESSION_TYPE_NONE, help=msg)
-    data.add_argument('--recompress', dest='recompress_path', metavar='PATH', help="Compress file or entire directory with new compression method")
+    data.add_argument('--recompress-path', dest='recompress_path', metavar='PATH', help="Compress file or entire directory with new compression method")
 
     msg = "Enable compression of data blocks using one or more of the supported compression methods: %s"
     msg %= ', '.join('%r' % mth for mth in compression_methods_cmd[:-2])

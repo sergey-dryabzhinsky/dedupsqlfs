@@ -680,9 +680,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         if not self.isReadonly():
             attr = llfuse.EntryAttributes()
-            ctime_i, ctime_ns = self.__newctime_tuple()
-            attr.st_atime = ctime_i
-            attr.st_atime_ns = ctime_ns
+            attr.st_atime = time()
             self.setattr(inode, attr)
 
         if flags & os.O_TRUNC:
@@ -703,9 +701,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         if not self.isReadonly():
             attr = llfuse.EntryAttributes()
-            ctime_i, ctime_ns = self.__newctime_tuple()
-            attr.st_atime = ctime_i
-            attr.st_atime_ns = ctime_ns
+            attr.st_atime = time()
             self.setattr(inode, attr)
 
         return inode
@@ -739,9 +735,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if lr:
                 if not self.isReadonly():
                     attr = llfuse.EntryAttributes()
-                    ctime_i, ctime_ns = self.__newctime_tuple()
-                    attr.st_ctime = ctime_i
-                    attr.st_ctime_ns = ctime_ns
+                    attr.st_ctime = time()
                     self.setattr(fh, attr)
 
             self.__cache_block_hook()
@@ -1111,9 +1105,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.cached_attrs.set(fh, attrs, writed=True)
 
             attr = llfuse.EntryAttributes()
-            ctime_i, ctime_ns = self.__newctime_tuple()
-            attr.st_mtime = ctime_i
-            attr.st_mtime_ns = ctime_ns
+            attr.st_mtime = time()
             self.setattr(fh, attr)
 
             # self.bytes_written is incremented from release().

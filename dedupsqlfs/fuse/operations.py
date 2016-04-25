@@ -645,6 +645,10 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             inode, parent_ino = self.__insert(parent_inode, name, mode | stat.S_IFDIR, size, ctx)
             self.getManager().getTable("inode").inc_nlinks(parent_ino)
+
+            if not self.isReadonly():
+                self.__setattr_mtime(parent_inode)
+
             return self.__getattr(inode)
         except FUSEError:
             raise
@@ -725,10 +729,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             # self.__log_call('read', 'readed: size=%s, data=%r', len(data), data, )
             self.__log_call('read', '<-readed: size=%s', lr, )
 
-            if lr:
-                if not self.isReadonly():
-                    self.__setattr_ctime(fh)
-
             self.__cache_block_hook()
 
             self.time_spent_reading += time() - start_time
@@ -758,8 +758,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             attrs = self.__getattr(node["inode_id"])
             self.__log_call('readdir', '<-(name=%r, attrs=%r, node=%i)',
                             name, self.__get_inode_row(node["inode_id"]), node["id"])
-            if not self.isReadonly():
-                self.__setattr_ctime(fh)
             yield (name, attrs, node["id"],)
 
 
@@ -858,6 +856,9 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.__log_call('rmdir', '->(inode_parent=%i, name=%r)', inode_parent, name)
             if self.isReadonly():
                 raise FUSEError(errno.EROFS)
+
+            if not self.isReadonly():
+                self.__setattr_mtime(inode_parent)
 
             self.__remove(inode_parent, name, check_empty=True)
             self.__gc_hook()
@@ -1122,6 +1123,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.__log_call('unlink', '->(parent_inode=%i, name=%r)', parent_inode, name)
             if self.isReadonly():
                 raise FUSEError(errno.EROFS)
+
+            self.__setattr_mtime(parent_inode)
 
             self.__remove(parent_inode, name)
             self.__cache_meta_hook()

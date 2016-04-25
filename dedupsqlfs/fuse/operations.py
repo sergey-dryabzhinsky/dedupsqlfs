@@ -910,11 +910,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                     new_data["gid"] = attr.st_gid
                     update_db = True
 
-            if attr.st_atime is not None or attr.st_atime_ns is not None:
-                if attr.st_atime_ns is not None:
-                    atime_i, atime_ns = self.__get_time_tuple(attr.st_atime_ns / 10**9)
-                else:
-                    atime_i, atime_ns = self.__get_time_tuple(attr.st_atime)
+            if attr.st_atime_ns is not None:
+                atime_i, atime_ns = self.__get_time_tuple(float(attr.st_atime_ns) / 10**9)
                 if row["atime"] != atime_i:
                     new_data["atime"] = atime_i
                     update_db = True
@@ -922,11 +919,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                     new_data["atime_ns"] = atime_ns
                     update_db = True
 
-            if attr.st_mtime is not None or attr.st_mtime_ns is not None:
-                if attr.st_mtime_ns is not None:
-                    mtime_i, mtime_ns = self.__get_time_tuple(attr.st_mtime_ns / 10**9)
-                else:
-                    mtime_i, mtime_ns = self.__get_time_tuple(attr.st_mtime)
+            if attr.st_mtime_ns is not None:
+                mtime_i, mtime_ns = self.__get_time_tuple(float(attr.st_mtime_ns) / 10**9)
                 if row["mtime"] != mtime_i:
                     new_data["mtime"] = mtime_i
                     update_db = True
@@ -934,11 +928,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                     new_data["mtime_ns"] = mtime_ns
                     update_db = True
 
-            if attr.st_ctime is not None or attr.st_ctime_ns is not None:
-                if attr.st_ctime_ns is not None:
-                    ctime_i, ctime_ns = self.__get_time_tuple(attr.st_ctime_ns / 10**9)
-                else:
-                    ctime_i, ctime_ns = self.__get_time_tuple(attr.st_ctime)
+            if attr.st_ctime_ns is not None:
+                ctime_i, ctime_ns = self.__get_time_tuple(float(attr.st_ctime_ns) / 10**9)
                 if row["ctime"] != ctime_i:
                     new_data["ctime"] = ctime_i
                     update_db = True
@@ -1285,21 +1276,15 @@ class DedupOperations(llfuse.Operations): # {{{1
         result.st_gid       = int(row["gid"])
         result.st_rdev      = int(row["rdev"])
         result.st_size      = int(row["size"])
+        result.st_atime     = float(row["atime"]) + float(row["atime_ns"]) / 10 ** 9
+        result.st_mtime     = float(row["mtime"]) + float(row["mtime_ns"]) / 10 ** 9
+        result.st_ctime     = float(row["ctime"]) + float(row["ctime_ns"]) / 10 ** 9
         if hasattr(result, "st_atime_ns"):
-            result.st_atime     = int(row["atime"])
-            result.st_atime_ns  = int(row["atime_ns"])
-        else:
-            result.st_atime     = float(row["atime"]) + float(row["atime_ns"]) / 10**9
+            result.st_atime_ns  = int(row["atime"]) * 10**9 + int(row["atime_ns"])
         if hasattr(result, "st_mtime_ns"):
-            result.st_mtime     = int(row["mtime"])
-            result.st_mtime_ns  = int(row["mtime_ns"])
-        else:
-            result.st_mtime     = float(row["mtime"]) + float(row["mtime_ns"]) / 10**9
+            result.st_mtime_ns  = int(row["mtime"]) * 10**9 + int(row["mtime_ns"])
         if hasattr(result, "st_ctime_ns"):
-            result.st_ctime     = int(row["ctime"])
-            result.st_ctime_ns  = int(row["ctime_ns"])
-        else:
-            result.st_ctime     = float(row["ctime"]) + float(row["ctime_ns"]) / 10**9
+            result.st_ctime_ns  = int(row["ctime"]) * 10**9 + int(row["ctime_ns"])
         result.st_blksize   = int(self.block_size)
         result.st_blocks    = int(result.st_size / self.block_size)
         return result

@@ -676,9 +676,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         # Make sure the file exists?
 
         if not self.isReadonly():
-            attr = llfuse.EntryAttributes()
-            attr.st_atime = time()
-            self.setattr(inode, attr)
+            self.__setattr_atime(inode)
 
         if flags & os.O_TRUNC:
             if self.isReadonly(): raise FUSEError(errno.EROFS)
@@ -697,9 +695,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         # Make sure the file is readable and/or writable.
 
         if not self.isReadonly():
-            attr = llfuse.EntryAttributes()
-            attr.st_atime = time()
-            self.setattr(inode, attr)
+            self.__setattr_atime(inode)
 
         return inode
 
@@ -731,9 +727,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             if lr:
                 if not self.isReadonly():
-                    attr = llfuse.EntryAttributes()
-                    attr.st_ctime = time()
-                    self.setattr(fh, attr)
+                    self.__setattr_ctime(fh)
 
             self.__cache_block_hook()
 
@@ -764,6 +758,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             attrs = self.__getattr(node["inode_id"])
             self.__log_call('readdir', '<-(name=%r, attrs=%r, node=%i)',
                             name, self.__get_inode_row(node["inode_id"]), node["id"])
+            if not self.isReadonly():
+                self.__setattr_ctime(fh)
             yield (name, attrs, node["id"],)
 
 
@@ -971,6 +967,69 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.__rollback_changes()
             raise self.__except_to_status('setattr', e, errno.EIO)
 
+    def __setattr_atime(self, inode):
+        """
+        :param  inode:  inode ID
+        :type   inode:  int
+        """
+        try:
+            row = self.__get_inode_row(inode)
+
+            new_data = {}
+
+            ctime_i, ctime_ns = self.__newctime_tuple()
+            new_data["atime"] = ctime_i
+            new_data["atime_ns"] = ctime_ns
+
+            row.update(new_data)
+            self.cached_attrs.set(inode, row, writed=True)
+
+            self.__cache_meta_hook()
+        except Exception as e:
+            raise self.__except_to_status('__setattr_atime', e, errno.EIO)
+
+    def __setattr_ctime(self, inode):
+        """
+        :param  inode:  inode ID
+        :type   inode:  int
+        """
+        try:
+            row = self.__get_inode_row(inode)
+
+            new_data = {}
+
+            ctime_i, ctime_ns = self.__newctime_tuple()
+            new_data["ctime"] = ctime_i
+            new_data["ctime_ns"] = ctime_ns
+
+            row.update(new_data)
+            self.cached_attrs.set(inode, row, writed=True)
+
+            self.__cache_meta_hook()
+        except Exception as e:
+            raise self.__except_to_status('__setattr_ctime', e, errno.EIO)
+
+    def __setattr_mtime(self, inode):
+        """
+        :param  inode:  inode ID
+        :type   inode:  int
+        """
+        try:
+            row = self.__get_inode_row(inode)
+
+            new_data = {}
+
+            ctime_i, ctime_ns = self.__newctime_tuple()
+            new_data["mtime"] = ctime_i
+            new_data["mtime_ns"] = ctime_ns
+
+            row.update(new_data)
+            self.cached_attrs.set(inode, row, writed=True)
+
+            self.__cache_meta_hook()
+        except Exception as e:
+            raise self.__except_to_status('__setattr_mtime', e, errno.EIO)
+
     def setxattr(self, inode, name, value):
         try:
             self.__log_call('setxattr', '->(inode=%i, name=%r, value=%r)', inode, name, value)
@@ -1101,9 +1160,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                 attrs["size"] = offset + length
                 self.cached_attrs.set(fh, attrs, writed=True)
 
-            attr = llfuse.EntryAttributes()
-            attr.st_mtime = time()
-            self.setattr(fh, attr)
+            if not self.isReadonly():
+                self.__setattr_mtime(fh)
 
             # self.bytes_written is incremented from release().
             self.__cache_meta_hook()

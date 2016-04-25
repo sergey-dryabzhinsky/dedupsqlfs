@@ -910,7 +910,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                     new_data["gid"] = attr.st_gid
                     update_db = True
 
-            if attr.st_atime_ns is not None:
+            if attr.st_atime_ns is not None and not self.getOption('noatime'):
                 atime_i, atime_ns = self.__get_time_tuple(float(attr.st_atime_ns) / 10**9)
                 if row["atime"] != atime_i:
                     new_data["atime"] = atime_i
@@ -963,6 +963,9 @@ class DedupOperations(llfuse.Operations): # {{{1
         :param  inode:  inode ID
         :type   inode:  int
         """
+        if self.getOption('noatime'):
+            return
+
         try:
             row = self.__get_inode_row(inode)
 

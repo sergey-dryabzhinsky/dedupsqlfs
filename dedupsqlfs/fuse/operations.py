@@ -1285,9 +1285,21 @@ class DedupOperations(llfuse.Operations): # {{{1
         result.st_gid       = int(row["gid"])
         result.st_rdev      = int(row["rdev"])
         result.st_size      = int(row["size"])
-        result.st_atime     = float(row["atime"]) + float(row["atime_ns"]) / 10**9
-        result.st_mtime     = float(row["mtime"]) + float(row["mtime_ns"]) / 10**9
-        result.st_ctime     = float(row["ctime"]) + float(row["ctime_ns"]) / 10**9
+        if hasattr(result, "st_atime_ns"):
+            result.st_atime     = int(row["atime"])
+            result.st_atime_ns  = int(row["atime_ns"])
+        else:
+            result.st_atime     = float(row["atime"]) + float(row["atime_ns"]) / 10**9
+        if hasattr(result, "st_mtime_ns"):
+            result.st_mtime     = int(row["mtime"])
+            result.st_mtime_ns  = int(row["mtime_ns"])
+        else:
+            result.st_mtime     = float(row["mtime"]) + float(row["mtime_ns"]) / 10**9
+        if hasattr(result, "st_ctime_ns"):
+            result.st_ctime     = int(row["ctime"])
+            result.st_ctime_ns  = int(row["ctime_ns"])
+        else:
+            result.st_ctime     = float(row["ctime"]) + float(row["ctime_ns"]) / 10**9
         result.st_blksize   = int(self.block_size)
         result.st_blocks    = int(result.st_size / self.block_size)
         return result

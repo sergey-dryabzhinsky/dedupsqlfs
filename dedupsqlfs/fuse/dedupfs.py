@@ -22,7 +22,15 @@ try:
     from llfuse import FUSEError
 except ImportError:
     sys.stderr.write("Error: The Python FUSE binding isn't installed!\n" + \
-        "If you're on Ubuntu try running `sudo apt-get install python-fuse'.\n")
+        "If you're on Ubuntu try running `sudo apt-get install python3-fuse'.\n")
+    sys.exit(1)
+
+fv = fuse.__version__.split('.')
+if int(fv[0]) < 1 and int(fv[1]) < 41:
+    sys.stderr.write(
+        "Error: The Python FUSE binding v0.41+ isn't installed!\n" + \
+        "If you're on Ubuntu try running `sudo apt-get install python3-fuse'\n"+
+        " or `sudo pip3 install llfuse=0.41.1`.\n")
     sys.exit(1)
 
 # Local modules that are mostly useful for debugging.

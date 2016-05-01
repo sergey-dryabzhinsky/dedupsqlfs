@@ -274,13 +274,11 @@ class Table( object ):
 
     def vacuum(self):
         self.startTimer()
-        #cur = self.getCursor()
-        #cur.execute("VACUUM")
         self.close()
 
         # VACUUM breaks on huge DB
         # Dump/Load DB
-        # Warning! Need 3+x space!
+        # Warning! Need 2+x space!
 
         fn = self.getDbFilePath()
         if not os.path.isfile(fn):
@@ -323,7 +321,7 @@ class Table( object ):
             self.getName(), diffSign, abs(newSize - oldSize) * 100.0 / oldSize, diffSign, sz,))
 
         self.stopTimer("vacuum")
-        return self
+        return newSize - oldSize
 
     def close(self):
         if self._curr:

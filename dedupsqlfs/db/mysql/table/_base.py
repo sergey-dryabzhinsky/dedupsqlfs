@@ -298,7 +298,7 @@ class Table( object ):
             self.getName(), diffSign, abs(newSize - oldSize) * 100.0 / oldSize, diffSign, sz,))
 
         self.stopTimer("vacuum")
-        return self
+        return newSize - oldSize
 
     def close(self):
         return self

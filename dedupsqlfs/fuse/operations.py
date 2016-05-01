@@ -2294,9 +2294,19 @@ class DedupOperations(llfuse.Operations): # {{{1
         if not self.isReadonly():
             start_time = time()
             self.getLogger().debug("Performing data vacuum (this might take a while) ..")
+            sz = 0
+            dbsz = self.getManager().getFileSize()
             for table_name in self.getManager().tables:
-                self.__vacuum_datatable(table_name)
+                sz += self.__vacuum_datatable(table_name, True)
             elapsed_time = time() - start_time
+
+            diffSign = sz > 0 and '+' or '-'
+
+            prsz = format_size(abs(sz))
+
+            self.getLogger().info("Total DB size change after vacuum: %s%.2f%% (%s%s)" % (
+                diffSign, abs(sz) * 100.0 / dbsz, diffSign, prsz,))
+
             self.getLogger().debug("Finished data vacuum in %s.", format_timespan(elapsed_time))
         return
 
@@ -2672,16 +2682,19 @@ class DedupOperations(llfuse.Operations): # {{{1
         return
 
 
-    def __vacuum_datatable(self, tableName): # {{{4
+    def __vacuum_datatable(self, tableName, getsize=False): # {{{4
         msg = ""
+        sz = 0
         sub_start_time = time()
         if self.should_vacuum and self.gc_vacuum_enabled:
             self.getLogger().debug(" vacuum %s table" % tableName)
-            self.getTable(tableName).vacuum()
+            sz += self.getTable(tableName).vacuum()
             msg = "  vacuumed SQLite data store in %s."
         if msg:
             elapsed_time = time() - sub_start_time
             self.getLogger().debug(msg, format_timespan(elapsed_time))
+        if getsize:
+            return sz
         return msg
 
     def __commit_changes(self): # {{{3

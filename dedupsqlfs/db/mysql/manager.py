@@ -633,9 +633,10 @@ class DbManager( object ):
         return self
 
     def vacuum(self):
+        sz = 0
         for name, t in self._table.items():
-            t.vacuum()
-        return self
+            sz += t.vacuum()
+        return sz
 
     def closeConn(self):
         if self._conn:

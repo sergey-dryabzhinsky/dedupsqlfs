@@ -313,12 +313,18 @@ class Table( object ):
 
         newSize = os.path.getsize(fn)
 
-        diffSign = newSize > oldSize and '+' or '-'
+        diffSign = ''
+        if newSize > oldSize:
+            diffSign = '+'
+        elif newSize < oldSize:
+            diffSign = '-'
 
-        sz = format_size(abs(newSize - oldSize))
-
-        self.getLogger().info("DB table '%s' size change after vacuum: %s%.2f%% (%s%s)" % (
-            self.getName(), diffSign, abs(newSize - oldSize) * 100.0 / oldSize, diffSign, sz,))
+        if diffSign:
+            sz = format_size(abs(newSize - oldSize))
+            self.getLogger().debug("DB table '%s' size change after vacuum: %s%.2f%% (%s%s)" % (
+                self.getName(), diffSign, abs(newSize - oldSize) * 100.0 / oldSize, diffSign, sz,))
+        else:
+            self.getLogger().debug("DB table '%s' size not changed after vacuum." % self.getName())
 
         self.stopTimer("vacuum")
         return newSize - oldSize

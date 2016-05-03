@@ -19,7 +19,7 @@ def scandir(dir, files=[]):
     for file in os.listdir(dir):
         path = os.path.join(dir, file)
         if os.path.isfile(path) and path.endswith(".py") and \
-            path.find("__.py") == -1 and path.find('migrations') != -1:
+            path.find("__.py") == -1 and path.find('migrations') == -1:
             files.append(path.replace(os.path.sep, ".")[:-3])
         elif os.path.isdir(path):
             scandir(path, files)

@@ -18,9 +18,9 @@ except ImportError as e:
     sys.exit(1)
 
 from dedupsqlfs.lib import constants
-from dedupsqlfs.db import check_engines
 from dedupsqlfs.log import logging
 import dedupsqlfs
+
 
 def fuse_mount(options, compression_methods=None, hash_functions=None):
     from dedupsqlfs.fuse.dedupfs import DedupFS
@@ -180,7 +180,7 @@ def main(): # {{{1
         import cProfile, pstats
         profile = '.dedupsqlfs.cprofile-%i' % time()
         profiler = cProfile.Profile()
-        result = profiler.runcall(fuse_mount, args, compression_methods, hash_functions)
+        result = profiler.runcall(fuse_mount, args, compression_methods, None)
         profiler.dump_stats(profile)
         sys.stderr.write("\n Profiling statistics:\n\n")
         s = pstats.Stats(profile)
@@ -189,7 +189,7 @@ def main(): # {{{1
         s.sort_stats('tottime').print_stats(0.1)
         os.unlink(profile)
     else:
-        return fuse_mount(args, compression_methods, hash_functions)
+        return fuse_mount(args, compression_methods, None)
 
     return 0
 

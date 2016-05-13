@@ -39,7 +39,7 @@ extern "C" {
 #endif
 
 #include <stddef.h>    /* size_t, ptrdiff_t */
-#include "zstd_v02.h"
+#include "zstd_v03.h"
 
 /******************************************
 *  Compiler-specific
@@ -1117,7 +1117,7 @@ typedef struct ZSTD_DCtx_s ZSTD_DCtx;
 /* *************************************
 *  Prefix - version detection
 ***************************************/
-#define ZSTD_magicNumber 0xFD2FB522   /* v0.2 (current)*/
+#define ZSTD_magicNumber 0xFD2FB523   /* v0.3 */
 
 
 #if defined (__cplusplus)
@@ -1266,16 +1266,16 @@ typedef U32 DTable_max_t[FSE_DTABLE_SIZE_U32(FSE_MAX_TABLELOG)];
 
 /* Function templates */
 
-#define FSE_DECODE_TYPE FSE_decode_t
+#define FSE_DECODE_TYPE FSE_TYPE_NAME(FSE_decode_t, FSE_FUNCTION_EXTENSION)
 
 static U32 FSE_tableStep(U32 tableSize) { return (tableSize>>1) + (tableSize>>3) + 3; }
 
-static size_t FSE_buildDTable
+static size_t FSE_FUNCTION_NAME(FSE_buildDTable, FSE_FUNCTION_EXTENSION)
 (FSE_DTable* dt, const short* normalizedCounter, unsigned maxSymbolValue, unsigned tableLog)
 {
     void* ptr = dt+1;
-    FSE_DECODE_TYPE* const tableDecode = (FSE_DECODE_TYPE*)ptr;
     FSE_DTableHeader DTableH;
+    FSE_DECODE_TYPE* const tableDecode = (FSE_DECODE_TYPE*)ptr;
     const U32 tableSize = 1 << tableLog;
     const U32 tableMask = tableSize-1;
     const U32 step = FSE_tableStep(tableSize);
@@ -1333,7 +1333,7 @@ static size_t FSE_buildDTable
     }
 
     DTableH.fastMode = (U16)noLarge;
-    memcpy(dt, &DTableH, sizeof(DTableH));   /* memcpy(), to avoid strict aliasing warnings */
+    memcpy(dt, &DTableH, sizeof(DTableH));
     return 0;
 }
 
@@ -1473,7 +1473,7 @@ static size_t FSE_buildDTable_rle (FSE_DTable* dt, BYTE symbolValue)
 {
     void* ptr = dt;
     FSE_DTableHeader* const DTableH = (FSE_DTableHeader*)ptr;
-    FSE_decode_t* const cell = (FSE_decode_t*)(ptr) + 1;   /* because dt is unsigned */
+    FSE_decode_t* const cell = (FSE_decode_t*)(ptr) + 1;
 
     DTableH->tableLog = 0;
     DTableH->fastMode = 0;
@@ -1490,7 +1490,7 @@ static size_t FSE_buildDTable_raw (FSE_DTable* dt, unsigned nbBits)
 {
     void* ptr = dt;
     FSE_DTableHeader* const DTableH = (FSE_DTableHeader*)ptr;
-    FSE_decode_t* const dinfo = (FSE_decode_t*)(ptr) + 1;   /* because dt is unsigned */
+    FSE_decode_t* const dinfo = (FSE_decode_t*)(ptr) + 1;
     const unsigned tableSize = 1 << nbBits;
     const unsigned tableMask = tableSize - 1;
     const unsigned maxSymbolValue = tableMask;
@@ -1816,7 +1816,7 @@ static size_t HUF_readDTableX2 (U16* DTable, const void* src, size_t srcSize)
     U32 n;
     U32 nextRankStart;
     void* ptr = DTable+1;
-    HUF_DEltX2* const dt = (HUF_DEltX2*)ptr;
+    HUF_DEltX2* const dt = (HUF_DEltX2*)(ptr);
 
     HUF_STATIC_ASSERT(sizeof(HUF_DEltX2) == sizeof(U16));   /* if compilation fails here, assertion is false */
     //memset(huffWeight, 0, sizeof(huffWeight));   /* is not necessary, even though some analyzer complain ... */
@@ -2133,8 +2133,7 @@ static size_t HUF_readDTableX4 (U32* DTable, const void* src, size_t srcSize)
     if (tableLog > memLog) return ERROR(tableLog_tooLarge);   /* DTable can't fit code depth */
 
     /* find maxWeight */
-    for (maxW = tableLog; rankStats[maxW]==0; maxW--)
-        {if (!maxW) return ERROR(GENERIC); }  /* necessarily finds a solution before maxW==0 */
+    for (maxW = tableLog; rankStats[maxW]==0; maxW--) {}  /* necessarily finds a solution before 0 */
 
     /* Get start index of each weight */
     {
@@ -2466,9 +2465,7 @@ static size_t HUF_readDTableX6 (U32* DTable, const void* src, size_t srcSize)
     if (tableLog > memLog) return ERROR(tableLog_tooLarge);   /* DTable is too small */
 
     /* find maxWeight */
-    for (maxW = tableLog; rankStats[maxW]==0; maxW--)
-        { if (!maxW) return ERROR(GENERIC); }  /* necessarily finds a solution before maxW==0 */
-
+    for (maxW = tableLog; rankStats[maxW]==0; maxW--) {}  /* necessarily finds a solution before 0 */
 
     /* Get start index of each weight */
     {
@@ -2522,10 +2519,10 @@ static size_t HUF_readDTableX6 (U32* DTable, const void* src, size_t srcSize)
 
     /* fill tables */
     {
-        void* ptr = DTable+1;
-        HUF_DDescX6* DDescription = (HUF_DDescX6*)(ptr);
-        void* dSeqStart = DTable + 1 + ((size_t)1<<(memLog-1));
-        HUF_DSeqX6* DSequence = (HUF_DSeqX6*)(dSeqStart);
+        void* ddPtr = DTable+1;
+        HUF_DDescX6* DDescription = (HUF_DDescX6*)(ddPtr);
+        void* dsPtr = DTable + 1 + ((size_t)1<<(memLog-1));
+        HUF_DSeqX6* DSequence = (HUF_DSeqX6*)(dsPtr);
         HUF_DSeqX6 DSeq;
         HUF_DDescX6 DDesc;
         DSeq.sequence = 0;
@@ -3491,7 +3488,7 @@ static size_t ZSTD_decompressSequences(
         memset(&sequence, 0, sizeof(sequence));
         seqState.dumps = dumps;
         seqState.dumpsEnd = dumps + dumpsLength;
-        seqState.prevOffset = 1;
+        seqState.prevOffset = sequence.offset = 4;
         errorCode = BIT_initDStream(&(seqState.DStream), ip, iend-ip);
         if (ERR_isError(errorCode)) return ERROR(corruption_detected);
         FSE_initDState(&(seqState.stateLL), &(seqState.DStream), DTableLL);
@@ -3711,38 +3708,38 @@ static size_t ZSTD_decompressContinue(ZSTD_DCtx* ctx, void* dst, size_t maxDstSi
 
 /* wrapper layer */
 
-unsigned ZSTDv02_isError(size_t code)
+unsigned ZSTDv03_isError(size_t code)
 {
 	return ZSTD_isError(code);
 }
 
-size_t ZSTDv02_decompress( void* dst, size_t maxOriginalSize,
+size_t ZSTDv03_decompress( void* dst, size_t maxOriginalSize,
                      const void* src, size_t compressedSize)
 {
 	return ZSTD_decompress(dst, maxOriginalSize, src, compressedSize);
 }
 
-ZSTDv02_Dctx* ZSTDv02_createDCtx(void)
+ZSTDv03_Dctx* ZSTDv03_createDCtx(void)
 {
-	return (ZSTDv02_Dctx*)ZSTD_createDCtx();
+	return (ZSTDv03_Dctx*)ZSTD_createDCtx();
 }
 
-size_t ZSTDv02_freeDCtx(ZSTDv02_Dctx* dctx)
+size_t ZSTDv03_freeDCtx(ZSTDv03_Dctx* dctx)
 {
 	return ZSTD_freeDCtx((ZSTD_DCtx*)dctx);
 }
 
-size_t ZSTDv02_resetDCtx(ZSTDv02_Dctx* dctx)
+size_t ZSTDv03_resetDCtx(ZSTDv03_Dctx* dctx)
 {
 	return ZSTD_resetDCtx((ZSTD_DCtx*)dctx);
 }
 
-size_t ZSTDv02_nextSrcSizeToDecompress(ZSTDv02_Dctx* dctx)
+size_t ZSTDv03_nextSrcSizeToDecompress(ZSTDv03_Dctx* dctx)
 {
 	return ZSTD_nextSrcSizeToDecompress((ZSTD_DCtx*)dctx);
 }
 
-size_t ZSTDv02_decompressContinue(ZSTDv02_Dctx* dctx, void* dst, size_t maxDstSize, const void* src, size_t srcSize)
+size_t ZSTDv03_decompressContinue(ZSTDv03_Dctx* dctx, void* dst, size_t maxDstSize, const void* src, size_t srcSize)
 {
 	return ZSTD_decompressContinue((ZSTD_DCtx*)dctx, dst, maxDstSize, src, srcSize);
 }

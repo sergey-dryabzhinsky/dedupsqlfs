@@ -4,14 +4,14 @@ __author__ = 'sergey'
 
 """
 Class for Zstd compression helper
-New version 0.3.6
+New version 0.4.7
 """
 
 from dedupsqlfs.compression import BaseCompression
 
 class Zstd036Compression(BaseCompression):
 
-    _method_name = "zstd036"
+    _method_name = "zstd047"
 
     _minimal_size = 31
 

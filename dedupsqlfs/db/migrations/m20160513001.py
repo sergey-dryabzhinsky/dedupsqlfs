@@ -1,13 +1,13 @@
 # -*- coding: utf8 -*-
 #
-# DB migration 001 by 2016-01-22
+# DB migration 001 by 2016-05-13
 #
-# - Rename current ZSTD compression into 'zstd036'
-# - Add new 'zstd' compression for 0.4+
+# - Rename current ZSTD compression into 'zstd047'
+# - Add new 'zstd' compression for 0.6+
 #
 __author__ = 'sergey'
 
-__NUMBER__ = 20160122001
+__NUMBER__ = 20160513001
 
 
 def run(manager):
@@ -24,10 +24,10 @@ def run(manager):
                         dedupsqlfs.db.mysql.table.compression_type.TableCompressionType
         """
 
-        if not table_ct.find('zstd036'):
+        if not table_ct.find('zstd047'):
             cur = table_ct.getCursor()
 
-            cur.execute("UPDATE compression_type SET value='zstd036' WHERE value='zstd';")
+            cur.execute("UPDATE compression_type SET value='zstd047' WHERE value='zstd';")
             cur.execute("INSERT INTO compression_type (value) VALUES ('zstd');")
 
             table_ct.commit()

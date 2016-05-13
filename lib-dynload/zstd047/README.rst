@@ -12,9 +12,7 @@ Python bindings to Yann Collet ZSTD compression library
  "Standard" translates into everyday situations which neither look for highest possible ratio
  (which LZMA and ZPAQ cover) nor extreme speeds (which LZ4 covers).
 
-It is provided as a BSD-license package, hosted on GitHub_.
-
-.. _GitHub: https://github.com/Cyan4973/zstd
+It is provided as a BSD-license package, hosted on [Github https://github.com/Cyan4973/zstd].
 
 Build from source
 -----------------
@@ -22,5 +20,5 @@ Build from source
    >>> git clone https://github.com/sergey-dryabzhinsky/python-zstd
    >>> git submodule update --init
    >>> apt-get install python-dev python3-dev python-setuptools python3-setuptools
-   >>> python setup.py build clean
-   >>> python3 setup.py build clean
+   >>> python setup.py build; python setup.py clean
+   >>> python3 setup.py build; python3 setup.py clean

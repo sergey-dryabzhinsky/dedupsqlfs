@@ -1,7 +1,7 @@
 /*
     zstd_legacy - decoder for legacy format
     Header File
-    Copyright (C) 2015-2016, Yann Collet.
+    Copyright (C) 2015, Yann Collet.
 
     BSD 2-Clause License (http://www.opensource.org/licenses/bsd-license.php)
 
@@ -45,53 +45,32 @@ extern "C" {
 #include "zstd_v01.h"
 #include "zstd_v02.h"
 #include "zstd_v03.h"
-#include "zstd_v04.h"
-#include "zstd_v05.h"
 
-
-/** ZSTD_isLegacy() :
-    @return : > 0 if supported by legacy decoder. 0 otherwise.
-              return value is the version.
-*/
 MEM_STATIC unsigned ZSTD_isLegacy (U32 magicNumberLE)
 {
 	switch(magicNumberLE)
 	{
-		case ZSTDv01_magicNumberLE:return 1;
-		case ZSTDv02_magicNumber : return 2;
-		case ZSTDv03_magicNumber : return 3;
-		case ZSTDv04_magicNumber : return 4;
-		case ZSTDv05_MAGICNUMBER : return 5;
+		case ZSTDv01_magicNumberLE :
+		case ZSTDv02_magicNumber :
+		case ZSTDv03_magicNumber : return 1;
 		default : return 0;
 	}
 }
 
 
 MEM_STATIC size_t ZSTD_decompressLegacy(
-                     void* dst, size_t dstCapacity,
+                     void* dst, size_t maxOriginalSize,
                const void* src, size_t compressedSize,
-               const void* dict,size_t dictSize,
                      U32 magicNumberLE)
 {
 	switch(magicNumberLE)
 	{
 		case ZSTDv01_magicNumberLE :
-			return ZSTDv01_decompress(dst, dstCapacity, src, compressedSize);
+			return ZSTDv01_decompress(dst, maxOriginalSize, src, compressedSize);
 		case ZSTDv02_magicNumber :
-			return ZSTDv02_decompress(dst, dstCapacity, src, compressedSize);
+			return ZSTDv02_decompress(dst, maxOriginalSize, src, compressedSize);
 		case ZSTDv03_magicNumber :
-			return ZSTDv03_decompress(dst, dstCapacity, src, compressedSize);
-		case ZSTDv04_magicNumber :
-			return ZSTDv04_decompress(dst, dstCapacity, src, compressedSize);
-		case ZSTDv05_MAGICNUMBER :
-		    {
-		        size_t result;
-		        ZSTDv05_DCtx* zd = ZSTDv05_createDCtx();
-		        if (zd==NULL) return ERROR(memory_allocation);
-		        result = ZSTDv05_decompress_usingDict(zd, dst, dstCapacity, src, compressedSize, dict, dictSize);
-		        ZSTDv05_freeDCtx(zd);
-		        return result;
-		    }
+			return ZSTDv03_decompress(dst, maxOriginalSize, src, compressedSize);
 		default :
 		    return ERROR(prefix_unknown);
 	}

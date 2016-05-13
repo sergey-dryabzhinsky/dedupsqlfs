@@ -4,7 +4,7 @@ __author__ = 'sergey'
 
 """
 Class for Zstd compression helper
-New version 0.4+
+New version 0.6+
 """
 
 from dedupsqlfs.compression import BaseCompression
@@ -13,15 +13,9 @@ class ZstdCompression(BaseCompression):
 
     _method_name = "zstd"
 
-    _minimal_size = 31
+    _minimal_size = 25
 
     _has_comp_level_options = True
-
-    _func_decomp_old = None
-
-    def _init_module(self):
-        super()._init_module()
-        return
 
     def getFastCompressionOptions(self):
         return ( 1, )
@@ -47,19 +41,5 @@ class ZstdCompression(BaseCompression):
             opts = False
             pass
         return opts
-
-    def decompressData(self, cdata):
-        """
-        @param cdata:
-        @return:
-        """
-        try:
-            data = super().decompressData(cdata)
-        except Exception as e:
-            if str(e).find("wrongMagicNumber") != -1:
-                raise e
-            data = False
-            pass
-        return data
 
     pass

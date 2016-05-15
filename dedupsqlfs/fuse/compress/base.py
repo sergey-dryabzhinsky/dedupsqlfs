@@ -122,11 +122,14 @@ class BaseCompressTool(object):
         elif name == "zstd036":
             from dedupsqlfs.compression.zstd036 import Zstd036Compression
             self._compressors[name] = Zstd036Compression()
+        elif name == "zstd047":
+            from dedupsqlfs.compression.zstd047 import Zstd047Compression
+            self._compressors[name] = Zstd047Compression()
         elif name == "zstd001":
             from dedupsqlfs.compression.zstd001 import Zstd001Compression
             self._compressors[name] = Zstd001Compression()
         else:
-            raise ValueError("Unknown compression method!")
+            raise ValueError("Unknown compression method! %r" % name)
 
         self._compressors[name].setCustomCompressionLevel(level)
 

@@ -9,7 +9,7 @@ New version 0.4.7
 
 from dedupsqlfs.compression import BaseCompression
 
-class Zstd036Compression(BaseCompression):
+class Zstd047Compression(BaseCompression):
 
     _method_name = "zstd047"
 

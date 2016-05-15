@@ -6,6 +6,7 @@ __author__ = 'sergey'
 Base class for compression helper
 """
 
+import sys
 from dedupsqlfs.lib import constants
 
 class BaseCompression:
@@ -32,6 +33,8 @@ class BaseCompression:
 
     def _init_module(self):
         if not self._module:
+            if self._method_name in sys.modules:
+                del sys.modules[ self._method_name ]
             self._module = __import__(self._method_name)
             self._func_comp = getattr(self._module, "compress")
             self._func_decomp = getattr(self._module, "decompress")

@@ -6,6 +6,7 @@ __author__ = 'sergey'
 Class for LZ4 compression helper High Level
 """
 
+import sys
 from dedupsqlfs.compression import BaseCompression
 
 class Lz4hCompression(BaseCompression):
@@ -18,6 +19,8 @@ class Lz4hCompression(BaseCompression):
 
     def _init_module(self):
         if not self._module:
+            if self._method_name in sys.modules:
+                del sys.modules[ self._method_name ]
             self._module = __import__(self._method_name)
             self._func_comp = getattr(self._module, "compressHC")
             self._func_decomp = getattr(self._module, "decompress")

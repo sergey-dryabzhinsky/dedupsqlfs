@@ -46,7 +46,7 @@ zstdFiles = []
 for f in [
         'compress/zstd_compress.c', 'compress/fse_compress.c', 'compress/huf_compress.c', 'compress/zbuff_compress.c',
         'decompress/zstd_decompress.c', 'common/fse_decompress.c', 'decompress/huf_decompress.c', 'decompress/zbuff_decompress.c',
-        'dictBuilder/zdict.c', 'dictBuilder/divsufsort.c',
+#        'dictBuilder/zdict.c', 'dictBuilder/divsufsort.c',
         'common/entropy_common.c', 'common/zstd_common.c',
         'legacy/zstd_v01.c', 'legacy/zstd_v02.c', 'legacy/zstd_v03.c', 'legacy/zstd_v04.c', 'legacy/zstd_v05.c',
     ]:

@@ -9,27 +9,27 @@ VERSION_STR = ".".join([str(x) for x in VERSION])
 COPT = {
     'msvc': [
                 '/Ox',
-                '/Izstd\\lib\\common', '/Izstd\\lib\\compress', '/Izstd\\lib\\decompress',  '/Izstd\\lib\\legacy',
+                '/Izstd\\lib\\common', '/Izstd\\lib\\compress', '/Izstd\\lib\\legacy',
                 '/DVERSION=\"\\\"%s\\\"\"' % VERSION_STR, '/DZSTD_LEGACY_SUPPORT=1'
             ],
     'mingw32':  [
                     '-O3',
-                    '-Izstd/lib/common', '-Izstd/lib/compress', '-Izstd/lib/decompress', '-Izstd/lib/legacy',
+                    '-Izstd/lib/common', '-Izstd/lib/compress', '-Izstd/lib/legacy',
                     '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=1'
                 ],
     'unix': [
                 '-O3',
-                '-Izstd/lib/common', '-Izstd/lib/compress', '-Izstd/lib/decompress', '-Izstd/lib/legacy',
+                '-Izstd/lib/common', '-Izstd/lib/compress', '-Izstd/lib/legacy',
                 '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=1'
             ],
     'clang':    [
                     '-O3',
-                    '-Izstd/lib/common', '-Izstd/lib/compress', '-Izstd/lib/decompress', '-Izstd/lib/legacy',
+                    '-Izstd/lib/common', '-Izstd/lib/compress', '-Izstd/lib/legacy',
                     '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=1'
                 ],
     'gcc':  [
                 '-O3',
-                '-Izstd/lib/common', '-Izstd/lib/compress', '-Izstd/lib/decompress', '-Izstd/lib/legacy',
+                '-Izstd/lib/common', '-Izstd/lib/compress', '-Izstd/lib/legacy',
                 '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=1'
             ]
 }
@@ -46,7 +46,7 @@ zstdFiles = []
 for f in [
         'compress/zstd_compress.c', 'compress/fse_compress.c', 'compress/huf_compress.c', 'compress/zbuff_compress.c',
         'decompress/zstd_decompress.c', 'common/fse_decompress.c', 'decompress/huf_decompress.c', 'decompress/zbuff_decompress.c',
-#        'dictBuilder/zdict.c', 'dictBuilder/divsufsort.c',
+        'dictBuilder/zdict.c', 'dictBuilder/divsufsort.c',
         'common/entropy_common.c', 'common/zstd_common.c',
         'legacy/zstd_v01.c', 'legacy/zstd_v02.c', 'legacy/zstd_v03.c', 'legacy/zstd_v04.c', 'legacy/zstd_v05.c',
     ]:

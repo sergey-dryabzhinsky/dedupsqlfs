@@ -31,6 +31,8 @@ class Table( object ):
     # default start page size for SQLite db file
     _page_size = 512
 
+    _compressed = False
+
     def __init__(self, manager):
         if self._table_name is None:
             raise AttributeError("Define non-empty class variable '_table_name'")
@@ -137,6 +139,35 @@ class Table( object ):
                 break
         return pageSize
 
+    def _decompress(self):
+        db_path = self.getDbFilePath()
+
+        if os.path.exists(db_path):
+            return False
+
+        if os.path.exists(db_path + ".gz"):
+            os.system("gzip -d '%s'" % (db_path + ".gz"))
+            self._compressed = True
+        else:
+            return False
+
+        return True
+
+    def setCompressed(self, flag=True):
+        self._compressed = flag
+        return self
+
+    def _compress(self):
+        db_path = self.getDbFilePath()
+
+        if not os.path.exists(db_path):
+            return False
+        else:
+            if self._compressed:
+                os.system("gzip '%s'" % (db_path + ".gz"))
+
+        return True
+
     def connect( self ):
         import sqlite3
 
@@ -145,6 +176,8 @@ class Table( object ):
         db_dir = os.path.dirname(db_path)
         if not os.path.exists(db_dir):
             os.makedirs(db_dir)
+
+        self._decompress()
 
         isNew = False
         if not os.path.isfile(db_path):
@@ -233,6 +266,8 @@ class Table( object ):
         db_path = self.getDbFilePath()
         if os.path.isfile(db_path):
             return os.stat(db_path).st_size
+        if os.path.isfile(db_path + ".gz"):
+            return os.stat(db_path + ".gz").st_size
         return 0
 
     def getSize(self):
@@ -280,6 +315,8 @@ class Table( object ):
         # Dump/Load DB
         # Warning! Need 2+x space!
 
+        self._decompress()
+
         fn = self.getDbFilePath()
         if not os.path.isfile(fn):
             # Nothing to do
@@ -326,6 +363,8 @@ class Table( object ):
         else:
             self.getLogger().debug("DB table '%s' size not changed after vacuum." % self.getName())
 
+        self._compress()
+
         self.stopTimer("vacuum")
         return newSize - oldSize
 
@@ -336,6 +375,7 @@ class Table( object ):
         if self._conn:
             self._conn.close()
             self._conn = None
+        self._compress()
         return self
 
     def createIndexIfNotExists(self, indexName, fieldList, unique=False, indexSizes=None):
@@ -394,8 +434,11 @@ class Table( object ):
     def drop(self):
         self.startTimer()
         self.close()
-        if os.path.isfile(self.getDbFilePath()):
-            os.unlink(self.getDbFilePath())
+        fn = self.getDbFilePath()
+        if os.path.isfile(fn):
+            os.unlink(fn)
+        if os.path.isfile(fn + ".gz"):
+            os.unlink(fn + ".gz")
         self.stopTimer("drop")
         return self
 

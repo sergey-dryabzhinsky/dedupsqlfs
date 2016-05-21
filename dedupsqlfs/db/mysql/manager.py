@@ -680,7 +680,14 @@ class DbManager( object ):
     def create(self):
         return self
 
-    def copy(self, oldTableName, newTableName):
+    def copy(self, oldTableName, newTableName, compress_dummy=False):
+        """
+        Copy tables
+        @param oldTableName:    Old table name
+        @param newTableName:    New table nane
+        @param compress_dummy:  Dummy params to be equal api with Sqlite
+        @return:
+        """
         self.getTable(oldTableName)
         t2 = self.getTable(newTableName)
 

@@ -146,7 +146,7 @@ class Table( object ):
             return False
 
         if os.path.exists(db_path + ".gz"):
-            os.system("gzip -d '%s'" % (db_path + ".gz"))
+            subprocess.Popen(["gzip", "-d", db_path + ".gz"]).wait()
             self._compressed = True
         else:
             return False
@@ -164,7 +164,7 @@ class Table( object ):
             return False
         else:
             if self._compressed:
-                os.system("gzip '%s'" % (db_path + ".gz"))
+                subprocess.Popen(["gzip", db_path]).wait()
 
         return True
 
@@ -309,7 +309,7 @@ class Table( object ):
 
     def vacuum(self):
         self.startTimer()
-        self.close()
+        self.close(True)
 
         # VACUUM breaks on huge DB
         # Dump/Load DB
@@ -320,7 +320,7 @@ class Table( object ):
         fn = self.getDbFilePath()
         if not os.path.isfile(fn):
             # Nothing to do
-            return self
+            return 0
 
         pageSize = self.calcFilePageSize()
 
@@ -368,14 +368,15 @@ class Table( object ):
         self.stopTimer("vacuum")
         return newSize - oldSize
 
-    def close(self):
+    def close(self, nocompress=False):
         if self._curr:
             self._curr.close()
             self._curr = None
         if self._conn:
             self._conn.close()
             self._conn = None
-        self._compress()
+        if not nocompress:
+            self._compress()
         return self
 
     def createIndexIfNotExists(self, indexName, fieldList, unique=False, indexSizes=None):

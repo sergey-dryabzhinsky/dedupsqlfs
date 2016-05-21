@@ -258,7 +258,7 @@ class DbManager( object ):
         shutil.copyfile(t1.getDbFilePath(), t2.getDbFilePath())
 
         if compress:
-            t2.setCompress()
+            t2.setCompressed()
             t2.close()
 
         return self

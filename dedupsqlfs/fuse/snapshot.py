@@ -55,12 +55,14 @@ class Snapshot(Subvolume):
             self.print_msg("Copy table: %r\n" % tName)
             self.getManager().getManager().copy(
                 tName + "_%s" % subvolItemFrom["hash"],
-                tName + "_%s" % subvolItemTo["hash"]
+                tName + "_%s" % subvolItemTo["hash"],
+                True
             )
 
         self.print_msg("Done\n")
 
         self.getManager().getManager().commit()
+        self.getManager().getManager().close()
 
         return
 

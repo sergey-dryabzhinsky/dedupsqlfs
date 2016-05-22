@@ -97,6 +97,7 @@ class Subvolume(object):
         tableTree.insert(None, name_id, inode_id)
 
         self.getManager().getManager().commit()
+        self.getManager().getManager().close()
 
         return subvolItem
 
@@ -183,6 +184,8 @@ class Subvolume(object):
             self.print_out("-"*(nameMaxLen+11+16+22+22+22+1) + "\n")
         else:
             self.print_out("-"*(nameMaxLen+11+16+14+18+16+22+22+22+1) + "\n")
+
+        self.getManager().getManager().close()
 
         return
 
@@ -382,6 +385,7 @@ class Subvolume(object):
             return
 
         self.getManager().getManager().commit()
+        self.getManager().getManager().close()
 
         return
 
@@ -408,6 +412,7 @@ class Subvolume(object):
         changed = self.getTable('subvolume').readonly(subvol_id, flag)
 
         self.getManager().getManager().commit()
+        self.getManager().getManager().close()
 
         return changed > 0
 

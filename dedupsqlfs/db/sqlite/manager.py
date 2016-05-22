@@ -239,15 +239,28 @@ class DbManager( object ):
         #    self.getTable(t).create()
         return self
 
-    def copy(self, oldTableName, newTableName):
+    def copy(self, oldTableName, newTableName, compress=False):
+        """
+        Copy table file for subvolume
+
+        @param oldTableName:    Old table name
+        @param newTableName:    New table name
+        @param compress:        Compress new table file
+        @return:
+        """
+
         t1 = self.getTable(oldTableName, True)
         t2 = self.getTable(newTableName, True)
 
         t1.create()
         t1.close()
 
-        # Rename files
         shutil.copyfile(t1.getDbFilePath(), t2.getDbFilePath())
+
+        if compress:
+            t2.setCompressed()
+            t2.close()
+
         return self
 
     pass

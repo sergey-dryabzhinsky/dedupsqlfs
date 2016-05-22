@@ -123,7 +123,7 @@ class TableTree( Table ):
     def get_inodes_by_inodes(self, inode_ids):
         self.startTimer()
 
-        iids = ()
+        iids = set()
         id_str = ",".join(inode_ids)
         if id_str:
             cur = self.getCursor()

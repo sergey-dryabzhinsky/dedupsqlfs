@@ -2373,10 +2373,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not nameIds:
                 continue
 
-            to_delete = set()
-            for name_id in nameIds:
-                if name_id not in treeNameIds:
-                    to_delete.add(str(name_id))
+            # SET magick
+            to_delete = nameIds - treeNameIds
 
             count += tableName.remove_by_ids(to_delete)
 
@@ -2423,10 +2421,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             treeInodeIds = tableTree.get_inodes_by_inodes(inodeIds)
 
-            to_delete = set()
-            for inode_id in inodeIds:
-                if inode_id not in treeInodeIds:
-                    to_delete.add(inode_id)
+            # SET magick
+            to_delete = inodeIds - treeInodeIds
 
             count += tableInode.remove_by_ids(to_delete)
 
@@ -2474,10 +2470,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             xattrInodeIds = tableInode.get_inodes_by_inodes(inodeIds)
 
-            to_delete = ()
-            for inode_id in inodeIds:
-                if inode_id not in xattrInodeIds:
-                    to_delete += (inode_id,)
+            # SET magick
+            to_delete = inodeIds - xattrInodeIds
 
             count += tableXattr.remove_by_ids(to_delete)
 
@@ -2525,10 +2519,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             linkInodeIds = tableInode.get_inodes_by_inodes(inodeIds)
 
-            to_delete = ()
-            for inode_id in inodeIds:
-                if inode_id not in linkInodeIds:
-                    to_delete += (inode_id,)
+            # SET magick
+            to_delete = inodeIds - linkInodeIds
 
             count += tableLink.remove_by_ids(to_delete)
 
@@ -2577,13 +2569,9 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             indexInodeIds = tableInode.get_inodes_by_inodes(inodeIds)
 
-            to_delete = set()
-            to_trunc = set()
-            for inode_id in inodeIds:
-                if inode_id not in indexInodeIds:
-                    to_delete.add(inode_id)
-                else:
-                    to_trunc.add(inode_id)
+            # SET magick
+            to_delete = inodeIds - indexInodeIds
+            to_trunc = inodeIds - to_delete
 
             count += tableIndex.remove_by_inodes(to_delete)
 
@@ -2649,10 +2637,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not hashIds:
                 continue
 
-            to_delete = set()
-            for hash_id in hashIds:
-                if hash_id not in indexHashIds:
-                    to_delete.add(str(hash_id))
+            # SET magick
+            to_delete = hashIds - indexHashIds
 
             count += tableHash.remove_by_ids(to_delete)
             tableBlock.remove_by_ids(to_delete)

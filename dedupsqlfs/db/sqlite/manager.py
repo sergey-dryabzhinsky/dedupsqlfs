@@ -258,7 +258,8 @@ class DbManager( object ):
         shutil.copyfile(t1.getDbFilePath(), t2.getDbFilePath())
 
         if compress:
-            t2.setCompressed()
+            if os.path.getsize(t2.getDbFilePath()) > 1024*1024:
+                t2.setCompressed()
             t2.close()
 
         return self

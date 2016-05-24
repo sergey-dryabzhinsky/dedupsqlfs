@@ -2640,10 +2640,11 @@ class DedupOperations(llfuse.Operations): # {{{1
             # SET magick
             to_delete = hashIds - indexHashIds
 
-            count += tableHash.remove_by_ids(to_delete)
-            tableBlock.remove_by_ids(to_delete)
-            tableHCT.remove_by_ids(to_delete)
-            tableHSZ.remove_by_ids(to_delete)
+            id_str = ",".join((str(_id) for _id in to_delete))
+            count += tableHash.remove_by_ids(id_str)
+            tableBlock.remove_by_ids(id_str)
+            tableHCT.remove_by_ids(id_str)
+            tableHSZ.remove_by_ids(id_str)
 
             p = "%6.2f%%" % (100.0 * current / countHashes)
             if p != proc:

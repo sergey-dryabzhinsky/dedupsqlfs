@@ -68,10 +68,9 @@ class TableBlock( Table ):
         self.stopTimer('get')
         return item
 
-    def remove_by_ids(self, hash_ids):
+    def remove_by_ids(self, id_str):
         self.startTimer()
         count = 0
-        id_str = ",".join(hash_ids)
         if id_str:
             cur = self.getCursor()
             cur.execute("DELETE FROM `%s` " % self.getName()+

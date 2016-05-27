@@ -267,18 +267,18 @@ class DedupFS(object): # {{{1
 
         self.getLogger().info("--" * 39)
 
-        tableSubvol = manager.getTable("subvolume")
+        tableSubvol = manager.getTable("subvolume", True)
 
         disk_usage = 0
-        disk_usage += manager.getTable("hash").getFileSize()
-        disk_usage += manager.getTable("hash_compression_type").getFileSize()
-        disk_usage += manager.getTable("hash_sizes").getFileSize()
-        disk_usage += manager.getTable("compression_type").getFileSize()
-        disk_usage += manager.getTable("name").getFileSize()
-        disk_usage += manager.getTable("name_pattern_option").getFileSize()
-        disk_usage += manager.getTable("option").getFileSize()
-        disk_usage += manager.getTable("subvolume").getFileSize()
-        disk_usage += manager.getTable("block").getFileSize()
+        disk_usage += manager.getTable("hash", True).getFileSize()
+        disk_usage += manager.getTable("hash_compression_type", True).getFileSize()
+        disk_usage += manager.getTable("hash_sizes", True).getFileSize()
+        disk_usage += manager.getTable("compression_type", True).getFileSize()
+        disk_usage += manager.getTable("name", True).getFileSize()
+        disk_usage += manager.getTable("name_pattern_option", True).getFileSize()
+        disk_usage += manager.getTable("option", True).getFileSize()
+        disk_usage += manager.getTable("subvolume", True).getFileSize()
+        disk_usage += manager.getTable("block", True).getFileSize()
 
         apparentSize = 0
         dataSize = 0
@@ -292,16 +292,16 @@ class DedupFS(object): # {{{1
             subvol = tableSubvol.get(subvol_id)
             apparentSize += subv.get_apparent_size_fast(subvol["name"])
 
-            disk_usage += manager.getTable("inode_" + subvol["hash"]).getFileSize()
-            disk_usage += manager.getTable("inode_option_" + subvol["hash"]).getFileSize()
-            disk_usage += manager.getTable("inode_hash_block_" + subvol["hash"]).getFileSize()
-            disk_usage += manager.getTable("link_" + subvol["hash"]).getFileSize()
-            disk_usage += manager.getTable("xattr_" + subvol["hash"]).getFileSize()
-            disk_usage += manager.getTable("tree_" + subvol["hash"]).getFileSize()
+            disk_usage += manager.getTable("inode_" + subvol["hash"], True).getFileSize()
+            disk_usage += manager.getTable("inode_option_" + subvol["hash"], True).getFileSize()
+            disk_usage += manager.getTable("inode_hash_block_" + subvol["hash"], True).getFileSize()
+            disk_usage += manager.getTable("link_" + subvol["hash"], True).getFileSize()
+            disk_usage += manager.getTable("xattr_" + subvol["hash"], True).getFileSize()
+            disk_usage += manager.getTable("tree_" + subvol["hash"], True).getFileSize()
 
 
-        tableHCT = manager.getTable('hash_compression_type')
-        tableHS = manager.getTable('hash_sizes')
+        tableHCT = manager.getTable('hash_compression_type', True)
+        tableHS = manager.getTable('hash_sizes', True)
 
         hashCount = subv.prepareIndexHashIdCount()
 

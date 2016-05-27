@@ -448,7 +448,7 @@ class Subvolume(object):
         if subvolItem["stats_at"] and subvolItem["stats"]:
             stats_at = int(subvolItem["stats_at"])
             updated_at = int(subvolItem["updated_at"])
-            if not updated_at > stats_at:
+            if updated_at <= stats_at:
                 # No updates since last stats calculated
                 stats = json.loads(subvolItem["stats"])
                 return stats["apparentSize"]

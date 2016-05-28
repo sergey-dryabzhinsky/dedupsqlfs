@@ -2376,7 +2376,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             # SET magick
             to_delete = nameIds - treeNameIds
 
-            count += tableName.remove_by_ids(to_delete)
+            id_str = ",".join((str(_id) for _id in to_delete))
+            count += tableName.remove_by_ids(id_str)
 
             p = "%6.2f%%" % (100.0 * current / countNames)
             if p != proc:

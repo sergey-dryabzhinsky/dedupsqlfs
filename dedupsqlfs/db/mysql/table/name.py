@@ -110,10 +110,9 @@ class TableName( Table ):
         self.stopTimer('get_name_ids')
         return nameIds
 
-    def remove_by_ids(self, name_ids):
+    def remove_by_ids(self, id_str):
         self.startTimer()
         count = 0
-        id_str = ",".join(name_ids)
         if id_str:
             cur = self.getCursor()
             cur.execute("DELETE FROM `%s` WHERE `id` IN (%s)" % (self.getName(), id_str,))

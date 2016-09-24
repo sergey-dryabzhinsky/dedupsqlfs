@@ -10,27 +10,27 @@ COPT = {
     'msvc': [
                 '/Ox',
                 '/Izstd\\lib\\common', '/Izstd\\lib\\compress', '/Izstd\\lib\\legacy',
-                '/DVERSION=\"\\\"%s\\\"\"' % VERSION_STR, '/DZSTD_LEGACY_SUPPORT=1'
+                '/DVERSION=\"\\\"%s\\\"\"' % VERSION_STR, '/DZSTD_LEGACY_SUPPORT=0'
             ],
     'mingw32':  [
                     '-O3',
                     '-Izstd/lib/common', '-Izstd/lib/compress', '-Izstd/lib/legacy',
-                    '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=1'
+                    '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=0'
                 ],
     'unix': [
                 '-O3',
                 '-Izstd/lib/common', '-Izstd/lib/compress', '-Izstd/lib/legacy',
-                '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=1'
+                '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=0'
             ],
     'clang':    [
                     '-O3',
                     '-Izstd/lib/common', '-Izstd/lib/compress', '-Izstd/lib/legacy',
-                    '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=1'
+                    '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=0'
                 ],
     'gcc':  [
                 '-O3',
                 '-Izstd/lib/common', '-Izstd/lib/compress', '-Izstd/lib/legacy',
-                '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=1'
+                '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=0'
             ]
 }
 
@@ -48,7 +48,6 @@ for f in [
         'decompress/zstd_decompress.c', 'common/fse_decompress.c', 'decompress/huf_decompress.c', 'decompress/zbuff_decompress.c',
 #        'dictBuilder/zdict.c', 'dictBuilder/divsufsort.c',
         'common/entropy_common.c', 'common/zstd_common.c',
-        'legacy/zstd_v01.c', 'legacy/zstd_v02.c', 'legacy/zstd_v03.c', 'legacy/zstd_v04.c', 'legacy/zstd_v05.c',
     ]:
     zstdFiles.append('zstd/lib/'+f)
 

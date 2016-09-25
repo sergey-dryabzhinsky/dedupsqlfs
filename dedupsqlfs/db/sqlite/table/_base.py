@@ -10,6 +10,8 @@ import subprocess
 from dedupsqlfs.db.sqlite.row import dict_factory
 from dedupsqlfs.log import logging
 from dedupsqlfs.my_formats import format_size
+from dedupsqlfs.lib import constants
+from dedupsqlfs.fs import which
 
 class Table( object ):
 
@@ -32,6 +34,9 @@ class Table( object ):
     _page_size = 512
 
     _compressed = False
+
+    _compressed_prog = "gzip"
+
 
     def __init__(self, manager):
         if self._table_name is None:
@@ -139,19 +144,50 @@ class Table( object ):
                 break
         return pageSize
 
+
+    def setCompressionProg(self, prog):
+        if not prog in constants.COMPRESSION_PROGS:
+            raise ValueError("Compression program %r nt supported!")
+        self._compressed_prog = prog
+        return self
+
+
     def _decompress(self):
         db_path = self.getDbFilePath()
 
         if os.path.exists(db_path):
             return False
 
-        if os.path.exists(db_path + ".gz"):
-            subprocess.Popen(["gzip", "-d", db_path + ".gz"]).wait()
-            self._compressed = True
-        else:
-            return False
+        found = False
+        ext_path = db_path
+        for ext, progs in constants.COMPRESSION_PROGS_EXT.items():
+            if os.path.exists(db_path + ext):
+                ext_path = db_path + ext
 
-        return True
+                for prog in progs:
+                    # No progs needed found?
+                    if which(prog) == False:
+                        continue
+
+                    opts = constants.COMPRESSION_PROGS[prog]
+                    if not opts["can-decomp"]:
+                        continue
+
+                    found = True
+
+                    cmd = [prog,]
+                    cmd.extend(opts["decomp"])
+                    cmd.append(ext_path)
+                    subprocess.Popen(cmd).wait()
+                    self._compressed = True
+                    self._compressed_prog = prog
+
+                    break
+
+        if not found and ext_path != db_path:
+            raise RuntimeError("Can't decompress sqlite database: %r. No programs found!" % (ext_path,))
+
+        return found
 
     def setCompressed(self, flag=True):
         self._compressed = flag
@@ -164,8 +200,11 @@ class Table( object ):
             return False
         else:
             if self._compressed:
-                subprocess.Popen(["gzip", db_path]).wait()
-
+                opts = constants.COMPRESSION_PROGS[ self._compressed_prog ]
+                cmd = [self._compressed_prog]
+                cmd.extend(opts["comp"])
+                cmd.append(db_path)
+                subprocess.Popen(cmd).wait()
         return True
 
     def connect( self ):
@@ -266,8 +305,10 @@ class Table( object ):
         db_path = self.getDbFilePath()
         if os.path.isfile(db_path):
             return os.stat(db_path).st_size
-        if os.path.isfile(db_path + ".gz"):
-            return os.stat(db_path + ".gz").st_size
+
+        for prog, opts in constants.COMPRESSION_PROGS.items():
+            if os.path.isfile(db_path + opts["ext"]):
+                return os.stat(db_path + opts["ext"]).st_size
         return 0
 
     def getSize(self):
@@ -438,8 +479,11 @@ class Table( object ):
         fn = self.getDbFilePath()
         if os.path.isfile(fn):
             os.unlink(fn)
-        if os.path.isfile(fn + ".gz"):
-            os.unlink(fn + ".gz")
+
+        for prog, opts in constants.COMPRESSION_PROGS.items():
+            if os.path.isfile(fn + opts["ext"]):
+                os.unlink(fn + opts["ext"])
+
         self.stopTimer("drop")
         return self
 

@@ -19,6 +19,7 @@ except ImportError as e:
 from dedupsqlfs.lib import constants
 from dedupsqlfs.db import check_engines
 from dedupsqlfs.log import logging
+from dedupsqlfs.fs import which
 import dedupsqlfs
 
 def fuse_mount(options, compression_methods=None, hash_functions=None):
@@ -176,6 +177,19 @@ def main(): # {{{1
                         help="Compression level ratio: one of %s; or INT. Defaults to %r. Not all methods support this option." % (
                             ', '.join('%r' % lvl for lvl in levels), constants.COMPRESSION_LEVEL_DEFAULT
                         ))
+
+
+    # Dynamically check for supported compression programs
+    compression_progs = ["none"]
+    for pname, opts in constants.COMPRESSION_PROGS.items():
+        if which(pname):
+            compression_progs.append(pname)
+
+    msg = "Enable compression of snapshot sqlite database files using one of the supported compression programs: %s"
+    msg %= ', '.join('%r' % mth for mth in compression_progs)
+    msg += ". Defaults to %r." % constants.COMPRESSION_PROGS_DEFAULT
+    parser.add_argument('--sqlite-compression-prog', dest='sqlite_compression_prog', metavar='PROGNAME', default=constants.COMPRESSION_PROGS_DEFAULT, help=msg)
+
 
     parser.add_argument('--recompress-on-fly', dest='compression_recompress_now', action="store_true", help="Do recompress blocks which compressed with deprecated compression method.")
 

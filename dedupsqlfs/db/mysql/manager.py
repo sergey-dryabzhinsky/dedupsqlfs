@@ -680,6 +680,15 @@ class DbManager( object ):
     def create(self):
         return self
 
+
+    # Dummy functions
+    def setCompressionProg(self, prog):
+        return self
+
+    def getCompressionProg(self):
+        return None
+
+
     def copy(self, oldTableName, newTableName, compress_dummy=False):
         """
         Copy tables

@@ -17,6 +17,8 @@ class DbManager( object ):
 
     _log = None
 
+    _compresssion_prog = None
+
     tables = (
         "option",
         "tree",
@@ -239,6 +241,15 @@ class DbManager( object ):
         #    self.getTable(t).create()
         return self
 
+
+    def setCompressionProg(self, prog):
+        self._compressed_prog = prog
+        return self
+
+    def getCompressionProg(self):
+        return self._compressed_prog
+
+
     def copy(self, oldTableName, newTableName, compress=False):
         """
         Copy table file for subvolume
@@ -260,6 +271,9 @@ class DbManager( object ):
         if compress:
             if os.path.getsize(t2.getDbFilePath()) > 1024*1024:
                 t2.setCompressed()
+                prog = self.getCompressionProg()
+                if prog not in (None, "none"):
+                    t2.setCompressionProg(prog)
             t2.close()
 
         return self

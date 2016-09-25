@@ -101,10 +101,10 @@ DedupSQLfs was developed using Python 3.2, though it might also work on newer ve
 
 Additional compression modules can be builded with commands:
 
-    $ sudo apt-get install build-essential python3-dev liblzo2-dev libsnappy-dev
+    $ sudo apt-get install build-essential python3-dev liblzo2-dev libsnappy-dev liblz4-dev
     $ cd lib-dynload/lzo
     $ python3 setup.py clean -a
-    $ python3 setup.py build
+    $ python3 setup.py build clean
     ## ... same for lz4, snappy,..
 
 Additional storage engine via MySQL can be accessed with commands:

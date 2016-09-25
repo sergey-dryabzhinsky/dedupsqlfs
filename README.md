@@ -16,7 +16,7 @@ The following shell commands show how to install and use the DedupFS file system
  (where it was developed):
 
     $ sudo apt-get install python3-pip
-    $ sudo pip3 install llfuse
+    $ sudo pip3 install llfuse==0.41.1
     $ git clone https://github.com/sergey-dryabzhinsky/dedupsqlfs.git
     $ mkdir mount_point
     $ ./bin/mount.dedupsqlfs --mountpoint mount_point
@@ -41,7 +41,7 @@ The file system initially stored everything in a multiple [SQLite](http://www.sq
  * Delayed writes for blocks (hashing and compression too).
  * Use "stream"-like writes and read of data blocks, don't store complete files in memory.
  * Cached filesystem tree nodes, inodes and data blocks.
- * New compression methods (some ported for python3): lzo, lz4, quicklz, zstd (ported); lzma, snappy.
+ * Many compression methods: zlib, bzip2, lzma, lzo, lz4, quicklz, zstd, snappy.
  * Support for data storage in localy started MySQL server.
 
 ### Limitations
@@ -102,7 +102,7 @@ DedupSQLfs was developed using Python 3.2, though it might also work on newer ve
 Additional compression modules can be builded with commands:
 
     $ sudo apt-get install build-essential python3-dev liblzo2-dev libsnappy-dev
-    $ cd lzo
+    $ cd lib-dynload/lzo
     $ python3 setup.py clean -a
     $ python3 setup.py build
     ## ... same for lz4, snappy,..
@@ -136,6 +136,6 @@ The latest version of DedupSqlFS is available at <https://github.com/sergey-drya
 
 This software is licensed under the MIT license.
 
-© 2013-2015 Sergey Dryabzhinsky &lt;<sergey.dryabzhinsky@gmail.com>&gt;.
+© 2013-2016 Sergey Dryabzhinsky &lt;<sergey.dryabzhinsky@gmail.com>&gt;.
 
 © 2010 Peter Odding &lt;<peter@peterodding.com>&gt;.

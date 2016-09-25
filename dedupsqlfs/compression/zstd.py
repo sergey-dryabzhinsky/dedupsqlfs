@@ -13,7 +13,7 @@ class ZstdCompression(BaseCompression):
 
     _method_name = "zstd"
 
-    _minimal_size = 25
+    _minimal_size = 31
 
     _has_comp_level_options = True
 

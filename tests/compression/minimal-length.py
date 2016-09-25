@@ -19,7 +19,7 @@ sys.path.insert( 0, dynloaddir )
 sys.path.insert( 0, basedir )
 os.chdir(basedir)
 
-COMPRESSION_SUPPORTED=('lzo', 'zlib', 'bz2', 'lzma', 'snappy', 'lz4', ('lz4', 'lz4h', 'compressHC',), 'quicklzf', 'quicklzm', 'quicklzb', 'zstd')
+COMPRESSION_SUPPORTED=('lzo', 'zlib', 'bz2', 'lzma', 'snappy', 'lz4', ('lz4', 'lz4h', 'compressHC',), 'quicklzf', 'quicklzm', 'quicklzb', 'zstd', 'zstd061', 'zstd047', 'zstd036')
 
 CLENGTHS={}
 

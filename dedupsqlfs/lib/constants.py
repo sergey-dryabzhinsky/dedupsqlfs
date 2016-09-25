@@ -7,8 +7,8 @@ __author__ = 'sergey'
 
 COMPRESSION_SUPPORTED=('lzo', 'zlib', 'bz2', 'lzma', 'snappy', 'lz4', 'lz4h',
                        'quicklz', 'quicklzf', 'quicklzm', 'quicklzb',
-                       'zstd', 'zstd001', 'zstd036', 'zstd047')
-COMPRESSION_READONLY=("quicklz", "zstd001", "zstd036", "zstd047")
+                       'zstd', 'zstd001', 'zstd036', 'zstd047', 'zstd061')
+COMPRESSION_READONLY=("quicklz", "zstd001", "zstd036", "zstd047", 'zstd061')
 COMPRESSION_TYPE_BEST="auto_best"
 COMPRESSION_TYPE_CUSTOM="custom"
 COMPRESSION_TYPE_NONE="none"

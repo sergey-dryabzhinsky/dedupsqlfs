@@ -13,7 +13,7 @@ class Zstd047Compression(BaseCompression):
 
     _method_name = "zstd047"
 
-    _minimal_size = 31
+    _minimal_size = 33
 
     _has_comp_level_options = True
 

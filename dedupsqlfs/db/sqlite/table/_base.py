@@ -183,6 +183,8 @@ class Table( object ):
                     self._compressed_prog = prog
 
                     break
+            if found:
+                break
 
         if not found and ext_path != db_path:
             raise RuntimeError("Can't decompress sqlite database: %r. No programs found!" % (ext_path,))

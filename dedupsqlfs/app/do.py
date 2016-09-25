@@ -41,6 +41,7 @@ except ImportError as e:
 from dedupsqlfs.log import logging
 from dedupsqlfs.lib import constants
 from dedupsqlfs.db import check_engines
+from dedupsqlfs.fs import which
 import dedupsqlfs
 
 def create_subvolume(options, _fuse):
@@ -520,7 +521,7 @@ def main(): # {{{1
         msg += " %r will try selected compression methods (--custom-compress) and choose one with smaller result data." % constants.COMPRESSION_TYPE_CUSTOM
 
     data.add_argument('--compress-method', dest='compression_method', metavar='METHOD', default=constants.COMPRESSION_TYPE_NONE, help=msg)
-    data.add_argument('--recompress-path', dest='recompress_path', metavar='PATH', help="Compress file or entire directory with new compression method")
+    data.add_argument('--recompress-path', dest='recompress_path', metavar='PATH', help="Compress file or entire directory with new compression method. (@todo)")
 
     msg = "Enable compression of data blocks using one or more of the supported compression methods: %s"
     msg %= ', '.join('%r' % mth for mth in compression_methods_cmd[:-2])
@@ -538,6 +539,18 @@ def main(): # {{{1
                             ', '.join('%r' % lvl for lvl in levels), constants.COMPRESSION_LEVEL_DEFAULT
                         ))
     # Do not want 'best' after help setup
+
+    # Dynamically check for supported compression programs
+    compression_progs = ["none"]
+    for pname, opts in constants.COMPRESSION_PROGS.items():
+        if which(pname):
+            compression_progs.append(pname)
+
+    msg = "Enable compression of snapshot sqlite database files using one of the supported compression programs: %s"
+    msg %= ', '.join('%r' % mth for mth in compression_progs)
+    msg += ". Defaults to %r." % constants.COMPRESSION_PROGS_DEFAULT
+    data.add_argument('--sqlite-compression-prog', dest='sqlite_compression_prog', metavar='PROGNAME', default=constants.COMPRESSION_PROGS_DEFAULT, help=msg)
+
 
     # Dynamically check for profiling support.
     try:

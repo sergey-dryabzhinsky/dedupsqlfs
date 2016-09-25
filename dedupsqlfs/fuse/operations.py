@@ -138,6 +138,11 @@ class DedupOperations(llfuse.Operations): # {{{1
         return self
 
     def getManager(self):
+        """
+        @return: DbManager
+        @rtype: dedupsqlfs.db.sqlite.manager.DbManager | dedupsqlfs.db.mysql.manager.DbManager
+        """
+
         if not self.manager:
             engine = self.getOption('storage_engine')
             if not engine:
@@ -1064,7 +1069,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         try:
             self.__log_call('statfs', '->()')
             # Use os.statvfs() to report the host file system's storage capacity.
-            host_fs = os.statvfs(self.getOption("data"))
+            host_fs = os.statvfs(os.path.expanduser( self.getOption("data")) )
 
             stats = llfuse.StatvfsData()
 

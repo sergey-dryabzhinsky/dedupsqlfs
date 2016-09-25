@@ -53,6 +53,11 @@ class Snapshot(Subvolume):
         for tName in ("tree", "inode", "link", "xattr", "inode_hash_block", "inode_option",):
 
             self.print_msg("Copy table: %r\n" % tName)
+
+            self.getManager().getManager().setCompressionProg(
+                self.getManager().getOption("sqlite_compression_prog")
+            )
+
             self.getManager().getManager().copy(
                 tName + "_%s" % subvolItemFrom["hash"],
                 tName + "_%s" % subvolItemTo["hash"],

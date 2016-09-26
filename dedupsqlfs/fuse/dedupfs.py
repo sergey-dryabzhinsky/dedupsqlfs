@@ -37,6 +37,7 @@ if int(fv[0]) < 1 and int(fv[1]) < 41:
 from dedupsqlfs.my_formats import format_size
 from dedupsqlfs.log import logging, DEBUG_VERBOSE
 from dedupsqlfs.fuse.compress.mp import MultiProcCompressTool, BaseCompressTool
+from dedupsqlfs.fuse.compress.mt import MultiThreadCompressTool
 
 # Storage for options and DB interface
 # Implements FUSE interface
@@ -74,8 +75,12 @@ class DedupFS(object): # {{{1
         self.getLogger().debug("DedupFS mount options: %r" % (self._opts,))
         self.getLogger().debug("DedupFS mountpoint: %r" % (self.mountpoint,))
 
-
-        self._compressTool = MultiProcCompressTool()
+        if self.getOption("multi_cpu") == "process":
+            self._compressTool = MultiProcCompressTool()
+        elif self.getOption("multi_cpu") == "thread":
+            self._compressTool = MultiThreadCompressTool()
+        else:
+            self._compressTool = BaseCompressTool()
         self._compressTool.setOption("cpu_limit", self.getOption("cpu_limit"))
         if self._compressTool.checkCpuLimit() <= 1:
             self._compressTool = BaseCompressTool()

@@ -36,7 +36,6 @@ class MultiProcCompressTool(BaseCompressTool):
 
         self._np = self.checkCpuLimit()
 
-        self._task_queue = JoinableQueue()
         self._result_queue = JoinableQueue()
 
         for n in range(self._np):

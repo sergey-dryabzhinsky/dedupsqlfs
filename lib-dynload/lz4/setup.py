@@ -6,9 +6,9 @@ import subprocess
 import os
 from distutils import ccompiler
 
-VERSION = (0, 8, 2)
+VERSION = (1, 7, 5,)
 VERSION_STR = ".".join([str(x) for x in VERSION])
-LZ4_VERSION = "r131"
+LZ4_VERSION = "1.7.5"
 
 # Check to see if we have a lz4 library installed on the system and
 # use it if so. If not, we'll use the bundled library. If lz4 is

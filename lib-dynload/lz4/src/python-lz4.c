@@ -74,6 +74,8 @@ static const int hdr_size = sizeof(uint32_t);
 
 
 static PyObject *py_lz4_compress_fast(PyObject *self, PyObject *args) {
+    (void)self;
+
     PyObject *result;
     const char *source;
     int source_size;
@@ -107,6 +109,8 @@ static PyObject *py_lz4_compress_fast(PyObject *self, PyObject *args) {
 
 
 static PyObject *compress_with(compressor compress, PyObject *self, PyObject *args) {
+    (void)self;
+
     PyObject *result;
     const char *source;
     int source_size;
@@ -140,14 +144,16 @@ static PyObject *compress_with(compressor compress, PyObject *self, PyObject *ar
 }
 
 static PyObject *py_lz4_compress(PyObject *self, PyObject *args) {
-    return compress_with(LZ4_compress, self, args);
+    return compress_with(LZ4_compress_default, self, args);
 }
 
 static PyObject *py_lz4_compressHC(PyObject *self, PyObject *args) {
-    return compress_with(LZ4_compressHC, self, args);
+    return compress_with(LZ4_compress_HC, self, args);
 }
 
 static PyObject *py_lz4_uncompress(PyObject *self, PyObject *args) {
+    (void)self;
+
     PyObject *result;
     const char *source;
     int source_size;

@@ -197,6 +197,9 @@ def main(): # {{{1
     parser.add_argument('--recompress-not-current', dest='compression_recompress_current', action="store_true",
                         help="Do recompress blocks which compressed with not currently selected compression method.")
 
+    parser.add_argument('--decompress-try-all', dest='decompress_try_all', action="store_true", help="Try to decompress blocks with every available method if stored one fails.")
+
+
     # Dynamically check for profiling support.
     try:
         # Using __import__() here because of pyflakes.

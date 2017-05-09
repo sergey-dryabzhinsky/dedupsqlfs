@@ -230,6 +230,11 @@ class DedupOperations(llfuse.Operations): # {{{1
             self._compression_types_revert = self.getManager().getTable("compression_type").getAllRevert()
         return self._compression_types_revert[name]
 
+    def getCompressionTypeIds(self):
+        if not self._compression_types:
+            self._compression_types = self.getManager().getTable("compression_type").getAllRevert()
+        return set(self._compression_types.keys())
+
     # --------------------------------------------------------------------------------------
     #       FUSE OPERATIONS
     # --------------------------------------------------------------------------------------
@@ -1362,7 +1367,33 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getLogger().debug("-- db size: %s" % len(item["data"]))
 
                 block.seek(0)
-                block.write(self.__decompress(item["data"], compType["type_id"]))
+
+                tryAll = self.getOption('decompress_try_all')
+
+                # Try all decompression methods
+                if tryAll:
+                    try:
+                        bdata = self.__decompress(item["data"], compType["type_id"])
+                    except:
+                        bdata = False
+                    if bdata is False:
+                        for type_id in self.getCompressionTypeIds():
+                            try:
+                                bdata = self.__decompress(item["data"], compType["type_id"])
+                            except:
+                                bdata = False
+                            if bdata is not False:
+                                # If stored wrong method - recompress
+                                if type_id != compType["type_id"]:
+                                    recompress = True
+                                block.write(bdata)
+                                break
+                        if bdata is False:
+                            raise OSError("Can't decompress data block! Data corruption?")
+
+                else:
+                    # If it fails - OSError raised
+                    block.write(self.__decompress(item["data"], compType["type_id"]))
 
                 compression = self.getCompressionTypeName(compType["type_id"])
 

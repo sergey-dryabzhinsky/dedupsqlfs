@@ -6,31 +6,34 @@ from setuptools.command.build_ext import build_ext
 VERSION = (0, 6, 1)
 VERSION_STR = ".".join([str(x) for x in VERSION])
 
+# Need legacy support for now
+SUP_LEGACY=1
+
 COPT = {
     'msvc': [
                 '/Ox',
                 '/Izstd\\lib\\common', '/Izstd\\lib\\compress', '/Izstd\\lib\\legacy',
-                '/DVERSION=\"\\\"%s\\\"\"' % VERSION_STR, '/DZSTD_LEGACY_SUPPORT=0'
+                '/DVERSION=\"\\\"%s\\\"\"' % VERSION_STR, '/DZSTD_LEGACY_SUPPORT=%d' % SUP_LEGACY
             ],
     'mingw32':  [
-                    '-O3',
+                    '-O2',
                     '-Izstd/lib/common', '-Izstd/lib/compress', '-Izstd/lib/legacy',
-                    '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=0'
+                    '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=%d' % SUP_LEGACY
                 ],
     'unix': [
-                '-O3',
+                '-O2',
                 '-Izstd/lib/common', '-Izstd/lib/compress', '-Izstd/lib/legacy',
-                '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=0'
+                '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=%d' % SUP_LEGACY
             ],
     'clang':    [
-                    '-O3',
+                    '-O2',
                     '-Izstd/lib/common', '-Izstd/lib/compress', '-Izstd/lib/legacy',
-                    '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=0'
+                    '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=%d' % SUP_LEGACY
                 ],
     'gcc':  [
-                '-O3',
+                '-O2',
                 '-Izstd/lib/common', '-Izstd/lib/compress', '-Izstd/lib/legacy',
-                '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=0'
+                '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=%d' % SUP_LEGACY
             ]
 }
 
@@ -50,6 +53,13 @@ for f in [
         'common/entropy_common.c', 'common/zstd_common.c',
     ]:
     zstdFiles.append('zstd/lib/'+f)
+
+if SUP_LEGACY:
+    for f in [
+            'legacy/zstd_v01.c','legacy/zstd_v02.c','legacy/zstd_v03.c','legacy/zstd_v04.c','legacy/zstd_v05.c',
+        ]:
+        zstdFiles.append('zstd/lib/'+f)
+
 
 zstdFiles.append('src/python-zstd.c')
 

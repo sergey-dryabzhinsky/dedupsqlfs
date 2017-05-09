@@ -6,11 +6,11 @@ from setuptools.command.build_ext import build_ext
 VERSION = (0, 4, 7)
 VERSION_STR = ".".join([str(x) for x in VERSION])
 
-COPT =  {'msvc': ['/Ox', '/Izstd\\lib', '/Izstd\\lib\\legacy', '/DVERSION=\"\\\"%s\\\"\"' % VERSION_STR, '/DZSTD_LEGACY_SUPPORT=0'],
-     'mingw32' : ['-O3', '-Izstd/lib', '-Izstd/lib/legacy', '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=0'],
-     'unix' : ['-O3', '-Izstd/lib', '-Izstd/lib/legacy', '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=0'],
-     'clang' : ['-O3', '-Izstd/lib', '-Izstd/lib/legacy', '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=0'],
-     'gcc' : ['-O3', '-Izstd/lib', '-Izstd/lib/legacy', '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=0']}
+COPT =  {'msvc': ['/Ox', '/Izstd\\lib', '/Izstd\\lib\\legacy', '/DVERSION=\"\\\"%s\\\"\"' % VERSION_STR, '/DZSTD_LEGACY_SUPPORT=1'],
+     'mingw32' : ['-O3', '-Izstd/lib', '-Izstd/lib/legacy', '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=1'],
+     'unix' : ['-O3', '-Izstd/lib', '-Izstd/lib/legacy', '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=1'],
+     'clang' : ['-O3', '-Izstd/lib', '-Izstd/lib/legacy', '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=1'],
+     'gcc' : ['-O3', '-Izstd/lib', '-Izstd/lib/legacy', '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=1']}
 
 class build_ext_subclass( build_ext ):
     def build_extensions(self):
@@ -38,9 +38,9 @@ setup(
         Extension('zstd', [
             'zstd/lib/huff0.c',
             'zstd/lib/fse.c',
-#            'zstd/lib/legacy/zstd_v01.c',
-#            'zstd/lib/legacy/zstd_v02.c',
-#            'zstd/lib/legacy/zstd_v03.c',
+            'zstd/lib/legacy/zstd_v01.c',
+            'zstd/lib/legacy/zstd_v02.c',
+            'zstd/lib/legacy/zstd_v03.c',
             'zstd/lib/zstd_compress.c',
             'zstd/lib/zstd_decompress.c',
             'src/python-zstd.c'

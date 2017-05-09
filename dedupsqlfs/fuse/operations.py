@@ -1381,7 +1381,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                     if bdata is False:
                         for type_id in self.getCompressionTypeIds():
                             try:
-                                bdata = self.__decompress(item["data"], compType["type_id"])
+                                bdata = self.__decompress(item["data"], type_id)
                             except:
                                 bdata = False
                             if bdata is not False:

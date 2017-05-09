@@ -184,6 +184,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if migr.isMigrationNeeded():
                 self.getLogger().error("FS databases need to process migrations! They not (all) applyed!")
                 raise OSError("FS DB not migrated!")
+            self.flushCompressionType()
 
         return self.manager
 
@@ -211,6 +212,13 @@ class DedupOperations(llfuse.Operations): # {{{1
     def flushCaches(self):
         return self.__cache_meta_hook() + self.__cache_block_hook()
 
+
+    def flushCompressionType(self):
+        if self._compression_types:
+            self._compression_types = None
+        if not self._compression_types_revert:
+            self._compression_types_revert = None
+        return
 
     def getCompressionTypeName(self, comp_id):
         if not self._compression_types:

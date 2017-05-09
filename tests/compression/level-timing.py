@@ -315,6 +315,7 @@ def do_level_dtest(method, name, level):
 COMPRESSION_SUPPORTED=[
     ('lzo' , False, do_simple_ctest,),
     ('lz4' , False, do_simple_ctest,),
+    ('lz4r07' , False, do_simple_ctest,),
     ('snappy' , False, do_simple_ctest,),
 #    ('zstd' , False, do_simple_ctest,),
     ('zstd' , range(1,21), do_level_ctest,),
@@ -332,6 +333,7 @@ COMPRESSION_SUPPORTED=[
 DECOMPRESSION_SUPPORTED=[
     ('lzo' , False, do_simple_dtest,),
     ('lz4' , False, do_simple_dtest,),
+    ('lz4r07' , False, do_simple_dtest,),
     ('snappy' , False, do_simple_dtest,),
 #    ('zstd' , False, do_simple_dtest,),
     ('zstd' , range(1,21), do_level_dtest,),

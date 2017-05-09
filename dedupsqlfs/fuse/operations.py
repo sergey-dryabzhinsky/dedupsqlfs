@@ -1368,6 +1368,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
                 block.seek(0)
 
+                compression = self.getCompressionTypeName(compType["type_id"])
+
                 tryAll = self.getOption('decompress_try_all')
 
                 # Try all decompression methods
@@ -1385,17 +1387,19 @@ class DedupOperations(llfuse.Operations): # {{{1
                             if bdata is not False:
                                 # If stored wrong method - recompress
                                 if type_id != compType["type_id"]:
+                                    self.getLogger().debug("-- Different compression types! Do recompress!")
+                                    self.getLogger().debug("----   compressed with: %s" % compression)
+                                    self.getLogger().debug("---- decompressed with: %s" % self.getCompressionTypeName(type_id))
                                     recompress = True
                                 block.write(bdata)
                                 break
                         if bdata is False:
-                            raise OSError("Can't decompress data block! Data corruption?")
+                            raise OSError("Can't decompress data block! Data corruption? Original method was: %s (%d)" % (
+                                compression, compType["type_id"],))
 
                 else:
                     # If it fails - OSError raised
                     block.write(self.__decompress(item["data"], compType["type_id"]))
-
-                compression = self.getCompressionTypeName(compType["type_id"])
 
                 if self.getOption('compression_recompress_now') and self.application.isDeprecated(compression):
                     recompress = True

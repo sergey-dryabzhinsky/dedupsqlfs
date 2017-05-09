@@ -98,6 +98,9 @@ class BaseCompressTool(object):
         elif name == "lz4":
             from dedupsqlfs.compression.lz4 import Lz4Compression
             self._compressors[name] = Lz4Compression()
+        elif name == "lz4r07":
+            from dedupsqlfs.compression.lz4r07 import Lz4r07Compression
+            self._compressors[name] = Lz4r07Compression()
         elif name == "lz4h":
             from dedupsqlfs.compression.lz4h import Lz4hCompression
             self._compressors[name] = Lz4hCompression()

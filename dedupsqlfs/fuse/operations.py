@@ -402,9 +402,10 @@ class DedupOperations(llfuse.Operations): # {{{1
         @return: None
         """
         self.__log_call('fsync', '->(fh=%i, datasync=%r)', fh, datasync)
-        try:
-            if self.isReadonly(): raise FUSEError(errno.EROFS)
 
+        if self.isReadonly(): raise FUSEError(errno.EROFS)
+
+        try:
             attr = self.__get_inode_row(fh)
             self.__log_call('fsync', '-- inode(%i) size=%i', fh, attr["size"])
             if not attr["size"]:
@@ -645,6 +646,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         return node
 
     def mkdir(self, parent_inode, name, mode, ctx): # {{{3
+        if self.isReadonly(): raise FUSEError(errno.EROFS)
+
         try:
             c = {}
             for key in ctx.__slots__:
@@ -652,8 +655,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.__log_call('mkdir', '->(parent_inode=%i, name=%r, mode=%o, ctx=%r)',
                             parent_inode, name, mode, c)
-
-            if self.isReadonly(): raise FUSEError(errno.EROFS)
 
             nameTable = self.getTable("name")
             inodeTable = self.getTable("inode")
@@ -675,6 +676,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             raise self.__except_to_status('mkdir', e, errno.EIO)
 
     def mknod(self, parent_inode, name, mode, rdev, ctx): # {{{3
+        if self.isReadonly(): raise FUSEError(errno.EROFS)
+
         try:
             c = {}
             for key in ctx.__slots__:
@@ -682,7 +685,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.__log_call('mknod', '->(parent_inode=%i, name=%r, mode=%o, rdev=%i, ctx=%r)',
                             parent_inode, name, mode, rdev, c)
-            if self.isReadonly(): return -errno.EROFS
 
             inode, parent_ino = self.__insert(parent_inode, name, mode, 0, ctx, rdev)
             return self.__getattr(inode)
@@ -802,10 +804,11 @@ class DedupOperations(llfuse.Operations): # {{{1
         return 0
 
     def removexattr(self, inode, name):
+        if self.isReadonly():
+            raise FUSEError(errno.EROFS)
+
         try:
             self.__log_call('removexattr', '->(inode=%i, name=%r)', inode, name)
-            if self.isReadonly():
-                raise FUSEError(errno.EROFS)
 
             xattrs = self.__get_cached_xattrs(inode)
             self.__log_call('removexattr', '--(xattrs=%r)', inode, xattrs)
@@ -825,11 +828,12 @@ class DedupOperations(llfuse.Operations): # {{{1
 
 
     def rename(self, inode_parent_old, name_old, inode_parent_new, name_new): # {{{3
+        if self.isReadonly():
+            raise FUSEError(errno.EROFS)
+
         try:
             self.__log_call('rename', '->(inode_parent_old=%i, name_old=%r, inode_parent_new=%i, name_new=%r)',
                             inode_parent_old, name_old, inode_parent_new, name_new)
-            if self.isReadonly():
-                raise FUSEError(errno.EROFS)
 
             # Try to remove the existing target path (if if exists).
             # NB: This also makes sure target directories are empty.
@@ -870,10 +874,11 @@ class DedupOperations(llfuse.Operations): # {{{1
         return 0
 
     def rmdir(self, inode_parent, name): # {{{3
+        if self.isReadonly():
+            raise FUSEError(errno.EROFS)
+
         try:
             self.__log_call('rmdir', '->(inode_parent=%i, name=%r)', inode_parent, name)
-            if self.isReadonly():
-                raise FUSEError(errno.EROFS)
 
             if not self.isReadonly():
                 self.__setattr_mtime(inode_parent)
@@ -892,13 +897,15 @@ class DedupOperations(llfuse.Operations): # {{{1
         @param  attr:   attributes
         @type   attr:   llfuse.EntryAttributes
         """
+        if self.isReadonly():
+            raise FUSEError(errno.EROFS)
+
         try:
             v = {}
             for a in attr.__slots__:
                 v[a] = getattr(attr, a)
 
             self.__log_call('setattr', '->(inode=%i, attr=%r)', inode, v)
-            if self.isReadonly(): return -errno.EROFS
 
             row = self.__get_inode_row(inode)
             self.getLogger().debug("-- current row: %r", row)
@@ -1044,10 +1051,11 @@ class DedupOperations(llfuse.Operations): # {{{1
             raise self.__except_to_status('__setattr_mtime', e, errno.EIO)
 
     def setxattr(self, inode, name, value):
+        if self.isReadonly():
+            raise FUSEError(errno.EROFS)
+
         try:
             self.__log_call('setxattr', '->(inode=%i, name=%r, value=%r)', inode, name, value)
-            if self.isReadonly():
-                raise FUSEError(errno.EROFS)
 
             xattrs = self.__get_cached_xattrs(inode)
 

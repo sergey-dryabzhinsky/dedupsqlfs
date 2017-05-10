@@ -317,11 +317,11 @@ class StorageTimeSize(object):
 
         nget = int((currentSize - needMaxSize) / self._block_size)
 
-        mostrecent = []
+        mostoldest = []
         while True:
             needSize = currentSize
-            mostrecent = heapq.nlargest(nget, heap)
-            for dt, inode, bn, bsize in mostrecent:
+            mostoldest = heapq.nlargest(nget, heap)
+            for dt, inode, bn, bsize in mostoldest:
                 needSize -= bsize
             if needSize <= needMaxSize:
                 break
@@ -330,53 +330,49 @@ class StorageTimeSize(object):
         # 3. Convert data
 
         heap_inodes = {}
-        for dt, inode, bn, bsize in mostrecent:
+        for dt, inode, bn, bsize in mostoldest:
             if inode not in heap_inodes:
-                heap_inodes[ inode ] = ()
-            heap_inodes[ inode ] += (bn,)
+                heap_inodes[ inode ] = set()
+            heap_inodes[ inode ].add(bn)
 
         del heap
-        del mostrecent
+        del mostoldest
 
         # 4. Expire cache, filter by new data
 
         if writed:
-            old_inodes = {}
+            oversize_inodes = {}
         else:
-            old_inodes = 0
+            oversize_inodes = 0
 
-        for inode in inodesKeys:
+        for inode in set(heap_inodes.keys()):
 
             inode_data = self._inodes[inode]
 
-            for bn in set(inode_data.keys()):
+            for bn in heap_inodes[inode]:
 
                 block_data = inode_data[bn]
 
                 if block_data["w"] != writed:
                     continue
 
-                # Expire inodes that in heap or by block numbers
-                if inode not in heap_inodes or\
-                    bn not in heap_inodes[ inode ]:
+                if writed:
+                    osi_inode_data = oversize_inodes.get(inode, {})
+                    osi_inode_data[bn] = block_data.copy()
+                    oversize_inodes[inode] = osi_inode_data
 
-                    if writed:
-                        old_inode_data = old_inodes.get(inode, {})
-                        old_inode_data[bn] = block_data.copy()
-                        old_inodes[inode] = old_inode_data
+                    self._cur_write_cache_size -= block_data["size"]
+                else:
+                    oversize_inodes += 1
 
-                        self._cur_write_cache_size -= block_data["size"]
-                    else:
-                        old_inodes += 1
+                    self._cur_read_cache_size -= block_data["size"]
 
-                        self._cur_read_cache_size -= block_data["size"]
-
-                    del inode_data[bn]
+                del inode_data[bn]
 
             if not inode_data and inode in self._inodes:
                 del self._inodes[inode]
 
-        return old_inodes
+        return oversize_inodes
 
 
     def clear(self):

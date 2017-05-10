@@ -394,16 +394,6 @@ class StorageTimeSize(object):
 
 
     def clear(self):
-        old_inodes = {}
-
-        for inode in set(self._inodes.keys()):
-
-            inode_data = self._inodes[inode]
-
-            if not inode_data["w"]:
-                continue
-
-            old_inodes[inode] = inode_data["data"].copy()
-
+        old_inodes = self._inodes.copy()
         self._inodes = {}
         return old_inodes

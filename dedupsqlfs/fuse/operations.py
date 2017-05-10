@@ -2209,9 +2209,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         start_time1 = time()
         if start_time1 - self.cache_gc_block_write_last_run >= self.flush_interval:
-            flushed = self.__flush_old_cached_blocks(self.cached_blocks.toBeFlushed(), True)
-            flushed_writed_blocks += flushed
-
             flushed = self.__flush_old_cached_blocks(self.cached_blocks.expired(True), True)
             flushed_writed_blocks += flushed
             flushed_writed_expiredByTime_blocks += flushed
@@ -2332,8 +2329,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             # Just readed...
             flushed_attrs += self.cached_attrs.expired(False)
-            # Just flushable...
-            flushed_attrs += self.__flush_expired_inodes(self.cached_attrs.toBeFlushed())
             # Just writed/updated...
             flushed_attrs += self.__flush_expired_inodes(self.cached_attrs.expired(True))
 

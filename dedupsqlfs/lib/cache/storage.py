@@ -222,27 +222,6 @@ class StorageTimeSize(object):
                 inode_data[bn]["f"] = True
         return
 
-    def toBeFlushed(self):
-        flush_inodes = {}
-
-        for inode in tuple(self._inodes.keys()):
-
-            inode_data = self._inodes[inode]
-
-            for bn in tuple(inode_data.keys()):
-                block_data = inode_data[bn]
-
-                if not block_data["f"]:
-                    continue
-
-                block_data["f"] = False
-
-                flush_inode_data = flush_inodes.get(inode, {})
-                flush_inode_data[bn] = block_data.copy()
-                flush_inodes[inode] = flush_inode_data
-
-        return flush_inodes
-
     def expired(self, writed=False):
         now = time()
 
@@ -257,6 +236,13 @@ class StorageTimeSize(object):
 
             for bn in tuple(inode_data.keys()):
                 block_data = inode_data[bn]
+
+                # Get data to FLUSH (and if requested written blocks)
+                if block_data["f"] and writed:
+                    old_inode_data = old_inodes.get(inode, {})
+                    old_inode_data[bn] = block_data.copy()
+                    old_inodes[inode] = old_inode_data
+                    block_data["f"] = False
 
                 t = block_data["time"]
                 if block_data["w"] != writed:

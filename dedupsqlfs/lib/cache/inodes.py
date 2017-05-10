@@ -92,6 +92,11 @@ class InodesTime(object):
 
             inode_data = self._inodes[inode]
 
+            # Get data to FLUSH (and if requested written attrs)
+            if inode_data["f"] and writed:
+                old_inodes[inode] = inode_data["data"].copy()
+                inode_data["f"] = False
+
             if inode_data["w"] != writed:
                 continue
 
@@ -105,28 +110,6 @@ class InodesTime(object):
                 del self._inodes[inode]
 
         return old_inodes
-
-
-    def toBeFlushed(self):
-        """
-        Copy list of inodes which need to be flushed to disk
-        
-        @return: 
-        """
-        flush_inodes = {}
-
-        for inode in set(self._inodes.keys()):
-
-            inode_data = self._inodes[inode]
-
-            if not inode_data["f"]:
-                continue
-
-            flush_inodes[inode] = inode_data["data"].copy()
-
-            inode_data["f"] = False
-
-        return flush_inodes
 
 
     def flush(self, inode):

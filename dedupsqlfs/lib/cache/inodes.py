@@ -34,18 +34,27 @@ class InodesTime(object):
 
         inode = str(inode)
 
+        new = False
         if inode not in self._inodes:
             self._inodes[ inode ] = {
-                "w" : writed
+                "w" : writed,
+                "f" : writed,
             }
+            new = True
 
         inode_data = self._inodes[inode]
 
-        inode_data["time"] = time()
+        # If time not set to 0 (expired)
+        if inode_data.get("time", 0):
+            new = True
+
+        if new:
+            inode_data["time"] = time()
         inode_data["data"] = data
 
         if writed:
             inode_data["w"] = True
+            inode_data["f"] = True
 
         return self
 
@@ -56,15 +65,20 @@ class InodesTime(object):
         inode = str(inode)
 
         inode_data = self._inodes.get(inode, {
-            "time" : now
+            "time" : 0              # Don't create empty item with good time
         })
 
         val = inode_data.get("data", default)
 
+        t = inode_data["time"]
+        if now - t > self._max_ttl:
+            return val
+
         # update last request time
-        inode_data["time"] = time()
+        inode_data["time"] = now
 
         return val
+
 
     def expired(self, writed=False):
         now = time()
@@ -74,7 +88,7 @@ class InodesTime(object):
         else:
             old_inodes = 0
 
-        for inode in tuple(self._inodes.keys()):
+        for inode in set(self._inodes.keys()):
 
             inode_data = self._inodes[inode]
 
@@ -93,7 +107,39 @@ class InodesTime(object):
         return old_inodes
 
 
-    def unset(self, inode):
+    def toBeFlushed(self):
+        """
+        Copy list of inodes which need to be flushed to disk
+        
+        @return: 
+        """
+        flush_inodes = {}
+
+        for inode in set(self._inodes.keys()):
+
+            inode_data = self._inodes[inode]
+
+            if not inode_data["f"]:
+                continue
+
+            flush_inodes[inode] = inode_data["data"].copy()
+
+            inode_data["f"] = False
+
+        return flush_inodes
+
+
+    def flush(self, inode):
+        """
+        Do not remove but set flush flag
+        """
+        key = str(inode)
+        if key in self._inodes:
+            self._inodes[ key ]["f"] = True
+        return self
+
+
+    def expire(self, inode):
         """
         Do not remove but expire
         """
@@ -102,20 +148,18 @@ class InodesTime(object):
             self._inodes[ key ]["time"] = 0
         return self
 
-    def expire(self, inode):
-        return self.unset(inode)
 
     def clear(self):
         old_inodes = {}
 
-        for inode in tuple(self._inodes.keys()):
+        for inode in set(self._inodes.keys()):
 
             inode_data = self._inodes[inode]
 
             if not inode_data["w"]:
                 continue
 
-            old_inodes[inode] = inode_data["data"]
+            old_inodes[inode] = inode_data["data"].copy()
 
         self._inodes = {}
         return old_inodes

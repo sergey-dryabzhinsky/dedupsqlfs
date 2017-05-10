@@ -77,8 +77,9 @@ class StorageTimeSize(object):
 
         if block_number not in inode_data:
             inode_data[ block_number ] = {
-                "size" : 0,
-                "w" : writed
+                "size" : 0,         # Written size
+                "w" : writed,       # Recently written
+                "f" : writed        # Force flush
             }
             new = True
 
@@ -104,12 +105,18 @@ class StorageTimeSize(object):
         else:
             self._cur_read_cache_size += blockSize
 
-        block_data["time"] = time()
+        # If time not set to 0 (expired)
+        if block_data.get("time", 0):
+            new = True
+
+        if new:
+            block_data["time"] = time()
         block_data["block"] = block
         block_data["size"] = blockSize
 
         if writed:
             block_data["w"] = True
+            block_data["f"] = True
 
         return self
 
@@ -123,7 +130,7 @@ class StorageTimeSize(object):
         inode_data = self._inodes.get(inode, {})
 
         block_data = inode_data.get(block_number, {
-            "time" : now
+            "time" : 0          # Don't create empty item with good time
         })
 
         if not block_data:
@@ -136,7 +143,7 @@ class StorageTimeSize(object):
             return val
 
         # update last request time
-        block_data["time"] = time()
+        block_data["time"] = now
 
         return val
 
@@ -147,9 +154,7 @@ class StorageTimeSize(object):
                 if block_data["w"] != writed:
                     continue
 
-                block_data["block"].seek(0, 2)
-                size += block_data["block"].tell()
-                block_data["block"].seek(0, 0)
+                size += len(block_data["block"].getvalue())
         return size
 
 
@@ -168,19 +173,75 @@ class StorageTimeSize(object):
         return filled > max_fill
 
     def forget(self, inode):
+        """
+        Delete inode info from cache if it don't have writed blocks anyhow
+        If have - do expire blocks
+        
+        @param inode: 
+        @return: bool 
+        """
         inode = str(inode)
+        canDel = True
         if inode in self._inodes:
-            del self._inodes[inode]
-        return
+            inode_data = self._inodes[inode]
+            for bn in set(inode_data.keys()):
+                block_data = inode_data[bn]
+                inode_data[bn]["time"] = 0
+                if block_data["w"] is True:
+                    canDel = False
+            if canDel:
+                del self._inodes[inode]
+        return canDel
 
     def expire(self, inode):
+        """
+        Expire inode data
+        It will be removed from cache on expred() call
+        
+        @param inode: 
+        @return: 
+        """
         inode = str(inode)
         if inode in self._inodes:
             inode_data = self._inodes[inode]
-            for bn in tuple(inode_data.keys()):
+            for bn in set(inode_data.keys()):
                 inode_data[bn]["time"] = 0
-            self._inodes[inode] = inode_data
         return
+
+    def flush(self, inode):
+        """
+        Force inode blocks to flush on disk
+        
+        @param inode: 
+        @return: 
+        """
+        inode = str(inode)
+        if inode in self._inodes:
+            inode_data = self._inodes[inode]
+            for bn in set(inode_data.keys()):
+                inode_data[bn]["f"] = True
+        return
+
+    def toBeFlushed(self):
+        flush_inodes = {}
+
+        for inode in tuple(self._inodes.keys()):
+
+            inode_data = self._inodes[inode]
+
+            for bn in tuple(inode_data.keys()):
+                block_data = inode_data[bn]
+
+                if not block_data["f"]:
+                    continue
+
+                block_data["f"] = False
+
+                flush_inode_data = flush_inodes.get(inode, {})
+                flush_inode_data[bn] = block_data.copy()
+                flush_inodes[inode] = flush_inode_data
+
+        return flush_inodes
 
     def expired(self, writed=False):
         now = time()
@@ -220,14 +281,22 @@ class StorageTimeSize(object):
 
         return old_inodes
 
+
     def expireByCount(self, writed=False):
+        """
+        Expired inodes data by in-memory bytes size of cache
+        
+        @param writed: 
+        @return: dict or int 
+        """
+
         now = time()
 
         # 1. Fill heap
 
         heap = []
 
-        inodesKeys = tuple(self._inodes.keys())
+        inodesKeys = set(self._inodes.keys())
 
         for inode in inodesKeys:
 
@@ -258,14 +327,14 @@ class StorageTimeSize(object):
             currentSize = self._cur_read_cache_size
             maxSize = self._max_read_cache_size
 
-        needMaxSize = maxSize * (100 - self._max_size_trsh) / 100
+        needMaxSize = int(maxSize * (100.0 - self._max_size_trsh) / 100.0)
 
         nget = int((currentSize - needMaxSize) / self._block_size)
 
         mostrecent = []
         while True:
             needSize = currentSize
-            mostrecent = heapq.nsmallest(nget, heap)
+            mostrecent = heapq.nlargest(nget, heap)
             for dt, inode, bn, bsize in mostrecent:
                 needSize -= bsize
             if needSize <= needMaxSize:
@@ -294,7 +363,7 @@ class StorageTimeSize(object):
 
             inode_data = self._inodes[inode]
 
-            for bn in tuple(inode_data.keys()):
+            for bn in set(inode_data.keys()):
 
                 block_data = inode_data[bn]
 
@@ -323,7 +392,18 @@ class StorageTimeSize(object):
 
         return old_inodes
 
+
     def clear(self):
-        old_inodes = self._inodes.copy()
+        old_inodes = {}
+
+        for inode in set(self._inodes.keys()):
+
+            inode_data = self._inodes[inode]
+
+            if not inode_data["w"]:
+                continue
+
+            old_inodes[inode] = inode_data["data"].copy()
+
         self._inodes = {}
         return old_inodes

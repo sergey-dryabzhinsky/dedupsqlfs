@@ -366,8 +366,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.getTable("inode_hash_block").delete(fh)
                 self.cached_blocks.forget(fh)
             else:
-                self.cached_blocks.expire(fh)
-            self.cached_attrs.expire(fh)
+                self.cached_blocks.flush(fh)
+            self.cached_attrs.flush(fh)
             self.cached_indexes.expire(fh)
 
             self.__cache_meta_hook()
@@ -413,10 +413,10 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.cached_blocks.forget(fh)
             else:
                 if datasync:
-                    self.cached_blocks.expire(fh)
+                    self.cached_blocks.flush(fh)
                     self.cached_indexes.expire(fh)
 
-            self.cached_attrs.expire(fh)
+            self.cached_attrs.flush(fh)
 
             self.__cache_meta_hook()
             self.__cache_block_hook()
@@ -429,7 +429,7 @@ class DedupOperations(llfuse.Operations): # {{{1
     def fsyncdir(self, fh, datasync):
         self.__log_call('fsyncdir', '->(fh=%i, datasync=%r)', fh, datasync)
         if self.isReadonly(): raise FUSEError(errno.EROFS)
-        self.cached_attrs.expire(fh)
+        self.cached_attrs.flush(fh)
         self.__cache_meta_hook()
 
     def getattr(self, inode): # {{{3
@@ -2045,7 +2045,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         if (block_length == 0 and index_hash_id) or sparsed_block:
             self.getLogger().debug("write block: remove empty or zero-filled block")
             tableIndex.delete_by_inode_number(inode, block_number)
-            self.cached_indexes.unset(inode, block_number)
+            self.cached_indexes.expireBlock(inode, block_number)
 
             result["deleted"] = True
 
@@ -2201,6 +2201,9 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         start_time1 = time()
         if start_time1 - self.cache_gc_block_write_last_run >= self.flush_interval:
+            flushed = self.__flush_old_cached_blocks(self.cached_blocks.toBeFlushed(), True)
+            flushed_writed_blocks += flushed
+
             flushed = self.__flush_old_cached_blocks(self.cached_blocks.expired(True), True)
             flushed_writed_blocks += flushed
             flushed_writed_expiredByTime_blocks += flushed
@@ -2290,7 +2293,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         tableIndex = self.getTable("inode_hash_block")
         items = tableIndex.delete_by_inode_number_more(inode_id, max_block_number)
         for item in items:
-            self.cached_indexes.unset(inode_id, item["block_number"])
+            self.cached_indexes.expireBlock(inode_id, item["block_number"])
 
         # 2. Truncate last block with zeroes
         block = self.__get_block_from_cache(inode_id, max_block_number)
@@ -2321,6 +2324,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             # Just readed...
             flushed_attrs += self.cached_attrs.expired(False)
+            # Just flushable...
+            flushed_attrs += self.__flush_expired_inodes(self.cached_attrs.toBeFlushed())
             # Just writed/updated...
             flushed_attrs += self.__flush_expired_inodes(self.cached_attrs.expired(True))
 

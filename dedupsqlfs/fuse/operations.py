@@ -335,11 +335,12 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.getLogger().debug("Umount file system in process...")
             if not self.getOption("readonly"):
 
-                # Stop flushing thread
-                self.getLogger().debug("Stop flushing thread.")
-                self.flush_thread.stop_event.set()
-                self.getLogger().debug("Wait flushing thread.")
-                self.flush_thread.stop_event.wait()
+                # Stop flushing thread if it started
+                if self.flush_thread.stop_event:
+                    self.getLogger().debug("Stop flushing thread.")
+                    self.flush_thread.stop_event.set()
+                    self.getLogger().debug("Wait flushing thread.")
+                    self.flush_thread.stop_event.wait()
 
                 # Flush all cached blocks
                 self.getLogger().debug("Flush remaining inodes.")
@@ -602,6 +603,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                     pass
 
             if not self.isReadonly():
+                self.flush_thread.data_root_path = self.getApplication().mountpoint
                 self.flush_thread.start()
 
             self.getLogger().debug("DedupFS: inited and mounted")

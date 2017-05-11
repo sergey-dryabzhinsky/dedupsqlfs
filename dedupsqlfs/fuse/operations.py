@@ -590,6 +590,10 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.__get_opts_from_db()
             # Make sure the hash function is (still) valid (since the database was created).
 
+            if not self.isReadonly():
+                self.flush_thread.data_root_path = self.getApplication().mountpoint
+                self.flush_thread.start()
+
             if self.getApplication().mountpoint:
                 self.getManager().getTable('option').update('mounted', 1)
 
@@ -601,10 +605,6 @@ class DedupOperations(llfuse.Operations): # {{{1
                 except:
                     self.getLogger().warning("DedupFS: can't write to %r" % self.getOption('lock_file'))
                     pass
-
-            if not self.isReadonly():
-                self.flush_thread.data_root_path = self.getApplication().mountpoint
-                self.flush_thread.start()
 
             self.getLogger().debug("DedupFS: inited and mounted")
             return 0

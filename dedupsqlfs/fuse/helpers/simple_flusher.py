@@ -23,15 +23,11 @@ class SimpleThreadingCacheFlusher(Thread):
     _file_io = None
 
     def start(self):
-
         if not self.data_root_path:
             raise ValueError("Setup data_root_path value before thread start!")
 
         if not os.path.isdir(self.data_root_path):
             raise ValueError("Value of data_root_path must be existing directory path!")
-
-        self.stop_event = Event()
-        self.flush_event = Event()
         return super().start()
 
     def _get_file_io(self, file_path):
@@ -40,6 +36,9 @@ class SimpleThreadingCacheFlusher(Thread):
         return self._file_io
 
     def run(self):
+
+        self.stop_event = Event()
+        self.flush_event = Event()
 
         flush_path = os.path.join(self.data_root_path, self.flush_filename)
 

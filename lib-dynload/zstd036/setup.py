@@ -1,23 +1,47 @@
 #!/usr/bin/env python
 
+import sys
 from setuptools import setup, find_packages, Extension
 from setuptools.command.build_ext import build_ext
+from distutils import ccompiler
 
 VERSION = (0, 3, 6)
 VERSION_STR = ".".join([str(x) for x in VERSION])
 
-COPT =  {'msvc': ['/Ox', '/Izstd\\lib', '/Izstd\\lib\\legacy', '/DVERSION=\"\\\"%s\\\"\"' % VERSION_STR],
-     'mingw32' : ['-O3', '-Izstd/lib', '-Izstd/lib/legacy', '-DVERSION="%s"' % VERSION_STR],
-     'unix' : ['-O3', '-Izstd/lib', '-Izstd/lib/legacy', '-DVERSION="%s"' % VERSION_STR],
-     'clang' : ['-O3', '-Izstd/lib', '-Izstd/lib/legacy', '-DVERSION="%s"' % VERSION_STR],
-     'gcc' : ['-O3', '-Izstd/lib', '-Izstd/lib/legacy', '-DVERSION="%s"' % VERSION_STR]}
+EXTRA_OPT = 0
+if "--extra-optimization" in sys.argv:
+    # Support legacy output format functions
+    EXTRA_OPT = 1
+    sys.argv.remove("--extra-optimization")
 
-class build_ext_subclass( build_ext ):
+if ccompiler.get_default_compiler() == "msvc":
+    extra_compile_args = [
+        "/Wall",
+        '/Izstd\\lib', '/Izstd\\lib\\legacy',
+        '/DVERSION=\"\\\"%s\\\"\"' % VERSION_STR
+    ]
+    if EXTRA_OPT:
+        extra_compile_args.insert(0, "/O2")
+    else:
+        extra_compile_args.insert(0, "/Ot")
+else:
+    extra_compile_args = [
+        "-std=c99", "-Wall", "-DFORTIFY_SOURCE=2", "-fstack-protector",
+        '-Izstd/lib', '-Izstd/lib/legacy',
+        '-DVERSION="%s"' % VERSION_STR
+    ]
+    if EXTRA_OPT:
+        extra_compile_args.insert(0, "-march=native")
+        extra_compile_args.insert(0, "-O3")
+    else:
+        extra_compile_args.insert(0, "-O2")
+
+
+class BuildExtSubclass(build_ext):
+
     def build_extensions(self):
-        c = self.compiler.compiler_type
-        if c in COPT:
-           for e in self.extensions:
-               e.extra_compile_args = COPT[c]
+        for e in self.extensions:
+            e.extra_compile_args = extra_compile_args
         build_ext.build_extensions(self)
 
 setup(
@@ -45,7 +69,7 @@ setup(
             'src/python-zstd.c'
         ])
     ],
-    cmdclass = {'build_ext': build_ext_subclass },
+    cmdclass={'build_ext': BuildExtSubclass},
     classifiers=[
         'License :: OSI Approved :: BSD License',
         'Intended Audience :: Developers',

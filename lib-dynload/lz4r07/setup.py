@@ -21,8 +21,7 @@ if "--extra-optimization" in sys.argv:
 if ccompiler.get_default_compiler() == "msvc":
     extra_compile_args = ["/Wall"]
     if EXTRA_OPT:
-        extra_compile_args.insert(0, "/Og")
-        extra_compile_args.insert(0, "/Ox")
+        extra_compile_args.insert(0, "/O2")
     else:
         extra_compile_args.insert(0, "/Ot")
 else:

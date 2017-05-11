@@ -1,23 +1,78 @@
 #!/usr/bin/env python
 
+import sys
 from setuptools import setup, find_packages, Extension
 from setuptools.command.build_ext import build_ext
+from distutils import ccompiler
 
 VERSION = (0, 4, 7)
 VERSION_STR = ".".join([str(x) for x in VERSION])
 
-COPT =  {'msvc': ['/Ox', '/Izstd\\lib', '/Izstd\\lib\\legacy', '/DVERSION=\"\\\"%s\\\"\"' % VERSION_STR, '/DZSTD_LEGACY_SUPPORT=1'],
-     'mingw32' : ['-O3', '-Izstd/lib', '-Izstd/lib/legacy', '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=1'],
-     'unix' : ['-O3', '-Izstd/lib', '-Izstd/lib/legacy', '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=1'],
-     'clang' : ['-O3', '-Izstd/lib', '-Izstd/lib/legacy', '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=1'],
-     'gcc' : ['-O3', '-Izstd/lib', '-Izstd/lib/legacy', '-DVERSION="%s"' % VERSION_STR, '-DZSTD_LEGACY_SUPPORT=1']}
+SUP_LEGACY=0
+if "--legacy" in sys.argv:
+    # Support legacy output format functions
+    SUP_LEGACY=1
+    sys.argv.remove("--legacy")
 
-class build_ext_subclass( build_ext ):
+EXTRA_OPT = 0
+if "--extra-optimization" in sys.argv:
+    # Support legacy output format functions
+    EXTRA_OPT = 1
+    sys.argv.remove("--extra-optimization")
+
+if ccompiler.get_default_compiler() == "msvc":
+    extra_compile_args = [
+        "/Wall",
+        '/Izstd\\lib',
+        '/DVERSION=\"\\\"%s\\\"\"' % VERSION_STR,
+        '/DZSTD_LEGACY_SUPPORT=%d' % SUP_LEGACY
+    ]
+    if EXTRA_OPT:
+        extra_compile_args.insert(0, "/O2")
+    else:
+        extra_compile_args.insert(0, "/Ot")
+else:
+    extra_compile_args = [
+        "-std=c99", "-Wall", "-DFORTIFY_SOURCE=2", "-fstack-protector",
+        '-Izstd/lib',
+        '-DVERSION="%s"' % VERSION_STR,
+        '-DZSTD_LEGACY_SUPPORT=%d' % SUP_LEGACY
+    ]
+    if EXTRA_OPT:
+        extra_compile_args.insert(0, "-march=native")
+        extra_compile_args.insert(0, "-O3")
+    else:
+        extra_compile_args.insert(0, "-O2")
+
+
+zstdFiles = [
+            'zstd/lib/huff0.c',
+            'zstd/lib/fse.c',
+            'zstd/lib/zstd_compress.c',
+            'zstd/lib/zstd_decompress.c',
+        ]
+
+
+if SUP_LEGACY:
+    if ccompiler.get_default_compiler() == "msvc":
+        extra_compile_args.extend(['/Izstd\\lib\\legacy',])
+    else:
+        extra_compile_args.extend(['-Izstd/lib/legacy',])
+
+    zstdFiles.extend([
+        'zstd/lib/legacy/zstd_v01.c',
+        'zstd/lib/legacy/zstd_v02.c',
+        'zstd/lib/legacy/zstd_v03.c',
+    ])
+
+zstdFiles.append('src/python-zstd.c')
+
+
+class BuildExtSubclass(build_ext):
+
     def build_extensions(self):
-        c = self.compiler.compiler_type
-        if c in COPT:
-           for e in self.extensions:
-               e.extra_compile_args = COPT[c]
+        for e in self.extensions:
+            e.extra_compile_args = extra_compile_args
         build_ext.build_extensions(self)
 
 setup(
@@ -35,18 +90,9 @@ setup(
     packages=find_packages('src'),
     package_dir={'': 'src'},
     ext_modules=[
-        Extension('zstd', [
-            'zstd/lib/huff0.c',
-            'zstd/lib/fse.c',
-            'zstd/lib/legacy/zstd_v01.c',
-            'zstd/lib/legacy/zstd_v02.c',
-            'zstd/lib/legacy/zstd_v03.c',
-            'zstd/lib/zstd_compress.c',
-            'zstd/lib/zstd_decompress.c',
-            'src/python-zstd.c'
-        ])
+        Extension('zstd', zstdFiles)
     ],
-    cmdclass = {'build_ext': build_ext_subclass },
+    cmdclass={'build_ext': BuildExtSubclass},
     test_suite="tests",
     classifiers=[
         'License :: OSI Approved :: BSD License',

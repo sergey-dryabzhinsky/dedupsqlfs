@@ -4,6 +4,8 @@ import sys
 
 from setuptools import setup, find_packages, Extension
 from setuptools.command.build_ext import build_ext
+from distutils import ccompiler
+
 
 VERSION = (1, 2, 0)
 VERSION_STR = ".".join([str(x) for x in VERSION])
@@ -16,7 +18,7 @@ PKG_VERSION_STR = ".".join([str(x) for x in PKG_VERSION])
 # Ugly hacks, I know
 #
 
-SUP_LEGACY=1
+SUP_LEGACY=0
 if "--legacy" in sys.argv:
     # Support legacy output format functions
     SUP_LEGACY=1
@@ -42,49 +44,57 @@ if "--external" in sys.argv:
         ext_libraries=["zstd"]
 
 
-COPT = {
-    'msvc':     [ '/Ox', ],
-    'mingw32':  [ '-O2', ],
-    'unix':     [ '-O2', ],
-    'clang':    [ '-O2', ],
-    'gcc':      [ '-O2', ]
-}
+EXTRA_OPT=0
+if "--extra-optimization" in sys.argv:
+    # Support legacy output format functions
+    EXTRA_OPT=1
+    sys.argv.remove("--extra-optimization")
+
+if ccompiler.get_default_compiler() == "msvc":
+    extra_compile_args = ["/Wall"]
+    if EXTRA_OPT:
+        extra_compile_args.insert(0, "/O2")
+    else:
+        extra_compile_args.insert(0, "/Ot")
+else:
+    extra_compile_args = ["-std=c99", "-Wall", "-DFORTIFY_SOURCE=2", "-fstack-protector"]
+    if EXTRA_OPT:
+        extra_compile_args.insert(0, "-march=native")
+        extra_compile_args.insert(0, "-O3")
+    else:
+        extra_compile_args.insert(0, "-O2")
+
 
 if not SUP_EXTERNAL:
-    for comp in COPT:
-        if comp == 'msvc':
-            COPT[comp].extend([
-                '/Izstd\\lib', '/Izstd\\lib\\common', '/Izstd\\lib\\compress', '/Izstd\\lib\\decompress',
-                '/DVERSION=\"\\\"%s\\\"\"' % VERSION_STR,
-            ])
-        else:
-            COPT[comp].extend([
-                '-Izstd/lib', '-Izstd/lib/common', '-Izstd/lib/compress', '-Izstd/lib/decompress',
-                '-DVERSION="%s"' % VERSION_STR,
-            ])
+    if ccompiler.get_default_compiler() == "msvc":
+        extra_compile_args.extend([
+            '/Izstd\\lib', '/Izstd\\lib\\common', '/Izstd\\lib\\compress', '/Izstd\\lib\\decompress',
+            '/DVERSION=\"\\\"%s\\\"\"' % VERSION_STR,
+        ])
+    else:
+        extra_compile_args.extend([
+            '-Izstd/lib', '-Izstd/lib/common', '-Izstd/lib/compress', '-Izstd/lib/decompress',
+            '-DVERSION="%s"' % VERSION_STR,
+        ])
 
 if SUP_LEGACY:
-    for comp in COPT:
-        if comp == 'msvc':
-            COPT[comp].extend(['/Izstd\\lib\\legacy', '/DZSTD_LEGACY_SUPPORT=1'])
-        else:
-            COPT[comp].extend(['-Izstd/lib/legacy', '-DZSTD_LEGACY_SUPPORT=1'])
+    if ccompiler.get_default_compiler() == "msvc":
+        extra_compile_args.extend(['/Izstd\\lib\\legacy', '/DZSTD_LEGACY_SUPPORT=1'])
+    else:
+        extra_compile_args.extend(['-Izstd/lib/legacy', '-DZSTD_LEGACY_SUPPORT=1'])
 
 if SUP_PYZSTD_LEGACY:
-    for comp in COPT:
-        if comp == 'msvc':
-            COPT[comp].extend(['/DPYZSTD_LEGACY=1'])
-        else:
-            COPT[comp].extend(['-DPYZSTD_LEGACY=1'])
+    if ccompiler.get_default_compiler() == "msvc":
+        extra_compile_args.extend(['/DPYZSTD_LEGACY=1'])
+    else:
+        extra_compile_args.extend(['-DPYZSTD_LEGACY=1'])
 
 
 class ZstdBuildExt( build_ext ):
 
     def build_extensions(self):
-        c = self.compiler.compiler_type
-        if c in COPT:
-           for e in self.extensions:
-               e.extra_compile_args = COPT[c]
+        for e in self.extensions:
+            e.extra_compile_args = extra_compile_args
         build_ext.build_extensions(self)
 
 zstdFiles = []

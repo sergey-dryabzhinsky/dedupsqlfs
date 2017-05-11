@@ -130,6 +130,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.manager = None
 
         self.flush_thread = SimpleThreadingCacheFlusher()
+        self.flush_thread.setDaemon(True)
+        self.flush_thread.setName("simple-threading-cache-flusher")
 
     # FUSE API implementation: {{{2
 

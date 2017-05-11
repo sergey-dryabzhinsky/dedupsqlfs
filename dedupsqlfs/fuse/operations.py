@@ -38,6 +38,7 @@ from dedupsqlfs.lib.cache.storage import StorageTimeSize
 from dedupsqlfs.lib.cache.index import IndexTime
 from dedupsqlfs.lib.cache.inodes import InodesTime
 from dedupsqlfs.fuse.subvolume import Subvolume
+from dedupsqlfs.fuse.helpers.simple_flusher import SimpleThreadingCacheFlusher
 
 class DedupOperations(llfuse.Operations): # {{{1
 
@@ -127,6 +128,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         self._compression_types_revert = {}
 
         self.manager = None
+
+        self.flush_thread = SimpleThreadingCacheFlusher()
 
     # FUSE API implementation: {{{2
 
@@ -331,6 +334,13 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.__log_call('destroy', '->()')
             self.getLogger().debug("Umount file system in process...")
             if not self.getOption("readonly"):
+
+                # Stop flushing thread
+                self.getLogger().debug("Stop flushing thread.")
+                self.flush_thread.stop_event.set()
+                self.getLogger().debug("Wait flushing thread.")
+                self.flush_thread.stop_event.wait()
+
                 # Flush all cached blocks
                 self.getLogger().debug("Flush remaining inodes.")
                 self.__flush_expired_inodes(self.cached_attrs.clear())
@@ -351,9 +361,19 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.getManager().getTable('option').update('mounted', 0)
 
             self.getManager().close()
-            return 0
         except Exception as e:
             raise self.__except_to_status('destroy', e, errno.EIO)
+
+        if self.getOption('lock_file'):
+            try:
+                f = open(self.getOption('lock_file'), 'w')
+                f.write("destroy-done\n")
+                f.close()
+            except:
+                self.getLogger().warning("DedupFS: can't write to %r" % self.getOption('lock_file'))
+                pass
+
+        return 0
 
     def flush(self, fh):
         try:
@@ -580,6 +600,9 @@ class DedupOperations(llfuse.Operations): # {{{1
                 except:
                     self.getLogger().warning("DedupFS: can't write to %r" % self.getOption('lock_file'))
                     pass
+
+            if not self.isReadonly():
+                self.flush_thread.start()
 
             self.getLogger().debug("DedupFS: inited and mounted")
             return 0

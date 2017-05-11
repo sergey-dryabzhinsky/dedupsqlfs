@@ -14,6 +14,7 @@ try:
     import stat
     from time import time
     import traceback
+    from threading import Timer
 except ImportError as e:
     msg = "Error: Failed to load one of the required Python modules! (%s)\n"
     sys.stderr.write(msg % str(e))
@@ -594,7 +595,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             if not self.isReadonly():
                 self.flush_thread.data_root_path = self.getApplication().mountpoint
-                self.flush_thread.start()
+                t = Timer(5, self.flush_thread.start)
+                t.start()
 
             if self.getApplication().mountpoint:
                 self.getManager().getTable('option').update('mounted', 1)

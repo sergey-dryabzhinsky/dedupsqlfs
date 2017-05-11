@@ -35,17 +35,25 @@ class IndexTime(object):
         inode = str(inode)
         block_number = str(block_number)
 
+        new = False
         if inode not in self._inodes:
             self._inodes[ inode ] = {}
+            new = True
 
         inode_data = self._inodes[inode]
 
         if block_number not in inode_data:
             inode_data[ block_number ] = {}
+            new = True
 
         hash_data = inode_data[block_number]
 
-        hash_data["time"] = time()
+        # If time not set to 0 (expired)
+        if hash_data.get("time", 0):
+            new = True
+
+        if new:
+            hash_data["time"] = time()
         hash_data["hash"] = hash_id
 
         return self
@@ -60,17 +68,21 @@ class IndexTime(object):
         inode_data = self._inodes.get(inode, {})
 
         hash_data = inode_data.get(block_number, {
-            "time" : now
+            "time" : 0              # Don't create empty item with good time
         })
 
         val = hash_data.get("hash", default)
 
+        t = hash_data["time"]
+        if now - t > self._max_ttl:
+            return val
+
         # update last request time
-        hash_data["time"] = time()
+        hash_data["time"] = now
 
         return val
 
-    def unset(self, inode, block_number):
+    def expireBlock(self, inode, block_number):
 
         inode = str(inode)
         block_number = str(block_number)
@@ -94,7 +106,7 @@ class IndexTime(object):
         inode = str(inode)
         if inode in self._inodes:
             inode_data = self._inodes[inode]
-            for bn in tuple(inode_data.keys()):
+            for bn in set(inode_data.keys()):
                 inode_data[bn]["time"] = 0
             self._inodes[inode] = inode_data
         return
@@ -104,11 +116,11 @@ class IndexTime(object):
 
         old_inodes = 0
 
-        for inode in tuple(self._inodes.keys()):
+        for inode in set(self._inodes.keys()):
 
             inode_data = self._inodes[inode]
 
-            for bn in tuple(inode_data.keys()):
+            for bn in set(inode_data.keys()):
                 block_data = inode_data[bn]
 
                 t = block_data["time"]

@@ -10,23 +10,41 @@ import sys, os
 from distutils.command.build_ext import build_ext
 from distutils.core import setup
 from distutils.extension import Extension
+from distutils import ccompiler
 
 __version__ = "0.0.3"
 
 packages = []
 home = os.path.expanduser("~")
+
+EXTRA_OPT=0
+if "--extra-optimization" in sys.argv:
+    # Support legacy output format functions
+    EXTRA_OPT=1
+    sys.argv.remove("--extra-optimization")
+
+if ccompiler.get_default_compiler() == "msvc":
+    extra_compile_args = ["/Wall"]
+    if EXTRA_OPT:
+        extra_compile_args.insert(0, "/O2")
+    else:
+        extra_compile_args.insert(0, "/Ot")
+else:
+    extra_compile_args = ["-std=c99", "-Wall", "-DFORTIFY_SOURCE=2", "-fstack-protector"]
+    if EXTRA_OPT:
+        extra_compile_args.insert(0, "-march=native")
+        extra_compile_args.insert(0, "-O3")
+    else:
+        extra_compile_args.insert(0, "-O2")
+
+
 extens = [
     Extension('_lzma',
         ['src/_lzmamodule.c'],
         libraries = ['lzma'],
         include_dirs = [os.path.join(home, 'include'), '/opt/local/include', '/usr/local/include'],
         library_dirs = [os.path.join(home, 'lib'), '/opt/local/lib', '/usr/local/lib'],
-        extra_compile_args = [
-            "-O3",
-            "-march=native",
-            "-DFORTIFY_SOURCE=2", "-fstack-protector",
-#            "-floop-interchange", "-floop-block", "-floop-strip-mine", "-ftree-loop-distribution"
-        ]
+        extra_compile_args = extra_compile_args
    )
 ]
 

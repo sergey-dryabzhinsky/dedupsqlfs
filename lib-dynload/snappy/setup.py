@@ -23,7 +23,9 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import sys
 from distutils.core import setup, Extension
+from distutils import ccompiler
 
 version = '0.5'
 long_description = """
@@ -32,20 +34,31 @@ Python bindings for the snappy compression library from Google.
 More details about Snappy library: http://code.google.com/p/snappy
 """
 
+EXTRA_OPT=0
+if "--extra-optimization" in sys.argv:
+    # Support legacy output format functions
+    EXTRA_OPT=1
+    sys.argv.remove("--extra-optimization")
+
+if ccompiler.get_default_compiler() == "msvc":
+    extra_compile_args = ["/Wall"]
+    if EXTRA_OPT:
+        extra_compile_args.insert(0, "/O2")
+    else:
+        extra_compile_args.insert(0, "/Ot")
+else:
+    extra_compile_args = ["-Wall", "-DFORTIFY_SOURCE=2", "-fstack-protector"]
+    if EXTRA_OPT:
+        extra_compile_args.insert(0, "-march=native")
+        extra_compile_args.insert(0, "-O3")
+    else:
+        extra_compile_args.insert(0, "-O2")
 
 snappymodule = Extension(
     'snappy',
     libraries=['snappy'],
     sources=['src/snappymodule.cc', 'src/crc32c.c'],
-    extra_compile_args = [
-        "-O3",
-# Hardening
-            "-DFORTIFY_SOURCE=2", "-fstack-protector",
-# Full CPU optimization, for custom build by hand
-#            "-march=native",
-# GCC Graphite
-#            "-floop-interchange", "-floop-block", "-floop-strip-mine", "-ftree-loop-distribution",
-    ]
+    extra_compile_args = extra_compile_args
 )
 
 setup(

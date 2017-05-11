@@ -7,7 +7,7 @@ Based on code written by Peter Odding: http://github.com/xolox/dedupfs/
 
 Rewriten to use Python3 (3.2+), new compression methods, snapshots / subvolumes.
 
-I know about ZFS and Btrfs but them are still complicated to use under linux and has disadvantages
+I know about ZFS and Btrfs. But they are still complicated to use under linux and has disadvantages
  like need in block device, weak block hash algorithms, very little variants of compression methods.
 
 ## Usage
@@ -15,7 +15,8 @@ I know about ZFS and Btrfs but them are still complicated to use under linux and
 The following shell commands show how to install and use the DedupFS file system on [Ubuntu](http://www.ubuntu.com/)
  (where it was developed):
 
-    $ sudo apt-get install python3-pip
+    $ sudo apt-get install python3-pip libfuse-dev
+    # !!! STRONG DEPENDANCY on that version !!! @2017-05-11
     $ sudo pip3 install llfuse==0.41.1
     $ git clone https://github.com/sergey-dryabzhinsky/dedupsqlfs.git
     $ mkdir mount_point
@@ -28,7 +29,12 @@ The following shell commands show how to install and use the DedupFS file system
 
 ## Status
 
-Development on DedupSqlFS began as a proof of concept to find out how much disk space the author could free by employing deduplication to store his daily backups. Since then it's become more or less usable as a way to archive old backups, i.e. for secondary storage deduplication. It's not recommended to use the file system for primary storage though, simply because the file system is too slow. I also wouldn't recommend depending on DedupFS just yet, at least until a proper set of automated tests has been written and successfully run to prove the correctness of the code.
+Development on DedupSqlFS began as a proof of concept to find out how much disk space the author could free
+ by employing deduplication to store his daily backups. Since then it's become more or less usable as a way
+ to archive old backups, i.e. for secondary storage deduplication. It's not recommended to use the file system
+ for primary storage though, simply because the file system is too slow.
+ I also wouldn't recommend depending on DedupFS just yet, at least until a proper set of automated tests
+ has been written and successfully run to prove the correctness of the code.
 
 The file system initially stored everything in a multiple [SQLite](http://www.sqlite.org/) databases.
  It turned out that in single file database after the database grew beyond 8 GB the write speed would drop
@@ -101,17 +107,20 @@ DedupSQLfs was developed using Python 3.2, though it might also work on newer ve
 
 Additional compression modules can be builded with commands:
 
-    $ sudo apt-get install build-essential python3-dev liblzo2-dev libsnappy-dev liblz4-dev
+    $ sudo apt-get install build-essential python3-dev liblzo2-dev libsnappy-dev liblz4-dev liblzma-dev
     $ cd lib-dynload/lzo
     $ python3 setup.py clean -a
-    $ python3 setup.py build clean
+    $ python3 setup.py build_ext clean
     ## ... same for lz4, snappy,..
+    # If you need extra optimization - tune for your CPU for example - then call
+    $ python3 setup.py clean -a
+    $ python3 setup.py build_ext --extra-optimization clean
 
 Additional storage engine via MySQL can be accessed with commands:
 
     $ sudo pip3 install pymysql
 
-Additional performance gain about 1-3% via Cython:
+Additional performance gain about 1-5% via Cython:
 
     ## Setup tools If not installed
     $ sudo pip3 install setuptools
@@ -136,6 +145,6 @@ The latest version of DedupSqlFS is available at <https://github.com/sergey-drya
 
 This software is licensed under the MIT license.
 
-© 2013-2016 Sergey Dryabzhinsky &lt;<sergey.dryabzhinsky@gmail.com>&gt;.
+© 2013-2017 Sergey Dryabzhinsky &lt;<sergey.dryabzhinsky@gmail.com>&gt;.
 
 © 2010 Peter Odding &lt;<peter@peterodding.com>&gt;.

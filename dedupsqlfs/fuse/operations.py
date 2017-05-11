@@ -379,14 +379,17 @@ class DedupOperations(llfuse.Operations): # {{{1
             raise self.__except_to_status('flush', e, errno.EIO)
 
     def forget(self, inode_list):
+        """
+        @param inode_list: inode_list is a list of (inode, nlookup) tuples. 
+        @return: 
+        """
         try:
             self.__log_call('forget', '->(inode_list=%r)', inode_list)
             # clear block cache
             for ituple in inode_list:
-                for inode in ituple:
-                    self.cached_attrs.expire(inode)
-                    self.cached_blocks.expire(inode)
-                    self.cached_indexes.expire(inode)
+                self.cached_attrs.expire(ituple[0])
+                self.cached_blocks.expire(ituple[0])
+                self.cached_indexes.expire(ituple[0])
         except FUSEError:
             raise
         except Exception as e:
@@ -792,6 +795,8 @@ class DedupOperations(llfuse.Operations): # {{{1
     def release(self, fh): # {{{3
         self.__log_call('release', '->(fh=%i)', fh)
         #self.__flush_inode_cached_blocks(fh, clean=True)
+        self.cached_blocks.expire(fh)
+        self.cached_attrs.expire(fh)
         self.__cache_block_hook()
         self.__cache_meta_hook()
         self.__gc_hook()
@@ -799,6 +804,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def releasedir(self, fh):
         self.__log_call('releasedir', '->(fh=%r)', fh)
+        self.cached_attrs.expire(fh)
         self.__cache_meta_hook()
         self.__gc_hook()
         return 0

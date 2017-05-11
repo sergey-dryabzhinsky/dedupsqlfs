@@ -145,6 +145,6 @@ The latest version of DedupSqlFS is available at <https://github.com/sergey-drya
 
 This software is licensed under the MIT license.
 
-© 2013-2016 Sergey Dryabzhinsky &lt;<sergey.dryabzhinsky@gmail.com>&gt;.
+© 2013-2017 Sergey Dryabzhinsky &lt;<sergey.dryabzhinsky@gmail.com>&gt;.
 
 © 2010 Peter Odding &lt;<peter@peterodding.com>&gt;.

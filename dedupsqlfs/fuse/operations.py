@@ -594,7 +594,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.__get_opts_from_db()
             # Make sure the hash function is (still) valid (since the database was created).
 
-            if not self.isReadonly():
+            # NOT READONLY - AND - Mountpoint defined (mount action)
+            if not self.isReadonly() and self.getApplication().mountpoint:
                 self.flush_thread.data_root_path = self.getApplication().mountpoint
                 t = Timer(5, self.flush_thread.start)
                 t.start()

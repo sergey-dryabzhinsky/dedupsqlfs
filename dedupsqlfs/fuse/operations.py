@@ -324,6 +324,11 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def destroy(self): # {{{3
 
+        # Stop flushing thread if it started
+        if self.flush_thread.stop_event:
+            self.getLogger().debug("Stop flushing thread.")
+            self.flush_thread.do_stop()
+
         if self.getOption('lock_file'):
             try:
                 f = open(self.getOption('lock_file'), 'w')
@@ -337,14 +342,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.__log_call('destroy', '->()')
             self.getLogger().debug("Umount file system in process...")
             if not self.getOption("readonly"):
-
-                # Stop flushing thread if it started
-                if self.flush_thread.stop_event:
-                    self.getLogger().debug("Stop flushing thread.")
-                    self.flush_thread.stop_event.set()
-                    self.getLogger().debug("Wait flushing thread to stop.")
-                    while self.flush_thread.stop_event.is_set():
-                        sleep(0.01)
 
                 # Flush all cached blocks
                 self.getLogger().debug("Flush remaining inodes.")

@@ -32,10 +32,19 @@ class SimpleThreadingCacheFlusher(Thread):
         super().start()
 
 
-    def _get_file_io(self, file_path):
-        if not self._file_io:
-            self._file_io = open(file_path, 'w+')
-        return self._file_io
+    def _do_flush(self):
+        if self._file_io:
+            self._file_io.seek(0, 0)
+            self._file_io.write("Do not remove!\n")
+            self._file_io.flush()
+
+
+    def do_stop(self):
+        if self.stop_event:
+            self.stop_event.set()
+        if self._file_io:
+            self._file_io.close()
+            self._file_io = None
 
 
     def run(self):
@@ -44,6 +53,9 @@ class SimpleThreadingCacheFlusher(Thread):
         self.flush_event = Event()
 
         flush_path = os.path.join(self.data_root_path, self.flush_filename)
+
+        if not self._file_io:
+            self._file_io = open(flush_path, 'w+')
 
         last_flush = time()
         while not self.stop_event.is_set():
@@ -58,9 +70,7 @@ class SimpleThreadingCacheFlusher(Thread):
                 sleep(self.sleep_interval)
                 continue
 
-            self._get_file_io(flush_path).seek(0, 0)
-            self._get_file_io(flush_path).write("Do not remove!\n")
-            self._get_file_io(flush_path).flush()
+            self._do_flush()
 
             last_flush = now
 

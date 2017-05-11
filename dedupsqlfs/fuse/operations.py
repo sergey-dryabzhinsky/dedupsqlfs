@@ -1397,7 +1397,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                                 if type_id != compType["type_id"]:
                                     self.getLogger().debug("-- Different compression types! Do recompress!")
                                     self.getLogger().debug("----   compressed with: %s" % compression)
-                                    self.getLogger().debug("---- decompressed with: %s" % self.getCompressionTypeName(type_id))
+                                    compression = self.getCompressionTypeName(type_id)
+                                    self.getLogger().debug("---- decompressed with: %s" % compression)
                                     recompress = True
                                 block.write(bdata)
                                 break

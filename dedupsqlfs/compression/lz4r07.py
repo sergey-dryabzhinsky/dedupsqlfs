@@ -19,4 +19,14 @@ class Lz4r07Compression(BaseCompression):
 
     _deprecated = True
 
+    def isDataMayBeCompressed(self, data):
+        """
+        Disallow compression
+        It's deprecated version
+
+        @param data:
+        @return:
+        """
+        return False
+
     pass

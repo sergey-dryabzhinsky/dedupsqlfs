@@ -50,11 +50,18 @@ class BaseCompressTool(object):
     @type _options: dict
     """
 
+    _selected = None
+    """
+    @ivar _selected: is Method selected cache
+    @type _selected: dict
+    """
+
     time_spent_compressing = 0
 
     def __init__(self):
         self._compressors = {}
         self._options = {}
+        self._selected = {}
         pass
 
     def checkCpuLimit(self):
@@ -141,6 +148,7 @@ class BaseCompressTool(object):
 
         return self
 
+
     def getCompressor(self, name):
         if name in self._compressors:
             comp = self._compressors[name]
@@ -148,7 +156,13 @@ class BaseCompressTool(object):
         else:
             raise ValueError("Unknown compression method: %r" % (name,))
 
+
     def isMethodSelected(self, name):
+
+        selected = self._selected.get(name)
+        if selected is not None:
+            return selected
+
         selected = False
 
         method = self.getOption("compression_method")
@@ -164,6 +178,8 @@ class BaseCompressTool(object):
             for m in methods:
                 if m == name:
                     selected = True
+
+        self._selected[name] = selected
 
         return selected
 

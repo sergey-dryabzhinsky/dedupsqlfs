@@ -84,7 +84,7 @@ class MultiProcCompressTool(BaseCompressTool):
         @return:
         """
 
-        sleep_wait = 0.1
+        sleep_wait = 0.01
 
         while True:
 
@@ -160,7 +160,7 @@ class MultiProcCompressTool(BaseCompressTool):
 
         for n in range(self._np):
             tq = self._task_queues[n]
-            tq.put_nowait(0.1)
+            tq.put_nowait(0.01)
 
         self.time_spent_compressing = time() - start_time
 

@@ -12,7 +12,7 @@ try:
     from math import floor, ceil, modf
     import os
     import stat
-    from time import time
+    from time import time, sleep
     import traceback
     from threading import Timer
 except ImportError as e:
@@ -342,8 +342,9 @@ class DedupOperations(llfuse.Operations): # {{{1
                 if self.flush_thread.stop_event:
                     self.getLogger().debug("Stop flushing thread.")
                     self.flush_thread.stop_event.set()
-                    self.getLogger().debug("Wait flushing thread.")
-                    self.flush_thread.stop_event.wait()
+                    self.getLogger().debug("Wait flushing thread to stop.")
+                    while self.flush_thread.stop_event.is_set():
+                        sleep(0.01)
 
                 # Flush all cached blocks
                 self.getLogger().debug("Flush remaining inodes.")

@@ -2,11 +2,11 @@
 # -*- coding: utf8 -*-
 
 """
-Mount dedupsqlfs filesystem
+Flush caches in dedupsqlfs filesystem
 
 @author: sergey
-@copyright: 2013
-@since: 2013-07-28
+@copyright: 2017
+@since: 2017-05-12
 """
 
 import sys

@@ -95,8 +95,21 @@ def main():
     flusher.mount_point = args.mountpoint
     flusher.start()
 
+    # Catch some common and system depends signals
     signal.signal(signal.SIGINT, flusher.do_stop)
     signal.signal(signal.SIGTERM, flusher.do_stop)
+    try:
+        signal.signal(signal.SIGABRT, flusher.do_stop)
+    except:
+        pass
+    try:
+        signal.signal(signal.SIGQUIT, flusher.do_stop)
+    except:
+        pass
+    try:
+        signal.signal(signal.SIGPWR, flusher.do_stop)
+    except:
+        pass
 
     return flusher.run()
 

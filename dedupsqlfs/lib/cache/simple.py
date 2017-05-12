@@ -41,7 +41,7 @@ class CacheTTLseconds(object):
 
     def get(self, key, default=None):
         # not setted
-        val = self._storage.get(key, [0, default])
+        val = self._storage.get(key, [0, default])[self.OFFSET_VALUE]
         now = time()
 
         # update time only if value was set

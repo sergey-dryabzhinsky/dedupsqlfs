@@ -99,8 +99,10 @@ class DedupFS(object): # {{{1
             return
         if self.isReadonly():
             return
+        if not self.getOption('use_cache_flusher'):
+            return
 
-        cf_path = os.path.join(os.path.dirname(sys.argv[0]), 'cache_flusher.helper')
+        cf_path = os.path.join(os.path.dirname(sys.argv[0]), 'cache_flusher')
         if not os.path.isfile(cf_path):
             self.getLogger().warning("Can't find cache flushing helper! By path: %r" % cf_path)
             return
@@ -118,6 +120,8 @@ class DedupFS(object): # {{{1
         if self.isReadonly():
             return
         if not self._cache_flusher_proc:
+            return
+        if not self.getOption('use_cache_flusher'):
             return
 
         self._cache_flusher_proc.terminate()

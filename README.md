@@ -16,9 +16,12 @@ The following shell commands show how to install and use the DedupFS file system
  (where it was developed):
 
     $ sudo apt-get install python3-pip libfuse-dev
+    #
     # !!! STRONG DEPENDANCY on that version !!! @2017-05-11
     $ sudo pip3 install llfuse==0.41.1
+    #
     $ git clone https://github.com/sergey-dryabzhinsky/dedupsqlfs.git
+    #
     $ mkdir mount_point
     $ ./bin/mount.dedupsqlfs --mountpoint mount_point
     # Now copy some files to mount_point/ and observe that the size of the two
@@ -26,6 +29,11 @@ The following shell commands show how to install and use the DedupFS file system
     # The databases are by default stored in the following locations:
     # ~/data/dedupsqlfs/*.sqlite3 contains the tree, meta and blocks data
     # You can choose another location by --data option.
+    #
+    # As of 1.2.919 version cache_flusher helper starts
+    # and touches hidden file in mount_point directory.
+    # So umount may fail in that time. Call it repeated with some lag:
+    $ umount mount_point || sleep 0.5 && umount mount_point
 
 ## Status
 

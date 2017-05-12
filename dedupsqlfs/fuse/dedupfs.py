@@ -38,6 +38,7 @@ from dedupsqlfs.my_formats import format_size
 from dedupsqlfs.log import logging, DEBUG_VERBOSE
 from dedupsqlfs.fuse.compress.mp import MultiProcCompressTool, BaseCompressTool
 from dedupsqlfs.fuse.compress.mt import MultiThreadCompressTool
+from subprocess import Popen
 
 # Storage for options and DB interface
 # Implements FUSE interface
@@ -46,12 +47,17 @@ class DedupFS(object): # {{{1
     def __init__(self, operations, mountpoint, options, *args, **kw):  # {{{2
         """
         @type operations: dedupsqlfs.fuse.operations.DedupOperations
+        
+        @ivar _cache_flusher_proc
+        @type _cache_flusher_proc: Popen
         """
 
         self.options = dict(vars(options))
 
         self._compressors = {}
         self._readonly = False
+
+        self._cache_flusher_proc = None
 
         self.mountpoint = mountpoint
         self.operations = operations
@@ -86,6 +92,40 @@ class DedupFS(object): # {{{1
             self._compressTool = BaseCompressTool()
 
         pass
+
+
+    def startCacheFlusher(self):
+        if not self.mountpoint:
+            return
+        if self.isReadonly():
+            return
+        if not self.getOption('use_cache_flusher'):
+            return
+
+        cf_path = os.path.join(os.path.dirname(sys.argv[0]), 'cache_flusher')
+        if not os.path.isfile(cf_path):
+            self.getLogger().warning("Can't find cache flushing helper! By path: %r" % cf_path)
+            return
+
+        self._cache_flusher_proc = Popen(
+            [ cf_path, self.mountpoint ],
+            stderr=open(os.path.devnull, "w"),
+            stdout=open(os.path.devnull, "w"),
+        )
+
+
+    def stopCacheFlusher(self):
+        if not self.mountpoint:
+            return
+        if self.isReadonly():
+            return
+        if not self._cache_flusher_proc:
+            return
+        if not self.getOption('use_cache_flusher'):
+            return
+
+        self._cache_flusher_proc.terminate()
+        self._cache_flusher_proc.wait()
 
 
     def preInit(self):

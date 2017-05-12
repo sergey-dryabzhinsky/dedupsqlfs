@@ -318,6 +318,9 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def destroy(self): # {{{3
 
+        # Stop flushing thread if it started
+        self.getApplication().stopCacheFlusher()
+
         if self.getOption('lock_file'):
             try:
                 f = open(self.getOption('lock_file'), 'w')
@@ -331,6 +334,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.__log_call('destroy', '->()')
             self.getLogger().debug("Umount file system in process...")
             if not self.getOption("readonly"):
+
                 # Flush all cached blocks
                 self.getLogger().debug("Flush remaining inodes.")
                 self.__flush_expired_inodes(self.cached_attrs.clear())
@@ -351,9 +355,19 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.getManager().getTable('option').update('mounted', 0)
 
             self.getManager().close()
-            return 0
         except Exception as e:
             raise self.__except_to_status('destroy', e, errno.EIO)
+
+        if self.getOption('lock_file'):
+            try:
+                f = open(self.getOption('lock_file'), 'w')
+                f.write("destroy-done\n")
+                f.close()
+            except:
+                self.getLogger().warning("DedupFS: can't write to %r" % self.getOption('lock_file'))
+                pass
+
+        return 0
 
     def flush(self, fh):
         try:
@@ -568,6 +582,10 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.__select_subvolume()
             self.__get_opts_from_db()
             # Make sure the hash function is (still) valid (since the database was created).
+
+            # NOT READONLY - AND - Mountpoint defined (mount action)
+            self.getApplication().startCacheFlusher()
+
 
             if self.getApplication().mountpoint:
                 self.getManager().getTable('option').update('mounted', 1)

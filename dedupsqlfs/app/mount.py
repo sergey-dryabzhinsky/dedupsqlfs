@@ -106,6 +106,7 @@ def main(): # {{{1
                             help=msg)
 
     parser.add_argument('--no-cache', dest='use_cache', action='store_false', help="Don't use cache in memory and delayed write to storage.")
+    parser.add_argument('--no-cache-flusher', dest='use_cache_flusher', action='store_false', help="Don't use separate cache flusher process. It touches file in mount_point directory. This may prevent FS to umount cleanly.")
     parser.add_argument('--cache-meta-timeout', dest='cache_meta_timeout', metavar='NUMBER', type=int, default=20, help="Delay flush expired metadata for NUMBER of seconds. Defaults to 20 seconds.")
     parser.add_argument('--cache-block-write-timeout', dest='cache_block_write_timeout', metavar='NUMBER', type=int, default=10, help="Expire writed data and flush from memory after NUMBER of seconds. Defaults to 10 seconds.")
     parser.add_argument('--cache-block-write-size', dest='cache_block_write_size', metavar='BYTES', type=int,

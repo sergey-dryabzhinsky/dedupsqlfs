@@ -16,11 +16,9 @@ class SimpleThreadingCacheFlusher(Thread):
     sleep_interval = 0.01
     flush_internal = 1
 
-    flush_filename = '.dedupsqlfs.io'
+    flush_filepath = None
 
     data_root_path = None
-
-    _file_io = None
 
 
     def start(self):
@@ -29,33 +27,27 @@ class SimpleThreadingCacheFlusher(Thread):
 
         if not os.path.isdir(self.data_root_path):
             raise ValueError("Value of data_root_path must be existing directory path!")
+
+        self.flush_filepath = os.path.join(self.data_root_path, '.dedupsqlfs.io')
         super().start()
 
 
     def _do_flush(self):
-        if self._file_io:
-            self._file_io.seek(0, 0)
-            self._file_io.write("Do not remove!\n")
-            self._file_io.flush()
+        file_io = open(self.flush_filepath, 'w+')
+        file_io.seek(0, 0)
+        file_io.write("Do not remove!\n")
+        file_io.flush()
+        file_io.close()
 
 
     def do_stop(self):
         if self.stop_event:
             self.stop_event.set()
-        if self._file_io:
-            self._file_io.close()
-            self._file_io = None
-
 
     def run(self):
 
         self.stop_event = Event()
         self.flush_event = Event()
-
-        flush_path = os.path.join(self.data_root_path, self.flush_filename)
-
-        if not self._file_io:
-            self._file_io = open(flush_path, 'w+')
 
         last_flush = time()
         while not self.stop_event.is_set():
@@ -75,10 +67,6 @@ class SimpleThreadingCacheFlusher(Thread):
             last_flush = now
 
             pass
-
-        if self._file_io:
-            self._file_io.close()
-            self._file_io = None
 
         self.stop_event.clear()
 

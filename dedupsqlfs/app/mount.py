@@ -48,6 +48,12 @@ def fuse_mount(options, compression_methods=None, hash_functions=None):
     if ops:
         ops.getManager().close()
 
+        if options.memory_usage:
+            import resource
+            kbytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            ops.getApplication().getLogger().warning("\n-= Memory statistics: =-\n\n")
+            ops.getApplication().getLogger().warning("Peak memory usage: %.2f Mb\n\n" % (kbytes/1000.0))
+
     return ret
 
 def main(): # {{{1
@@ -247,12 +253,6 @@ def main(): # {{{1
         os.unlink(profile)
     else:
         result = fuse_mount(args, compression_methods, hash_functions)
-
-    if args.memory_usage:
-        import resource
-        kbytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-        sys.stderr.write("\n-= Memory statistics: =-\n\n")
-        sys.stderr.write("Peak memory usage: %.2f Mb\n\n" % (kbytes/1000.0))
 
     return result
 

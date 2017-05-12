@@ -51,8 +51,10 @@ def fuse_mount(options, compression_methods=None, hash_functions=None):
         if options.memory_usage:
             import resource
             kbytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-            ops.getApplication().getLogger().warning("\n-= Memory statistics: =-\n\n")
-            ops.getApplication().getLogger().warning("Peak memory usage: %.2f Mb\n\n" % (kbytes/1000.0))
+            logger = ops.getApplication().getLogger()
+            logger.important("\n  ~~ MOUNT ~~")
+            logger.important("-= Memory statistics: =-")
+            logger.important("Peak memory usage: %.2f Mb\n" % (kbytes/1000.0))
 
     return ret
 

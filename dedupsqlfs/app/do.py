@@ -293,9 +293,10 @@ def set_snapshot_readonly(options, _fuse, flag):
 
 def print_fs_stats(options, _fuse):
     _fuse.setReadonly(True)
+    lvl = _fuse.getLogger().getEffectiveLevel()
     _fuse.getLogger().setLevel(logging.INFO)
     _fuse.report_disk_usage()
-    _fuse.getLogger().setLevel(logging.ERROR)
+    _fuse.getLogger().setLevel(lvl)
     _fuse.operations.destroy()
     return 0
 
@@ -308,9 +309,10 @@ def data_vacuum(options, _fuse):
 
     _fuse.operations.init()
     _fuse.operations.should_vacuum = True
+    lvl = _fuse.getLogger().getEffectiveLevel()
     _fuse.getLogger().setLevel(logging.INFO)
     _fuse.operations.forced_vacuum()
-    _fuse.getLogger().setLevel(logging.ERROR)
+    _fuse.getLogger().setLevel(lvl)
     _fuse.operations.destroy()
     return 0
 
@@ -422,8 +424,10 @@ def do(options, compression_methods=None):
         if options.memory_usage:
             import resource
             kbytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-            ops.getApplication().getLogger().warning("\n-= Memory statistics: =-\n\n")
-            ops.getApplication().getLogger().warning("Peak memory usage: %.2f Mb\n\n" % (kbytes/1000.0))
+            logger = ops.getApplication().getLogger()
+            logger.important("\n  ~~ DO ~~")
+            logger.important("-= Memory statistics: =-")
+            logger.important("Peak memory usage: %.2f Mb\n" % (kbytes/1000.0))
 
     return ret
 

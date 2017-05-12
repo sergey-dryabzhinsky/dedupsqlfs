@@ -35,7 +35,7 @@ if int(fv[0]) < 1 and int(fv[1]) < 41:
 
 # Local modules that are mostly useful for debugging.
 from dedupsqlfs.my_formats import format_size
-from dedupsqlfs.log import logging, DEBUG_VERBOSE
+from dedupsqlfs.log import logging, DEBUG_VERBOSE, IMPORTANT
 from dedupsqlfs.fuse.compress.mp import MultiProcCompressTool, BaseCompressTool
 from dedupsqlfs.fuse.compress.mt import MultiThreadCompressTool
 from subprocess import Popen
@@ -282,15 +282,17 @@ class DedupFS(object): # {{{1
         # Initialize a Logger() object to handle logging.
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(logging.ERROR)
+        if self.getOption('memory_usage'):
+            self.logger.setLevel(IMPORTANT)
 
-        if not self.getOption("log_file_only"):
-            self.logger.addHandler(logging.StreamHandler(sys.stderr))
         # Configure logging of messages to a file.
         if self.getOption("log_file"):
             handler = logging.StreamHandler(open(self.getOption("log_file"), 'a'))
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             handler.setFormatter(formatter)
             self.getLogger().addHandler(handler)
+        if not self.getOption("log_file_only"):
+            self.logger.addHandler(logging.StreamHandler(sys.stderr))
         # Convert verbosity argument to logging level?
         if self.getOption("verbosity") > 0:
             if self.getOption("verbosity") <= 1:

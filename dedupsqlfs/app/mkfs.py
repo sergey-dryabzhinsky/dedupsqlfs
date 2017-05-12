@@ -1,4 +1,7 @@
 # -*- coding: utf8 -*-
+"""
+@todo: Update argument parser options
+"""
 
 # Imports. {{{1
 
@@ -186,8 +189,8 @@ def main(): # {{{1
         s.sort_stats('tottime').print_stats(0.1)
         os.unlink(profile)
     else:
-        return mkfs(args, compression_methods, hash_functions)
+        result = mkfs(args, compression_methods, hash_functions)
 
-    return 0
+    return result
 
 # vim: ts=4 sw=4 et

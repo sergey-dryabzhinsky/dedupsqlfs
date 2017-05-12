@@ -451,9 +451,9 @@ def main(): # {{{1
     generic.add_argument('--nosync', dest='synchronous', action='store_false', help="Disable SQLite's normal synchronous behavior which guarantees that data is written to disk immediately, because it slows down the file system too much (this means you might lose data when the mount point isn't cleanly unmounted).")
     generic.add_argument('--nogc-on-umount', dest='gc_umount_enabled', action='store_false', help="Disable garbage collection on umount operation (only do this when you've got disk space to waste or you know that nothing will be be deleted from the file system, which means little to no garbage will be produced).")
     generic.add_argument('--gc', dest='gc_enabled', action='store_true', help="Enable the periodic garbage collection because it degrades performance (only do this when you've got disk space to waste or you know that nothing will be be deleted from the file system, which means little to no garbage will be produced).")
-    parser.add_argument('--gc-vacuum', dest='gc_vacuum_enabled', action='store_true', help="Enable data vacuum after the periodic garbage collection.")
-    parser.add_argument('--gc-fast', dest='gc_fast_enabled', action='store_true', help="Enable faster periodic garbage collection. Don't collect hash and block garbage.")
-    parser.add_argument('--gc-interval', dest='gc_interval', metavar="N", type=int, default=60, help="Call garbage callector after Nth seconds on FUSE operations, if GC enabled. Defaults to 60.")
+    generic.add_argument('--gc-vacuum', dest='gc_vacuum_enabled', action='store_true', help="Enable data vacuum after the periodic garbage collection.")
+    generic.add_argument('--gc-fast', dest='gc_fast_enabled', action='store_true', help="Enable faster periodic garbage collection. Don't collect hash and block garbage.")
+    generic.add_argument('--gc-interval', dest='gc_interval', metavar="N", type=int, default=60, help="Call garbage callector after Nth seconds on FUSE operations, if GC enabled. Defaults to 60.")
 
     generic.add_argument('--memory-limit', dest='memory_limit', action='store_true', help="Use some lower values for less memory consumption.")
 
@@ -461,12 +461,14 @@ def main(): # {{{1
     generic.add_argument('--multi-cpu', dest='multi_cpu', metavar='TYPE', default="single", choices=("single", "process", "thread",), help="Specify type of compression tool: single process, multi-process or multi-thread. Choices are: 'single', 'process', 'thread'. Defaults to 'single'.")
 
 
+    data = parser.add_argument_group('Data')
+
     engines, msg = check_engines()
     if not engines:
         logger.error("No storage engines available! Please install sqlite or pymysql python module!")
         return 1
 
-    generic.add_argument('--storage-engine', dest='storage_engine', metavar='ENGINE', choices=engines, default=engines[0],
+    data.add_argument('--storage-engine', dest='storage_engine', metavar='ENGINE', choices=engines, default=engines[0],
                         help=msg)
 
     if "mysql" in engines:
@@ -476,18 +478,17 @@ def main(): # {{{1
         table_engines = get_table_engines()
 
         msg = "One of MySQL table engines: "+", ".join(table_engines)+". Default: %r. Aria and TokuDB engine can be used only with MariaDB or Percona server." % table_engines[0]
-        generic.add_argument('--table-engine', dest='table_engine', metavar='ENGINE',
+        data.add_argument('--table-engine', dest='table_engine', metavar='ENGINE',
                             choices=table_engines, default=table_engines[0],
                             help=msg)
 
-    data = parser.add_argument_group('Data')
     data.add_argument('--print-stats', dest='print_stats', action='store_true', help="Print the total apparent size and the actual disk usage of the file system and exit")
     data.add_argument('--check-tree-inodes', dest='check_tree_inodes', action='store_true', help="Check if inodes exists in fs tree on fs usage calculation. Applies to subvolume and snapshot stats calculation too.")
     data.add_argument('--defragment', dest='defragment', action='store_true', help="Defragment all stored data, do garbage collection.")
     data.add_argument('--vacuum', dest='vacuum', action='store_true', help="Like defragment, but force SQLite to vacuum databases.")
     data.add_argument('--verify', dest='verify', action='store_true', help="Verify all stored data hashes. (@todo)")
     data.add_argument('--new-block-size', dest='new_block_size', metavar='BYTES', default=1024*128, type=int, help="Specify the new block size in bytes. Defaults to 128kB. (@todo)")
-    data.add_argument('--maximum-block-size', dest='maximum_block_size', metavar='BYTES', default=1024*1024*10, type=int, help="Specify the maximum block size in bytes for defragmentation. Defaults to 10MB.")
+    data.add_argument('--maximum-block-size', dest='maximum_block_size', metavar='BYTES', default=1024*1024*10, type=int, help="Specify the maximum block size in bytes for defragmentation. Defaults to 10MB. (@todo)")
 
     # Dynamically check for supported hashing algorithms.
     msg = "Specify the hashing algorithm that will be used to recognize duplicate data blocks: one of %s"
@@ -553,18 +554,6 @@ def main(): # {{{1
     data.add_argument('--sqlite-compression-prog', dest='sqlite_compression_prog', metavar='PROGNAME', default=constants.COMPRESSION_PROGS_DEFAULT, help=msg)
 
 
-    # Dynamically check for profiling support.
-    try:
-        # Using __import__() here because of pyflakes.
-        for p in 'cProfile', 'pstats': __import__(p)
-        generic.add_argument('--profile', action='store_true', default=False, help="Use the Python modules cProfile and pstats to create a profile of time spent in various function calls and print out a table of the slowest functions at exit (of course this slows everything down but it can nevertheless give a good indication of the hot spots).")
-    except ImportError:
-        logger.warning("No profiling support available, --profile option disabled.")
-        logger.warning("If you're on Ubuntu try 'sudo apt-get install python-profiler'.")
-
-    generic.add_argument('-M', '--memory-usage', dest='memory_usage', help="Output into stderr memory statistics at the exit of process", action="store_true")
-
-
     snapshot = parser.add_argument_group('Snapshot')
     snapshot.add_argument('--list-snapshots', dest='snapshot_list', action='store_true', help="Show list of all snapshots")
     snapshot.add_argument('--list-snapshots-with-stats', dest='subvol_list_with_stats', action='store_true', help="Show more statistics in snapshots list. Slow.")
@@ -586,6 +575,21 @@ def main(): # {{{1
     subvol.add_argument('--create-subvol', dest='subvol_create', metavar='NAME', help="Create new subvolume")
     subvol.add_argument('--remove-subvol', dest='subvol_remove', metavar='NAME', help="Remove selected subvolume")
     subvol.add_argument('--subvol-stats', dest='subvol_stats', metavar='NAME', help="Print information about selected subvolume")
+
+
+    # Dynamically check for profiling support.
+    grp_profile = parser.add_argument_group('Profiling')
+    try:
+        # Using __import__() here because of pyflakes.
+        for p in 'cProfile', 'pstats': __import__(p)
+        grp_profile.add_argument('--profile', action='store_true', default=False, help="Use the Python modules cProfile and pstats to create a profile of time spent in various function calls and print out a table of the slowest functions at exit (of course this slows everything down but it can nevertheless give a good indication of the hot spots).")
+    except ImportError:
+        logger.warning("No profiling support available, --profile option disabled.")
+        logger.warning("If you're on Ubuntu try 'sudo apt-get install python-profiler'.")
+        pass
+
+    grp_profile.add_argument('-M', '--memory-usage', dest='memory_usage', help="Output into stderr memory statistics at the exit of process", action="store_true")
+
 
     args = parser.parse_args()
 

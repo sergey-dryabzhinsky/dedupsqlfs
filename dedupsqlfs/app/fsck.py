@@ -1,4 +1,8 @@
 # -*- coding: utf8 -*-
+"""
+@todo: Update argument parser options
+"""
+
 
 # Imports. {{{1
 
@@ -9,7 +13,6 @@ try:
     import os
     import traceback
     import argparse
-    import time
     from time import time
     import hashlib
 except ImportError as e:
@@ -189,9 +192,9 @@ def main(): # {{{1
         s.sort_stats('tottime').print_stats(0.1)
         os.unlink(profile)
     else:
-        return fuse_mount(args, compression_methods, None)
+        result = fuse_mount(args, compression_methods, None)
 
-    return 0
+    return result
 
 if __name__ == '__main__':
     main()

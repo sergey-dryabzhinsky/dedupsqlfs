@@ -67,31 +67,36 @@ def main(): # {{{1
     # Register some custom command line options with the option parser.
     option_stored_in_db = " (this option is only useful when creating a new database, because your choice is stored in the database and can't be changed after that)"
 
-    parser.add_argument('-h', '--help', action='help', help="show this help message followed by the command line options defined by the Python FUSE binding and exit")
-    parser.add_argument('-v', '--verbose', action='count', dest='verbosity', default=0, help="increase verbosity")
-    parser.add_argument('--verbose-stats', dest='verbose_stats', action='store_true', help="Enable FS opterations statistic output. Verbosity level must be 1+.")
-    parser.add_argument('--log-file', dest='log_file', help="specify log file location")
-    parser.add_argument('--log-file-only', dest='log_file_only', action='store_true',
+    generic = parser.add_argument_group('Generic')
+
+    generic.add_argument('-h', '--help', action='help', help="show this help message followed by the command line options defined by the Python FUSE binding and exit")
+    generic.add_argument('-v', '--verbose', action='count', dest='verbosity', default=0, help="increase verbosity")
+    generic.add_argument('--verbose-stats', dest='verbose_stats', action='store_true', help="Enable FS opterations statistic output. Verbosity level must be 1+.")
+    generic.add_argument('--log-file', dest='log_file', help="specify log file location")
+    generic.add_argument('--log-file-only', dest='log_file_only', action='store_true',
                         help="Don't send log messages to stderr.")
 
-    parser.add_argument('--lock-file', dest='lock_file', help="Specify lock file location. Useful to check fs status via content or existsnce.")
-    parser.add_argument('--data', dest='data', metavar='DIRECTORY', default="~/data", help="Specify the base location for the files in which metadata and blocks data is stored. Defaults to ~/data")
-    parser.add_argument('--name', dest='name', metavar='DATABASE', default="dedupsqlfs", help="Specify the name for the database directory in which metadata and blocks data is stored. Defaults to dedupsqlfs")
-    parser.add_argument('--temp', dest='temp', metavar='DIRECTORY', help="Specify the location for the files in which temporary data is stored. By default honour TMPDIR environment variable value.")
-    parser.add_argument('-b', '--block-size', dest='block_size', metavar='BYTES', default=1024*128, type=int, help="Specify the maximum block size in bytes" + option_stored_in_db + ". Defaults to 128kB.")
-    parser.add_argument('--mount-subvolume', dest='mounted_subvolume', metavar='NAME', default=None, help="Use subvolume NAME as root fs.")
+    generic.add_argument('--lock-file', dest='lock_file', help="Specify lock file location. Useful to check fs status via content or existsnce.")
+    generic.add_argument('--data', dest='data', metavar='DIRECTORY', default="~/data", help="Specify the base location for the files in which metadata and blocks data is stored. Defaults to ~/data")
+    generic.add_argument('--name', dest='name', metavar='DATABASE', default="dedupsqlfs", help="Specify the name for the database directory in which metadata and blocks data is stored. Defaults to dedupsqlfs")
+    generic.add_argument('--temp', dest='temp', metavar='DIRECTORY', help="Specify the location for the files in which temporary data is stored. By default honour TMPDIR environment variable value.")
+    generic.add_argument('-b', '--block-size', dest='block_size', metavar='BYTES', default=1024*128, type=int, help="Specify the maximum block size in bytes" + option_stored_in_db + ". Defaults to 128kB.")
+    generic.add_argument('--mount-subvolume', dest='mounted_subvolume', metavar='NAME', default=None, help="Use subvolume NAME as root fs.")
 
-    parser.add_argument('--memory-limit', dest='memory_limit', action='store_true', help="Use some lower values for less memory consumption.")
+    generic.add_argument('--memory-limit', dest='memory_limit', action='store_true', help="Use some lower values for less memory consumption.")
 
-    parser.add_argument('--cpu-limit', dest='cpu_limit', metavar='NUMBER', default=0, type=int, help="Specify the maximum CPU count to use in multiprocess compression. Defaults to 0 (auto).")
-    parser.add_argument('--multi-cpu', dest='multi_cpu', metavar='TYPE', default="single", choices=("single", "process", "thread",), help="Specify type of compression tool: single process, multi-process or multi-thread. Choices are: 'single', 'process', 'thread'. Defaults to 'single'.")
+    generic.add_argument('--cpu-limit', dest='cpu_limit', metavar='NUMBER', default=0, type=int, help="Specify the maximum CPU count to use in multiprocess compression. Defaults to 0 (auto).")
+    generic.add_argument('--multi-cpu', dest='multi_cpu', metavar='TYPE', default="single", choices=("single", "process", "thread",), help="Specify type of compression tool: single process, multi-process or multi-thread. Choices are: 'single', 'process', 'thread'. Defaults to 'single'.")
+
+
+    grp_data = parser.add_argument_group('Data')
 
     engines, msg = check_engines()
     if not engines:
         logger.error("No storage engines available! Please install sqlite or pymysql python module!")
         return 1
 
-    parser.add_argument('--storage-engine', dest='storage_engine', metavar='ENGINE', choices=engines, default=engines[0],
+    grp_data.add_argument('--storage-engine', dest='storage_engine', metavar='ENGINE', choices=engines, default=engines[0],
                         help=msg)
 
     if "mysql" in engines:
@@ -101,31 +106,18 @@ def main(): # {{{1
         table_engines = get_table_engines()
 
         msg = "One of MySQL table engines: "+", ".join(table_engines)+". Default: %r. Aria and TokuDB engine can be used only with MariaDB or Percona server." % table_engines[0]
-        parser.add_argument('--table-engine', dest='table_engine', metavar='ENGINE',
+        grp_data.add_argument('--table-engine', dest='table_engine', metavar='ENGINE',
                             choices=table_engines, default=table_engines[0],
                             help=msg)
 
-    parser.add_argument('--no-cache', dest='use_cache', action='store_false', help="Don't use cache in memory and delayed write to storage.")
-    parser.add_argument('--no-cache-flusher', dest='use_cache_flusher', action='store_false', help="Don't use separate cache flusher process. It touches file in mount_point directory. This may prevent FS to umount cleanly.")
-    parser.add_argument('--cache-meta-timeout', dest='cache_meta_timeout', metavar='NUMBER', type=int, default=20, help="Delay flush expired metadata for NUMBER of seconds. Defaults to 20 seconds.")
-    parser.add_argument('--cache-block-write-timeout', dest='cache_block_write_timeout', metavar='NUMBER', type=int, default=10, help="Expire writed data and flush from memory after NUMBER of seconds. Defaults to 10 seconds.")
-    parser.add_argument('--cache-block-write-size', dest='cache_block_write_size', metavar='BYTES', type=int,
-                        default=1024*1024*1024,
-                        help="Write cache for blocks: potential size in BYTES. Set to -1 for infinite. Defaults to 1024 MB.")
-    parser.add_argument('--cache-block-read-timeout', dest='cache_block_read_timeout', metavar='NUMBER', type=int, default=10, help="Expire readed data and flush from memory after NUMBER of seconds. Defaults to 10 seconds.")
-    parser.add_argument('--cache-block-read-size', dest='cache_block_read_size', metavar='BYTES', type=int,
-                        default=1024*1024*1024,
-                        help="Readed cache for blocks: potential size in BYTES. Set to -1 for infinite. Defaults to 1024 MB.")
-    parser.add_argument('--flush-interval', dest='flush_interval', metavar="N", type=int, default=5, help="Call expired cache callector every Nth seconds on FUSE operations. Defaults to 5.")
+    grp_data.add_argument('--no-transactions', dest='use_transactions', action='store_false', help="Don't use transactions when making multiple related changes, this might make the file system faster or slower (?).")
+    grp_data.add_argument('--nosync', dest='synchronous', action='store_false', help="Disable SQLite's normal synchronous behavior which guarantees that data is written to disk immediately, because it slows down the file system too much (this means you might lose data when the mount point isn't cleanly unmounted).")
 
-    parser.add_argument('--no-transactions', dest='use_transactions', action='store_false', help="Don't use transactions when making multiple related changes, this might make the file system faster or slower (?).")
-    parser.add_argument('--nosync', dest='synchronous', action='store_false', help="Disable SQLite's normal synchronous behavior which guarantees that data is written to disk immediately, because it slows down the file system too much (this means you might lose data when the mount point isn't cleanly unmounted).")
-
-    parser.add_argument('--nogc-on-umount', dest='gc_umount_enabled', action='store_false', help="Disable garbage collection on umount operation (only do this when you've got disk space to waste or you know that nothing will be be deleted from the file system, which means little to no garbage will be produced).")
-    parser.add_argument('--gc', dest='gc_enabled', action='store_true', help="Enable the periodic garbage collection. It degrades performance. Only do this when you don't have disk space to waste or you know that alot of data will be be deleted from the file system.")
-    parser.add_argument('--gc-vacuum', dest='gc_vacuum_enabled', action='store_true', help="Enable data vacuum after the periodic garbage collection.")
-    parser.add_argument('--gc-fast', dest='gc_fast_enabled', action='store_true', help="Enable faster periodic garbage collection. Don't collect hash and block garbage.")
-    parser.add_argument('--gc-interval', dest='gc_interval', metavar="N", type=int, default=60, help="Call garbage callector after Nth seconds on FUSE operations, if GC enabled. Defaults to 60.")
+    grp_data.add_argument('--nogc-on-umount', dest='gc_umount_enabled', action='store_false', help="Disable garbage collection on umount operation (only do this when you've got disk space to waste or you know that nothing will be be deleted from the file system, which means little to no garbage will be produced).")
+    grp_data.add_argument('--gc', dest='gc_enabled', action='store_true', help="Enable the periodic garbage collection. It degrades performance. Only do this when you don't have disk space to waste or you know that alot of data will be be deleted from the file system.")
+    grp_data.add_argument('--gc-vacuum', dest='gc_vacuum_enabled', action='store_true', help="Enable data vacuum after the periodic garbage collection.")
+    grp_data.add_argument('--gc-fast', dest='gc_fast_enabled', action='store_true', help="Enable faster periodic garbage collection. Don't collect hash and block garbage.")
+    grp_data.add_argument('--gc-interval', dest='gc_interval', metavar="N", type=int, default=60, help="Call garbage callector after Nth seconds on FUSE operations, if GC enabled. Defaults to 60.")
 
     # Dynamically check for supported hashing algorithms.
     msg = "Specify the hashing algorithm that will be used to recognize duplicate data blocks: one of %s"
@@ -133,9 +125,28 @@ def main(): # {{{1
     hash_functions.sort()
     msg %= ', '.join('%r' % fun for fun in hash_functions)
     msg += ". Defaults to 'sha1'."
-    parser.add_argument('--hash', dest='hash_function', metavar='FUNCTION', choices=hash_functions, default='sha1', help=msg)
+    grp_data.add_argument('--hash', dest='hash_function', metavar='FUNCTION', choices=hash_functions, default='sha1', help=msg)
 
-    parser.add_argument('--collision-check', dest='collision_check_enabled', action='store_true', help="Check for hash collision on writed data.")
+    grp_data.add_argument('--collision-check', dest='collision_check_enabled', action='store_true', help="Check for hash collision on writed data.")
+
+
+    grp_cache = parser.add_argument_group('Cache')
+
+    grp_cache.add_argument('--no-cache', dest='use_cache', action='store_false', help="Don't use cache in memory and delayed write to storage.")
+    grp_cache.add_argument('--no-cache-flusher', dest='use_cache_flusher', action='store_false', help="Don't use separate cache flusher process. It touches file in mount_point directory. This may prevent FS to umount cleanly.")
+    grp_cache.add_argument('--cache-meta-timeout', dest='cache_meta_timeout', metavar='NUMBER', type=int, default=20, help="Delay flush expired metadata for NUMBER of seconds. Defaults to 20 seconds.")
+    grp_cache.add_argument('--cache-block-write-timeout', dest='cache_block_write_timeout', metavar='NUMBER', type=int, default=10, help="Expire writed data and flush from memory after NUMBER of seconds. Defaults to 10 seconds.")
+    grp_cache.add_argument('--cache-block-write-size', dest='cache_block_write_size', metavar='BYTES', type=int,
+                        default=1024*1024*1024,
+                        help="Write cache for blocks: potential size in BYTES. Set to -1 for infinite. Defaults to 1024 MB.")
+    grp_cache.add_argument('--cache-block-read-timeout', dest='cache_block_read_timeout', metavar='NUMBER', type=int, default=10, help="Expire readed data and flush from memory after NUMBER of seconds. Defaults to 10 seconds.")
+    grp_cache.add_argument('--cache-block-read-size', dest='cache_block_read_size', metavar='BYTES', type=int,
+                        default=1024*1024*1024,
+                        help="Readed cache for blocks: potential size in BYTES. Set to -1 for infinite. Defaults to 1024 MB.")
+    grp_cache.add_argument('--flush-interval', dest='flush_interval', metavar="N", type=int, default=5, help="Call expired cache callector every Nth seconds on FUSE operations. Defaults to 5.")
+
+
+    grp_compress = parser.add_argument_group('Compression')
 
     # Dynamically check for supported compression methods.
     compression_methods = [constants.COMPRESSION_TYPE_NONE]
@@ -161,21 +172,21 @@ def main(): # {{{1
         msg += " %r will try all compression methods and choose one with smaller result data." % constants.COMPRESSION_TYPE_BEST
         msg += " %r will try selected compression methods (--custom-compress) and choose one with smaller result data." % constants.COMPRESSION_TYPE_CUSTOM
 
-    parser.add_argument('--compress', dest='compression_method', metavar='METHOD', default=constants.COMPRESSION_TYPE_NONE, help=msg)
+    grp_compress.add_argument('--compress', dest='compression_method', metavar='METHOD', default=constants.COMPRESSION_TYPE_NONE, help=msg)
 
     msg = "Enable compression of data blocks using one or more of the supported compression methods: %s"
     msg %= ', '.join('%r' % mth for mth in compression_methods_cmd[:-2])
     msg += ". To use two or more methods select this option in command line for each compression method."
     msg += " You can use <method>=<level> syntax, <level> can be integer or value from --compression-level."
 
-    parser.add_argument('--custom-compress', dest='compression_custom', metavar='METHOD', action="append", help=msg)
+    grp_compress.add_argument('--custom-compress', dest='compression_custom', metavar='METHOD', action="append", help=msg)
 
-    parser.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")
-    parser.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=-1, help="Minimal block data size for compression. Defaults to -1 bytes (auto). Do not compress if data size is less than BYTES long. If not forced to.")
+    grp_compress.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")
+    grp_compress.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=-1, help="Minimal block data size for compression. Defaults to -1 bytes (auto). Do not compress if data size is less than BYTES long. If not forced to.")
 
     levels = (constants.COMPRESSION_LEVEL_DEFAULT, constants.COMPRESSION_LEVEL_FAST, constants.COMPRESSION_LEVEL_NORM, constants.COMPRESSION_LEVEL_BEST)
 
-    parser.add_argument('--compression-level', dest='compression_level', metavar="LEVEL", default=constants.COMPRESSION_LEVEL_DEFAULT,
+    grp_compress.add_argument('--compression-level', dest='compression_level', metavar="LEVEL", default=constants.COMPRESSION_LEVEL_DEFAULT,
                         help="Compression level ratio: one of %s; or INT. Defaults to %r. Not all methods support this option." % (
                             ', '.join('%r' % lvl for lvl in levels), constants.COMPRESSION_LEVEL_DEFAULT
                         ))
@@ -190,32 +201,34 @@ def main(): # {{{1
     msg = "Enable compression of snapshot sqlite database files using one of the supported compression programs: %s"
     msg %= ', '.join('%r' % mth for mth in compression_progs)
     msg += ". Defaults to %r." % constants.COMPRESSION_PROGS_DEFAULT
-    parser.add_argument('--sqlite-compression-prog', dest='sqlite_compression_prog', metavar='PROGNAME', default=constants.COMPRESSION_PROGS_DEFAULT, help=msg)
+    grp_compress.add_argument('--sqlite-compression-prog', dest='sqlite_compression_prog', metavar='PROGNAME', default=constants.COMPRESSION_PROGS_DEFAULT, help=msg)
 
+    grp_compress.add_argument('--recompress-on-fly', dest='compression_recompress_now', action="store_true", help="Do recompress blocks which compressed with deprecated compression method.")
 
-    parser.add_argument('--recompress-on-fly', dest='compression_recompress_now', action="store_true", help="Do recompress blocks which compressed with deprecated compression method.")
-
-    parser.add_argument('--recompress-not-current', dest='compression_recompress_current', action="store_true",
+    grp_compress.add_argument('--recompress-not-current', dest='compression_recompress_current', action="store_true",
                         help="Do recompress blocks which compressed with not currently selected compression method.")
 
-    parser.add_argument('--decompress-try-all', dest='decompress_try_all', action="store_true", help="Try to decompress blocks with every available method if stored one fails.")
+    grp_compress.add_argument('--decompress-try-all', dest='decompress_try_all', action="store_true", help="Try to decompress blocks with every available method if stored one fails.")
 
 
+    grp_profile = parser.add_argument_group('Profiling')
     # Dynamically check for profiling support.
     try:
         # Using __import__() here because of pyflakes.
         for p in 'cProfile', 'pstats': __import__(p)
-        parser.add_argument('--profile', action='store_true', default=False, help="Use the Python modules cProfile and pstats to create a profile of time spent in various function calls and print out a table of the slowest functions at exit (of course this slows everything down but it can nevertheless give a good indication of the hot spots).")
+        grp_profile.add_argument('--profile', action='store_true', default=False, help="Use the Python modules cProfile and pstats to create a profile of time spent in various function calls and print out a table of the slowest functions at exit (of course this slows everything down but it can nevertheless give a good indication of the hot spots).")
     except ImportError:
         logger.warning("No profiling support available, --profile option disabled.")
         logger.warning("If you're on Ubuntu try 'sudo apt-get install python-profiler'.")
+        pass
 
-    parser.add_argument('-M', '--memory-usage', dest='memory_usage', help="Output into stderr memory statistics at the exit of process", action="store_true")
+    grp_profile.add_argument('-M', '--memory-usage', dest='memory_usage', help="Output into stderr memory statistics at the exit of process", action="store_true")
 
 
-    parser.add_argument('-o', '--mountoption', help="specify mount option", action="append")
+    grp_mount = parser.add_argument_group('Mounting')
+    grp_mount.add_argument('-o', '--mountoption', help="specify mount option", action="append")
 
-    parser.add_argument('mountpoint', help="specify mount point")
+    grp_mount.add_argument('mountpoint', help="specify mount point")
 
     args = parser.parse_args()
 

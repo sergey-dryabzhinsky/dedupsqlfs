@@ -39,7 +39,6 @@ from dedupsqlfs.lib.cache.storage import StorageTimeSize
 from dedupsqlfs.lib.cache.index import IndexTime
 from dedupsqlfs.lib.cache.inodes import InodesTime
 from dedupsqlfs.fuse.subvolume import Subvolume
-from dedupsqlfs.fuse.helpers.simple_flusher import SimpleThreadingCacheFlusher
 
 class DedupOperations(llfuse.Operations): # {{{1
 
@@ -129,10 +128,6 @@ class DedupOperations(llfuse.Operations): # {{{1
         self._compression_types_revert = {}
 
         self.manager = None
-
-        self.flush_thread = SimpleThreadingCacheFlusher()
-        self.flush_thread.setDaemon(True)
-        self.flush_thread.setName("simple-threading-cache-flusher")
 
     # FUSE API implementation: {{{2
 
@@ -325,9 +320,7 @@ class DedupOperations(llfuse.Operations): # {{{1
     def destroy(self): # {{{3
 
         # Stop flushing thread if it started
-        if self.flush_thread.stop_event:
-            self.getLogger().debug("Stop flushing thread.")
-            self.flush_thread.do_stop()
+        self.getApplication().stopCacheFlusher()
 
         if self.getOption('lock_file'):
             try:
@@ -592,10 +585,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             # Make sure the hash function is (still) valid (since the database was created).
 
             # NOT READONLY - AND - Mountpoint defined (mount action)
-            if not self.isReadonly() and self.getApplication().mountpoint:
-                self.flush_thread.data_root_path = self.getApplication().mountpoint
-                t = Timer(5, self.flush_thread.start)
-                t.start()
+            self.getApplication().startCacheFlusher()
+
 
             if self.getApplication().mountpoint:
                 self.getManager().getTable('option').update('mounted', 1)

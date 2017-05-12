@@ -562,6 +562,8 @@ def main(): # {{{1
         logger.warning("No profiling support available, --profile option disabled.")
         logger.warning("If you're on Ubuntu try 'sudo apt-get install python-profiler'.")
 
+    generic.add_argument('-M', '--memory-usage', dest='memory_usage', help="Output into stderr memory statistics at the exit of process", action="store_true")
+
 
     snapshot = parser.add_argument_group('Snapshot')
     snapshot.add_argument('--list-snapshots', dest='snapshot_list', action='store_true', help="Show list of all snapshots")
@@ -601,8 +603,14 @@ def main(): # {{{1
         s.sort_stats('tottime').print_stats(0.1)
         os.unlink(profile)
     else:
-        return do(args, compression_methods)
+        result = do(args, compression_methods)
 
-    return 0
+    if args.memory_usage:
+        import resource
+        kbytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        sys.stderr.write("\n-= Memory statistics: =-\n\n")
+        sys.stderr.write("Peak memory usage: %.2f Mb\n\n" % (kbytes/1000.0))
+
+    return result
 
 # vim: ts=4 sw=4 et

@@ -210,6 +210,9 @@ def main(): # {{{1
         logger.warning("No profiling support available, --profile option disabled.")
         logger.warning("If you're on Ubuntu try 'sudo apt-get install python-profiler'.")
 
+    parser.add_argument('-M', '--memory-usage', dest='memory_usage', help="Output into stderr memory statistics at the exit of process", action="store_true")
+
+
     parser.add_argument('-o', '--mountoption', help="specify mount option", action="append")
 
     parser.add_argument('mountpoint', help="specify mount point")
@@ -230,9 +233,15 @@ def main(): # {{{1
         s.sort_stats('tottime').print_stats(0.1)
         os.unlink(profile)
     else:
-        return fuse_mount(args, compression_methods, hash_functions)
+        result = fuse_mount(args, compression_methods, hash_functions)
 
-    return 0
+    if args.memory_usage:
+        import resource
+        kbytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        sys.stderr.write("\n-= Memory statistics: =-\n\n")
+        sys.stderr.write("Peak memory usage: %.2f Mb\n\n" % (kbytes/1000.0))
+
+    return result
 
 if __name__ == '__main__':
     main()

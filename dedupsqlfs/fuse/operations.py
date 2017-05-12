@@ -12,9 +12,8 @@ try:
     from math import floor, ceil, modf
     import os
     import stat
-    from time import time, sleep
+    from time import time
     import traceback
-    from threading import Timer
 except ImportError as e:
     msg = "Error: Failed to load one of the required Python modules! (%s)\n"
     sys.stderr.write(msg % str(e))

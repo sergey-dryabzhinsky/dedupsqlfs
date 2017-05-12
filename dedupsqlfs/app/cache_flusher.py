@@ -18,29 +18,29 @@ class SimpleCacheFlusher(object):
 
     flush_filepath = None
 
-    mount_poing = None
+    mount_point = None
 
     _stop_flag = False
 
     def start(self):
-        if not self.mount_poing:
-            raise ValueError("Setup mouht_poing value before thread start!")
+        if not self.mount_point:
+            raise ValueError("Setup mouht_point value before thread start!")
 
-        if not os.path.isdir(self.mount_poing):
-            raise ValueError("Value of mouht_poing must be existing directory path!")
+        if not os.path.isdir(self.mount_point):
+            raise ValueError("Value of mouht_point must be existing directory path!")
 
-        self.flush_filepath = os.path.join(self.mount_poing, '.dedupsqlfs.io')
+        self.flush_filepath = os.path.join(self.mount_point, '.dedupsqlfs.io')
         self._stop_flag = False
 
     def _do_flush(self):
 
-        if not os.path.exists(self.mount_poing):
+        if not os.path.exists(self.mount_point):
             return
 
-        if not os.path.isdir(self.mount_poing):
+        if not os.path.isdir(self.mount_point):
             return
 
-        if not os.path.ismount(self.mount_poing):
+        if not os.path.ismount(self.mount_point):
             return
 
         file_io = open(self.flush_filepath, 'w+')
@@ -92,7 +92,7 @@ def main():
 
     args = parser.parse_args()
 
-    flusher.mount_poing = args.mountpoint
+    flusher.mount_point = args.mountpoint
     flusher.start()
 
     signal.signal(signal.SIGINT, flusher.do_stop)

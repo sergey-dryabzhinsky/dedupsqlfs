@@ -1,10 +1,31 @@
 # -*- coding: utf8 -*-
+"""
+@author Sergey Dryabzhinsky
+"""
 
 from time import time
 
-__author__ = 'sergey'
-
 class InodesTime(object):
+    """
+    Cache storage for inode raw attributes
+
+    {
+        inode (int) : [
+            timestamp (float),      - then added, updated, set to 0 if expired
+            data (dict),            - inode raw ROW data from SQLdb
+            written (bool)          - data was written, updated
+            toflush (bool)          - data must be flushed as soos as possible, but not expired
+        ], ...
+    }
+
+    Just to not lookup in SQLdb
+
+    """
+
+    OFFSET_TIME = 0
+    OFFSET_DATA = 1
+    OFFSET_WRITTEN = 2
+    OFFSET_TOFLUSH = 3
 
     # Maximum seconds after that cache is expired for writed inodes
     _max_ttl = 5
@@ -32,29 +53,26 @@ class InodesTime(object):
         @type   writed: bool
         """
 
-        inode = str(inode)
-
         new = False
         if inode not in self._inodes:
-            self._inodes[ inode ] = {
-                "w" : writed,
-                "f" : writed,
-            }
+            self._inodes[ inode ] = [
+                0, data, writed, writed
+            ]
             new = True
 
         inode_data = self._inodes[inode]
 
         # If time not set to 0 (expired)
-        if inode_data.get("time", 0):
+        if inode_data[self.OFFSET_TIME]:
             new = True
 
         if new:
-            inode_data["time"] = time()
-        inode_data["data"] = data
+            inode_data[self.OFFSET_TIME] = time()
+        inode_data[self.OFFSET_DATA] = data
 
         if writed:
-            inode_data["w"] = True
-            inode_data["f"] = True
+            inode_data[self.OFFSET_WRITTEN] = True
+            inode_data[self.OFFSET_TOFLUSH] = True
 
         return self
 
@@ -62,20 +80,18 @@ class InodesTime(object):
 
         now = time()
 
-        inode = str(inode)
+        inode_data = self._inodes.get(inode, [
+                0, default, False, False
+            ])
 
-        inode_data = self._inodes.get(inode, {
-            "time" : 0              # Don't create empty item with good time
-        })
+        val = inode_data[self.OFFSET_DATA]
 
-        val = inode_data.get("data", default)
-
-        t = inode_data["time"]
+        t = inode_data[self.OFFSET_TIME]
         if now - t > self._max_ttl:
             return val
 
         # update last request time
-        inode_data["time"] = now
+        inode_data[self.OFFSET_TIME] = now
 
         return val
 
@@ -88,22 +104,22 @@ class InodesTime(object):
         else:
             old_inodes = 0
 
-        for inode in set(self._inodes.keys()):
+        for inode in tuple(self._inodes.keys()):
 
             inode_data = self._inodes[inode]
 
             # Get data to FLUSH (and if requested written attrs)
-            if inode_data["f"] and writed:
-                old_inodes[inode] = inode_data["data"].copy()
-                inode_data["f"] = False
+            if inode_data[self.OFFSET_TOFLUSH] and writed:
+                old_inodes[inode] = inode_data[self.OFFSET_DATA].copy()
+                inode_data[self.OFFSET_TOFLUSH] = False
 
-            if inode_data["w"] != writed:
+            if inode_data[self.OFFSET_WRITTEN] != writed:
                 continue
 
-            t = inode_data["time"]
+            t = inode_data[self.OFFSET_TIME]
             if now - t > self._max_ttl:
                 if writed:
-                    old_inodes[inode] = inode_data["data"].copy()
+                    old_inodes[inode] = inode_data[self.OFFSET_DATA].copy()
                 else:
                     old_inodes += 1
 
@@ -116,9 +132,8 @@ class InodesTime(object):
         """
         Do not remove but set flush flag
         """
-        key = str(inode)
-        if key in self._inodes:
-            self._inodes[ key ]["f"] = True
+        if inode in self._inodes:
+            self._inodes[ inode ][self.OFFSET_TOFLUSH] = True
         return self
 
 
@@ -126,23 +141,22 @@ class InodesTime(object):
         """
         Do not remove but expire
         """
-        key = str(inode)
-        if key in self._inodes:
-            self._inodes[ key ]["time"] = 0
+        if inode in self._inodes:
+            self._inodes[ inode ][self.OFFSET_TIME] = 0
         return self
 
 
     def clear(self):
         old_inodes = {}
 
-        for inode in set(self._inodes.keys()):
+        for inode in tuple(self._inodes.keys()):
 
             inode_data = self._inodes[inode]
 
-            if not inode_data["w"]:
+            if not inode_data[self.OFFSET_WRITTEN]:
                 continue
 
-            old_inodes[inode] = inode_data["data"].copy()
+            old_inodes[inode] = inode_data[self.OFFSET_DATA].copy()
 
         self._inodes = {}
         return old_inodes

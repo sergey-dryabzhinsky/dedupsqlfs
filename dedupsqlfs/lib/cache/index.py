@@ -1,10 +1,28 @@
 # -*- coding: utf8 -*-
+"""
+@author Sergey Dryabzhinsky
+"""
 
 from time import time
 
-__author__ = 'sergey'
-
 class IndexTime(object):
+    """
+    Cache storage for inode-block index
+    
+    {
+        inode (int) : {
+            block_number (int) : [
+                timestamp (float),      - then added, updated, set to 0 if expired
+                hash_id (int)           - block hash ID
+            ], ...
+        }, ...
+    }
+    
+    Just to not lookup in SQLdb
+    """
+
+    OFFSET_TIME = 0
+    OFFSET_HASH = 1
 
     # Maximum seconds after that cache is expired for writed blocks
     _max_ttl = 10
@@ -16,6 +34,10 @@ class IndexTime(object):
         pass
 
     def __len__(self):
+        """
+        For clear() count
+        @return: int
+        """
         s = 0
         for inode in self._inodes:
             s += len(self._inodes[inode])
@@ -32,9 +54,6 @@ class IndexTime(object):
         @type   hash_id: int
         """
 
-        inode = str(inode)
-        block_number = str(block_number)
-
         new = False
         if inode not in self._inodes:
             self._inodes[ inode ] = {}
@@ -43,49 +62,41 @@ class IndexTime(object):
         inode_data = self._inodes[inode]
 
         if block_number not in inode_data:
-            inode_data[ block_number ] = {}
+            inode_data[ block_number ] = [0, hash_id,]
             new = True
 
         hash_data = inode_data[block_number]
 
         # If time not set to 0 (expired)
-        if hash_data.get("time", 0):
+        if hash_data[self.OFFSET_TIME]:
             new = True
 
         if new:
-            hash_data["time"] = time()
-        hash_data["hash"] = hash_id
+            hash_data[self.OFFSET_TIME] = time()
+        hash_data[self.OFFSET_HASH] = hash_id
 
         return self
 
     def get(self, inode, block_number, default=None):
 
-        inode = str(inode)
-        block_number = str(block_number)
-
         now = time()
 
         inode_data = self._inodes.get(inode, {})
 
-        hash_data = inode_data.get(block_number, {
-            "time" : 0              # Don't create empty item with good time
-        })
+        hash_data = inode_data.get(block_number, [0, default])
 
-        val = hash_data.get("hash", default)
+        val = hash_data[self.OFFSET_HASH]
 
-        t = hash_data["time"]
+        t = hash_data[self.OFFSET_TIME]
         if now - t > self._max_ttl:
             return val
 
         # update last request time
-        hash_data["time"] = now
+        hash_data[self.OFFSET_TIME] = now
 
         return val
 
     def expireBlock(self, inode, block_number):
-
-        inode = str(inode)
-        block_number = str(block_number)
 
         removed = False
 
@@ -94,7 +105,7 @@ class IndexTime(object):
 
             if block_number in inode_data:
                 block_data = inode_data[block_number]
-                block_data["time"] = 0
+                block_data[self.OFFSET_TIME] = 0
                 removed = True
 
             if not inode_data:
@@ -106,8 +117,8 @@ class IndexTime(object):
         inode = str(inode)
         if inode in self._inodes:
             inode_data = self._inodes[inode]
-            for bn in set(inode_data.keys()):
-                inode_data[bn]["time"] = 0
+            for bn in inode_data.keys():
+                inode_data[bn][self.OFFSET_TIME] = 0
             self._inodes[inode] = inode_data
         return
 
@@ -116,15 +127,14 @@ class IndexTime(object):
 
         old_inodes = 0
 
-        for inode in set(self._inodes.keys()):
+        for inode in tuple(self._inodes.keys()):
 
             inode_data = self._inodes[inode]
 
-            for bn in set(inode_data.keys()):
+            for bn in tuple(inode_data.keys()):
                 block_data = inode_data[bn]
 
-                t = block_data["time"]
-
+                t = block_data[self.OFFSET_TIME]
                 if now - t > self._max_ttl:
                     old_inodes += 1
 

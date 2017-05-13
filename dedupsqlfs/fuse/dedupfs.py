@@ -102,7 +102,13 @@ class DedupFS(object): # {{{1
         if not self.getOption('use_cache_flusher'):
             return
 
-        cf_path = os.path.join(os.path.dirname(sys.argv[0]), 'cache_flusher')
+        # Find real program path
+        # Cache flusher may be not installed with "common" programs
+        mf_path = sys.argv[0]
+        while os.path.islink(mf_path):
+            mf_path = os.path.abspath(os.readlink(mf_path))
+
+        cf_path = os.path.join(os.path.dirname(mf_path), 'cache_flusher')
         if not os.path.isfile(cf_path):
             self.getLogger().warning("Can't find cache flushing helper! By path: %r" % cf_path)
             return

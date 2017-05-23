@@ -1386,7 +1386,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             recompress = False
 
             hash_id = self.__get_hash_index_from_cache(inode, block_number)
-            if not hash_id:
+            if hash_id is None:
                 self.getLogger().debug("-- new block")
             else:
                 tableBlock = self.getTable("block")

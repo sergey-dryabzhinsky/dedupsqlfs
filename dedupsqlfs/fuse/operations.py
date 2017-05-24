@@ -1368,6 +1368,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 # Do hack here... store False to prevent table reread until it stored in cache or deleted
                 self.getLogger().debug("-- new index")
                 self.cached_indexes.set(inode, block_number, False)
+                hash_id = False
             else:
                 self.cached_indexes.set(inode, block_number, hash_id)
         return hash_id
@@ -1386,13 +1387,18 @@ class DedupOperations(llfuse.Operations): # {{{1
             recompress = False
 
             hash_id = self.__get_hash_index_from_cache(inode, block_number)
-            if hash_id is None:
+            item = None
+
+            if not hash_id:
                 self.getLogger().debug("-- new block")
             else:
                 tableBlock = self.getTable("block")
-                tableHCT = self.getTable("hash_compression_type")
 
                 item = tableBlock.get(hash_id)
+
+            # XXX: how block can be defragmented away?
+            if item:
+                tableHCT = self.getTable("hash_compression_type")
                 compType = tableHCT.get(hash_id)
 
                 self.getLogger().debug("-- decompress block")

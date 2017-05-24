@@ -149,7 +149,7 @@ class InodesTime(object):
     def clear(self):
         old_inodes = {}
 
-        for inode in tuple(self._inodes.keys()):
+        for inode in self._inodes.keys():
 
             inode_data = self._inodes[inode]
 

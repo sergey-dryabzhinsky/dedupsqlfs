@@ -119,7 +119,6 @@ class IndexTime(object):
             inode_data = self._inodes[inode]
             for bn in inode_data.keys():
                 inode_data[bn][self.OFFSET_TIME] = 0
-            self._inodes[inode] = inode_data
         return
 
     def expired(self):

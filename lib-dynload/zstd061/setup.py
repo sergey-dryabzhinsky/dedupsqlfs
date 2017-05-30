@@ -75,7 +75,7 @@ class BuildExtSubclass(build_ext):
         build_ext.build_extensions(self)
 
 setup(
-    name='zstd',
+    name='zstd061',
     version=VERSION_STR,
     description="ZSTD Bindings for Python",
     long_description=open('README.rst', 'r').read(),
@@ -89,7 +89,7 @@ setup(
     packages=find_packages('src'),
     package_dir={'': 'src'},
     ext_modules=[
-        Extension('zstd', zstdFiles)
+        Extension('zstd061', zstdFiles)
     ],
     cmdclass={'build_ext': BuildExtSubclass},
     test_suite="tests",

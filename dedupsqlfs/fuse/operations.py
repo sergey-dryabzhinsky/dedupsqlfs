@@ -1469,6 +1469,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         @return: bytes
         """
+        self.getLogger().debug("__get_block_data_by_offset: inode = %s, offset = %s, size = %s" % (inode, offset, size,))
         if not size:
             return b''
 
@@ -1481,7 +1482,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         if not read_blocks:
             read_blocks = 1
 
-        self.getLogger().debug("first block number = %s, read blocks = %s inblock offset = %s" % (first_block_number, read_blocks, inblock_offset,))
+        self.getLogger().debug("first block number = %s, read blocks = %s, inblock offset = %s" % (first_block_number, read_blocks, inblock_offset,))
 
         readed_size = 0
 
@@ -1517,6 +1518,9 @@ class DedupOperations(llfuse.Operations): # {{{1
         @type block_data: bytes
         """
         size = len(block_data)
+
+        self.getLogger().debug("__write_block_data_by_offset: inode = %s, offset = %s, block size = %s" % (inode, offset, size,))
+
         if not size:
             return 0
 

@@ -1368,7 +1368,6 @@ class DedupOperations(llfuse.Operations): # {{{1
                 # Do hack here... store False to prevent table reread until it stored in cache or deleted
                 self.getLogger().debug("-- new index")
                 self.cached_indexes.set(inode, block_number, False)
-                hash_id = False
             else:
                 self.cached_indexes.set(inode, block_number, hash_id)
         return hash_id

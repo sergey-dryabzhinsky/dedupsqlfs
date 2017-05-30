@@ -48,7 +48,7 @@ class CacheTTLseconds(object):
         t = item[self.OFFSET_TIME]
 
         if now - t > self._max_ttl:
-            return default
+            return val
 
         # update time only if value was set
         if key in self._storage:

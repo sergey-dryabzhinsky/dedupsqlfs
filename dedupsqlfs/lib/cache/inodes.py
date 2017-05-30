@@ -88,7 +88,7 @@ class InodesTime(object):
 
         t = inode_data[self.OFFSET_TIME]
         if now - t > self._max_ttl:
-            return default
+            return val
 
         # update last request time
         inode_data[self.OFFSET_TIME] = now

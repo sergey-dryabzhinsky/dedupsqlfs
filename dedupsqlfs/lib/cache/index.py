@@ -89,7 +89,7 @@ class IndexTime(object):
 
         t = hash_data[self.OFFSET_TIME]
         if now - t > self._max_ttl:
-            return default
+            return val
 
         # update last request time
         hash_data[self.OFFSET_TIME] = now

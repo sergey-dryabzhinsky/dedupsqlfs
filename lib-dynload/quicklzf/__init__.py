@@ -23,8 +23,8 @@ for d in dirs:
         sys.path.insert(0, os.path.join(build_dir, d) )
         import imp
 
-        fp, pathname, description = imp.find_module("quicklz")
-        module = imp.load_module("quicklz", fp, pathname, description)
+        fp, pathname, description = imp.find_module("qlzf")
+        module = imp.load_module("qlzf", fp, pathname, description)
 
         def compress_data(raw_data):
             """

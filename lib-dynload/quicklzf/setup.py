@@ -25,13 +25,13 @@ else:
 define_macros = [("QLZ_COMPRESSION_LEVEL","1"),("QLZ_STREAMING_BUFFER","%s" % (64*1024,)),]
 
 setup(
-    name = "quicklz",
+    name = "qlzf",
     version = "1.0",
     packages=[],
     package_dir={'': 'src'},
     ext_modules = [
         Extension(
-            "quicklz",
+            "qlzf",
             ["src/quicklz.c", "src/quicklzpy.c"],
             extra_compile_args=extra_compile_args,
             define_macros=define_macros

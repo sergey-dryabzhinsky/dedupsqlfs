@@ -429,6 +429,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.__log_call('fsync', '-- inode(%i) zero sized! remove all blocks', fh)
                 self.getTable("inode_hash_block").delete(fh)
                 self.cached_blocks.forget(fh)
+                self.cached_indexes.expire(fh)
             else:
                 if datasync:
                     self.cached_blocks.flush(fh)

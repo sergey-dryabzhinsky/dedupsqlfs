@@ -1546,7 +1546,6 @@ class DedupOperations(llfuse.Operations): # {{{1
                     write_size = self.block_size - inblock_offset
 
             block.write(io_data.read(write_size))
-            block.write(io_data.read(write_size))
 
             self.cached_blocks.set(inode, n + first_block_number, block, writed=True)
 

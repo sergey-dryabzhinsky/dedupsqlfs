@@ -1396,7 +1396,9 @@ class DedupOperations(llfuse.Operations): # {{{1
 
                 item = tableBlock.get(hash_id)
                 if not item:
-                    self.getLogger().warning("get block from DB: block not found! (inode=%i, block_number=%i, hash_id=%s)" % (inode, block_number, hash_id,))
+                    err_str = "get block from DB: block not found! (inode=%i, block_number=%i, hash_id=%s)" % (inode, block_number, hash_id,)
+                    self.getLogger().error(err_str)
+                    raise OSError(err_str)
 
             # XXX: how block can be defragmented away?
             if item:

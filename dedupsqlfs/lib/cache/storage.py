@@ -152,8 +152,12 @@ class StorageTimeSize(object):
         val = block_data[self.OFFSET_BLOCK]
 
         t = block_data[self.OFFSET_TIME]
-        if now - t > self._max_write_ttl:
-            return default
+        if block_data[self.OFFSET_WRITTEN]:
+            if now - t > self._max_write_ttl:
+                return default
+        else:
+            if now - t > self._max_read_ttl:
+                return default
 
         # update last request time
         block_data[self.OFFSET_TIME] = now

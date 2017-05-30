@@ -1422,8 +1422,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                         bdata = False
                     if bdata is False:
                         for type_id in self.getCompressionTypeIds():
-                            compression = self.getCompressionTypeName(type_id)
-                            if compression == 'none':
+                            compressionT = self.getCompressionTypeName(type_id)
+                            if compressionT == 'none':
                                 continue
 
                             try:
@@ -1435,7 +1435,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                                 if type_id != compType["type_id"]:
                                     self.getLogger().debug("-- Different compression types! Do recompress!")
                                     self.getLogger().debug("----   compressed with: %s" % compression)
-                                    self.getLogger().debug("---- decompressed with: %s" % compression)
+                                    self.getLogger().debug("---- decompressed with: %s" % compressionT)
                                     recompress = True
                                 break
                         if bdata is False:

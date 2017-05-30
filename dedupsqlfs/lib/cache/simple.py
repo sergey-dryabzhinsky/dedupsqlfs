@@ -36,13 +36,11 @@ class CacheTTLseconds(object):
         return self
 
     def set(self, key, value):
-        key = str(key)
         self._storage[ key ] = [time(), value]
         return self
 
     def get(self, key, default=None):
-        key = str(key)
-
+        # not setted
         now = time()
 
         item = self._storage.get(key, [0, default])
@@ -59,7 +57,6 @@ class CacheTTLseconds(object):
         return val
 
     def unset(self, key):
-        key = str(key)
         if key in self._storage:
             del self._storage[ key ]
         return self

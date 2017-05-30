@@ -52,7 +52,6 @@ class InodesTime(object):
         @type   data: dict
         @type   writed: bool
         """
-        inode = str(inode)
 
         new = False
         if inode not in self._inodes:
@@ -78,7 +77,6 @@ class InodesTime(object):
         return self
 
     def get(self, inode, default=None):
-        inode = str(inode)
 
         now = time()
 
@@ -134,7 +132,6 @@ class InodesTime(object):
         """
         Do not remove but set flush flag
         """
-        inode = str(inode)
         if inode in self._inodes:
             self._inodes[ inode ][self.OFFSET_TOFLUSH] = True
         return self
@@ -144,7 +141,6 @@ class InodesTime(object):
         """
         Do not remove but expire
         """
-        inode = str(inode)
         if inode in self._inodes:
             self._inodes[ inode ][self.OFFSET_TIME] = 0
         return self

@@ -53,6 +53,8 @@ class IndexTime(object):
         @type   block_number: int
         @type   hash_id: int
         """
+        inode = str(inode)
+        block_number = str(block_number)
 
         new = False
         if inode not in self._inodes:
@@ -78,6 +80,8 @@ class IndexTime(object):
         return self
 
     def get(self, inode, block_number, default=None):
+        inode = str(inode)
+        block_number = str(block_number)
 
         now = time()
 
@@ -97,6 +101,8 @@ class IndexTime(object):
         return val
 
     def expireBlock(self, inode, block_number):
+        inode = str(inode)
+        block_number = str(block_number)
 
         removed = False
 
@@ -114,6 +120,7 @@ class IndexTime(object):
         return removed
 
     def expire(self, inode):
+        inode = str(inode)
         if inode in self._inodes:
             inode_data = self._inodes[inode]
             for bn in inode_data.keys():

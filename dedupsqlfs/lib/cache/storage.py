@@ -57,7 +57,7 @@ class StorageTimeSize(object):
 
     def __len__(self):
         s = 0
-        for inode in self._inodes:
+        for inode in self._inodes.keys():
             s += len(self._inodes[inode])
         return s
 
@@ -88,6 +88,8 @@ class StorageTimeSize(object):
         @type   block: BytesIO
         @type   writed: bool
         """
+        inode = str(inode)
+        block_number = str(block_number)
 
         new = False
         if inode not in self._inodes:
@@ -140,6 +142,8 @@ class StorageTimeSize(object):
         return self
 
     def get(self, inode, block_number, default=None):
+        inode = str(inode)
+        block_number = str(block_number)
 
         now = time()
 
@@ -199,6 +203,7 @@ class StorageTimeSize(object):
         
         @return: bool 
         """
+        inode = str(inode)
         canDel = True
         if inode in self._inodes:
             inode_data = self._inodes[inode]
@@ -221,6 +226,7 @@ class StorageTimeSize(object):
         @param inode: 
         @return: 
         """
+        inode = str(inode)
         if inode in self._inodes:
             inode_data = self._inodes[inode]
             for bn in inode_data.keys():
@@ -234,6 +240,7 @@ class StorageTimeSize(object):
         @param inode: 
         @return: 
         """
+        inode = str(inode)
         if inode in self._inodes:
             inode_data = self._inodes[inode]
             for bn in inode_data.keys():

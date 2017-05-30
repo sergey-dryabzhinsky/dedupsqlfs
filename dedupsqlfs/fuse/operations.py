@@ -1485,7 +1485,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         if not read_blocks:
             read_blocks = 1
 
-        self.getLogger().debug("first block number = %s, read blocks = %s, inblock offset = %s" % (first_block_number, read_blocks, inblock_offset,))
+        self.getLogger().debug("-- first block number = %s, read blocks = %s, inblock offset = %s" % (first_block_number, read_blocks, inblock_offset,))
 
         readed_size = 0
 
@@ -1506,6 +1506,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             readed_size += read_size
 
         self.bytes_read += readed_size
+
+        self.getLogger().debug("-- readed size = %s" % (readed_size,))
 
         return raw_data.getvalue()
 
@@ -1536,7 +1538,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         if not write_blocks:
             write_blocks = 1
 
-        self.getLogger().debug("first block number = %s, size = %s, write blocks = %s inblock offset = %s" % (first_block_number, size, write_blocks, inblock_offset,))
+        self.getLogger().debug("-- first block number = %s, size = %s, write blocks = %s, inblock offset = %s" % (first_block_number, size, write_blocks, inblock_offset,))
 
         writed_size = 0
 
@@ -1558,6 +1560,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.cached_blocks.set(inode, n + first_block_number, block, writed=True)
 
             writed_size += write_size
+
+        self.getLogger().debug("-- writed size = %s" % (writed_size,))
 
         return writed_size
 

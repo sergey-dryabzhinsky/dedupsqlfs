@@ -1382,7 +1382,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.getLogger().debug("get block from DB: inode=%i, number=%i", inode, block_number)
 
-            block = BytesIO(b"\x00"*self.block_size)
+            block = BytesIO()
 
             recompress = False
 

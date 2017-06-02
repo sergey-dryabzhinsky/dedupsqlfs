@@ -1439,8 +1439,10 @@ class DedupOperations(llfuse.Operations): # {{{1
                                     recompress = True
                                 break
                         if bdata is False:
-                            raise OSError("Can't decompress data block! Data corruption? Original method was: %s (%d)" % (
-                                compression, compType["type_id"],))
+                            err_str = "Can't decompress data block! Data corruption? Original method was: %s (%d)" % (
+                                compression, compType["type_id"],)
+                            self.getLogger().error(err_str)
+                            raise OSError(err_str)
                     block.write(bdata)
 
                 else:

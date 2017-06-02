@@ -259,6 +259,6 @@ def main(): # {{{1
     return result
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
 
 # vim: ts=2 sw=2 et

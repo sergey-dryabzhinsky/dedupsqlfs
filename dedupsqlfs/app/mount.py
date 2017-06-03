@@ -194,7 +194,8 @@ def main(): # {{{1
     grp_compress.add_argument('--custom-compress', dest='compression_custom', metavar='METHOD', action="append", help=msg)
 
     grp_compress.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")
-    grp_compress.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=-1, help="Minimal block data size for compression. Defaults to -1 bytes (auto). Do not compress if data size is less than BYTES long. If not forced to.")
+    grp_compress.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=1024, help="Minimal block data size for compression. Defaults to 1025 bytes. Value -1 means auto - per method absolute minimum. Do not compress if data size is less than BYTES long. If not forced to.")
+    grp_compress.add_argument('--minimal-compress-ratio', dest='compression_minimal_ratio', metavar='RATIO', type=float, default=0.1, help="Minimal data compression ratio. Defaults to 0.1 (10%). Do not compress if ratio is less than RATIO. If not forced to.")
 
     levels = (constants.COMPRESSION_LEVEL_DEFAULT, constants.COMPRESSION_LEVEL_FAST, constants.COMPRESSION_LEVEL_NORM, constants.COMPRESSION_LEVEL_BEST)
 

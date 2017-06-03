@@ -43,7 +43,10 @@ def fuse_mount(options, compression_methods=None):
         ret = _fuse.main()
     except Exception:
         import traceback
-        print(traceback.format_exc())
+        err_str = traceback.format_exc()
+        logger = ops.getApplication().getLogger()
+        logger.error(err_str)
+        print(err_str)
         ret = -1
     if ops:
         ops.getManager().close()

@@ -240,13 +240,11 @@ class StorageTimeSize(object):
                 inode_data[bn][self.OFFSET_TOFLUSH] = True
         return
 
-    def expired(self, writed=False):
+    def expired(self):
         now = time()
 
-        if writed:
-            old_inodes = {}
-        else:
-            old_inodes = 0
+        write_inodes = {}
+        read_inodes = 0
 
         for inode in tuple(self._inodes.keys()):
 
@@ -256,29 +254,26 @@ class StorageTimeSize(object):
                 block_data = inode_data[bn]
 
                 # Get data to FLUSH (and if requested written blocks)
-                if block_data[self.OFFSET_TOFLUSH] and writed:
+                if block_data[self.OFFSET_TOFLUSH]:
 
-                    if inode not in old_inodes:
-                        old_inodes[inode] = {}
+                    if inode not in write_inodes:
+                        write_inodes[inode] = {}
 
-                    old_inodes[inode][bn] = block_data.copy()
+                    write_inodes[inode][bn] = block_data.copy()
 
                     block_data[self.OFFSET_TOFLUSH] = False
 
-                if block_data[self.OFFSET_WRITTEN] != writed:
-                    continue
-
                 t = block_data[self.OFFSET_TIME]
                 if now - t > self._max_write_ttl:
-                    if writed:
-                        if inode not in old_inodes:
-                            old_inodes[inode] = {}
+                    if block_data[self.OFFSET_WRITTEN]:
+                        if inode not in write_inodes:
+                            write_inodes[inode] = {}
 
-                        old_inodes[inode][bn] = block_data.copy()
+                        write_inodes[inode][bn] = block_data.copy()
 
                         self._cur_write_cache_size -= block_data[self.OFFSET_SIZE]
                     else:
-                        old_inodes += 1
+                        read_inodes += 1
 
                         self._cur_read_cache_size -= block_data[self.OFFSET_SIZE]
 
@@ -287,7 +282,7 @@ class StorageTimeSize(object):
             if not inode_data and inode in self._inodes:
                 del self._inodes[inode]
 
-        return old_inodes
+        return (read_inodes, write_inodes,)
 
 
     def expireByCount(self, writed=False):

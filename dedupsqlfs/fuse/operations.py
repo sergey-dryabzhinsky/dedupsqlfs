@@ -2256,7 +2256,13 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         start_time1 = time()
         if start_time1 - self.cache_gc_block_write_last_run >= self.flush_interval:
-            flushed = self.__flush_old_cached_blocks(self.cached_blocks.expired(True), True)
+
+            expired = self.cached_blocks.expired()
+
+            flushed_readed_blocks += expired[0]
+            flushed_readed_expiredByTime_blocks += expired[0]
+
+            flushed = self.__flush_old_cached_blocks(expired[1], True)
             flushed_writed_blocks += flushed
             flushed_writed_expiredByTime_blocks += flushed
 
@@ -2279,19 +2285,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             elapsed_time1 = self.cache_gc_block_writeSize_last_run - start_time1
             self.time_spent_flushing_writed_block_cache += elapsed_time1
             self.time_spent_flushing_writedBySize_block_cache += elapsed_time1
-
-
-        start_time1 = time()
-        if start_time1 - self.cache_gc_block_read_last_run >= self.flush_interval:
-            flushed = self.cached_blocks.expired(False)
-            flushed_readed_blocks += flushed
-            flushed_readed_expiredByTime_blocks += flushed
-
-            self.cache_gc_block_read_last_run = time()
-
-            elapsed_time1 = self.cache_gc_block_read_last_run - start_time1
-            self.time_spent_flushing_readed_block_cache += elapsed_time1
-            self.time_spent_flushing_readedByTime_block_cache += elapsed_time1
 
 
         start_time1 = time()

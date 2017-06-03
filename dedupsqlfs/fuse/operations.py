@@ -2375,9 +2375,10 @@ class DedupOperations(llfuse.Operations): # {{{1
             flushed_xattrs = self.cached_xattrs.clear()
 
             # Just readed...
-            flushed_attrs += self.cached_attrs.expired(False)
+            expired = self.cached_attrs.expired()
+            flushed_attrs += expired[0]
             # Just writed/updated...
-            flushed_attrs += self.__flush_expired_inodes(self.cached_attrs.expired(True))
+            flushed_attrs += self.__flush_expired_inodes(expired[1])
 
             self.__commit_changes()
 

@@ -19,8 +19,8 @@ for d in dirs:
     if d.find("-%s.%s" % (p1, p2)) != -1 and d.find("lib.") != -1:
         sys.path.insert(0, os.path.join(build_dir, d) )
         import imp
-        fp, pathname, description = imp.find_module("zstd047")
-        module = imp.load_module("zstd047", fp, pathname, description)
+        fp, pathname, description = imp.find_module("_zstd047")
+        module = imp.load_module("_zstd047", fp, pathname, description)
 
         compress = module.compress
         decompress = module.decompress

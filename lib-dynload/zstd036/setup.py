@@ -59,7 +59,7 @@ setup(
     packages=find_packages('src'),
     package_dir={'': 'src'},
     ext_modules=[
-        Extension('zstd036', [
+        Extension('_zstd036', [
             'zstd/lib/huff0.c',
             'zstd/lib/fse.c',
             'zstd/lib/legacy/zstd_v01.c',

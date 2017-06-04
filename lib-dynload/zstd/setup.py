@@ -137,7 +137,7 @@ setup(
     packages=find_packages('src'),
     package_dir={'': 'src'},
     ext_modules=[
-        Extension('zstd', zstdFiles, libraries=ext_libraries)
+        Extension('_zstd', zstdFiles, libraries=ext_libraries)
     ],
     cmdclass = {'build_ext': ZstdBuildExt },
     test_suite=tests,

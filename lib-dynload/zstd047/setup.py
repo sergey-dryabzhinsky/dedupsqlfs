@@ -90,7 +90,7 @@ setup(
     packages=find_packages('src'),
     package_dir={'': 'src'},
     ext_modules=[
-        Extension('zstd047', zstdFiles)
+        Extension('_zstd047', zstdFiles)
     ],
     cmdclass={'build_ext': BuildExtSubclass},
     test_suite="tests",

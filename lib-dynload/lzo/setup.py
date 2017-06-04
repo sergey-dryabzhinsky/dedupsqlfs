@@ -23,13 +23,13 @@ else:
         extra_compile_args.insert(0, "-O2")
 
 setup(
-    name = "LZO",
+    name = "lzo2",
     version = "1.0",
     packages=[],
     package_dir={'': 'src'},
     ext_modules = [
         Extension(
-            "lzo",
+            "_lzo2",
             ["src/lzomodule.c"],
             libraries=['lzo2'],
             extra_compile_args=extra_compile_args

@@ -229,7 +229,7 @@ static int snappy_clear(PyObject *m) {
 
 static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
-        "snappy",
+        "_snappy",
     NULL,
     sizeof(struct module_state),
     snappy_methods,
@@ -243,13 +243,13 @@ static struct PyModuleDef moduledef = {
 #define INITERROR return NULL
 
 PyMODINIT_FUNC
-PyInit_snappy(void)
+PyInit__snappy(void)
 
 #else
 #define INITERROR return
 
 PyMODINIT_FUNC
-initsnappy(void)
+init_snappy(void)
 #endif
 {
     PyObject *m;
@@ -257,20 +257,20 @@ initsnappy(void)
     #if PY_MAJOR_VERSION >= 3
     m = PyModule_Create(&moduledef);
     #else
-    m = Py_InitModule("snappy", snappy_methods);
+    m = Py_InitModule("_snappy", snappy_methods);
     #endif
 
     if (m == NULL)
         INITERROR;
 
-    SnappyCompressError = PyErr_NewException((char*)"snappy.CompressError",
+    SnappyCompressError = PyErr_NewException((char*)"_snappy.CompressError",
         NULL, NULL);
-    SnappyUncompressError = PyErr_NewException((char*)"snappy.UncompressError",
+    SnappyUncompressError = PyErr_NewException((char*)"_snappy.UncompressError",
         NULL, NULL);
     SnappyInvalidCompressedInputError = PyErr_NewException(
-        (char*)"snappy.InvalidCompressedInputError", NULL, NULL);
+        (char*)"_snappy.InvalidCompressedInputError", NULL, NULL);
     SnappyCompressedLengthError = PyErr_NewException(
-        (char*)"snappy.CompressedLengthError", NULL, NULL);
+        (char*)"_snappy.CompressedLengthError", NULL, NULL);
 
     Py_INCREF(SnappyCompressError);
     Py_INCREF(SnappyUncompressError);

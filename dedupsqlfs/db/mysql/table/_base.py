@@ -306,7 +306,7 @@ class Table( object ):
         self.stopTimer("vacuum")
         return newSize - oldSize
 
-    def close(self):
+    def close(self, nocompress=False):
         return self
 
     def drop(self):

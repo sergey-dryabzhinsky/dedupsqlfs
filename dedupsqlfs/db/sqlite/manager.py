@@ -274,7 +274,9 @@ class DbManager( object ):
                 prog = self.getCompressionProg()
                 if prog not in (None, "none"):
                     t2.setCompressionProg(prog)
-            t2.close()
+                else:
+                    compress = False
+        t2.close(compress is False)
 
         return self
 

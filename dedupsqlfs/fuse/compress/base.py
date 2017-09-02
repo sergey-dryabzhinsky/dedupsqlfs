@@ -171,11 +171,10 @@ class BaseCompressTool(object):
             if name in methods:
                 selected = True
         else:
-            methods = tuple(self._compressors.keys())
-            methods += (constants.COMPRESSION_TYPE_NONE,)
-            for m in methods:
-                if m == name:
-                    selected = True
+            methods = set(self._compressors.keys())
+            methods.add(constants.COMPRESSION_TYPE_NONE)
+            if name in methods:
+                selected = True
 
         self._selected[name] = selected
 

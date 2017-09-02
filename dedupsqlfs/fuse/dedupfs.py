@@ -226,6 +226,7 @@ class DedupFS(object): # {{{1
         defaultLevel = self.getOption("compression_level")
 
         methods = self.getOption("compression")
+        self.getLogger().info("_fixCompressionOptions - Compression methods = %r" % (methods,))
         if methods and type(methods) in (tuple, list,):
             methods = list(methods)
             auto_type = None
@@ -234,16 +235,17 @@ class DedupFS(object): # {{{1
                 level = defaultLevel
                 if method and method.find(":") != -1:
                     method, level = method.split(":")
-                    if method in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_FAST,):
-                        auto_type = method
-                        continue
                     methods[i] = method
+                if method in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_FAST,):
+                    auto_type = method
+                    continue
                 if method == constants.COMPRESSION_TYPE_NONE:
                     continue
-                self.getLogger().info("Compression method %r set level %r" % (method, level,))
+                self.getLogger().info("_fixCompressionOptions - Compression method %r set level %r" % (method, level,))
                 self._compressTool.getCompressor(method).setCustomCompressionLevel(level)
             if auto_type:
                 methods = [auto_type]
+            self.getLogger().info("_fixCompressionOptions - Compression methods after fix = %r" % (methods,))
             self._compressTool.setOption("compression", methods)
 
         self._compressTool.setOption("compression_minimal_ratio", self.getOption("compression_minimal_ratio"))

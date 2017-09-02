@@ -540,7 +540,7 @@ def main(): # {{{1
         msg += "\n- Method %r will try all compression methods with 'fast' level and choose one with smaller result data." % constants.COMPRESSION_TYPE_FAST
     msg += "\nDefaults to %r." % constants.COMPRESSION_TYPE_NONE
 
-    grp_compress.add_argument('--compress', dest='compression', metavar='METHOD', action="append", default=constants.COMPRESSION_TYPE_NONE, help=msg)
+    grp_compress.add_argument('--compress', dest='compression', metavar='METHOD', action="append", default=[constants.COMPRESSION_TYPE_NONE], help=msg)
 
     grp_compress.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")
     grp_compress.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=1024, help="Minimal block data size for compression. Defaults to 1024 bytes. Value -1 means auto - per method absolute minimum. Do not compress if data size is less than BYTES long. If not forced to.")

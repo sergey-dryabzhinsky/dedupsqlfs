@@ -23,13 +23,13 @@ else:
         extra_compile_args.insert(0, "-O2")
 
 setup(
-    name = "quicklz",
+    name = "qlz",
     version = "1.0",
     packages=[],
     package_dir={'': 'src'},
     ext_modules = [
         Extension(
-            "quicklz",
+            "qlz",
             ["src/quicklz.c", "src/quicklzpy.c"],
             extra_compile_args=extra_compile_args
         )

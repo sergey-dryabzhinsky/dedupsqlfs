@@ -241,6 +241,7 @@ class DedupFS(object): # {{{1
                     self._compressTool.getCompressor(method).setCustomCompressionLevel(level)
             self._compressTool.setOption("compression_custom", methods)
 
+        self._compressTool.setOption("compression_minimal_ratio", self.getOption("compression_minimal_ratio"))
         self._compressTool.setOption("compression_minimal_size", self.getOption("compression_minimal_size"))
         self._compressTool.setOption("compression_level", self.getOption("compression_level"))
         self._compressTool.setOption("compression_forced", self.getOption("compression_forced"))

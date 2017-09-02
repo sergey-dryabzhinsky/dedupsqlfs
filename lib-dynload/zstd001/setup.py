@@ -39,7 +39,7 @@ setup(
     packages=find_packages('src'),
     package_dir={'': 'src'},
     ext_modules=[
-        Extension('zstd001', [
+        Extension('_zstd001', [
             'src/zstd.c',
             'src/python-zstd.c'
         ], extra_compile_args=extra_compile_args)

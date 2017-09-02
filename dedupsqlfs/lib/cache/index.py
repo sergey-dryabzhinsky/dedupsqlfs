@@ -89,7 +89,7 @@ class IndexTime(object):
 
         t = hash_data[self.OFFSET_TIME]
         if now - t > self._max_ttl:
-            return default
+            return val
 
         # update last request time
         hash_data[self.OFFSET_TIME] = now
@@ -114,12 +114,10 @@ class IndexTime(object):
         return removed
 
     def expire(self, inode):
-        inode = str(inode)
         if inode in self._inodes:
             inode_data = self._inodes[inode]
             for bn in inode_data.keys():
                 inode_data[bn][self.OFFSET_TIME] = 0
-            self._inodes[inode] = inode_data
         return
 
     def expired(self):

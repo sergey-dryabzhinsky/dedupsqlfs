@@ -55,7 +55,7 @@ else:
         extra_compile_args.insert(0, "-O2")
 
 snappymodule = Extension(
-    'snappy',
+    '_snappy',
     libraries=['snappy'],
     sources=['src/snappymodule.cc', 'src/crc32c.c'],
     extra_compile_args = extra_compile_args

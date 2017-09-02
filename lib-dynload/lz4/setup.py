@@ -54,7 +54,7 @@ if liblz4_found:
         define_macros = [("VERSION","\"%s\"" % VERSION_STR),]
 
     lz4mod = Extension(
-        'lz4',
+        '_lz4',
         [
             'src/python-lz4.c'
         ],
@@ -73,7 +73,7 @@ else:
         define_macros = [("VERSION","\"%s\"" % VERSION_STR), ("LZ4_VERSION","\"%s\"" % LZ4_VERSION)]
 
     lz4mod = Extension(
-        'lz4',
+        '_lz4',
         [
             'src/lz4.c',
             'src/lz4hc.c',
@@ -85,7 +85,7 @@ else:
 
 
 setup(
-    name='lz4',
+    name='_lz4',
     version=VERSION_STR,
     description="LZ4 Bindings for Python",
     long_description=open('README.rst', 'r').read(),

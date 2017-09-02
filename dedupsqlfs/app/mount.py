@@ -22,7 +22,7 @@ from dedupsqlfs.log import logging
 from dedupsqlfs.fs import which
 import dedupsqlfs
 
-def fuse_mount(options, compression_methods=None, hash_functions=None):
+def fuse_mount(options, compression_methods=None):
     from dedupsqlfs.fuse.dedupfs import DedupFS
     from dedupsqlfs.fuse.operations import DedupOperations
 
@@ -43,10 +43,14 @@ def fuse_mount(options, compression_methods=None, hash_functions=None):
         ret = _fuse.main()
     except Exception:
         import traceback
-        print(traceback.format_exc())
+        err_str = traceback.format_exc()
+        logger = ops.getApplication().getLogger()
+        logger.error(err_str)
+        print(err_str)
         ret = -1
     if ops:
         ops.getManager().close()
+        ops.getApplication().stopCacheFlusher()
 
         if options.memory_usage:
             import resource
@@ -190,7 +194,8 @@ def main(): # {{{1
     grp_compress.add_argument('--custom-compress', dest='compression_custom', metavar='METHOD', action="append", help=msg)
 
     grp_compress.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")
-    grp_compress.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=-1, help="Minimal block data size for compression. Defaults to -1 bytes (auto). Do not compress if data size is less than BYTES long. If not forced to.")
+    grp_compress.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=1024, help="Minimal block data size for compression. Defaults to 1024 bytes. Value -1 means auto - per method absolute minimum. Do not compress if data size is less than BYTES long. If not forced to.")
+    grp_compress.add_argument('--minimal-compress-ratio', dest='compression_minimal_ratio', metavar='RATIO', type=float, default=0.05, help="Minimal data compression ratio. Defaults to 0.05 (5%). Do not compress if ratio is less than RATIO. If not forced to.")
 
     levels = (constants.COMPRESSION_LEVEL_DEFAULT, constants.COMPRESSION_LEVEL_FAST, constants.COMPRESSION_LEVEL_NORM, constants.COMPRESSION_LEVEL_BEST)
 
@@ -245,7 +250,7 @@ def main(): # {{{1
         import cProfile, pstats
         profile = '.dedupsqlfs.cprofile-%i' % time()
         profiler = cProfile.Profile()
-        result = profiler.runcall(fuse_mount, args, compression_methods, hash_functions)
+        result = profiler.runcall(fuse_mount, args, compression_methods)
         profiler.dump_stats(profile)
         sys.stderr.write("\n Profiling statistics:\n\n")
         s = pstats.Stats(profile)
@@ -254,11 +259,11 @@ def main(): # {{{1
         s.sort_stats('tottime').print_stats(0.1)
         os.unlink(profile)
     else:
-        result = fuse_mount(args, compression_methods, hash_functions)
+        result = fuse_mount(args, compression_methods)
 
     return result
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
 
 # vim: ts=2 sw=2 et

@@ -1,6 +1,5 @@
 import sys
 import os
-import imp
 
 search_paths = []
 
@@ -51,8 +50,8 @@ if not imported:
     path = sys.path.pop(0)
 
     try:
-        fp, pathname, description = imp.find_module("lzma")
-        module = imp.load_module("lzma", fp, pathname, description)
+        import importlib
+        module = importlib.import_module("lzma")
 
         compress = module.compress
         decompress = module.decompress

@@ -198,16 +198,24 @@ class BaseCompressTool(object):
         data_length = len(data)
         cmethod = constants.COMPRESSION_TYPE_NONE
 
+        minRatio = self.getOption("compression_minimal_ratio", 0.05)
+
         if data_length <= self.getOption("compression_minimal_size") and not forced:
             return cdata, cmethod
 
+        cdata_length = data_length
         if method != constants.COMPRESSION_TYPE_NONE:
             if method not in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_CUSTOM,):
                 comp = self._compressors[ method ]
                 if comp.isDataMayBeCompressed(data):
                     cdata = comp.compressData(data, level)
                     cmethod = method
-                    if data_length <= len(cdata) and not forced:
+                    cdata_length = len(cdata)
+                    cratio = (data_length - cdata_length) * 1.0 / data_length
+                    if data_length <= cdata_length and not forced:
+                        cdata = data
+                        cmethod = constants.COMPRESSION_TYPE_NONE
+                    elif cratio < minRatio and not forced:
                         cdata = data
                         cmethod = constants.COMPRESSION_TYPE_NONE
             else:
@@ -226,7 +234,11 @@ class BaseCompressTool(object):
                             cdata = _cdata
                             cmethod = m
 
+                cratio = (data_length - cdata_length) * 1.0 / data_length
                 if data_length <= min_len and not forced:
+                    cdata = data
+                    cmethod = constants.COMPRESSION_TYPE_NONE
+                elif cratio < minRatio and not forced:
                     cdata = data
                     cmethod = constants.COMPRESSION_TYPE_NONE
 

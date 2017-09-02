@@ -233,9 +233,12 @@ class Table( object ):
         conn.row_factory = dict_factory
         conn.text_factory = bytes
 
-        conn.execute('PRAGMA locking_mode=NORMAL')
+        # We don't expect many connections here
+        conn.execute('PRAGMA locking_mode=EXCLUSIVE')
         if not self.getManager().getSynchronous():
             conn.execute("PRAGMA synchronous=OFF")
+        else:
+            conn.execute("PRAGMA synchronous=NORMAL")
 
         conn.execute("PRAGMA temp_store=FILE")
         conn.execute("PRAGMA max_page_count=2147483646")

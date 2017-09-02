@@ -39,7 +39,7 @@ else:
     define_macros = [("LZ4_VERSION","\"%s\"" % LZ4_VERSION)]
 
 lz4mod = Extension(
-    'lz4',
+    '_lz4r07',
     [
         'src/lz4.c',
         'src/lz4hc.c',
@@ -50,7 +50,7 @@ lz4mod = Extension(
 )
 
 setup(
-    name='lz4',
+    name='_lz4r07',
     version=__version__,
     description="LZ4 Bindings for Python",
     long_description=open('README.rst', 'r').read(),

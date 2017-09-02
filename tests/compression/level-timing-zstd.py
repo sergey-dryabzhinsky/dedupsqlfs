@@ -310,7 +310,7 @@ def do_level_dtest(method, name, level):
 
 
 COMPRESSION_SUPPORTED=[
-    ('zstd'    , range(1,10), do_level_ctest,),
+    ('zstd'    , range(1,12), do_level_ctest,),
     ('zstd061' , range(1,10), do_level_ctest,),
     ('zstd047' , range(1,10), do_level_ctest,),
     ('zstd036' , range(1,10), do_level_ctest,),
@@ -319,7 +319,7 @@ COMPRESSION_SUPPORTED=[
     ]
 
 DECOMPRESSION_SUPPORTED=[
-    ('zstd'    , range(1,10), do_level_dtest,),
+    ('zstd'    , range(1,12), do_level_dtest,),
     ('zstd061' , range(1,10), do_level_dtest,),
     ('zstd047' , range(1,10), do_level_dtest,),
     ('zstd036' , range(1,10), do_level_dtest,),

@@ -20,6 +20,7 @@ from dedupsqlfs.lib import constants
 from dedupsqlfs.db import check_engines
 from dedupsqlfs.log import logging
 from dedupsqlfs.fs import which
+from dedupsqlfs.argp import SmartFormatter
 import dedupsqlfs
 
 def fuse_mount(options, compression_methods=None):
@@ -74,6 +75,7 @@ def main(): # {{{1
 
     parser = argparse.ArgumentParser(
         prog="%s/%s mount/%s" % (dedupsqlfs.__name__, dedupsqlfs.__version__, dedupsqlfs.__fsversion__),
+        formatter_class = SmartFormatter,
         conflict_handler="resolve")
 
     # Register some custom command line options with the option parser.
@@ -135,7 +137,8 @@ def main(): # {{{1
     msg = "Specify the hashing algorithm that will be used to recognize duplicate data blocks: one of %s"
     hash_functions = list({}.fromkeys([h.lower() for h in hashlib.algorithms_available]).keys())
     hash_functions.sort()
-    msg %= ', '.join('%r' % fun for fun in hash_functions)
+    work_hash_funcs = set(hash_functions) & constants.WANTED_HASH_FUCTIONS
+    msg %= ', '.join('%r' % fun for fun in work_hash_funcs)
     msg += ". Defaults to 'sha1'."
     grp_data.add_argument('--hash', dest='hash_function', metavar='FUNCTION', choices=hash_functions, default='sha1', help=msg)
 
@@ -146,16 +149,16 @@ def main(): # {{{1
 
     grp_cache.add_argument('--no-cache', dest='use_cache', action='store_false', help="Don't use cache in memory and delayed write to storage.")
     grp_cache.add_argument('--no-cache-flusher', dest='use_cache_flusher', action='store_false', help="Don't use separate cache flusher process. It touches file in mount_point directory. This may prevent FS to umount cleanly.")
-    grp_cache.add_argument('--cache-meta-timeout', dest='cache_meta_timeout', metavar='NUMBER', type=int, default=20, help="Delay flush expired metadata for NUMBER of seconds. Defaults to 20 seconds.")
-    grp_cache.add_argument('--cache-block-write-timeout', dest='cache_block_write_timeout', metavar='NUMBER', type=int, default=10, help="Expire writed data and flush from memory after NUMBER of seconds. Defaults to 10 seconds.")
+    grp_cache.add_argument('--cache-meta-timeout', dest='cache_meta_timeout', metavar='SECONDS', type=int, default=20, help="Delay flush expired metadata for NUMBER of seconds. Defaults to 20 seconds.")
+    grp_cache.add_argument('--cache-block-write-timeout', dest='cache_block_write_timeout', metavar='SECONDS', type=int, default=10, help="Expire writed data and flush from memory after NUMBER of seconds. Defaults to 10 seconds.")
     grp_cache.add_argument('--cache-block-write-size', dest='cache_block_write_size', metavar='BYTES', type=int,
                         default=1024*1024*1024,
                         help="Write cache for blocks: potential size in BYTES. Set to -1 for infinite. Defaults to 1024 MB.")
-    grp_cache.add_argument('--cache-block-read-timeout', dest='cache_block_read_timeout', metavar='NUMBER', type=int, default=10, help="Expire readed data and flush from memory after NUMBER of seconds. Defaults to 10 seconds.")
+    grp_cache.add_argument('--cache-block-read-timeout', dest='cache_block_read_timeout', metavar='SECONDS', type=int, default=10, help="Expire readed data and flush from memory after NUMBER of seconds. Defaults to 10 seconds.")
     grp_cache.add_argument('--cache-block-read-size', dest='cache_block_read_size', metavar='BYTES', type=int,
                         default=1024*1024*1024,
                         help="Readed cache for blocks: potential size in BYTES. Set to -1 for infinite. Defaults to 1024 MB.")
-    grp_cache.add_argument('--flush-interval', dest='flush_interval', metavar="N", type=int, default=5, help="Call expired cache callector every Nth seconds on FUSE operations. Defaults to 5.")
+    grp_cache.add_argument('--flush-interval', dest='flush_interval', metavar="SECONDS", type=int, default=5, help="Call expired cache callector every Nth seconds on FUSE operations. Defaults to 5.")
 
 
     grp_compress = parser.add_argument_group('Compression')
@@ -174,28 +177,22 @@ def main(): # {{{1
             pass
     if len(compression_methods) > 1:
         compression_methods_cmd.append(constants.COMPRESSION_TYPE_BEST)
-        compression_methods_cmd.append(constants.COMPRESSION_TYPE_CUSTOM)
+        compression_methods_cmd.append(constants.COMPRESSION_TYPE_FAST)
 
-    msg = "Enable compression of data blocks using one of the supported compression methods: one of %s"
-    msg %= ', '.join('%r' % mth for mth in compression_methods_cmd)
-    msg += ". Defaults to %r." % constants.COMPRESSION_TYPE_NONE
-    msg += " You can use <method>=<level> syntax, <level> can be integer or value from --compression-level."
-    if len(compression_methods_cmd) > 1:
-        msg += " %r will try all compression methods and choose one with smaller result data." % constants.COMPRESSION_TYPE_BEST
-        msg += " %r will try selected compression methods (--custom-compress) and choose one with smaller result data." % constants.COMPRESSION_TYPE_CUSTOM
-
-    grp_compress.add_argument('--compress', dest='compression_method', metavar='METHOD', default=constants.COMPRESSION_TYPE_NONE, help=msg)
-
-    msg = "Enable compression of data blocks using one or more of the supported compression methods: %s"
+    msg = "R|Enable compression of data blocks using one or more of the supported compression methods: %s"
     msg %= ', '.join('%r' % mth for mth in compression_methods_cmd[:-2])
-    msg += ". To use two or more methods select this option in command line for each compression method."
-    msg += " You can use <method>=<level> syntax, <level> can be integer or value from --compression-level."
+    msg += ".\n- To use two or more methods select this option in command line for each compression method."
+    msg += "\n- You can use <method>:<level> syntax, <level> can be integer or value from --compression-level."
+    if len(compression_methods_cmd) > 1:
+        msg += "\n- Method %r will try all compression methods with 'best' level and choose one with smaller result data." % constants.COMPRESSION_TYPE_BEST
+        msg += "\n- Method %r will try all compression methods with 'fast' level and choose one with smaller result data." % constants.COMPRESSION_TYPE_FAST
+    msg += "\nDefaults to %r." % constants.COMPRESSION_TYPE_NONE
 
-    grp_compress.add_argument('--custom-compress', dest='compression_custom', metavar='METHOD', action="append", help=msg)
+    grp_compress.add_argument('--compress', dest='compression', metavar='METHOD', action="append", default=[constants.COMPRESSION_TYPE_NONE], help=msg)
 
     grp_compress.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")
     grp_compress.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=1024, help="Minimal block data size for compression. Defaults to 1024 bytes. Value -1 means auto - per method absolute minimum. Do not compress if data size is less than BYTES long. If not forced to.")
-    grp_compress.add_argument('--minimal-compress-ratio', dest='compression_minimal_ratio', metavar='RATIO', type=float, default=0.05, help="Minimal data compression ratio. Defaults to 0.05 (5%). Do not compress if ratio is less than RATIO. If not forced to.")
+    grp_compress.add_argument('--minimal-compress-ratio', dest='compression_minimal_ratio', metavar='RATIO', type=float, default=0.05, help="Minimal data compression ratio. Defaults to 0.05 (5%%). Do not compress if ratio is less than RATIO. If not forced to.")
 
     levels = (constants.COMPRESSION_LEVEL_DEFAULT, constants.COMPRESSION_LEVEL_FAST, constants.COMPRESSION_LEVEL_NORM, constants.COMPRESSION_LEVEL_BEST)
 
@@ -211,9 +208,9 @@ def main(): # {{{1
         if which(pname):
             compression_progs.append(pname)
 
-    msg = "Enable compression of snapshot sqlite database files using one of the supported compression programs: %s"
+    msg = "R|Enable compression of snapshot sqlite database files using one of the supported compression programs: %s"
     msg %= ', '.join('%r' % mth for mth in compression_progs)
-    msg += ". Defaults to %r." % constants.COMPRESSION_PROGS_DEFAULT
+    msg += ".\nDefaults to %r." % constants.COMPRESSION_PROGS_DEFAULT
     grp_compress.add_argument('--sqlite-compression-prog', dest='sqlite_compression_prog', metavar='PROGNAME', default=constants.COMPRESSION_PROGS_DEFAULT, help=msg)
 
     grp_compress.add_argument('--recompress-on-fly', dest='compression_recompress_now', action="store_true", help="Do recompress blocks which compressed with deprecated compression method.")

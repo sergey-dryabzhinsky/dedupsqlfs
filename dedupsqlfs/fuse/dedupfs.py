@@ -38,6 +38,7 @@ from dedupsqlfs.my_formats import format_size
 from dedupsqlfs.log import logging, DEBUG_VERBOSE, IMPORTANT
 from dedupsqlfs.fuse.compress.mp import MultiProcCompressTool, BaseCompressTool
 from dedupsqlfs.fuse.compress.mt import MultiThreadCompressTool
+from dedupsqlfs.lib import constants
 from subprocess import Popen
 
 # Storage for options and DB interface
@@ -222,24 +223,30 @@ class DedupFS(object): # {{{1
 
     def _fixCompressionOptions(self):
 
-        method = self.getOption("compression_method")
-        if method and method.find("=") != -1:
-            method, level = method.split("=")
-            self._compressTool.setOption("compression_method", method)
-            self._compressTool.getCompressor(method).setCustomCompressionLevel(level)
-        else:
-            self._compressTool.setOption("compression_method", method)
+        defaultLevel = self.getOption("compression_level")
 
-        methods = self.getOption("compression_custom")
+        methods = self.getOption("compression")
+        self.getLogger().info("_fixCompressionOptions - Compression methods = %r" % (methods,))
         if methods and type(methods) in (tuple, list,):
             methods = list(methods)
+            auto_type = None
             for i in range(len(methods)):
                 method = methods[i]
-                if method and method.find("=") != -1:
-                    method, level = method.split("=")
+                level = defaultLevel
+                if method and method.find(":") != -1:
+                    method, level = method.split(":")
                     methods[i] = method
-                    self._compressTool.getCompressor(method).setCustomCompressionLevel(level)
-            self._compressTool.setOption("compression_custom", methods)
+                if method in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_FAST,):
+                    auto_type = method
+                    continue
+                if method == constants.COMPRESSION_TYPE_NONE:
+                    continue
+                self.getLogger().info("_fixCompressionOptions - Compression method %r set level %r" % (method, level,))
+                self._compressTool.getCompressor(method).setCustomCompressionLevel(level)
+            if auto_type:
+                methods = [auto_type]
+            self.getLogger().info("_fixCompressionOptions - Compression methods after fix = %r" % (methods,))
+            self._compressTool.setOption("compression", methods)
 
         self._compressTool.setOption("compression_minimal_ratio", self.getOption("compression_minimal_ratio"))
         self._compressTool.setOption("compression_minimal_size", self.getOption("compression_minimal_size"))
@@ -274,8 +281,8 @@ class DedupFS(object): # {{{1
             table = manager.getTable("compression_type")
             for m in methods:
 
-                if m and m.find("=") != -1:
-                    m, level = m.split("=")
+                if m and m.find(":") != -1:
+                    m, level = m.split(":")
 
                 m_id = table.find(m)
                 if not m_id:

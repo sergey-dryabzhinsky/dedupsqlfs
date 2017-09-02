@@ -4,6 +4,7 @@ __author__ = 'sergey'
 
 import os
 import shutil
+from dedupsqlfs.lib import constants
 
 class DbManager( object ):
 
@@ -272,9 +273,11 @@ class DbManager( object ):
             if os.path.getsize(t2.getDbFilePath()) > 1024*1024:
                 t2.setCompressed()
                 prog = self.getCompressionProg()
-                if prog not in (None, "none"):
+                if prog in (None, constants.COMPRESSION_PROGS_NONE,):
+                    compress = False
+                else:
                     t2.setCompressionProg(prog)
-            t2.close()
+        t2.close(compress is False)
 
         return self
 

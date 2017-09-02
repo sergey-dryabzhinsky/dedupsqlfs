@@ -53,6 +53,9 @@ class BaseCompression:
         self._custom_comp_level = level
         return self
 
+    def getCustomCompressionLevel(self):
+        return self._custom_comp_level
+
     def getFastCompressionOptions(self):
         return False
 

@@ -84,8 +84,8 @@ class BaseCompressTool(object):
     def appendCompression(self, name):
 
         level = None
-        if name and name.find("=") != -1:
-            name, level = name.split("=")
+        if name and name.find(":") != -1:
+            name, level = name.split(":")
 
         if name == "none":
             from dedupsqlfs.compression.none import NoneCompression
@@ -165,19 +165,16 @@ class BaseCompressTool(object):
 
         selected = False
 
-        method = self.getOption("compression_method")
+        methods = self.getOption("compression")
 
-        if method not in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_CUSTOM,):
-            if method == name:
+        if methods[0] not in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_FAST,):
+            if name in methods:
                 selected = True
         else:
-            methods = self._compressors.keys()
-            if method == constants.COMPRESSION_TYPE_CUSTOM:
-                methods = tuple(self.getOption("compression_custom"))
-                methods += (constants.COMPRESSION_TYPE_NONE,)
-            for m in methods:
-                if m == name:
-                    selected = True
+            methods = set(self._compressors.keys())
+            methods.add(constants.COMPRESSION_TYPE_NONE)
+            if name in methods:
+                selected = True
 
         self._selected[name] = selected
 
@@ -190,7 +187,6 @@ class BaseCompressTool(object):
         @return tuple (compressed data (bytes), compresion method (string) )
         """
 
-        method = self.getOption("compression_method")
         forced = self.getOption("compression_forced")
         level = self.getOption("compression_level")
 
@@ -204,43 +200,36 @@ class BaseCompressTool(object):
             return cdata, cmethod
 
         cdata_length = data_length
-        if method != constants.COMPRESSION_TYPE_NONE:
-            if method not in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_CUSTOM,):
-                comp = self._compressors[ method ]
-                if comp.isDataMayBeCompressed(data):
-                    cdata = comp.compressData(data, level)
-                    cmethod = method
-                    cdata_length = len(cdata)
-                    cratio = (data_length - cdata_length) * 1.0 / data_length
-                    if data_length <= cdata_length and not forced:
-                        cdata = data
-                        cmethod = constants.COMPRESSION_TYPE_NONE
-                    elif cratio < minRatio and not forced:
-                        cdata = data
-                        cmethod = constants.COMPRESSION_TYPE_NONE
-            else:
-                min_len = data_length * 2
-                # BEST
-                methods = self._compressors.keys()
-                if method == constants.COMPRESSION_TYPE_CUSTOM:
-                    methods = self.getOption("compression_custom")
-                for m in methods:
-                    comp = self._compressors[ m ]
-                    if comp.isDataMayBeCompressed(data):
-                        _cdata = comp.compressData(data, level)
-                        cdata_length = len(_cdata)
-                        if min_len > cdata_length:
-                            min_len = cdata_length
-                            cdata = _cdata
-                            cmethod = m
+        min_len = data_length * 2
+        # BEST
+        methods = self.getOption("compression")
+        if methods[0] in (constants.COMPRESSION_TYPE_FAST, constants.COMPRESSION_TYPE_BEST,):
+            if methods[0] == constants.COMPRESSION_TYPE_BEST:
+                level = constants.COMPRESSION_LEVEL_BEST
+            if methods[0] == constants.COMPRESSION_TYPE_FAST:
+                level = constants.COMPRESSION_LEVEL_FAST
+            methods = self._compressors.keys()
+        for m in methods:
+            comp = self._compressors[ m ]
+            if comp.isDataMayBeCompressed(data):
+                # Prefer custom level options
+                useLevel = comp.getCustomCompressionLevel()
+                if comp.getCustomCompressionOptions() is None:
+                    useLevel = level
+                _cdata = comp.compressData(data, useLevel)
+                cdata_length = len(_cdata)
+                if min_len > cdata_length:
+                    min_len = cdata_length
+                    cdata = _cdata
+                    cmethod = m
 
-                cratio = (data_length - cdata_length) * 1.0 / data_length
-                if data_length <= min_len and not forced:
-                    cdata = data
-                    cmethod = constants.COMPRESSION_TYPE_NONE
-                elif cratio < minRatio and not forced:
-                    cdata = data
-                    cmethod = constants.COMPRESSION_TYPE_NONE
+        cratio = (data_length - cdata_length) * 1.0 / data_length
+        if data_length <= min_len and not forced:
+            cdata = data
+            cmethod = constants.COMPRESSION_TYPE_NONE
+        elif cratio < minRatio and not forced:
+            cdata = data
+            cmethod = constants.COMPRESSION_TYPE_NONE
 
         return cdata, cmethod
 

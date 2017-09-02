@@ -35,7 +35,7 @@ class Table( object ):
 
     _compressed = False
 
-    _compressed_prog = "gzip"
+    _compressed_prog = None
 
 
     def __init__(self, manager):

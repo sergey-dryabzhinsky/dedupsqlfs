@@ -42,6 +42,7 @@ from dedupsqlfs.log import logging
 from dedupsqlfs.lib import constants
 from dedupsqlfs.db import check_engines
 from dedupsqlfs.fs import which
+from dedupsqlfs.argp import SmartFormatter
 import dedupsqlfs
 
 def create_subvolume(options, _fuse):
@@ -443,6 +444,7 @@ def main(): # {{{1
 
     parser = argparse.ArgumentParser(
         prog="%s/%s do/%s" % (dedupsqlfs.__name__, dedupsqlfs.__version__, dedupsqlfs.__fsversion__),
+        formatter_class = SmartFormatter,
         conflict_handler="resolve")
 
     # Register some custom command line options with the option parser.
@@ -495,18 +497,23 @@ def main(): # {{{1
     data.add_argument('--print-stats', dest='print_stats', action='store_true', help="Print the total apparent size and the actual disk usage of the file system and exit")
     data.add_argument('--check-tree-inodes', dest='check_tree_inodes', action='store_true', help="Check if inodes exists in fs tree on fs usage calculation. Applies to subvolume and snapshot stats calculation too.")
     data.add_argument('--defragment', dest='defragment', action='store_true', help="Defragment all stored data, do garbage collection.")
-    data.add_argument('--vacuum', dest='vacuum', action='store_true', help="Like defragment, but force SQLite to vacuum databases.")
+    data.add_argument('--vacuum', dest='vacuum', action='store_true', help="Like defragment, but force SQLite to 'vacuum' databases, MySQL to run OPTIMIZE on tables.")
+    data.add_argument('--new-block-size', dest='new_block_size', metavar='BYTES', default=constants.BLOCK_SIZE_DEFAULT, type=int, help="Specify the new block size in bytes. Defaults to 128kB. (@todo)")
+    data.add_argument('--maximum-block-size', dest='maximum_block_size', metavar='BYTES', default=constants.BLOCK_SIZE_MAX, type=int,
+                      help="R|Specify the maximum block size in bytes for defragmentation.\n Defaults to %dMB. (@todo)" % (constants.BLOCK_SIZE_MAX/1024/1024,))
+
     data.add_argument('--verify', dest='verify', action='store_true', help="Verify all stored data hashes. (@todo)")
-    data.add_argument('--new-block-size', dest='new_block_size', metavar='BYTES', default=1024*128, type=int, help="Specify the new block size in bytes. Defaults to 128kB. (@todo)")
-    data.add_argument('--maximum-block-size', dest='maximum_block_size', metavar='BYTES', default=1024*1024*10, type=int, help="Specify the maximum block size in bytes for defragmentation. Defaults to 10MB. (@todo)")
 
     # Dynamically check for supported hashing algorithms.
     msg = "Specify the hashing algorithm that will be used to recognize duplicate data blocks: one of %s"
     hash_functions = list({}.fromkeys([h.lower() for h in hashlib.algorithms_available]).keys())
     hash_functions.sort()
-    msg %= ', '.join('%r' % fun for fun in hash_functions)
+    work_hash_funcs = set(hash_functions) & constants.WANTED_HASH_FUCTIONS
+    msg %= ', '.join('%r' % fun for fun in work_hash_funcs)
     msg += ". Defaults to 'sha1'. (@todo)"
     data.add_argument('--rehash', dest='hash_function', metavar='FUNCTION', choices=hash_functions, default='sha1', help=msg)
+
+    grp_compress = parser.add_argument_group('Compression')
 
     # Dynamically check for supported compression methods.
     compression_methods = [constants.COMPRESSION_TYPE_NONE]
@@ -522,35 +529,30 @@ def main(): # {{{1
             pass
     if len(compression_methods) > 1:
         compression_methods_cmd.append(constants.COMPRESSION_TYPE_BEST)
-        compression_methods_cmd.append(constants.COMPRESSION_TYPE_CUSTOM)
+        compression_methods_cmd.append(constants.COMPRESSION_TYPE_FAST)
 
-    msg = "Enable compression of data blocks using one of the supported compression methods: %s"
-    msg %= ', '.join('%r' % mth for mth in compression_methods_cmd)
-    msg += ". Defaults to %r." % constants.COMPRESSION_TYPE_NONE
-    msg += " You can use <method>=<level> syntax, <level> can be integer or value from --compression-level."
-    if len(compression_methods_cmd) > 1:
-        msg += " %r will try all compression methods and choose one with smaller result data." % constants.COMPRESSION_TYPE_BEST
-        msg += " %r will try selected compression methods (--custom-compress) and choose one with smaller result data." % constants.COMPRESSION_TYPE_CUSTOM
-
-    data.add_argument('--compress-method', dest='compression_method', metavar='METHOD', default=constants.COMPRESSION_TYPE_NONE, help=msg)
-    data.add_argument('--recompress-path', dest='recompress_path', metavar='PATH', help="Compress file or entire directory with new compression method. (@todo)")
-
-    msg = "Enable compression of data blocks using one or more of the supported compression methods: %s"
+    msg = "R|Enable compression of data blocks using one or more of the supported compression methods: %s"
     msg %= ', '.join('%r' % mth for mth in compression_methods_cmd[:-2])
-    msg += ". To use two or more methods select this option in command line for each compression method."
-    msg += " You can use <method>=<level> syntax, <level> can be integer or value from --compression-level."
+    msg += ".\n- To use two or more methods select this option in command line for each compression method."
+    msg += "\n- You can use <method>:<level> syntax, <level> can be integer or value from --compression-level."
+    if len(compression_methods_cmd) > 1:
+        msg += "\n- Method %r will try all compression methods with 'best' level and choose one with smaller result data." % constants.COMPRESSION_TYPE_BEST
+        msg += "\n- Method %r will try all compression methods with 'fast' level and choose one with smaller result data." % constants.COMPRESSION_TYPE_FAST
+    msg += "\nDefaults to %r." % constants.COMPRESSION_TYPE_NONE
 
-    data.add_argument('--custom-compress', dest='compression_custom', metavar='METHOD', action="append", help=msg)
-    data.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")
-    data.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=-1, help="Minimal block data size for compression. Defaults to -1 bytes (auto). Do not do compression if not forced to.")
+    grp_compress.add_argument('--compress', dest='compression', metavar='METHOD', action="append", default=constants.COMPRESSION_TYPE_NONE, help=msg)
+
+    grp_compress.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")
+    grp_compress.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=1024, help="Minimal block data size for compression. Defaults to 1024 bytes. Value -1 means auto - per method absolute minimum. Do not compress if data size is less than BYTES long. If not forced to.")
 
     levels = (constants.COMPRESSION_LEVEL_DEFAULT, constants.COMPRESSION_LEVEL_FAST, constants.COMPRESSION_LEVEL_NORM, constants.COMPRESSION_LEVEL_BEST)
 
-    data.add_argument('--compression-level', dest='compression_level', metavar="LEVEL", default=constants.COMPRESSION_LEVEL_DEFAULT,
+    grp_compress.add_argument('--compression-level', dest='compression_level', metavar="LEVEL", default=constants.COMPRESSION_LEVEL_DEFAULT,
                         help="Compression level ratio: one of %s; or INT. Defaults to %r. Not all methods support this option." % (
                             ', '.join('%r' % lvl for lvl in levels), constants.COMPRESSION_LEVEL_DEFAULT
                         ))
     # Do not want 'best' after help setup
+    grp_compress.add_argument('--recompress-path', dest='recompress_path', metavar='PATH', help="Compress file or entire directory with new compression method. (@todo)")
 
     # Dynamically check for supported compression programs
     compression_progs = [constants.COMPRESSION_PROGS_NONE]
@@ -558,10 +560,10 @@ def main(): # {{{1
         if which(pname):
             compression_progs.append(pname)
 
-    msg = "Enable compression of snapshot sqlite database files using one of the supported compression programs: %s"
+    msg = "R|Enable compression of snapshot sqlite database files using one of the supported compression programs: %s"
     msg %= ', '.join('%r' % mth for mth in compression_progs)
-    msg += ". Defaults to %r." % constants.COMPRESSION_PROGS_DEFAULT
-    data.add_argument('--sqlite-compression-prog', dest='sqlite_compression_prog', metavar='PROGNAME', default=constants.COMPRESSION_PROGS_DEFAULT, help=msg)
+    msg += ".\nDefaults to %r." % constants.COMPRESSION_PROGS_DEFAULT
+    grp_compress.add_argument('--sqlite-compression-prog', dest='sqlite_compression_prog', metavar='PROGNAME', default=constants.COMPRESSION_PROGS_DEFAULT, help=msg)
 
 
     snapshot = parser.add_argument_group('Snapshot')

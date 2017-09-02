@@ -240,6 +240,7 @@ class DedupFS(object): # {{{1
                     methods[i] = method
                 if method == constants.COMPRESSION_TYPE_NONE:
                     continue
+                self.getLogger().info("Compression method %r set level %r" % (method, level,))
                 self._compressTool.getCompressor(method).setCustomCompressionLevel(level)
             if auto_type:
                 methods = [auto_type]

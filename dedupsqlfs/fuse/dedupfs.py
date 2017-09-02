@@ -238,6 +238,8 @@ class DedupFS(object): # {{{1
                         auto_type = method
                         continue
                     methods[i] = method
+                if method == constants.COMPRESSION_TYPE_NONE:
+                    continue
                 self._compressTool.getCompressor(method).setCustomCompressionLevel(level)
             if auto_type:
                 methods = [auto_type]

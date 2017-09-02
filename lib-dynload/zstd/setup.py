@@ -7,7 +7,7 @@ from setuptools.command.build_ext import build_ext
 from distutils import ccompiler
 
 
-VERSION = (1, 2, 0)
+VERSION = (1, 3, 1)
 VERSION_STR = ".".join([str(x) for x in VERSION])
 
 # Minor versions
@@ -102,10 +102,10 @@ zstdFiles = []
 if not SUP_EXTERNAL:
 
     for f in [
-            'compress/zstd_compress.c', 'compress/fse_compress.c', 'compress/huf_compress.c',
+            'compress/zstd_compress.c', 'compress/zstdmt_compress.c', 'compress/fse_compress.c', 'compress/huf_compress.c',
             'decompress/zstd_decompress.c', 'common/fse_decompress.c', 'decompress/huf_decompress.c',
 #            'dictBuilder/zdict.c', 'dictBuilder/divsufsort.c',
-            'common/entropy_common.c', 'common/zstd_common.c', 'common/xxhash.c', 'common/error_private.c',
+            'common/entropy_common.c', 'common/zstd_common.c', 'common/xxhash.c', 'common/error_private.c', 'common/pool.c',
         ]:
         zstdFiles.append('zstd/lib/'+f)
 

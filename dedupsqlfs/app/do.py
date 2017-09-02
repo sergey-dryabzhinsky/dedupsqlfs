@@ -553,7 +553,7 @@ def main(): # {{{1
     # Do not want 'best' after help setup
 
     # Dynamically check for supported compression programs
-    compression_progs = ["none"]
+    compression_progs = [constants.COMPRESSION_PROGS_NONE]
     for pname, opts in constants.COMPRESSION_PROGS.items():
         if which(pname):
             compression_progs.append(pname)

@@ -165,7 +165,7 @@ class DedupFS(object): # {{{1
 
 
         self._fixCompressionOptions()
-        self._compressTool.init()
+        self._compressTool.init(self.getLogger())
 
 
     def postDestroy(self):

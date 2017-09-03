@@ -56,6 +56,12 @@ class BaseCompressTool(object):
     @type _methods: set
     """
 
+    _logger = None
+    """
+    @ivar _logger: Logger
+    @type _logger: logger
+    """
+
     time_spent_compressing = 0
 
     def __init__(self):
@@ -67,7 +73,7 @@ class BaseCompressTool(object):
     def checkCpuLimit(self):
         return 1
 
-    def init(self):
+    def init(self, logger):
         self.time_spent_compressing = 0
 
         methods = self.getOption("compression")
@@ -76,10 +82,18 @@ class BaseCompressTool(object):
         self._methods = set(methods)
         if constants.COMPRESSION_TYPE_NONE in self._methods:
             self._methods.remove(constants.COMPRESSION_TYPE_NONE)
+
+        self._logger = logger
+
+
+        self.getLogger().info("BaseCompressTool::init - methods = %r" % (self._methods,))
         return self
 
     def stop(self):
         return self
+
+    def getLogger(self):
+        return self._logger
 
     def setOption(self, key, value):
         self._options[key] = value
@@ -187,23 +201,29 @@ class BaseCompressTool(object):
             return cdata, cmethod
 
         cdata_length = data_length
-        min_len = data_length * 2
+        min_len = data_length
 
         for m in self._methods:
             comp = self._compressors[ m ]
+            self.getLogger().debug("BaseCompressTool::_compressData - try method = %r" % m)
             if comp.isDataMayBeCompressed(data, data_length):
                 # Prefer custom level options
                 useLevel = comp.getCustomCompressionLevel()
                 if not useLevel:
                     useLevel = level
+                self.getLogger().debug("BaseCompressTool::_compressData - try level %r" % useLevel)
                 _cdata = comp.compressData(data, useLevel)
                 cdata_length = len(_cdata)
                 if min_len > cdata_length:
+                    self.getLogger().debug("BaseCompressTool::_compressData - good try - compressed data is less than before")
                     min_len = cdata_length
                     cdata = _cdata
                     cmethod = m
 
         cratio = (data_length - cdata_length) * 1.0 / data_length
+
+        self.getLogger().debug("BaseCompressTool::_compressData - RESULT - cratio = %.3f, minRatio = %.3f, cmethod = %r" % (cratio, minRatio, cmethod,))
+
         if data_length <= min_len and not forced:
             cdata = data
             cmethod = constants.COMPRESSION_TYPE_NONE

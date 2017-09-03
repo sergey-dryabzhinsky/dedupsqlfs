@@ -142,7 +142,7 @@ class DedupFS(object): # {{{1
                 f.write("pre-init\n")
                 f.close()
             except:
-                self.getLogger().warning("DedupFS: can't write to %r" % self.getOption('lock_file'))
+                self.getLogger().warning("DedupFS::preInit - can't write to %r" % self.getOption('lock_file'))
                 pass
 
 
@@ -150,6 +150,9 @@ class DedupFS(object): # {{{1
         manager = self.operations.getManager()
 
         is_mounted = manager.getTable('option').get('mounted')
+        self.getLogger().debug("DedupFS::preInit - FS flag mounted = %r" % is_mounted)
+        is_mounted = manager.getTable('option').get('mounted', True)
+        self.getLogger().debug("DedupFS::preInit - FS flag mounted = %r (raw)" % is_mounted)
         if is_mounted and int(is_mounted):
             self.getLogger().critical("Error: Seems like filesystem was not unmounted correctly! Run defragmentation!")
 
@@ -157,7 +160,7 @@ class DedupFS(object): # {{{1
                 try:
                     os.unlink(self.getOption('lock_file'))
                 except:
-                    self.getLogger().warning("DedupFS: can't remove %r" % self.getOption('lock_file'))
+                    self.getLogger().warning("DedupFS::preInit - can't remove %r" % self.getOption('lock_file'))
                     pass
 
             sys.exit(1)
@@ -172,7 +175,7 @@ class DedupFS(object): # {{{1
             try:
                 os.unlink(self.getOption('lock_file'))
             except:
-                self.getLogger().warning("DedupFS: can't remove %r" % self.getOption('lock_file'))
+                self.getLogger().warning("DedupFS::postDestroy can't remove %r" % self.getOption('lock_file'))
                 pass
         self._compressTool.stop()
         self.operations.getManager().close()

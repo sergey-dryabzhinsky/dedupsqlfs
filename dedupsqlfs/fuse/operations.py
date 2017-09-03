@@ -576,6 +576,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not self.isReadonly():
                 self.__init_store()
 
+
             self.mounted_subvolume_name = self.getOption("mounted_subvolume")
             if self.mounted_subvolume_name is not None:
                 self.mounted_subvolume_name = b'' + self.mounted_subvolume_name.encode()

@@ -144,11 +144,19 @@ class DedupFS(object): # {{{1
             except:
                 self.getLogger().warning("DedupFS: can't write to %r" % self.getOption('lock_file'))
                 pass
-        self._fixCompressionOptions()
-        self._compressTool.init()
+
 
         # Do migrations here, before fs.init callback
-        self.operations.getManager()
+        manager = self.operations.getManager()
+
+        is_mounted = manager.getTable('option').get('mounted')
+        if is_mounted and int(is_mounted):
+            self.getLogger().critical("Error: Seems like filesystem was not unmounted correctly! Run defragmentation!")
+            sys.exit(1)
+
+
+        self._fixCompressionOptions()
+        self._compressTool.init()
 
 
     def postDestroy(self):

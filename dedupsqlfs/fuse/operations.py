@@ -1431,6 +1431,9 @@ class DedupOperations(llfuse.Operations): # {{{1
                             compressionT = self.getCompressionTypeName(type_id)
                             if compressionT == 'none':
                                 continue
+                            # Don't repeat
+                            if type_id == compType["type_id"]:
+                                continue
 
                             try:
                                 bdata = self.__decompress(item["data"], type_id)

@@ -337,9 +337,11 @@ class DedupOperations(llfuse.Operations): # {{{1
 
                 # Flush all cached blocks
                 self.getLogger().debug("Flush remaining inodes.")
-                self.__flush_expired_inodes(self.cached_attrs.clear())
+                count = self.__flush_expired_inodes(self.cached_attrs.clear())
+                self.getLogger().debug("-- flushed: %d" % count)
                 self.getLogger().debug("Flush remaining blocks.")
-                self.__flush_old_cached_blocks(self.cached_blocks.clear())
+                count = self.__flush_old_cached_blocks(self.cached_blocks.clear())
+                self.getLogger().debug("-- flushed: %d" % count)
                 self.cached_indexes.clear()
 
                 self.getLogger().debug("Committing outstanding changes.")

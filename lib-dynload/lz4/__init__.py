@@ -20,7 +20,7 @@ for d in dirs:
         sys.path.insert(0, os.path.join(build_dir, d) )
 
         import importlib
-        module = importlib.import_module("_lz4")
+        module = importlib.import_module("_lz4.block._block")
 
         compress = module.compress
         decompress = module.decompress

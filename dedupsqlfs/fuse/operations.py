@@ -355,6 +355,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.__print_stats()
 
             self.getManager().getTable('option').update('mounted', 0)
+            self.getManager().commit()
 
             self.getManager().close()
         except Exception as e:

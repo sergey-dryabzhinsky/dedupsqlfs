@@ -119,6 +119,7 @@ class DedupFS(object): # {{{1
             stderr=open(os.path.devnull, "w"),
             stdout=open(os.path.devnull, "w"),
         )
+        return
 
 
     def stopCacheFlusher(self):
@@ -133,6 +134,7 @@ class DedupFS(object): # {{{1
 
         self._cache_flusher_proc.terminate()
         self._cache_flusher_proc.wait()
+        return
 
 
     def preInit(self):
@@ -166,6 +168,32 @@ class DedupFS(object): # {{{1
 
         self._fixCompressionOptions()
         self._compressTool.init(self.getLogger())
+        return
+
+
+    def _checkNotUnmounted(self):
+        if self.getOption('lock_file'):
+            try:
+                f = open(self.getOption('lock_file'), 'w')
+                f.write("check-not-unmounted\n")
+                f.close()
+            except:
+                self.getLogger().warning("DedupFS::preInit - can't write to %r" % self.getOption('lock_file'))
+                pass
+
+
+        # Do migrations here, before fs.init callback
+        manager = self.operations.getManager()
+
+        is_mounted = manager.getTable('option').get('mounted')
+        self.getLogger().debug("DedupFS::preInit - FS flag mounted = %r" % is_mounted)
+        if is_mounted and int(is_mounted):
+            self.getLogger().critical("Error: Seems like filesystem was not unmounted correctly! Run defragmentation!")
+
+            self.postDestroy()
+
+            sys.exit(1)
+        return
 
 
     def postDestroy(self):
@@ -177,10 +205,12 @@ class DedupFS(object): # {{{1
                 pass
         self._compressTool.stop()
         self.operations.getManager().close()
+        return
 
     def main(self):
 
         self.preInit()
+        self._checkNotUnmounted()
 
         error = False
         ex = None

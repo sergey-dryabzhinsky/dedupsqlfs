@@ -35,7 +35,10 @@ COMPRESSION_PROGS = {
 
     "lzop": {"ext": ".lzo", "comp": ["-3q"], "decomp": ["-dq"], "priority": 1, "can-comp": True, "can-decomp": True},
 
+    "lz4": {"ext": ".lz4", "comp": ["-1q"], "decomp": ["-dq"], "priority": 1, "can-comp": True, "can-decomp": True},
+
     # As of 0.8 -- need to be forced to remove compressed file
+    "pzstd": {"ext": ".zst", "comp": ["-4q", "--rm"], "decomp": ["-dq", "--rm"], "priority": 10, "can-comp": True, "can-decomp": True},
     "zstd": {"ext": ".zst", "comp": ["-4q", "--rm"], "decomp": ["-dq", "--rm"], "priority": 1, "can-comp": True, "can-decomp": True},
 }
 COMPRESSION_PROGS_EXT = {
@@ -43,7 +46,8 @@ COMPRESSION_PROGS_EXT = {
     ".bz2": ("pbzip2", "bzip2",),
     ".xz": ("pxz", "xz",),
     ".lzo": ("lzop",),
-    ".zst": ("zstd",)
+    ".lz4": ("lz4",),
+    ".zst": ("pzstd", "zstd",)
 }
 COMPRESSION_PROGS_NONE = "none"
 COMPRESSION_PROGS_DEFAULT = COMPRESSION_PROGS_NONE

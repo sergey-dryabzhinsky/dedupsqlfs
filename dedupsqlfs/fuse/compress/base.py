@@ -203,6 +203,8 @@ class BaseCompressTool(object):
         cdata_length = data_length
         min_len = data_length
 
+        self.getLogger().debug("BaseCompressTool::_compressData - data length = %r" % data_length)
+
         for m in self._methods:
             comp = self._compressors[ m ]
             self.getLogger().debug("BaseCompressTool::_compressData - try method = %r" % m)
@@ -214,6 +216,7 @@ class BaseCompressTool(object):
                 self.getLogger().debug("BaseCompressTool::_compressData - try level %r" % useLevel)
                 _cdata = comp.compressData(data, useLevel)
                 cdata_length = len(_cdata)
+                self.getLogger().debug("BaseCompressTool::_compressData - cdata length = %r" % cdata_length)
                 if min_len > cdata_length:
                     self.getLogger().debug("BaseCompressTool::_compressData - good try - compressed data is less than before")
                     min_len = cdata_length

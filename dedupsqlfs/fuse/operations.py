@@ -1386,7 +1386,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.getLogger().debug("get block from DB: inode=%i, number=%i", inode, block_number)
 
-            block = BytesIO()
+            # Fully allocate block
+            block = BytesIO(b'\x00'*self.block_size)
 
             recompress = False
 
@@ -1410,7 +1411,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 compType = tableHCT.get(hash_id)
 
                 self.getLogger().debug("-- decompress block")
-                self.getLogger().debug("-- db size: %s" % len(item["data"]))
+                self.getLogger().debug("-- in db size: %s" % len(item["data"]))
 
                 block.seek(0)
 

@@ -1455,10 +1455,11 @@ class DedupOperations(llfuse.Operations): # {{{1
                     # If it fails - OSError raised
                     block.write(self.__decompress(item["data"], compType["type_id"]))
 
-                if self.getOption('compression_recompress_now') and self.application.isDeprecated(compression):
-                    recompress = True
-                if self.getOption('compression_recompress_current') and not self.application.isMethodSelected(compression):
-                    recompress = True
+                if compression != constants.COMPRESSION_TYPE_NONE:
+                    if self.getOption('compression_recompress_now') and self.application.isDeprecated(compression):
+                        recompress = True
+                    if self.getOption('compression_recompress_current') and not self.application.isMethodSelected(compression):
+                        recompress = True
 
                 if recompress:
                     self.getLogger().debug("-- will recompress block")

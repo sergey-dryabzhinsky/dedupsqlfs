@@ -216,7 +216,7 @@ class DedupOperations(llfuse.Operations): # {{{1
     def flushCompressionType(self):
         if self._compression_types:
             self._compression_types = None
-        if not self._compression_types_revert:
+        if self._compression_types_revert:
             self._compression_types_revert = None
         return
 
@@ -232,7 +232,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def getCompressionTypeIds(self):
         if not self._compression_types:
-            self._compression_types = self.getManager().getTable("compression_type").getAllRevert()
+            self._compression_types = self.getManager().getTable("compression_type").getAll()
         return set(self._compression_types.keys())
 
     # --------------------------------------------------------------------------------------
@@ -1412,6 +1412,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
                 compression = self.getCompressionTypeName(compType["type_id"])
 
+                self.getLogger().debug("READ: Hash = %r, method = %r" % (hash_id, compression,))
+
                 tryAll = self.getOption('decompress_try_all')
 
                 # Try all decompression methods
@@ -2210,6 +2212,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         for hash_id, cItem in self.application.compressData(blocksToCompress):
             cdata, cmethod = cItem
+
+            self.getLogger().debug("WRITE: Hash = %r, method = %r" % (hash_id, cmethod,))
 
             comp_size = len(cdata)
 

@@ -214,7 +214,7 @@ class BaseCompressTool(object):
             if comp.isDataMayBeCompressed(data):
                 # Prefer custom level options
                 useLevel = comp.getCustomCompressionLevel()
-                if comp.getCustomCompressionOptions() is None:
+                if not useLevel:
                     useLevel = level
                 _cdata = comp.compressData(data, useLevel)
                 cdata_length = len(_cdata)
@@ -239,7 +239,7 @@ class BaseCompressTool(object):
 
         @param dataToCompress: dict { hash id: bytes data }
 
-        @return dict { hash id: (compressed data (bytes), compresion method (string) ) }
+        @return tuple ( hash id, (compressed data (bytes), compresion method (string) ) )
         """
 
         start_time = time()

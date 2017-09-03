@@ -1520,9 +1520,12 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.bytes_read += readed_size
 
-        self.getLogger().debug("-- readed size = %s" % (readed_size,))
+        raw_value = raw_data.getvalue()
 
-        return raw_data.getvalue()
+        self.getLogger().debug("-- readed size = %s" % (readed_size,))
+        self.getLogger().debug("-- raw data size = %s" % (len(raw_value),))
+
+        return raw_value
 
     def __write_block_data_by_offset(self, inode, offset, block_data):
         """

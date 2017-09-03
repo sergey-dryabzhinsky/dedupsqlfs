@@ -152,6 +152,14 @@ class DedupFS(object): # {{{1
         is_mounted = manager.getTable('option').get('mounted')
         if is_mounted and int(is_mounted):
             self.getLogger().critical("Error: Seems like filesystem was not unmounted correctly! Run defragmentation!")
+
+            if self.getOption('lock_file'):
+                try:
+                    os.unlink(self.getOption('lock_file'))
+                except:
+                    self.getLogger().warning("DedupFS: can't remove %r" % self.getOption('lock_file'))
+                    pass
+
             sys.exit(1)
 
 

@@ -151,8 +151,6 @@ class DedupFS(object): # {{{1
 
         is_mounted = manager.getTable('option').get('mounted')
         self.getLogger().debug("DedupFS::preInit - FS flag mounted = %r" % is_mounted)
-        is_mounted = manager.getTable('option').get('mounted', True)
-        self.getLogger().debug("DedupFS::preInit - FS flag mounted = %r (raw)" % is_mounted)
         if is_mounted and int(is_mounted):
             self.getLogger().critical("Error: Seems like filesystem was not unmounted correctly! Run defragmentation!")
 

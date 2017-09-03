@@ -20,7 +20,7 @@ class QuickLzCompression(BaseCompression):
 
     _has_comp_level_options = False
 
-    def isDataMayBeCompressed(self, data):
+    def isDataMayBeCompressed(self, data, data_len):
         """
         Disallow compression
         It's deprecated version

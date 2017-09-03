@@ -50,10 +50,10 @@ class BaseCompressTool(object):
     @type _options: dict
     """
 
-    _selected = None
+    _methods = None
     """
-    @ivar _selected: is Method selected cache
-    @type _selected: dict
+    @ivar _methods: Avalable to use Methods
+    @type _methods: set
     """
 
     time_spent_compressing = 0
@@ -61,7 +61,7 @@ class BaseCompressTool(object):
     def __init__(self):
         self._compressors = {}
         self._options = {}
-        self._selected = {}
+        self._methods = set()
         pass
 
     def checkCpuLimit(self):
@@ -69,6 +69,13 @@ class BaseCompressTool(object):
 
     def init(self):
         self.time_spent_compressing = 0
+
+        methods = self.getOption("compression")
+        if methods[0] in (constants.COMPRESSION_TYPE_FAST, constants.COMPRESSION_TYPE_BEST,):
+            methods = self._compressors.keys()
+        self._methods = set(methods)
+        if constants.COMPRESSION_TYPE_NONE in self._methods:
+            self._methods.remove(constants.COMPRESSION_TYPE_NONE)
         return self
 
     def stop(self):
@@ -158,27 +165,7 @@ class BaseCompressTool(object):
 
 
     def isMethodSelected(self, name):
-
-        selected = self._selected.get(name)
-        if selected is not None:
-            return selected
-
-        selected = False
-
-        methods = self.getOption("compression")
-
-        if methods[0] not in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_FAST,):
-            if name in methods:
-                selected = True
-        else:
-            methods = set(self._compressors.keys())
-            methods.add(constants.COMPRESSION_TYPE_NONE)
-            if name in methods:
-                selected = True
-
-        self._selected[name] = selected
-
-        return selected
+        return name in self._methods
 
     def _compressData(self, data):
         """
@@ -201,17 +188,10 @@ class BaseCompressTool(object):
 
         cdata_length = data_length
         min_len = data_length * 2
-        # BEST
-        methods = self.getOption("compression")
-        if methods[0] in (constants.COMPRESSION_TYPE_FAST, constants.COMPRESSION_TYPE_BEST,):
-            if methods[0] == constants.COMPRESSION_TYPE_BEST:
-                level = constants.COMPRESSION_LEVEL_BEST
-            if methods[0] == constants.COMPRESSION_TYPE_FAST:
-                level = constants.COMPRESSION_LEVEL_FAST
-            methods = self._compressors.keys()
-        for m in methods:
+
+        for m in self._methods:
             comp = self._compressors[ m ]
-            if comp.isDataMayBeCompressed(data):
+            if comp.isDataMayBeCompressed(data, data_length):
                 # Prefer custom level options
                 useLevel = comp.getCustomCompressionLevel()
                 if not useLevel:

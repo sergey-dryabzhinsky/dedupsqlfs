@@ -44,7 +44,7 @@ class Zstd061Compression(BaseCompression):
             pass
         return opts
 
-    def isDataMayBeCompressed(self, data):
+    def isDataMayBeCompressed(self, data, data_len):
         """
         Disallow compression
         It's deprecated version of ZSTD

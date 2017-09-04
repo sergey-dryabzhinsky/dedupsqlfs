@@ -23,10 +23,7 @@ class TableInode( Table ):
                 "size INTEGER NOT NULL, "+
                 "atime INTEGER NOT NULL, "+
                 "mtime INTEGER NOT NULL, "+
-                "ctime INTEGER NOT NULL, "+
-                "atime_ns INTEGER NOT NULL DEFAULT 0, "+
-                "mtime_ns INTEGER NOT NULL DEFAULT 0, "+
-                "ctime_ns INTEGER NOT NULL DEFAULT 0"+
+                "ctime INTEGER NOT NULL"+
             ");"
         )
         c.execute(
@@ -40,8 +37,7 @@ class TableInode( Table ):
         return 8 * 13
 
     def insert( self, nlinks, mode,
-                uid=-1, gid=-1, rdev=0, size=0, atime=0, mtime=0, ctime=0,
-                atime_ns=0, mtime_ns=0, ctime_ns=0):
+                uid=-1, gid=-1, rdev=0, size=0, atime=0, mtime=0, ctime=0):
         """
         :param value: bytes
         :return: int
@@ -49,8 +45,8 @@ class TableInode( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        cur.execute("INSERT INTO `%s`(nlinks, mode, uid, gid, rdev, size, atime, mtime, ctime, atime_ns, mtime_ns, ctime_ns) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)" % self.getName(), (
-            nlinks, mode, uid, gid, rdev, size, atime, mtime, ctime, atime_ns, mtime_ns, ctime_ns
+        cur.execute("INSERT INTO `%s`(nlinks, mode, uid, gid, rdev, size, atime, mtime, ctime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)" % self.getName(), (
+            nlinks, mode, uid, gid, rdev, size, atime, mtime, ctime,
         ))
         item = cur.lastrowid
         self.stopTimer('insert')

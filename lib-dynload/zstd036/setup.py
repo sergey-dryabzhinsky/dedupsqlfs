@@ -45,7 +45,7 @@ class BuildExtSubclass(build_ext):
         build_ext.build_extensions(self)
 
 setup(
-    name='zstd',
+    name='zstd036',
     version=VERSION_STR,
     description="ZSTD Bindings for Python",
     long_description=open('README.rst', 'r').read(),
@@ -59,7 +59,7 @@ setup(
     packages=find_packages('src'),
     package_dir={'': 'src'},
     ext_modules=[
-        Extension('zstd', [
+        Extension('_zstd036', [
             'zstd/lib/huff0.c',
             'zstd/lib/fse.c',
             'zstd/lib/legacy/zstd_v01.c',

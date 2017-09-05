@@ -88,7 +88,7 @@ class InodesTime(object):
 
         t = inode_data[self.OFFSET_TIME]
         if now - t > self._max_ttl:
-            return default
+            return val
 
         # update last request time
         inode_data[self.OFFSET_TIME] = now
@@ -96,36 +96,41 @@ class InodesTime(object):
         return val
 
 
-    def expired(self, writed=False):
+    def expired(self):
+        """
+        Gather inode data to be written:
+
+        1. Which targeted to FLUSH explicit
+
+        2. Which was written and expited by time
+
+        @return: tuple(int, dict{ inode: data})
+        """
         now = time()
 
-        if writed:
-            old_inodes = {}
-        else:
-            old_inodes = 0
+        write_inodes = {}
+        readed_inodes = 0
 
         for inode in tuple(self._inodes.keys()):
 
             inode_data = self._inodes[inode]
 
             # Get data to FLUSH (and if requested written attrs)
-            if inode_data[self.OFFSET_TOFLUSH] and writed:
-                old_inodes[inode] = inode_data[self.OFFSET_DATA].copy()
+            if inode_data[self.OFFSET_TOFLUSH]:
+                write_inodes[inode] = inode_data[self.OFFSET_DATA].copy()
                 inode_data[self.OFFSET_TOFLUSH] = False
-
-            if inode_data[self.OFFSET_WRITTEN] != writed:
-                continue
 
             t = inode_data[self.OFFSET_TIME]
             if now - t > self._max_ttl:
-                if writed:
-                    old_inodes[inode] = inode_data[self.OFFSET_DATA].copy()
+                if inode_data[self.OFFSET_WRITTEN]:
+                    if not write_inodes.get(inode):
+                        write_inodes[inode] = inode_data[self.OFFSET_DATA].copy()
                 else:
-                    old_inodes += 1
+                    readed_inodes += 1
 
                 del self._inodes[inode]
 
-        return old_inodes
+        return (readed_inodes, write_inodes,)
 
 
     def flush(self, inode):
@@ -147,16 +152,16 @@ class InodesTime(object):
 
 
     def clear(self):
-        old_inodes = {}
+        write_inodes = {}
 
-        for inode in tuple(self._inodes.keys()):
+        for inode in self._inodes.keys():
 
             inode_data = self._inodes[inode]
 
             if not inode_data[self.OFFSET_WRITTEN]:
                 continue
 
-            old_inodes[inode] = inode_data[self.OFFSET_DATA].copy()
+            write_inodes[inode] = inode_data[self.OFFSET_DATA].copy()
 
         self._inodes = {}
-        return old_inodes
+        return write_inodes

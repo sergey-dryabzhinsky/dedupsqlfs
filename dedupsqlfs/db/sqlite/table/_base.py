@@ -35,7 +35,7 @@ class Table( object ):
 
     _compressed = False
 
-    _compressed_prog = "gzip"
+    _compressed_prog = None
 
 
     def __init__(self, manager):
@@ -146,6 +146,9 @@ class Table( object ):
 
 
     def setCompressionProg(self, prog):
+        if prog in (None, constants.COMPRESSION_PROGS_NONE,):
+            self._compressed_prog = None
+            return self
         if not prog in constants.COMPRESSION_PROGS:
             raise ValueError("Compression program %r nt supported!")
         self._compressed_prog = prog
@@ -201,7 +204,7 @@ class Table( object ):
         if not os.path.exists(db_path):
             return False
         else:
-            if self._compressed:
+            if self._compressed and self._compressed_prog not in (None, constants.COMPRESSION_PROGS_NONE,):
                 opts = constants.COMPRESSION_PROGS[ self._compressed_prog ]
                 cmd = [self._compressed_prog]
                 cmd.extend(opts["comp"])
@@ -233,9 +236,12 @@ class Table( object ):
         conn.row_factory = dict_factory
         conn.text_factory = bytes
 
-        conn.execute('PRAGMA locking_mode=NORMAL')
+        # We don't expect many connections here
+        conn.execute('PRAGMA locking_mode=EXCLUSIVE')
         if not self.getManager().getSynchronous():
             conn.execute("PRAGMA synchronous=OFF")
+        else:
+            conn.execute("PRAGMA synchronous=NORMAL")
 
         conn.execute("PRAGMA temp_store=FILE")
         conn.execute("PRAGMA max_page_count=2147483646")

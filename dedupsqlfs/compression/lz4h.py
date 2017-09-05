@@ -22,7 +22,12 @@ class Lz4hCompression(BaseCompression):
             if self._method_name in sys.modules:
                 del sys.modules[ self._method_name ]
             self._module = __import__(self._method_name)
-            self._func_comp = getattr(self._module, "compressHC")
+
+            func_comp = getattr(self._module, "compress")
+            def compress_high(data):
+                return func_comp(data, "high_compression")
+
+            self._func_comp = compress_high
             self._func_decomp = getattr(self._module, "decompress")
         return
 

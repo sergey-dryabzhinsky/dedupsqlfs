@@ -4,7 +4,7 @@ __author__ = 'sergey'
 
 """
 Class for Zstd compression helper
-New version 0.6+
+New version 1.0+
 """
 
 from dedupsqlfs.compression import BaseCompression
@@ -13,7 +13,7 @@ class ZstdCompression(BaseCompression):
 
     _method_name = "zstd"
 
-    _minimal_size = 31
+    _minimal_size = 18
 
     _has_comp_level_options = True
 
@@ -21,21 +21,21 @@ class ZstdCompression(BaseCompression):
         return ( 1, )
 
     def getNormCompressionOptions(self):
-        return ( 7, )
+        return ( 6, )
 
     def getBestCompressionOptions(self):
-        return ( 9, )
+        return ( 11, )
 
     def getDefaultCompressionOptions(self):
-        return ( 4, )
+        return ( 3, )
 
     def getCustomCompressionOptions(self):
         try:
             level = int(self._custom_comp_level)
             if level < 1:
                 level = 1
-            elif level > 20:
-                level = 20
+            elif level > 22:
+                level = 22
             opts = (level, )
         except:
             opts = False

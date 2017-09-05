@@ -50,10 +50,16 @@ class BaseCompressTool(object):
     @type _options: dict
     """
 
-    _selected = None
+    _methods = None
     """
-    @ivar _selected: is Method selected cache
-    @type _selected: dict
+    @ivar _methods: Avalable to use Methods
+    @type _methods: set
+    """
+
+    _logger = None
+    """
+    @ivar _logger: Logger
+    @type _logger: logger
     """
 
     time_spent_compressing = 0
@@ -61,18 +67,33 @@ class BaseCompressTool(object):
     def __init__(self):
         self._compressors = {}
         self._options = {}
-        self._selected = {}
+        self._methods = set()
         pass
 
     def checkCpuLimit(self):
         return 1
 
-    def init(self):
+    def init(self, logger):
         self.time_spent_compressing = 0
+
+        methods = self.getOption("compression")
+        if methods[0] in (constants.COMPRESSION_TYPE_FAST, constants.COMPRESSION_TYPE_BEST,):
+            methods = self._compressors.keys()
+        self._methods = set(methods)
+        if constants.COMPRESSION_TYPE_NONE in self._methods:
+            self._methods.remove(constants.COMPRESSION_TYPE_NONE)
+
+        self._logger = logger
+
+
+        self.getLogger().info("BaseCompressTool::init - methods = %r" % (self._methods,))
         return self
 
     def stop(self):
         return self
+
+    def getLogger(self):
+        return self._logger
 
     def setOption(self, key, value):
         self._options[key] = value
@@ -84,8 +105,8 @@ class BaseCompressTool(object):
     def appendCompression(self, name):
 
         level = None
-        if name and name.find("=") != -1:
-            name, level = name.split("=")
+        if name and name.find(":") != -1:
+            name, level = name.split(":")
 
         if name == "none":
             from dedupsqlfs.compression.none import NoneCompression
@@ -158,30 +179,7 @@ class BaseCompressTool(object):
 
 
     def isMethodSelected(self, name):
-
-        selected = self._selected.get(name)
-        if selected is not None:
-            return selected
-
-        selected = False
-
-        method = self.getOption("compression_method")
-
-        if method not in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_CUSTOM,):
-            if method == name:
-                selected = True
-        else:
-            methods = self._compressors.keys()
-            if method == constants.COMPRESSION_TYPE_CUSTOM:
-                methods = tuple(self.getOption("compression_custom"))
-                methods += (constants.COMPRESSION_TYPE_NONE,)
-            for m in methods:
-                if m == name:
-                    selected = True
-
-        self._selected[name] = selected
-
-        return selected
+        return name in self._methods
 
     def _compressData(self, data):
         """
@@ -190,7 +188,6 @@ class BaseCompressTool(object):
         @return tuple (compressed data (bytes), compresion method (string) )
         """
 
-        method = self.getOption("compression_method")
         forced = self.getOption("compression_forced")
         level = self.getOption("compression_level")
 
@@ -198,37 +195,44 @@ class BaseCompressTool(object):
         data_length = len(data)
         cmethod = constants.COMPRESSION_TYPE_NONE
 
+        minRatio = self.getOption("compression_minimal_ratio", 0.05)
+
         if data_length <= self.getOption("compression_minimal_size") and not forced:
             return cdata, cmethod
 
-        if method != constants.COMPRESSION_TYPE_NONE:
-            if method not in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_CUSTOM,):
-                comp = self._compressors[ method ]
-                if comp.isDataMayBeCompressed(data):
-                    cdata = comp.compressData(data, level)
-                    cmethod = method
-                    if data_length <= len(cdata) and not forced:
-                        cdata = data
-                        cmethod = constants.COMPRESSION_TYPE_NONE
-            else:
-                min_len = data_length * 2
-                # BEST
-                methods = self._compressors.keys()
-                if method == constants.COMPRESSION_TYPE_CUSTOM:
-                    methods = self.getOption("compression_custom")
-                for m in methods:
-                    comp = self._compressors[ m ]
-                    if comp.isDataMayBeCompressed(data):
-                        _cdata = comp.compressData(data, level)
-                        cdata_length = len(_cdata)
-                        if min_len > cdata_length:
-                            min_len = cdata_length
-                            cdata = _cdata
-                            cmethod = m
+        cdata_length = data_length
+        min_len = data_length
 
-                if data_length <= min_len and not forced:
-                    cdata = data
-                    cmethod = constants.COMPRESSION_TYPE_NONE
+        self.getLogger().debug("BaseCompressTool::_compressData - data length = %r" % data_length)
+
+        for m in self._methods:
+            comp = self._compressors[ m ]
+            self.getLogger().debug("BaseCompressTool::_compressData - try method = %r" % m)
+            if comp.isDataMayBeCompressed(data, data_length):
+                # Prefer custom level options
+                useLevel = comp.getCustomCompressionLevel()
+                if not useLevel:
+                    useLevel = level
+                self.getLogger().debug("BaseCompressTool::_compressData - try level %r" % useLevel)
+                _cdata = comp.compressData(data, useLevel)
+                cdata_length = len(_cdata)
+                self.getLogger().debug("BaseCompressTool::_compressData - cdata length = %r" % cdata_length)
+                if min_len > cdata_length:
+                    self.getLogger().debug("BaseCompressTool::_compressData - good try - compressed data is less than before")
+                    min_len = cdata_length
+                    cdata = _cdata
+                    cmethod = m
+
+        cratio = (data_length - cdata_length) * 1.0 / data_length
+
+        self.getLogger().debug("BaseCompressTool::_compressData - RESULT - cratio = %.3f, minRatio = %.3f, cmethod = %r" % (cratio, minRatio, cmethod,))
+
+        if data_length <= min_len and not forced:
+            cdata = data
+            cmethod = constants.COMPRESSION_TYPE_NONE
+        elif cratio < minRatio and not forced:
+            cdata = data
+            cmethod = constants.COMPRESSION_TYPE_NONE
 
         return cdata, cmethod
 
@@ -238,7 +242,7 @@ class BaseCompressTool(object):
 
         @param dataToCompress: dict { hash id: bytes data }
 
-        @return dict { hash id: (compressed data (bytes), compresion method (string) ) }
+        @return tuple ( hash id, (compressed data (bytes), compresion method (string) ) )
         """
 
         start_time = time()

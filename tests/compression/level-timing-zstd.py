@@ -310,19 +310,21 @@ def do_level_dtest(method, name, level):
 
 
 COMPRESSION_SUPPORTED=[
-    ('zstd' , range(1,21), do_level_ctest,),
-    ('zstd047' , range(1,21), do_level_ctest,),
-    ('zstd036' , range(1,21), do_level_ctest,),
-    ('zstd001' , False, do_simple_ctest,),
-    ('zlib' , range(0,10), do_level_ctest,),
+    ('zstd'    , range(1,12), do_level_ctest,),
+    ('zstd061' , range(1,10), do_level_ctest,),
+    ('zstd047' , range(1,10), do_level_ctest,),
+    ('zstd036' , range(1,10), do_level_ctest,),
+    ('zstd001' , False      , do_simple_ctest,),
+    ('zlib'    , range(1,10), do_level_ctest,),
     ]
 
 DECOMPRESSION_SUPPORTED=[
-    ('zstd' , range(1,21), do_level_dtest,),
-    ('zstd047' , range(1,21), do_level_dtest,),
-    ('zstd036' , range(1,21), do_level_dtest,),
-    ('zstd001' , False, do_simple_dtest,),
-    ('zlib' , range(0,10), do_level_dtest,),
+    ('zstd'    , range(1,12), do_level_dtest,),
+    ('zstd061' , range(1,10), do_level_dtest,),
+    ('zstd047' , range(1,10), do_level_dtest,),
+    ('zstd036' , range(1,10), do_level_dtest,),
+    ('zstd001' , False      , do_simple_dtest,),
+    ('zlib'    , range(1,10), do_level_dtest,),
     ]
 
 CTIMING={}

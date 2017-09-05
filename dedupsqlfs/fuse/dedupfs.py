@@ -38,6 +38,7 @@ from dedupsqlfs.my_formats import format_size
 from dedupsqlfs.log import logging, DEBUG_VERBOSE, IMPORTANT
 from dedupsqlfs.fuse.compress.mp import MultiProcCompressTool, BaseCompressTool
 from dedupsqlfs.fuse.compress.mt import MultiThreadCompressTool
+from dedupsqlfs.lib import constants
 from subprocess import Popen
 
 # Storage for options and DB interface
@@ -118,6 +119,7 @@ class DedupFS(object): # {{{1
             stderr=open(os.path.devnull, "w"),
             stdout=open(os.path.devnull, "w"),
         )
+        return
 
 
     def stopCacheFlusher(self):
@@ -132,6 +134,7 @@ class DedupFS(object): # {{{1
 
         self._cache_flusher_proc.terminate()
         self._cache_flusher_proc.wait()
+        return
 
 
     def preInit(self):
@@ -141,13 +144,56 @@ class DedupFS(object): # {{{1
                 f.write("pre-init\n")
                 f.close()
             except:
-                self.getLogger().warning("DedupFS: can't write to %r" % self.getOption('lock_file'))
+                self.getLogger().warning("DedupFS::preInit - can't write to %r" % self.getOption('lock_file'))
                 pass
-        self._fixCompressionOptions()
-        self._compressTool.init()
+
 
         # Do migrations here, before fs.init callback
-        self.operations.getManager()
+        manager = self.operations.getManager()
+
+        is_mounted = manager.getTable('option').get('mounted')
+        self.getLogger().debug("DedupFS::preInit - FS flag mounted = %r" % is_mounted)
+        if is_mounted and int(is_mounted):
+            self.getLogger().critical("Error: Seems like filesystem was not unmounted correctly! Run defragmentation!")
+
+            if self.getOption('lock_file'):
+                try:
+                    os.unlink(self.getOption('lock_file'))
+                except:
+                    self.getLogger().warning("DedupFS::preInit - can't remove %r" % self.getOption('lock_file'))
+                    pass
+
+            sys.exit(1)
+
+
+        self._fixCompressionOptions()
+        self._compressTool.init(self.getLogger())
+        return
+
+
+    def _checkNotUnmounted(self):
+        if self.getOption('lock_file'):
+            try:
+                f = open(self.getOption('lock_file'), 'w')
+                f.write("check-not-unmounted\n")
+                f.close()
+            except:
+                self.getLogger().warning("DedupFS::preInit - can't write to %r" % self.getOption('lock_file'))
+                pass
+
+
+        # Do migrations here, before fs.init callback
+        manager = self.operations.getManager()
+
+        is_mounted = manager.getTable('option').get('mounted')
+        self.getLogger().debug("DedupFS::preInit - FS flag mounted = %r" % is_mounted)
+        if is_mounted and int(is_mounted):
+            self.getLogger().critical("Error: Seems like filesystem was not unmounted correctly! Run defragmentation!")
+
+            self.postDestroy()
+
+            sys.exit(1)
+        return
 
 
     def postDestroy(self):
@@ -155,14 +201,16 @@ class DedupFS(object): # {{{1
             try:
                 os.unlink(self.getOption('lock_file'))
             except:
-                self.getLogger().warning("DedupFS: can't remove %r" % self.getOption('lock_file'))
+                self.getLogger().warning("DedupFS::postDestroy can't remove %r" % self.getOption('lock_file'))
                 pass
         self._compressTool.stop()
         self.operations.getManager().close()
+        return
 
     def main(self):
 
         self.preInit()
+        self._checkNotUnmounted()
 
         error = False
         ex = None
@@ -222,25 +270,32 @@ class DedupFS(object): # {{{1
 
     def _fixCompressionOptions(self):
 
-        method = self.getOption("compression_method")
-        if method and method.find("=") != -1:
-            method, level = method.split("=")
-            self._compressTool.setOption("compression_method", method)
-            self._compressTool.getCompressor(method).setCustomCompressionLevel(level)
-        else:
-            self._compressTool.setOption("compression_method", method)
+        defaultLevel = self.getOption("compression_level")
 
-        methods = self.getOption("compression_custom")
+        methods = self.getOption("compression")
+        self.getLogger().info("_fixCompressionOptions - Compression methods = %r" % (methods,))
         if methods and type(methods) in (tuple, list,):
             methods = list(methods)
+            auto_type = None
             for i in range(len(methods)):
                 method = methods[i]
-                if method and method.find("=") != -1:
-                    method, level = method.split("=")
+                level = defaultLevel
+                if method and method.find(":") != -1:
+                    method, level = method.split(":")
                     methods[i] = method
-                    self._compressTool.getCompressor(method).setCustomCompressionLevel(level)
-            self._compressTool.setOption("compression_custom", methods)
+                if method in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_FAST,):
+                    auto_type = method
+                    continue
+                if method == constants.COMPRESSION_TYPE_NONE:
+                    continue
+                self.getLogger().info("_fixCompressionOptions - Compression method %r set level %r" % (method, level,))
+                self._compressTool.getCompressor(method).setCustomCompressionLevel(level)
+            if auto_type:
+                methods = [auto_type]
+            self.getLogger().info("_fixCompressionOptions - Compression methods after fix = %r" % (methods,))
+            self._compressTool.setOption("compression", methods)
 
+        self._compressTool.setOption("compression_minimal_ratio", self.getOption("compression_minimal_ratio"))
         self._compressTool.setOption("compression_minimal_size", self.getOption("compression_minimal_size"))
         self._compressTool.setOption("compression_level", self.getOption("compression_level"))
         self._compressTool.setOption("compression_forced", self.getOption("compression_forced"))
@@ -273,8 +328,8 @@ class DedupFS(object): # {{{1
             table = manager.getTable("compression_type")
             for m in methods:
 
-                if m and m.find("=") != -1:
-                    m, level = m.split("=")
+                if m and m.find(":") != -1:
+                    m, level = m.split(":")
 
                 m_id = table.find(m)
                 if not m_id:

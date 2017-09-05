@@ -184,7 +184,7 @@ static int lzo_clear(PyObject *m) {
 
 static struct PyModuleDef moduledef = {
         PyModuleDef_HEAD_INIT,
-        "lzo",
+        "_lzo",
         NULL,
         sizeof(struct module_state),
         lzo_methods,
@@ -197,13 +197,13 @@ static struct PyModuleDef moduledef = {
 #define INITERROR return NULL
 
 PyObject *
-PyInit_lzo(void)
+PyInit__lzo(void)
 
 #else
 #define INITERROR return
 
 void
-initlzo(void)
+init_lzo(void)
 #endif
 {
 
@@ -217,7 +217,7 @@ initlzo(void)
 #if PY_MAJOR_VERSION >= 3
     PyObject *module = PyModule_Create(&moduledef);
 #else
-    PyObject *module = Py_InitModule("lzo", lzo_methods);
+    PyObject *module = Py_InitModule("_lzo", lzo_methods);
 #endif
 
     if (module == NULL) {
@@ -226,7 +226,7 @@ initlzo(void)
     }
     struct module_state *st = GETSTATE(module);
 
-    st->error = PyErr_NewException("lzo.Error", NULL, NULL);
+    st->error = PyErr_NewException("_lzo.Error", NULL, NULL);
     if (st->error == NULL) {
         Py_DECREF(module);
         INITERROR;

@@ -53,6 +53,9 @@ class BaseCompression:
         self._custom_comp_level = level
         return self
 
+    def getCustomCompressionLevel(self):
+        return self._custom_comp_level
+
     def getFastCompressionOptions(self):
         return False
 
@@ -84,8 +87,7 @@ class BaseCompression:
             opts = self.getCustomCompressionOptions()
         return opts
 
-    def isDataMayBeCompressed(self, data):
-        data_len = len(data)
+    def isDataMayBeCompressed(self, data, data_len):
         if self._minimal_size > data_len:
             return False
         return True

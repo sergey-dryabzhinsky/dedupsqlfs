@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, Steeve Morin
+ * Copyright (c) 2016 Jonathan Underwood
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,37 +29,68 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Python.h"
-
-static PyObject *py_lz4_compress(PyObject *self, PyObject *args);
-static PyObject *py_lz4_compress_fast(PyObject *self, PyObject *args);
-static PyObject *py_lz4_uncompress(PyObject *self, PyObject *args);
-
-PyMODINIT_FUNC initlz4(void);
-
-#define COMPRESS_DOCSTRING      "Compress string, returning the compressed data.\nRaises an exception if any error occurs."
-#define COMPRESSFAST_DOCSTRING  "Compress string with the given acceleration, returning the compressed data.\nRaises an exception if any error occurs."
-#define COMPRESSHC_DOCSTRING    COMPRESS_DOCSTRING "\n\nCompared to compress, this gives a better compression ratio, but is much slower."
-#define UNCOMPRESS_DOCSTRING    "Decompress string, returning the uncompressed data.\nRaises an exception if any error occurs."
-
 #if defined(_WIN32) && defined(_MSC_VER)
-# define inline __inline
-# if _MSC_VER >= 1600
-#  include <stdint.h>
-# else /* _MSC_VER >= 1600 */
-   typedef signed char       int8_t;
-   typedef signed short      int16_t;
-   typedef signed int        int32_t;
-   typedef unsigned char     uint8_t;
-   typedef unsigned short    uint16_t;
-   typedef unsigned int      uint32_t;
-# endif /* _MSC_VER >= 1600 */
-#endif
-
-#if defined(__SUNPRO_C) || defined(__hpux) || defined(_AIX)
+#define inline __inline
+#elif defined(__SUNPRO_C) || defined(__hpux) || defined(_AIX)
 #define inline
 #endif
 
-#ifdef __linux
-#define inline __inline
+#include <py3c.h>
+#include <py3c/capsulethunk.h>
+
+#include <stdlib.h>
+#include <lz4.h>
+#include <lz4hc.h>
+
+#ifndef Py_UNUSED /* This is already defined for Python 3.4 onwards */
+#ifdef __GNUC__
+#define Py_UNUSED(name) _unused_ ## name __attribute__((unused))
+#else
+#define Py_UNUSED(name) _unused_ ## name
 #endif
+#endif
+
+PyDoc_STRVAR(lz4version__doc,
+             "lz4version()\n\n"                                         \
+             "Returns the version number of the LZ4 library");
+
+static PyObject *
+lz4version (PyObject * Py_UNUSED (self), PyObject * Py_UNUSED (args))
+{
+  return Py_BuildValue ("i", LZ4_versionNumber ());
+}
+
+static PyMethodDef module_methods[] = {
+  {
+    "lz4version",
+    (PyCFunction) lz4version,
+    METH_VARARGS,
+    lz4version__doc
+  },
+  {
+    /* Sentinel */
+    NULL,
+    NULL,
+    0,
+    NULL
+  }
+};
+
+static struct PyModuleDef moduledef =
+  {
+    PyModuleDef_HEAD_INIT,
+    "_version",
+    NULL,
+    -1,
+    module_methods
+  };
+
+MODULE_INIT_FUNC (_version)
+{
+  PyObject *module = PyModule_Create (&moduledef);
+
+  if (module == NULL)
+    return NULL;
+
+  return module;
+}

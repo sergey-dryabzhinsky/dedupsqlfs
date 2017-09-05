@@ -216,7 +216,7 @@ class DedupOperations(llfuse.Operations): # {{{1
     def flushCompressionType(self):
         if self._compression_types:
             self._compression_types = None
-        if not self._compression_types_revert:
+        if self._compression_types_revert:
             self._compression_types_revert = None
         return
 
@@ -232,7 +232,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def getCompressionTypeIds(self):
         if not self._compression_types:
-            self._compression_types = self.getManager().getTable("compression_type").getAllRevert()
+            self._compression_types = self.getManager().getTable("compression_type").getAll()
         return set(self._compression_types.keys())
 
     # --------------------------------------------------------------------------------------
@@ -337,9 +337,11 @@ class DedupOperations(llfuse.Operations): # {{{1
 
                 # Flush all cached blocks
                 self.getLogger().debug("Flush remaining inodes.")
-                self.__flush_expired_inodes(self.cached_attrs.clear())
+                count = self.__flush_expired_inodes(self.cached_attrs.clear())
+                self.getLogger().debug("-- flushed: %d" % count)
                 self.getLogger().debug("Flush remaining blocks.")
-                self.__flush_old_cached_blocks(self.cached_blocks.clear())
+                count = self.__flush_old_cached_blocks(self.cached_blocks.clear())
+                self.getLogger().debug("-- flushed: %d" % count)
                 self.cached_indexes.clear()
 
                 self.getLogger().debug("Committing outstanding changes.")
@@ -353,6 +355,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.__print_stats()
 
             self.getManager().getTable('option').update('mounted', 0)
+            self.getManager().commit()
 
             self.getManager().close()
         except Exception as e:
@@ -429,6 +432,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.__log_call('fsync', '-- inode(%i) zero sized! remove all blocks', fh)
                 self.getTable("inode_hash_block").delete(fh)
                 self.cached_blocks.forget(fh)
+                self.cached_indexes.expire(fh)
             else:
                 if datasync:
                     self.cached_blocks.flush(fh)
@@ -574,6 +578,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             if not self.isReadonly():
                 self.__init_store()
+
 
             self.mounted_subvolume_name = self.getOption("mounted_subvolume")
             if self.mounted_subvolume_name is not None:
@@ -1368,7 +1373,6 @@ class DedupOperations(llfuse.Operations): # {{{1
                 # Do hack here... store False to prevent table reread until it stored in cache or deleted
                 self.getLogger().debug("-- new index")
                 self.cached_indexes.set(inode, block_number, False)
-                hash_id = False
             else:
                 self.cached_indexes.set(inode, block_number, hash_id)
         return hash_id
@@ -1382,7 +1386,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.getLogger().debug("get block from DB: inode=%i, number=%i", inode, block_number)
 
-            block = BytesIO(b"\x00"*self.block_size)
+            # Fully allocate block
+            block = BytesIO(b'\x00'*self.block_size)
 
             recompress = False
 
@@ -1395,6 +1400,10 @@ class DedupOperations(llfuse.Operations): # {{{1
                 tableBlock = self.getTable("block")
 
                 item = tableBlock.get(hash_id)
+                if not item:
+                    err_str = "get block from DB: block not found! (inode=%i, block_number=%i, hash_id=%s)" % (inode, block_number, hash_id,)
+                    self.getLogger().error(err_str)
+                    raise OSError(err_str)
 
             # XXX: how block can be defragmented away?
             if item:
@@ -1402,11 +1411,13 @@ class DedupOperations(llfuse.Operations): # {{{1
                 compType = tableHCT.get(hash_id)
 
                 self.getLogger().debug("-- decompress block")
-                self.getLogger().debug("-- db size: %s" % len(item["data"]))
+                self.getLogger().debug("-- in db size: %s" % len(item["data"]))
 
                 block.seek(0)
 
                 compression = self.getCompressionTypeName(compType["type_id"])
+
+                self.getLogger().debug("READ: Hash = %r, method = %r" % (hash_id, compression,))
 
                 tryAll = self.getOption('decompress_try_all')
 
@@ -1418,6 +1429,13 @@ class DedupOperations(llfuse.Operations): # {{{1
                         bdata = False
                     if bdata is False:
                         for type_id in self.getCompressionTypeIds():
+                            compressionT = self.getCompressionTypeName(type_id)
+                            if compressionT == 'none':
+                                continue
+                            # Don't repeat
+                            if type_id == compType["type_id"]:
+                                continue
+
                             try:
                                 bdata = self.__decompress(item["data"], type_id)
                             except:
@@ -1427,23 +1445,25 @@ class DedupOperations(llfuse.Operations): # {{{1
                                 if type_id != compType["type_id"]:
                                     self.getLogger().debug("-- Different compression types! Do recompress!")
                                     self.getLogger().debug("----   compressed with: %s" % compression)
-                                    compression = self.getCompressionTypeName(type_id)
-                                    self.getLogger().debug("---- decompressed with: %s" % compression)
+                                    self.getLogger().debug("---- decompressed with: %s" % compressionT)
                                     recompress = True
-                                block.write(bdata)
                                 break
                         if bdata is False:
-                            raise OSError("Can't decompress data block! Data corruption? Original method was: %s (%d)" % (
-                                compression, compType["type_id"],))
+                            err_str = "Can't decompress data block! Data corruption? Original method was: %s (%d)" % (
+                                compression, compType["type_id"],)
+                            self.getLogger().error(err_str)
+                            raise OSError(err_str)
+                    block.write(bdata)
 
                 else:
                     # If it fails - OSError raised
                     block.write(self.__decompress(item["data"], compType["type_id"]))
 
-                if self.getOption('compression_recompress_now') and self.application.isDeprecated(compression):
-                    recompress = True
-                if self.getOption('compression_recompress_current') and not self.application.isMethodSelected(compression):
-                    recompress = True
+                if compression != constants.COMPRESSION_TYPE_NONE:
+                    if self.getOption('compression_recompress_now') and self.application.isDeprecated(compression):
+                        recompress = True
+                    if self.getOption('compression_recompress_current') and not self.application.isMethodSelected(compression):
+                        recompress = True
 
                 if recompress:
                     self.getLogger().debug("-- will recompress block")
@@ -1465,6 +1485,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         @return: bytes
         """
+        self.getLogger().debug("__get_block_data_by_offset: inode = %s, offset = %s, size = %s" % (inode, offset, size,))
         if not size:
             return b''
 
@@ -1477,7 +1498,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         if not read_blocks:
             read_blocks = 1
 
-        self.getLogger().debug("first block number = %s, read blocks = %s inblock offset = %s" % (first_block_number, read_blocks, inblock_offset,))
+        self.getLogger().debug("-- first block number = %s, read blocks = %s, inblock offset = %s" % (first_block_number, read_blocks, inblock_offset,))
 
         readed_size = 0
 
@@ -1499,7 +1520,12 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.bytes_read += readed_size
 
-        return raw_data.getvalue()
+        raw_value = raw_data.getvalue()
+
+        self.getLogger().debug("-- readed size = %s" % (readed_size,))
+        self.getLogger().debug("-- raw data size = %s" % (len(raw_value),))
+
+        return raw_value
 
     def __write_block_data_by_offset(self, inode, offset, block_data):
         """
@@ -1513,6 +1539,9 @@ class DedupOperations(llfuse.Operations): # {{{1
         @type block_data: bytes
         """
         size = len(block_data)
+
+        self.getLogger().debug("__write_block_data_by_offset: inode = %s, offset = %s, block size = %s" % (inode, offset, size,))
+
         if not size:
             return 0
 
@@ -1525,7 +1554,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         if not write_blocks:
             write_blocks = 1
 
-        self.getLogger().debug("first block number = %s, size = %s, write blocks = %s inblock offset = %s" % (first_block_number, size, write_blocks, inblock_offset,))
+        self.getLogger().debug("-- first block number = %s, size = %s, write blocks = %s, inblock offset = %s" % (first_block_number, size, write_blocks, inblock_offset,))
 
         writed_size = 0
 
@@ -1543,11 +1572,12 @@ class DedupOperations(llfuse.Operations): # {{{1
                     write_size = self.block_size - inblock_offset
 
             block.write(io_data.read(write_size))
-            block.write(io_data.read(write_size))
 
             self.cached_blocks.set(inode, n + first_block_number, block, writed=True)
 
             writed_size += write_size
+
+        self.getLogger().debug("-- writed size = %s" % (writed_size,))
 
         return writed_size
 
@@ -2195,6 +2225,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         for hash_id, cItem in self.application.compressData(blocksToCompress):
             cdata, cmethod = cItem
 
+            self.getLogger().debug("WRITE: Hash = %r, method = %r" % (hash_id, cmethod,))
+
             comp_size = len(cdata)
 
             writed_size = blockSize[ hash_id ]
@@ -2240,7 +2272,13 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         start_time1 = time()
         if start_time1 - self.cache_gc_block_write_last_run >= self.flush_interval:
-            flushed = self.__flush_old_cached_blocks(self.cached_blocks.expired(True), True)
+
+            expired = self.cached_blocks.expired()
+
+            flushed_readed_blocks += expired[0]
+            flushed_readed_expiredByTime_blocks += expired[0]
+
+            flushed = self.__flush_old_cached_blocks(expired[1], True)
             flushed_writed_blocks += flushed
             flushed_writed_expiredByTime_blocks += flushed
 
@@ -2263,19 +2301,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             elapsed_time1 = self.cache_gc_block_writeSize_last_run - start_time1
             self.time_spent_flushing_writed_block_cache += elapsed_time1
             self.time_spent_flushing_writedBySize_block_cache += elapsed_time1
-
-
-        start_time1 = time()
-        if start_time1 - self.cache_gc_block_read_last_run >= self.flush_interval:
-            flushed = self.cached_blocks.expired(False)
-            flushed_readed_blocks += flushed
-            flushed_readed_expiredByTime_blocks += flushed
-
-            self.cache_gc_block_read_last_run = time()
-
-            elapsed_time1 = self.cache_gc_block_read_last_run - start_time1
-            self.time_spent_flushing_readed_block_cache += elapsed_time1
-            self.time_spent_flushing_readedByTime_block_cache += elapsed_time1
 
 
         start_time1 = time()
@@ -2359,9 +2384,10 @@ class DedupOperations(llfuse.Operations): # {{{1
             flushed_xattrs = self.cached_xattrs.clear()
 
             # Just readed...
-            flushed_attrs += self.cached_attrs.expired(False)
+            expired = self.cached_attrs.expired()
+            flushed_attrs += expired[0]
             # Just writed/updated...
-            flushed_attrs += self.__flush_expired_inodes(self.cached_attrs.expired(True))
+            flushed_attrs += self.__flush_expired_inodes(expired[1])
 
             self.__commit_changes()
 

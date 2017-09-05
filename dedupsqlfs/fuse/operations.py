@@ -1826,24 +1826,15 @@ class DedupOperations(llfuse.Operations): # {{{1
             and (not (mode & os.X_OK) or ((o and (m & 0o100)) or (g and (m & 0o010)) or (w and (m & 0o001))))
 
 
-    def __newctime(self): # {{{3
-        return time()
-
-    def __newctime_tuple(self): # {{{3
-        return self.__get_time_tuple( self.__newctime() )
-
-    def newctime_tuple(self): # {{{3
-        return self.__newctime_tuple()
-
     def newctime64(self): # {{{3
-        t_ns, t_i = modf(t)
+        t_ns, t_i = modf(time())
         t_ns = int(t_ns * 10**9)
         return t_i * 10**9 + t_ns
 
-    def __get_time_tuple(self, t): # {{{3
-        t_ns, t_i = modf(t)
+    def newctime64_32(self): # {{{3
+        t_ns, t_i = modf(time())
         t_ns = int(t_ns * 10**9)
-        return int(t_i), t_ns
+        return t_i * 10**9 + t_ns, t_i
 
 
     def __hash(self, data): # {{{3

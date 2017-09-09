@@ -36,13 +36,22 @@ class TableInodeHashBlock( Table ):
         self.stopTimer('insert')
         return item
 
-    def update( self, inode, block_number, new_hash_id):
+    def update( self, inode, block_number, new_hash_id, new_size):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("UPDATE `%s` SET hash_id=?, real_size=? WHERE inode_id=? AND block_number=?" % self.getName(),
+                    (new_hash_id, new_size, inode, block_number,))
+        item = cur.rowcount
+        self.stopTimer('update')
+        return item
+
+    def update_hash( self, inode, block_number, new_hash_id):
         self.startTimer()
         cur = self.getCursor()
         cur.execute("UPDATE `%s` SET hash_id=? WHERE inode_id=? AND block_number=?" % self.getName(),
                     (new_hash_id, inode, block_number,))
         item = cur.rowcount
-        self.stopTimer('update')
+        self.stopTimer('update_hash')
         return item
 
     def update_size( self, inode, block_number, new_size):

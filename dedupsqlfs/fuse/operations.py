@@ -2172,19 +2172,18 @@ class DedupOperations(llfuse.Operations): # {{{1
                 inode, block_number, hash_id, result["real_size"]
             )
             indexItem = {
-                "real_size":result["real_size"],
+                "real_size": result["real_size"],
                 "hash_id": hash_id
             }
             self.cached_indexes.set(inode, block_number, indexItem)
         elif indexItem["hash_id"] != hash_id:
             tableIndex.update(
-                inode, block_number, hash_id
+                inode, block_number, hash_id, result["real_size"]
             )
-            tableIndex.update_size(
-                inode, block_number, result["real_size"]
-            )
-            indexItem["hash_id"] = hash_id
-            indexItem["real_size"] = result["real_size"]
+            indexItem.update({
+                "real_size": result["real_size"],
+                "hash_id": hash_id
+            })
             self.cached_indexes.set(inode, block_number, indexItem)
             result["update"] = True
 

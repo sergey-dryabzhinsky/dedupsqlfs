@@ -47,11 +47,11 @@ class IndexTime(object):
         self._max_ttl = seconds
         return self
 
-    def set(self, inode, block_number, hash_id):
+    def set(self, inode, block_number, item):
         """
         @type   inode: int
         @type   block_number: int
-        @type   hash_id: int
+        @type   item: dict
         """
 
         new = False
@@ -62,7 +62,7 @@ class IndexTime(object):
         inode_data = self._inodes[inode]
 
         if block_number not in inode_data:
-            inode_data[ block_number ] = [0, hash_id,]
+            inode_data[ block_number ] = [0, item,]
             new = True
 
         hash_data = inode_data[block_number]
@@ -73,7 +73,7 @@ class IndexTime(object):
 
         if new:
             hash_data[self.OFFSET_TIME] = time()
-        hash_data[self.OFFSET_HASH] = hash_id
+        hash_data[self.OFFSET_HASH] = item
 
         return self
 

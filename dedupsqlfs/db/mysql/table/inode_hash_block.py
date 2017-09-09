@@ -18,7 +18,8 @@ class TableInodeHashBlock( Table ):
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`inode_id` BIGINT UNSIGNED NOT NULL, "+
                 "`block_number` BIGINT UNSIGNED NOT NULL, "+
-                "`hash_id` BIGINT UNSIGNED NOT NULL "+
+                "`hash_id` BIGINT UNSIGNED NOT NULL, "+
+                "`real_size` INT UNSIGNED NOT NULL DEFAULT 0"+
             ")"+
             self._getCreationAppendString()
         )
@@ -29,17 +30,18 @@ class TableInodeHashBlock( Table ):
         self.createIndexIfNotExists("hash_inode", ('hash_id', 'inode_id',))
         return
 
-    def insert( self, inode, block_number, hash_id):
+    def insert( self, inode, block_number, hash_id, real_size=0):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
             "INSERT INTO `%s` " % self.getName()+
-            " (`inode_id`,`block_number`,`hash_id`) "+
-            " VALUES (%(inode)s, %(block)s, %(hash)s)",
+            " (`inode_id`,`block_number`,`hash_id`,`real_size`) "+
+            " VALUES (%(inode)s, %(block)s, %(hash)s), %(size)s",
             {
                 "inode": inode,
                 "block": block_number,
-                "hash": hash_id
+                "hash": hash_id,
+                "size": real_size
             }
         )
         item = cur.lastrowid
@@ -63,6 +65,23 @@ class TableInodeHashBlock( Table ):
         self.stopTimer('update')
         return item
 
+    def update_size( self, inode, block_number, new_size):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute(
+            "UPDATE `%s` " % self.getName()+
+            " SET `real_size`=%(size)s "+
+            " WHERE `inode_id`=%(inode)s AND `block_number`=%(block)s",
+            {
+                "size": new_size,
+                "inode": inode,
+                "block": block_number
+            }
+        )
+        item = cur.rowcount
+        self.stopTimer('update_size')
+        return item
+
     def delete( self, inode ):
         self.startTimer()
         cur = self.getCursor()
@@ -76,6 +95,21 @@ class TableInodeHashBlock( Table ):
         count = cur.rowcount
         self.stopTimer('delete')
         return count
+
+    def get( self, inode, block_number ):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute(
+            "SELECT `hash_id`,`real_size` FROM `%s` " % self.getName()+
+            " WHERE `inode_id`=%(inode)s AND `block_number`=%(block)s",
+            {
+                "inode": inode,
+                "block": block_number
+            }
+        )
+        item = cur.fetchone()
+        self.stopTimer('get')
+        return item
 
     def hash_by_inode_number( self, inode, block_number ):
         self.startTimer()

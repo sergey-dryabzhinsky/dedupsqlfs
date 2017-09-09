@@ -42,11 +42,12 @@ def run(manager):
             :type table: dedupsqlfs.db.sqlite.table.inode_hash_block.TableInodeHashBlock |
                             dedupsqlfs.db.mysql.table.inode_hash_block.TableInodeHashBlock
             """
+            idxCur = table.getCursor(True)
             if not table.hasField('real_size'):
                 if manager.TYPE == "sqlite":
-                    cur.execute("ALTER TABLE inode_hash_block ADD COLUMN real_size INTEGER NOT NULL DEFAULT 0;")
+                    idxCur.execute("ALTER TABLE `inode_hash_block` ADD COLUMN `real_size` INTEGER NOT NULL DEFAULT 0;")
                 if manager.TYPE == "mysql":
-                    cur.execute("ALTER TABLE inode_hash_block ADD COLUMN real_size INT UNSIGNED NOT NULL DEFAULT 0;")
+                    idxCur.execute("ALTER TABLE `inode_hash_block` ADD COLUMN `real_size` INT UNSIGNED NOT NULL DEFAULT 0;")
 
             table.commit()
             table.close()

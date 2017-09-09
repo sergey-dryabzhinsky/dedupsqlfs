@@ -32,7 +32,7 @@ class TableInode( Table ):
         return
 
     def getRowSize(self):
-        return 8 + 4 + 2 + 2 + 2 + 4 + 8 + 6 * 4
+        return 8 + 4 + 2 + 2 + 2 + 4 + 8 + 3 * 8
 
     def insert( self, nlinks, mode,
                 uid=-1, gid=-1, rdev=0, size=0, atime=0, mtime=0, ctime=0):

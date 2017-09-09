@@ -76,9 +76,9 @@ class Subvolume(object):
             self.getLogger().warning("Subvolume with name %r already exists!" % name)
             return subvolItem
 
-        t_i, t_ns = self.getManager().newctime_tuple()
+        newt_ns, newt_s = self.getManager().newctime64_32()
 
-        subvol_id = self.getTable('subvolume').insert(name, t_i, None, t_i)
+        subvol_id = self.getTable('subvolume').insert(name, newt_s, None, newt_s)
         subvolItem = self.getTable('subvolume').get(subvol_id)
 
         tableName = self.getTable("name")
@@ -93,7 +93,7 @@ class Subvolume(object):
             name_id = tableName.insert(nameRoot)
         # Directory size: name-row-size + inode-row-size + tree-row-size
         sz = tableName.getRowSize(nameRoot) + tableInode.getRowSize() + tableTree.getRowSize()
-        inode_id = tableInode.insert(2, self.root_mode, uid, gid, 0, sz, t_i, t_i, t_i, t_ns, t_ns, t_ns)
+        inode_id = tableInode.insert(2, self.root_mode, uid, gid, 0, sz, newt_ns, newt_ns, newt_ns)
         tableTree.insert(None, name_id, inode_id)
 
         self.getManager().getManager().commit()

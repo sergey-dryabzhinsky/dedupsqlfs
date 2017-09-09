@@ -38,6 +38,7 @@ from dedupsqlfs.lib.cache.storage import StorageTimeSize
 from dedupsqlfs.lib.cache.index import IndexTime
 from dedupsqlfs.lib.cache.inodes import InodesTime
 from dedupsqlfs.fuse.subvolume import Subvolume
+from dedupsqlfs import __fsversion__
 
 class DedupOperations(llfuse.Operations): # {{{1
 
@@ -966,35 +967,22 @@ class DedupOperations(llfuse.Operations): # {{{1
                     update_db = True
 
             if attr.st_atime_ns is not None and not self.getOption('noatime'):
-                atime_i, atime_ns = self.__get_time_tuple(float(attr.st_atime_ns) / 10**9)
-                if row["atime"] != atime_i:
-                    new_data["atime"] = atime_i
-                    update_db = True
-                if row["atime_ns"] != atime_ns:
-                    new_data["atime_ns"] = atime_ns
+                if row["atime"] != attr.st_atime_ns:
+                    new_data["atime"] = attr.st_atime_ns
                     update_db = True
 
             if attr.st_mtime_ns is not None:
-                mtime_i, mtime_ns = self.__get_time_tuple(float(attr.st_mtime_ns) / 10**9)
-                if row["mtime"] != mtime_i:
-                    new_data["mtime"] = mtime_i
-                    update_db = True
-                if row["mtime_ns"] != mtime_ns:
-                    new_data["mtime_ns"] = mtime_ns
+                if row["mtime"] != attr.st_mtime_ns:
+                    new_data["mtime"] = attr.st_mtime_ns
                     update_db = True
 
             if attr.st_ctime_ns is not None:
-                ctime_i, ctime_ns = self.__get_time_tuple(float(attr.st_ctime_ns) / 10**9)
-                if row["ctime"] != ctime_i:
-                    new_data["ctime"] = ctime_i
+                if row["ctime"] != attr.st_ctime_ns:
+                    new_data["ctime"] = attr.st_ctime_ns
                     update_db = True
-                if row["ctime_ns"] != ctime_ns:
-                    new_data["ctime_ns"] = ctime_ns
-                    update_db = True
+
             elif update_db:
-                ctime_i, ctime_ns = self.__newctime_tuple()
-                new_data["ctime"] = ctime_i
-                new_data["ctime_ns"] = ctime_ns
+                new_data["ctime"] = self.newctime64()
                 update_db = True
 
             if update_db:
@@ -1026,9 +1014,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             new_data = {}
 
-            ctime_i, ctime_ns = self.__newctime_tuple()
-            new_data["atime"] = ctime_i
-            new_data["atime_ns"] = ctime_ns
+            new_data["atime"] = self.newctime64()
 
             row.update(new_data)
             self.cached_attrs.set(inode, row, writed=True)
@@ -1047,9 +1033,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             new_data = {}
 
-            ctime_i, ctime_ns = self.__newctime_tuple()
-            new_data["ctime"] = ctime_i
-            new_data["ctime_ns"] = ctime_ns
+            new_data["ctime"] = self.newctime64()
 
             row.update(new_data)
             self.cached_attrs.set(inode, row, writed=True)
@@ -1068,9 +1052,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             new_data = {}
 
-            ctime_i, ctime_ns = self.__newctime_tuple()
-            new_data["mtime"] = ctime_i
-            new_data["mtime_ns"] = ctime_ns
+            new_data["mtime"] = self.newctime64()
 
             row.update(new_data)
             self.cached_attrs.set(inode, row, writed=True)
@@ -1337,15 +1319,18 @@ class DedupOperations(llfuse.Operations): # {{{1
         result.st_gid       = int(row["gid"])
         result.st_rdev      = int(row["rdev"])
         result.st_size      = int(row["size"])
-        result.st_atime     = float(row["atime"]) + float(row["atime_ns"]) / 10 ** 9
-        result.st_mtime     = float(row["mtime"]) + float(row["mtime_ns"]) / 10 ** 9
-        result.st_ctime     = float(row["ctime"]) + float(row["ctime_ns"]) / 10 ** 9
+        if hasattr(result, "st_atime"):
+            result.st_atime     = float(row["atime"]) / 10 ** 9
+        if hasattr(result, "st_mtime"):
+            result.st_mtime     = float(row["mtime"]) / 10 ** 9
+        if hasattr(result, "st_ctime"):
+            result.st_ctime     = float(row["ctime"]) / 10 ** 9
         if hasattr(result, "st_atime_ns"):
-            result.st_atime_ns  = int(row["atime"]) * 10**9 + int(row["atime_ns"])
+            result.st_atime_ns  = int(row["atime"])
         if hasattr(result, "st_mtime_ns"):
-            result.st_mtime_ns  = int(row["mtime"]) * 10**9 + int(row["mtime_ns"])
+            result.st_mtime_ns  = int(row["mtime"])
         if hasattr(result, "st_ctime_ns"):
-            result.st_ctime_ns  = int(row["ctime"]) * 10**9 + int(row["ctime_ns"])
+            result.st_ctime_ns  = int(row["ctime"])
         result.st_blksize   = int(self.block_size)
         result.st_blocks    = int(result.st_size / self.block_size)
         return result
@@ -1611,6 +1596,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             optTable.insert("mounted_subvolume", self.mounted_subvolume_name)
 
+            optTable.insert("fs_version", __fsversion__)
+
             from dedupsqlfs.db.migration import DbMigration
             migr = DbMigration(self.manager, self.getLogger())
             # Always use last migration number on new FS
@@ -1719,12 +1706,11 @@ class DedupOperations(llfuse.Operations): # {{{1
         inodeTable = self.getTable("inode")
         treeTable = self.getTable("tree")
 
-        t_i, t_ns = self.__newctime_tuple()
+        newt = self.newctime64()
 
         inode_id = inodeTable.insert(
             nlinks, mode, ctx.uid, ctx.gid, rdev, size,
-            t_i, t_i, t_i,
-            t_ns, t_ns, t_ns
+            newt, newt, newt
         )
 
         name_id = self.__intern(name)
@@ -1840,19 +1826,15 @@ class DedupOperations(llfuse.Operations): # {{{1
             and (not (mode & os.X_OK) or ((o and (m & 0o100)) or (g and (m & 0o010)) or (w and (m & 0o001))))
 
 
-    def __newctime(self): # {{{3
-        return time()
-
-    def __newctime_tuple(self): # {{{3
-        return self.__get_time_tuple( self.__newctime() )
-
-    def newctime_tuple(self): # {{{3
-        return self.__newctime_tuple()
-
-    def __get_time_tuple(self, t): # {{{3
-        t_ns, t_i = modf(t)
+    def newctime64(self): # {{{3
+        t_ns, t_i = modf(time())
         t_ns = int(t_ns * 10**9)
-        return int(t_i), t_ns
+        return t_i * 10**9 + t_ns
+
+    def newctime64_32(self): # {{{3
+        t_ns, t_i = modf(time())
+        t_ns = int(t_ns * 10**9)
+        return t_i * 10**9 + t_ns, t_i
 
 
     def __hash(self, data): # {{{3

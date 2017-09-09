@@ -21,12 +21,9 @@ class TableInode( Table ):
                 "`gid` SMALLINT UNSIGNED NOT NULL, "+
                 "`rdev` INT UNSIGNED NOT NULL, "+
                 "`size` BIGINT UNSIGNED NOT NULL, "+
-                "`atime` INT UNSIGNED NOT NULL, "+
-                "`mtime` INT UNSIGNED NOT NULL, "+
-                "`ctime` INT UNSIGNED NOT NULL, "+
-                "`atime_ns` INT UNSIGNED NOT NULL DEFAULT 0, "+
-                "`mtime_ns` INT UNSIGNED NOT NULL DEFAULT 0, "+
-                "`ctime_ns` INT UNSIGNED NOT NULL DEFAULT 0"+
+                "`atime` BIGINT UNSIGNED NOT NULL, "+
+                "`mtime` BIGINT UNSIGNED NOT NULL, "+
+                "`ctime` BIGINT UNSIGNED NOT NULL"+
             ")"+
             self._getCreationAppendString()
         )
@@ -35,11 +32,10 @@ class TableInode( Table ):
         return
 
     def getRowSize(self):
-        return 8 + 4 + 2 + 2 + 2 + 4 + 8 + 6 * 4
+        return 8 + 4 + 2 + 2 + 2 + 4 + 8 + 3 * 8
 
     def insert( self, nlinks, mode,
-                uid=-1, gid=-1, rdev=0, size=0, atime=0, mtime=0, ctime=0,
-                atime_ns=0, mtime_ns=0, ctime_ns=0):
+                uid=-1, gid=-1, rdev=0, size=0, atime=0, mtime=0, ctime=0):
         """
         :param value: bytes
         :return: int
@@ -48,11 +44,11 @@ class TableInode( Table ):
         cur = self.getCursor()
 
         cur.execute("INSERT INTO `%s`" % self.getName() +
-                    "(`nlinks`, `mode`, `uid`, `gid`, `rdev`, `size`, `atime`, `mtime`, `ctime`, `atime_ns`, `mtime_ns`, `ctime_ns`) " +
+                    "(`nlinks`, `mode`, `uid`, `gid`, `rdev`, `size`, `atime`, `mtime`, `ctime`) " +
                     "VALUES "+
-                    "(%s,       %s,     %s,    %s,    %s,     %s,     %s,      %s,      %s,      %s,         %s,         %s)", (
+                    "(%s,       %s,     %s,    %s,    %s,     %s,     %s,      %s,      %s)", (
             nlinks, mode, uid, gid, rdev, size,
-            atime, mtime, ctime, atime_ns, mtime_ns, ctime_ns
+            atime, mtime, ctime
         ))
         item = cur.lastrowid
         self.stopTimer('insert')

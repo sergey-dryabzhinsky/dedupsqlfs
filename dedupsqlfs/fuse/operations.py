@@ -1386,6 +1386,9 @@ class DedupOperations(llfuse.Operations): # {{{1
                     # If we have real block size
                     block = BytesIO(b'\x00' * indexItem["real_size"])
                 else:
+                    # Missing size
+                    # If there was migration
+                    #
                     tableIndex = self.getTable("inode_hash_block")
                     """
                     :type tableIndex:   dedupsqlfs.db.sqlite.table.inode_hash_block.TableInodeHashBlock |
@@ -1393,15 +1396,17 @@ class DedupOperations(llfuse.Operations): # {{{1
                     """
                     # Else - try to calculate
                     irow = self.__get_inode_row(inode)
-                    if irow["size"] < self.block_size:
+                    if irow["size"] <= self.block_size:
                         block = BytesIO(b'\x00' * irow["size"])
                         tableIndex.update_size(inode, block_number, irow["size"])
                     else:
-                        if irow["size"] < self.block_size * block_number:
+                        if irow["size"] <= self.block_size * block_number:
+                            # Last block?
                             sz = irow["size"] % self.block_size
-                            block = BytesIO(b'\x00' * (sz+1))
+                            block = BytesIO(b'\x00' * sz)
                             tableIndex.update_size(inode, block_number, sz)
                         else:
+                            # Middle block
                             block = BytesIO(b'\x00' * self.block_size)
                             tableIndex.update_size(inode, block_number, self.block_size)
 

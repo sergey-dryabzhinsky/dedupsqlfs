@@ -690,10 +690,15 @@ class DedupOperations(llfuse.Operations): # {{{1
             size = nameTable.getRowSize(name) + inodeTable.getRowSize() + treeTable.getRowSize()
 
             inode, parent_ino = self.__insert(parent_inode, name, mode | stat.S_IFDIR, size, ctx)
-            self.getManager().getTable("inode").inc_nlinks(parent_ino)
 
-            if not self.isReadonly():
-                self.__setattr_mtime(parent_inode)
+            parino = self.__get_inode_row(parent_inode)
+            # inodeTable.inc_nlinks(parent_inode)
+            parino["nlinks"] += 1
+            self.cached_attrs.set(parent_inode, parino, True)
+
+            self.__setattr_mtime(parent_inode)
+
+            self.__cache_meta_hook()
 
             return self.__getattr(inode)
         except FUSEError:

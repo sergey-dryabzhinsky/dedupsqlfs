@@ -1386,7 +1386,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                     # If we have real block size
                     block = BytesIO(b'\x00' * indexItem["real_size"])
                 else:
-                    tableIndex = self.getTable("inode_block_hash")
+                    tableIndex = self.getTable("inode_hash_block")
                     """
                     :type tableIndex:   dedupsqlfs.db.sqlite.table.inode_hash_block.TableInodeHashBlock |
                                         dedupsqlfs.db.mysql.table.inode_hash_block.TableInodeHashBlock

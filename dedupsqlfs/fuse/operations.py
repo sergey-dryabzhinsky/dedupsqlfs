@@ -1382,7 +1382,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             else:
                 # Fully allocate block
-                if indexItem["real_size"]:
+                if int(indexItem["real_size"]):
                     block = BytesIO(b'\x00' * indexItem["real_size"])
                 else:
                     block = BytesIO(b'\x00' * self.block_size)
@@ -2176,7 +2176,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 "hash_id": hash_id
             }
             self.cached_indexes.set(inode, block_number, indexItem)
-        elif indexItem["hash_id"] != hash_id:
+        elif indexItem["hash_id"] != hash_id or indexItem["real_size"] != result["real_size"]:
             tableIndex.update(
                 inode, block_number, hash_id, result["real_size"]
             )

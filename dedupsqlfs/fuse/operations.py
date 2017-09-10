@@ -1399,7 +1399,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                     else:
                         if irow["size"] < self.block_size * block_number:
                             sz = irow["size"] % self.block_size
-                            block = BytesIO(b'\x00' * sz)
+                            block = BytesIO(b'\x00' * (sz+1))
                             tableIndex.update_size(inode, block_number, sz)
                         else:
                             block = BytesIO(b'\x00' * self.block_size)

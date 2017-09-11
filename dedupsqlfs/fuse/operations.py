@@ -2091,13 +2091,10 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         tableIndex = self.getTable("inode_hash_block")
 
-        # get last writed position
-        block_length = block.tell()
-
         block.seek(0)
         data_block = block.getvalue()
 
-        #block_length = len(data_block)
+        block_length = len(data_block)
 
         result = {
             "hash": None,
@@ -2128,17 +2125,17 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         result["writed_size"] = block_length
 
-        self.getLogger().debug("write block: updated data length=%s, sparse=%r" % (block_length, sparsed_block,))
-
-        if (block_length == 0 and indexItem) or sparsed_block:
-            self.getLogger().debug("write block: remove empty or zero-filled block")
-            tableIndex.delete_by_inode_number(inode, block_number)
-            self.cached_indexes.expireBlock(inode, block_number)
-
-            result["deleted"] = True
-
-            self.time_spent_writing_blocks += time() - start_time
-            return result
+        # self.getLogger().debug("write block: updated data length=%s, sparse=%r" % (block_length, sparsed_block,))
+        #
+        # if (block_length == 0 and indexItem) or sparsed_block:
+        #     self.getLogger().debug("write block: remove empty or zero-filled block")
+        #     tableIndex.delete_by_inode_number(inode, block_number)
+        #     self.cached_indexes.expireBlock(inode, block_number)
+        #
+        #     result["deleted"] = True
+        #
+        #     self.time_spent_writing_blocks += time() - start_time
+        #     return result
 
         tableHash = self.getTable("hash")
         tableHCT = self.getTable("hash_compression_type")

@@ -2118,10 +2118,10 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         block_length = len(data_block)
 
-        # First sparse files variant = flush zero-bytes string
-        sparsed_block = False
-        if block_length == 0:
-            sparsed_block = True
+        # # First sparse files variant = flush zero-bytes string
+        # sparsed_block = False
+        # if block_length == 0:
+        #     sparsed_block = True
 
         result["writed_size"] = block_length
 

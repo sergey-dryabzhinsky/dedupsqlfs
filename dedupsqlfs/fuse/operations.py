@@ -1383,7 +1383,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             if not indexItem:
                 self.getLogger().debug("-- new block")
-                block = BytesIO()
+                # Truncate later
+                block = BytesIO(b'\x00' * self.block_size)
 
             else:
                 # Fully allocate block
@@ -2090,10 +2091,13 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         tableIndex = self.getTable("inode_hash_block")
 
+        # get last writed position
+        block_length = block.tell()
+
         block.seek(0)
         data_block = block.getvalue()
 
-        block_length = len(data_block)
+        #block_length = len(data_block)
 
         result = {
             "hash": None,
@@ -2382,6 +2386,10 @@ class DedupOperations(llfuse.Operations): # {{{1
         # 2. Truncate last block with zeroes
         block = self.__get_block_from_cache(inode_id, max_block_number)
         block.truncate(inblock_offset)
+
+        tableIndex.update_size(inode_id, max_block_number, inblock_offset)
+        self.cached_indexes.expireBlock(inode_id, max_block_number)
+
         # 3. Put to cache, it will be rehashed and compressed
         self.cached_blocks.set(inode_id, max_block_number, block, writed=True)
 

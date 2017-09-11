@@ -1381,15 +1381,15 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             recompress = False
 
+            block = BytesIO()
             if not indexItem:
                 self.getLogger().debug("-- new block")
-                block = BytesIO()
 
             else:
                 # Fully allocate block
                 if int(indexItem["real_size"]):
                     # If we have real block size
-                    block = BytesIO(b'\x00' * indexItem["real_size"])
+                    block.write(b'\x00' * indexItem["real_size"])
                 else:
                     # Missing size
                     # If there was migration
@@ -1402,17 +1402,18 @@ class DedupOperations(llfuse.Operations): # {{{1
                     # Else - try to calculate
                     irow = self.__get_inode_row(inode)
                     if irow["size"] <= self.block_size:
-                        block = BytesIO(b'\x00' * irow["size"])
-                        tableIndex.update_size(inode, block_number, irow["size"])
+                        if irow["size"] > 0:
+                            block.write(b'\x00' * irow["size"])
+                            tableIndex.update_size(inode, block_number, irow["size"])
                     else:
                         if irow["size"] <= self.block_size * block_number:
                             # Last block?
                             sz = irow["size"] % self.block_size
-                            block = BytesIO(b'\x00' * sz)
+                            block.write(b'\x00' * sz)
                             tableIndex.update_size(inode, block_number, sz)
                         else:
                             # Middle block
-                            block = BytesIO(b'\x00' * self.block_size)
+                            block.write(b'\x00' * self.block_size)
                             tableIndex.update_size(inode, block_number, self.block_size)
 
                 tableBlock = self.getTable("block")

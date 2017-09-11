@@ -223,7 +223,7 @@ class TableInodeHashBlock(Table):
         cur = self.getCursor()
         cur.execute("SELECT `hash_id`,`inode_id` FROM `%s` " % self.getName())
         iids = (item for item in cur)
-        self.stopTimer('get_hash_ids')
+        self.stopTimer('get_hash_inode_ids')
         return iids
 
     pass

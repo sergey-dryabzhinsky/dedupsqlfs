@@ -1383,8 +1383,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             if not indexItem:
                 self.getLogger().debug("-- new block")
-                # Truncate later
-                block = BytesIO(b'\x00' * self.block_size)
+                block = BytesIO()
 
             else:
                 # Fully allocate block

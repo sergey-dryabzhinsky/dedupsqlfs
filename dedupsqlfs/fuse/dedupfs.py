@@ -370,10 +370,12 @@ class DedupFS(object): # {{{1
         # Convert verbosity argument to logging level?
         if self.getOption("verbosity") > 0:
             if self.getOption("verbosity") <= 1:
-                self.getLogger().setLevel(logging.INFO)
+                self.getLogger().setLevel(logging.WARNING)
             elif self.getOption("verbosity") <= 2:
-                self.getLogger().setLevel(logging.DEBUG)
+                self.getLogger().setLevel(logging.INFO)
             elif self.getOption("verbosity") <= 3:
+                self.getLogger().setLevel(logging.DEBUG)
+            elif self.getOption("verbosity") <= 4:
                 self.getLogger().setLevel(DEBUG_VERBOSE)
             else:
                 self.getLogger().setLevel(logging.NOTSET)

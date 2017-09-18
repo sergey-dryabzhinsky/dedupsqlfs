@@ -11,6 +11,7 @@ try:
     import stat
     import time
     import traceback
+    import subprocess
 except ImportError as e:
     msg = "Error: Failed to load one of the required Python modules! (%s)\n"
     sys.stderr.write(msg % str(e))
@@ -192,10 +193,44 @@ class DedupFS(object): # {{{1
         self.operations.getManager().close()
         return
 
+
+    def onSignalUmount(self, signum=None, frame=None, error=False):
+        if signum:
+            self.getLogger().warning("Catch signal %r! Try to umount FS!" % signum)
+
+        try:
+            if error:
+                self.getLogger().warning("Try to umount FS manual!")
+                fuse.close(umount=False)
+            else:
+                fuse.close()
+        except:
+            pass
+
+        try:
+            subprocess.Popen(["umount", self.mountpoint]).wait()
+        except:
+            pass
+
+        self.postDestroy()
+        return
+
+
+    def setupSignals(self):
+        import signal
+
+        signal.signal(signal.SIGABRT, self.onSignalUmount)
+        signal.signal(signal.SIGINT, self.onSignalUmount)
+        signal.signal(signal.SIGTERM, self.onSignalUmount)
+
+        return
+
     def main(self):
 
         self.preInit()
         self._checkNotUnmounted()
+
+        self.setupSignals()
 
         error = False
         ex = None
@@ -207,14 +242,7 @@ class DedupFS(object): # {{{1
             ex = e
             self.getLogger().error(traceback.format_exc())
 
-        if error:
-            try:
-                fuse.close(unmount=False)
-            except:
-                pass
-        else:
-            fuse.close()
-        self.postDestroy()
+        self.onSignalUmount(error=error)
         if ex:
             raise ex
 

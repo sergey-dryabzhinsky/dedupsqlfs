@@ -219,9 +219,15 @@ class DedupFS(object): # {{{1
     def setupSignals(self):
         import signal
 
-        signal.signal(signal.SIGABRT, self.onSignalUmount)
         signal.signal(signal.SIGINT, self.onSignalUmount)
         signal.signal(signal.SIGTERM, self.onSignalUmount)
+
+        if hasattr(signal, "SIGABRT"):
+            signal.signal(signal.SIGABRT, self.onSignalUmount)
+        if hasattr(signal, "SIGPWR"):
+            signal.signal(signal.SIGPWR, self.onSignalUmount)
+        if hasattr(signal, "SIGQUIT"):
+            signal.signal(signal.SIGQUIT, self.onSignalUmount)
 
         return
 

@@ -149,22 +149,7 @@ class DedupFS(object): # {{{1
 
 
         # Do migrations here, before fs.init callback
-        manager = self.operations.getManager()
-
-        is_mounted = manager.getTable('option').get('mounted')
-        self.getLogger().debug("DedupFS::preInit - FS flag mounted = %r" % is_mounted)
-        if is_mounted and int(is_mounted):
-            self.getLogger().critical("Error: Seems like filesystem was not unmounted correctly! Run defragmentation!")
-
-            if self.getOption('lock_file'):
-                try:
-                    os.unlink(self.getOption('lock_file'))
-                except:
-                    self.getLogger().warning("DedupFS::preInit - can't remove %r" % self.getOption('lock_file'))
-                    pass
-
-            sys.exit(1)
-
+        self.operations.getManager()
 
         self._fixCompressionOptions()
         self._compressTool.init(self.getLogger())

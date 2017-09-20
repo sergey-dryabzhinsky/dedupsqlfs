@@ -451,7 +451,7 @@ def main(): # {{{1
     generic = parser.add_argument_group('Generic')
 
     generic.add_argument('-h', '--help', action='help', help="show this help message followed by the command line options defined by the Python FUSE binding and exit")
-    generic.add_argument('-v', '--verbose', action='count', dest='verbosity', default=0, help="increase verbosity")
+    generic.add_argument('-v', '--verbose', action='count', dest='verbosity', default=0, help="increase verbosity: 0 - error, 1 - warning, 2 - info, 3 - debug, 4 - verbose")
     generic.add_argument('--log-file', dest='log_file', metavar='PATH', help="specify log file location")
     generic.add_argument('--log-file-only', dest='log_file_only', action='store_true',
                         help="Don't send log messages to stderr.")

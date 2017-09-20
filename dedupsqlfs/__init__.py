@@ -18,15 +18,15 @@ The latest version is available at https://github.com/sergey-dryabzhinsky/dedups
 
 DedupFS is licensed under the MIT license.
 Copyright 2010 Peter Odding <peter@peterodding.com>.
-Copyright 2013-2015 Sergey Dryabzhinsky <sergey.dryabzhinsky@gmail.com>.
+Copyright 2013-2017 Sergey Dryabzhinsky <sergey.dryabzhinsky@gmail.com>.
 """
 
 __name__ = "DedupSQLfs"
 # for fuse mount
 __fsname__ = "dedupsqlfs"
-__fsversion__ = "3.1"
+__fsversion__ = "3.2"
 # Future 1.3
-__version__ = "1.2.922"
+__version__ = "1.2.923"
 
 # Check the Python version, warn the user if untested.
 import sys

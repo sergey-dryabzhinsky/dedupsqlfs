@@ -38,6 +38,7 @@ from dedupsqlfs.lib.cache.storage import StorageTimeSize
 from dedupsqlfs.lib.cache.index import IndexTime
 from dedupsqlfs.lib.cache.inodes import InodesTime
 from dedupsqlfs.fuse.subvolume import Subvolume
+from dedupsqlfs import __fsversion__
 
 class DedupOperations(llfuse.Operations): # {{{1
 
@@ -689,10 +690,15 @@ class DedupOperations(llfuse.Operations): # {{{1
             size = nameTable.getRowSize(name) + inodeTable.getRowSize() + treeTable.getRowSize()
 
             inode, parent_ino = self.__insert(parent_inode, name, mode | stat.S_IFDIR, size, ctx)
-            self.getManager().getTable("inode").inc_nlinks(parent_ino)
 
-            if not self.isReadonly():
-                self.__setattr_mtime(parent_inode)
+            parino = self.__get_inode_row(parent_inode)
+            # inodeTable.inc_nlinks(parent_inode)
+            parino["nlinks"] += 1
+            self.cached_attrs.set(parent_inode, parino, True)
+
+            self.__setattr_mtime(parent_inode)
+
+            self.__cache_meta_hook()
 
             return self.__getattr(inode)
         except FUSEError:
@@ -966,35 +972,22 @@ class DedupOperations(llfuse.Operations): # {{{1
                     update_db = True
 
             if attr.st_atime_ns is not None and not self.getOption('noatime'):
-                atime_i, atime_ns = self.__get_time_tuple(float(attr.st_atime_ns) / 10**9)
-                if row["atime"] != atime_i:
-                    new_data["atime"] = atime_i
-                    update_db = True
-                if row["atime_ns"] != atime_ns:
-                    new_data["atime_ns"] = atime_ns
+                if row["atime"] != attr.st_atime_ns:
+                    new_data["atime"] = attr.st_atime_ns
                     update_db = True
 
             if attr.st_mtime_ns is not None:
-                mtime_i, mtime_ns = self.__get_time_tuple(float(attr.st_mtime_ns) / 10**9)
-                if row["mtime"] != mtime_i:
-                    new_data["mtime"] = mtime_i
-                    update_db = True
-                if row["mtime_ns"] != mtime_ns:
-                    new_data["mtime_ns"] = mtime_ns
+                if row["mtime"] != attr.st_mtime_ns:
+                    new_data["mtime"] = attr.st_mtime_ns
                     update_db = True
 
             if attr.st_ctime_ns is not None:
-                ctime_i, ctime_ns = self.__get_time_tuple(float(attr.st_ctime_ns) / 10**9)
-                if row["ctime"] != ctime_i:
-                    new_data["ctime"] = ctime_i
+                if row["ctime"] != attr.st_ctime_ns:
+                    new_data["ctime"] = attr.st_ctime_ns
                     update_db = True
-                if row["ctime_ns"] != ctime_ns:
-                    new_data["ctime_ns"] = ctime_ns
-                    update_db = True
+
             elif update_db:
-                ctime_i, ctime_ns = self.__newctime_tuple()
-                new_data["ctime"] = ctime_i
-                new_data["ctime_ns"] = ctime_ns
+                new_data["ctime"] = self.newctime64()
                 update_db = True
 
             if update_db:
@@ -1026,9 +1019,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             new_data = {}
 
-            ctime_i, ctime_ns = self.__newctime_tuple()
-            new_data["atime"] = ctime_i
-            new_data["atime_ns"] = ctime_ns
+            new_data["atime"] = self.newctime64()
 
             row.update(new_data)
             self.cached_attrs.set(inode, row, writed=True)
@@ -1047,9 +1038,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             new_data = {}
 
-            ctime_i, ctime_ns = self.__newctime_tuple()
-            new_data["ctime"] = ctime_i
-            new_data["ctime_ns"] = ctime_ns
+            new_data["ctime"] = self.newctime64()
 
             row.update(new_data)
             self.cached_attrs.set(inode, row, writed=True)
@@ -1068,9 +1057,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             new_data = {}
 
-            ctime_i, ctime_ns = self.__newctime_tuple()
-            new_data["mtime"] = ctime_i
-            new_data["mtime_ns"] = ctime_ns
+            new_data["mtime"] = self.newctime64()
 
             row.update(new_data)
             self.cached_attrs.set(inode, row, writed=True)
@@ -1337,15 +1324,18 @@ class DedupOperations(llfuse.Operations): # {{{1
         result.st_gid       = int(row["gid"])
         result.st_rdev      = int(row["rdev"])
         result.st_size      = int(row["size"])
-        result.st_atime     = float(row["atime"]) + float(row["atime_ns"]) / 10 ** 9
-        result.st_mtime     = float(row["mtime"]) + float(row["mtime_ns"]) / 10 ** 9
-        result.st_ctime     = float(row["ctime"]) + float(row["ctime_ns"]) / 10 ** 9
+        if hasattr(result, "st_atime"):
+            result.st_atime     = float(row["atime"]) / 10 ** 9
+        if hasattr(result, "st_mtime"):
+            result.st_mtime     = float(row["mtime"]) / 10 ** 9
+        if hasattr(result, "st_ctime"):
+            result.st_ctime     = float(row["ctime"]) / 10 ** 9
         if hasattr(result, "st_atime_ns"):
-            result.st_atime_ns  = int(row["atime"]) * 10**9 + int(row["atime_ns"])
+            result.st_atime_ns  = int(row["atime"])
         if hasattr(result, "st_mtime_ns"):
-            result.st_mtime_ns  = int(row["mtime"]) * 10**9 + int(row["mtime_ns"])
+            result.st_mtime_ns  = int(row["mtime"])
         if hasattr(result, "st_ctime_ns"):
-            result.st_ctime_ns  = int(row["ctime"]) * 10**9 + int(row["ctime_ns"])
+            result.st_ctime_ns  = int(row["ctime"])
         result.st_blksize   = int(self.block_size)
         result.st_blocks    = int(result.st_size / self.block_size)
         return result
@@ -1357,25 +1347,25 @@ class DedupOperations(llfuse.Operations): # {{{1
         return self.__fill_attr_inode_row(row)
 
 
-    def __get_hash_index_from_cache(self, inode, block_number):
-        self.__log_call('__get_hash_index_from_cache', '->(inode=%i, block_number=%i)', inode, block_number)
+    def __get_index_from_cache(self, inode, block_number):
+        self.__log_call('__get_index_from_cache', '->(inode=%i, block_number=%i)', inode, block_number)
 
-        hash_id = self.cached_indexes.get(inode, block_number)
+        item = self.cached_indexes.get(inode, block_number)
 
-        if hash_id is None:
+        if item is None:
 
             self.getLogger().debug("get index from DB: inode=%i, number=%i", inode, block_number)
 
             tableIndex = self.getTable("inode_hash_block")
 
-            hash_id = tableIndex.hash_by_inode_number(inode, block_number)
-            if not hash_id:
+            item = tableIndex.get(inode, block_number)
+            if not item:
                 # Do hack here... store False to prevent table reread until it stored in cache or deleted
                 self.getLogger().debug("-- new index")
                 self.cached_indexes.set(inode, block_number, False)
             else:
-                self.cached_indexes.set(inode, block_number, hash_id)
-        return hash_id
+                self.cached_indexes.set(inode, block_number, item)
+        return item
 
     def __get_block_from_cache(self, inode, block_number):
         self.__log_call('__get_block_from_cache', '->(inode=%i, block_number=%i)', inode, block_number)
@@ -1386,29 +1376,58 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.getLogger().debug("get block from DB: inode=%i, number=%i", inode, block_number)
 
-            # Fully allocate block
-            block = BytesIO(b'\x00'*self.block_size)
+            indexItem = self.__get_index_from_cache(inode, block_number)
+            item = None
 
             recompress = False
 
-            hash_id = self.__get_hash_index_from_cache(inode, block_number)
-            item = None
-
-            if not hash_id:
+            block = BytesIO()
+            if not indexItem:
                 self.getLogger().debug("-- new block")
+
             else:
+                # Fully allocate block
+                if int(indexItem["real_size"]):
+                    # If we have real block size
+                    block.write(b'\x00' * indexItem["real_size"])
+                else:
+                    # Missing size
+                    # If there was migration
+                    #
+                    tableIndex = self.getTable("inode_hash_block")
+                    """
+                    :type tableIndex:   dedupsqlfs.db.sqlite.table.inode_hash_block.TableInodeHashBlock |
+                                        dedupsqlfs.db.mysql.table.inode_hash_block.TableInodeHashBlock
+                    """
+                    # Else - try to calculate
+                    irow = self.__get_inode_row(inode)
+                    if irow["size"] <= self.block_size:
+                        if irow["size"] > 0:
+                            block.write(b'\x00' * irow["size"])
+                            tableIndex.update_size(inode, block_number, irow["size"])
+                    else:
+                        if irow["size"] <= self.block_size * block_number:
+                            # Last block?
+                            sz = irow["size"] % self.block_size
+                            block.write(b'\x00' * sz)
+                            tableIndex.update_size(inode, block_number, sz)
+                        else:
+                            # Middle block
+                            block.write(b'\x00' * self.block_size)
+                            tableIndex.update_size(inode, block_number, self.block_size)
+
                 tableBlock = self.getTable("block")
 
-                item = tableBlock.get(hash_id)
+                item = tableBlock.get(indexItem["hash_id"])
                 if not item:
-                    err_str = "get block from DB: block not found! (inode=%i, block_number=%i, hash_id=%s)" % (inode, block_number, hash_id,)
+                    err_str = "get block from DB: block not found! (inode=%i, block_number=%i, hash_id=%s)" % (inode, block_number, indexItem["hash_id"],)
                     self.getLogger().error(err_str)
                     raise OSError(err_str)
 
             # XXX: how block can be defragmented away?
             if item:
                 tableHCT = self.getTable("hash_compression_type")
-                compType = tableHCT.get(hash_id)
+                compType = tableHCT.get(indexItem["hash_id"])
 
                 self.getLogger().debug("-- decompress block")
                 self.getLogger().debug("-- in db size: %s" % len(item["data"]))
@@ -1417,7 +1436,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
                 compression = self.getCompressionTypeName(compType["type_id"])
 
-                self.getLogger().debug("READ: Hash = %r, method = %r" % (hash_id, compression,))
+                self.getLogger().debug("READ: Hash = %r, method = %r" % (indexItem["hash_id"], compression,))
 
                 tryAll = self.getOption('decompress_try_all')
 
@@ -1611,6 +1630,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             optTable.insert("mounted_subvolume", self.mounted_subvolume_name)
 
+            optTable.insert("fs_version", __fsversion__)
+
             from dedupsqlfs.db.migration import DbMigration
             migr = DbMigration(self.manager, self.getLogger())
             # Always use last migration number on new FS
@@ -1719,12 +1740,11 @@ class DedupOperations(llfuse.Operations): # {{{1
         inodeTable = self.getTable("inode")
         treeTable = self.getTable("tree")
 
-        t_i, t_ns = self.__newctime_tuple()
+        newt = self.newctime64()
 
         inode_id = inodeTable.insert(
             nlinks, mode, ctx.uid, ctx.gid, rdev, size,
-            t_i, t_i, t_i,
-            t_ns, t_ns, t_ns
+            newt, newt, newt
         )
 
         name_id = self.__intern(name)
@@ -1840,19 +1860,15 @@ class DedupOperations(llfuse.Operations): # {{{1
             and (not (mode & os.X_OK) or ((o and (m & 0o100)) or (g and (m & 0o010)) or (w and (m & 0o001))))
 
 
-    def __newctime(self): # {{{3
-        return time()
-
-    def __newctime_tuple(self): # {{{3
-        return self.__get_time_tuple( self.__newctime() )
-
-    def newctime_tuple(self): # {{{3
-        return self.__newctime_tuple()
-
-    def __get_time_tuple(self, t): # {{{3
-        t_ns, t_i = modf(t)
+    def newctime64(self): # {{{3
+        t_ns, t_i = modf(time())
         t_ns = int(t_ns * 10**9)
-        return int(t_i), t_ns
+        return t_i * 10**9 + t_ns
+
+    def newctime64_32(self): # {{{3
+        t_ns, t_i = modf(time())
+        t_ns = int(t_ns * 10**9)
+        return t_i * 10**9 + t_ns, t_i
 
 
     def __hash(self, data): # {{{3
@@ -2095,31 +2111,31 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.getLogger().debug("write block: inode=%s, block number=%s, data length=%s" % (inode, block_number, block_length,))
 
-        index_hash_id = self.__get_hash_index_from_cache(inode, block_number)
+        indexItem = self.__get_index_from_cache(inode, block_number)
 
         # Second sparse files variant = remove zero-bytes tail
         data_block = data_block.rstrip(b"\x00")
 
         block_length = len(data_block)
 
-        # First sparse files variant = flush zero-bytes string
-        sparsed_block = False
-        if block_length == 0:
-            sparsed_block = True
+        # # First sparse files variant = flush zero-bytes string
+        # sparsed_block = False
+        # if block_length == 0:
+        #     sparsed_block = True
 
         result["writed_size"] = block_length
 
-        self.getLogger().debug("write block: updated data length=%s, sparse=%r" % (block_length, sparsed_block,))
-
-        if (block_length == 0 and index_hash_id) or sparsed_block:
-            self.getLogger().debug("write block: remove empty or zero-filled block")
-            tableIndex.delete_by_inode_number(inode, block_number)
-            self.cached_indexes.expireBlock(inode, block_number)
-
-            result["deleted"] = True
-
-            self.time_spent_writing_blocks += time() - start_time
-            return result
+        # self.getLogger().debug("write block: updated data length=%s, sparse=%r" % (block_length, sparsed_block,))
+        #
+        # if (block_length == 0 and indexItem) or sparsed_block:
+        #     self.getLogger().debug("write block: remove empty or zero-filled block")
+        #     tableIndex.delete_by_inode_number(inode, block_number)
+        #     self.cached_indexes.expireBlock(inode, block_number)
+        #
+        #     result["deleted"] = True
+        #
+        #     self.time_spent_writing_blocks += time() - start_time
+        #     return result
 
         tableHash = self.getTable("hash")
         tableHCT = self.getTable("hash_compression_type")
@@ -2180,16 +2196,24 @@ class DedupOperations(llfuse.Operations): # {{{1
             # Old hash found
             self.bytes_deduped += block_length
 
-        if not index_hash_id:
+        if not indexItem:
             tableIndex.insert(
-                inode, block_number, hash_id
+                inode, block_number, hash_id, result["real_size"]
             )
-            self.cached_indexes.set(inode, block_number, hash_id)
-        elif index_hash_id != hash_id:
+            indexItem = {
+                "real_size": result["real_size"],
+                "hash_id": hash_id
+            }
+            self.cached_indexes.set(inode, block_number, indexItem)
+        elif indexItem["hash_id"] != hash_id or indexItem["real_size"] != result["real_size"]:
             tableIndex.update(
-                inode, block_number, hash_id
+                inode, block_number, hash_id, result["real_size"]
             )
-            self.cached_indexes.set(inode, block_number, hash_id)
+            indexItem.update({
+                "real_size": result["real_size"],
+                "hash_id": hash_id
+            })
+            self.cached_indexes.set(inode, block_number, indexItem)
             result["update"] = True
 
         self.time_spent_writing_blocks += time() - start_time
@@ -2359,6 +2383,10 @@ class DedupOperations(llfuse.Operations): # {{{1
         # 2. Truncate last block with zeroes
         block = self.__get_block_from_cache(inode_id, max_block_number)
         block.truncate(inblock_offset)
+
+        tableIndex.update_size(inode_id, max_block_number, inblock_offset)
+        self.cached_indexes.expireBlock(inode_id, max_block_number)
+
         # 3. Put to cache, it will be rehashed and compressed
         self.cached_blocks.set(inode_id, max_block_number, block, writed=True)
 

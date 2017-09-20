@@ -75,7 +75,7 @@ def main(): # {{{1
     option_stored_in_db = " (this option is only useful when creating a new database, because your choice is stored in the database and can't be changed after that)"
 
     parser.add_argument('-h', '--help', action='help', help="show this help message followed by the command line options defined by the Python FUSE binding and exit")
-    parser.add_argument('-v', '--verbose', action='count', dest='verbosity', default=0, help="increase verbosity")
+    parser.add_argument('-v', '--verbose', action='count', dest='verbosity', default=0, help="increase verbosity: 0 - error, 1 - warning, 2 - info, 3 - debug, 4 - verbose")
     parser.add_argument('--log-file', dest='log_file', help="specify log file location")
     parser.add_argument('--log-file-only', dest='log_file_only', action='store_true',
                         help="Don't send log messages to stderr.")

@@ -11,6 +11,7 @@ try:
     import stat
     import time
     import traceback
+    import subprocess
 except ImportError as e:
     msg = "Error: Failed to load one of the required Python modules! (%s)\n"
     sys.stderr.write(msg % str(e))
@@ -149,22 +150,7 @@ class DedupFS(object): # {{{1
 
 
         # Do migrations here, before fs.init callback
-        manager = self.operations.getManager()
-
-        is_mounted = manager.getTable('option').get('mounted')
-        self.getLogger().debug("DedupFS::preInit - FS flag mounted = %r" % is_mounted)
-        if is_mounted and int(is_mounted):
-            self.getLogger().critical("Error: Seems like filesystem was not unmounted correctly! Run defragmentation!")
-
-            if self.getOption('lock_file'):
-                try:
-                    os.unlink(self.getOption('lock_file'))
-                except:
-                    self.getLogger().warning("DedupFS::preInit - can't remove %r" % self.getOption('lock_file'))
-                    pass
-
-            sys.exit(1)
-
+        self.operations.getManager()
 
         self._fixCompressionOptions()
         self._compressTool.init(self.getLogger())
@@ -207,10 +193,50 @@ class DedupFS(object): # {{{1
         self.operations.getManager().close()
         return
 
+
+    def onSignalUmount(self, signum=None, frame=None, error=False):
+        if signum:
+            self.getLogger().warning("Catch signal %r! Try to umount FS!" % signum)
+
+        try:
+            if error:
+                self.getLogger().warning("Try to umount FS manual!")
+                fuse.close(umount=False)
+            else:
+                fuse.close()
+        except:
+            pass
+
+        try:
+            subprocess.Popen(["umount", self.mountpoint]).wait()
+        except:
+            pass
+
+        self.postDestroy()
+        return
+
+
+    def setupSignals(self):
+        import signal
+
+        signal.signal(signal.SIGINT, self.onSignalUmount)
+        signal.signal(signal.SIGTERM, self.onSignalUmount)
+
+        if hasattr(signal, "SIGABRT"):
+            signal.signal(signal.SIGABRT, self.onSignalUmount)
+        if hasattr(signal, "SIGPWR"):
+            signal.signal(signal.SIGPWR, self.onSignalUmount)
+        if hasattr(signal, "SIGQUIT"):
+            signal.signal(signal.SIGQUIT, self.onSignalUmount)
+
+        return
+
     def main(self):
 
         self.preInit()
         self._checkNotUnmounted()
+
+        self.setupSignals()
 
         error = False
         ex = None
@@ -222,14 +248,7 @@ class DedupFS(object): # {{{1
             ex = e
             self.getLogger().error(traceback.format_exc())
 
-        if error:
-            try:
-                fuse.close(unmount=False)
-            except:
-                pass
-        else:
-            fuse.close()
-        self.postDestroy()
+        self.onSignalUmount(error=error)
         if ex:
             raise ex
 
@@ -357,10 +376,12 @@ class DedupFS(object): # {{{1
         # Convert verbosity argument to logging level?
         if self.getOption("verbosity") > 0:
             if self.getOption("verbosity") <= 1:
-                self.getLogger().setLevel(logging.INFO)
+                self.getLogger().setLevel(logging.WARNING)
             elif self.getOption("verbosity") <= 2:
-                self.getLogger().setLevel(logging.DEBUG)
+                self.getLogger().setLevel(logging.INFO)
             elif self.getOption("verbosity") <= 3:
+                self.getLogger().setLevel(logging.DEBUG)
+            elif self.getOption("verbosity") <= 4:
                 self.getLogger().setLevel(DEBUG_VERBOSE)
             else:
                 self.getLogger().setLevel(logging.NOTSET)

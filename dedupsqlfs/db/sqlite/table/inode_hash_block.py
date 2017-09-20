@@ -17,6 +17,7 @@ class TableInodeHashBlock( Table ):
                 "inode_id INTEGER NOT NULL, "+
                 "block_number INTEGER NOT NULL, "+
                 "hash_id INTEGER NOT NULL, "+
+                "real_size INTEGER NOT NULL DEFAULT 0, "+
                 "PRIMARY KEY (inode_id, block_number)"+
             ")"
         )
@@ -26,22 +27,40 @@ class TableInodeHashBlock( Table ):
         self.createIndexIfNotExists('hash_inode', ("hash_id", "inode_id",))
         return
 
-    def insert( self, inode, block_number, hash_id):
+    def insert( self, inode, block_number, hash_id, real_size=0):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("INSERT INTO `%s`(inode_id, block_number, hash_id) VALUES (?,?,?)" % self.getName(),
-                    (inode, block_number, hash_id,))
+        cur.execute("INSERT INTO `%s`(inode_id, block_number, hash_id, real_size) VALUES (?,?,?,?)" % self.getName(),
+                    (inode, block_number, hash_id, real_size,))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
 
-    def update( self, inode, block_number, new_hash_id):
+    def update( self, inode, block_number, new_hash_id, new_size):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("UPDATE `%s` SET hash_id=?, real_size=? WHERE inode_id=? AND block_number=?" % self.getName(),
+                    (new_hash_id, new_size, inode, block_number,))
+        item = cur.rowcount
+        self.stopTimer('update')
+        return item
+
+    def update_hash( self, inode, block_number, new_hash_id):
         self.startTimer()
         cur = self.getCursor()
         cur.execute("UPDATE `%s` SET hash_id=? WHERE inode_id=? AND block_number=?" % self.getName(),
                     (new_hash_id, inode, block_number,))
         item = cur.rowcount
-        self.stopTimer('update')
+        self.stopTimer('update_hash')
+        return item
+
+    def update_size( self, inode, block_number, new_size):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("UPDATE `%s` SET real_size=? WHERE inode_id=? AND block_number=?" % self.getName(),
+                    (new_size, inode, block_number,))
+        item = cur.rowcount
+        self.stopTimer('update_size')
         return item
 
     def delete( self, inode ):
@@ -51,6 +70,18 @@ class TableInodeHashBlock( Table ):
         count = cur.rowcount
         self.stopTimer('delete')
         return count
+
+    def get( self, inode, block_number ):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute(
+            "SELECT `hash_id`,`real_size` FROM `%s` " % self.getName()+
+            " WHERE `inode_id`=? AND `block_number`=?",
+            (inode, block_number,)
+        )
+        item = cur.fetchone()
+        self.stopTimer('get')
+        return item
 
     def hash_by_inode_number( self, inode, block_number ):
         self.startTimer()
@@ -122,7 +153,7 @@ class TableInodeHashBlock( Table ):
         cur = self.getCursor()
         cur.execute("SELECT `hash_id`,`inode_id` FROM `%s` " % self.getName())
         iids = (item for item in iter(cur.fetchone,None))
-        self.stopTimer('get_hash_ids')
+        self.stopTimer('get_hash_inode_ids')
         return iids
 
     pass

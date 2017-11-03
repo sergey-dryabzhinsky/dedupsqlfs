@@ -21,8 +21,10 @@ class TableSubvolume( Table ):
                 "`hash` CHAR(32) NOT NULL, "+
                 "`name` BLOB NOT NULL, "+
                 "`stats` TEXT, "+
+                "`root_diff` TEXT, "+
                 "`readonly` TINYINT UNSIGNED NOT NULL DEFAULT 0, "+
                 "stats_at INTEGER, "+
+                "root_diff_at INTEGER, "+
                 "created_at INTEGER NOT NULL, "+
                 "mounted_at INTEGER, "+
                 "updated_at INTEGER"
@@ -31,7 +33,7 @@ class TableSubvolume( Table ):
         self.createIndexIfNotExists("hash", ('hash',), unique=True)
         return
 
-    def insert( self, name, created_at, mounted_at=None, updated_at=None, stats_at=None, stats=None ):
+    def insert( self, name, created_at, mounted_at=None, updated_at=None, stats_at=None, stats=None, root_diff_at=None, root_diff=None ):
         """
         :param name: str            - subvolume/snapshot name
         :param created_at: int      - creation time
@@ -48,8 +50,8 @@ class TableSubvolume( Table ):
 
         bname = sqlite3.Binary(name)
 
-        cur.execute("INSERT INTO `%s`(hash, name, created_at, mounted_at, updated_at, stats_at, stats) " % self.getName()+
-                    "VALUES (?, ?, ?, ?, ?, ?, ?)", (digest, bname, int(created_at), mounted_at, updated_at, stats_at, stats,))
+        cur.execute("INSERT INTO `%s`(hash, name, created_at, mounted_at, updated_at, stats_at, stats, root_diff_at, root_diff) " % self.getName()+
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)", (digest, bname, int(created_at), mounted_at, updated_at, stats_at, stats, root_diff_at, root_diff,))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
@@ -115,6 +117,24 @@ class TableSubvolume( Table ):
         self.stopTimer('set_stats')
         return cur.rowcount
 
+    def root_diff_time(self, subvol_id, rtime=None):
+        self.startTimer()
+        if rtime is None:
+            rtime = time()
+        cur = self.getCursor()
+        cur.execute("UPDATE `%s` SET root_diff_at=? WHERE id=? " % self.getName(),
+                    (int(rtime), subvol_id,))
+        self.stopTimer('root_diff_time')
+        return cur.rowcount
+
+    def set_root_diff(self, subvol_id, root_dif):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("UPDATE `%s` SET root_diff=? WHERE id=? " % self.getName(),
+                    (root_dif, subvol_id,))
+        self.stopTimer('set_root_diff')
+        return cur.rowcount
+
     def get(self, subvol_id):
         self.startTimer()
         cur = self.getCursor()
@@ -144,6 +164,8 @@ class TableSubvolume( Table ):
             item['hash'] = item['hash'].decode()
             if item['stats']:
                 item['stats'] = item['stats'].decode()
+            if item['root_diff']:
+                item['root_diff'] = item['root_diff'].decode()
         self.stopTimer('find')
         return item
 

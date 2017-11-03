@@ -20,8 +20,10 @@ class TableSubvolume( Table ):
                 "`hash` CHAR(32) NOT NULL, "+
                 "`name` BLOB NOT NULL, "+
                 "`stats` TEXT, "+
+                "`root_diff` TEXT, "+
                 "`readonly` TINYINT UNSIGNED NOT NULL DEFAULT 0, "+
                 "`stats_at` INT UNSIGNED, "+
+                "`root_diff_at` INT UNSIGNED, "+
                 "`created_at` INT UNSIGNED NOT NULL, "+
                 "`mounted_at` INT UNSIGNED, "+
                 "`updated_at` INT UNSIGNED"+
@@ -31,7 +33,7 @@ class TableSubvolume( Table ):
         self.createIndexIfNotExists("hash", ('hash',), unique=True)
         return
 
-    def insert( self, name, created_at, mounted_at=None, updated_at=None, stats_at=None, stats=None ):
+    def insert( self, name, created_at, mounted_at=None, updated_at=None, stats_at=None, stats=None, root_diff_at=None, root_diff=None ):
         """
         :param name: str            - name for subvolume/snapshot
         :param created_at: int      - creation time
@@ -48,8 +50,8 @@ class TableSubvolume( Table ):
 
         cur.execute(
             "INSERT INTO `%s` " % self.getName()+
-            " (`hash`,`name`,`created_at`, `mounted_at`, `updated_at`, `stats_at`, `stats`) "+
-            "VALUES (%(hash)s, %(name)s, %(created)s, %(mounted)s, %(updated)s, %(statsed)s, %(stats)s)",
+            " (`hash`,`name`,`created_at`, `mounted_at`, `updated_at`, `stats_at`, `stats`, `root_diff_at`, `root_diff`) "+
+            "VALUES (%(hash)s, %(name)s, %(created)s, %(mounted)s, %(updated)s, %(statsed)s, %(stats)s, %(diffed)s, %(root_diff)s)",
             {
                 "hash": digest,
                 "name": name,
@@ -57,7 +59,9 @@ class TableSubvolume( Table ):
                 "mounted": mounted_at,
                 "updated": updated_at,
                 "statsed": stats_at,
-                "stats": stats
+                "stats": stats,
+                "diffed": root_diff_at,
+                "root_diff": root_diff
             }
         )
         item = cur.lastrowid
@@ -138,6 +142,36 @@ class TableSubvolume( Table ):
             " SET `stats`=%(stats)s WHERE `id`=%(id)s",
             {
                 "stats": stats,
+                "id": subvol_id
+            }
+        )
+        self.stopTimer('set_stats')
+        return cur.rowcount
+
+    def root_diff_time(self, subvol_id, rtime=None):
+        self.startTimer()
+        if rtime is None:
+            rtime = time()
+        cur = self.getCursor()
+        cur.execute(
+            "UPDATE `%s` " % self.getName()+
+            " SET `root_diff_at`=%(rtime)s WHERE `id`=%(id)s",
+            {
+                "rtime": int(rtime),
+                "id": subvol_id
+            }
+        )
+        self.stopTimer('stats_time')
+        return cur.rowcount
+
+    def set_root_diff(self, subvol_id, root_diff):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute(
+            "UPDATE `%s` " % self.getName()+
+            " SET `root_diff`=%(rdiff)s WHERE `id`=%(id)s",
+            {
+                "rdiff": root_diff,
                 "id": subvol_id
             }
         )

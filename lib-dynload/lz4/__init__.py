@@ -17,10 +17,10 @@ if not os.path.isdir(build_dir):
 dirs = os.listdir(build_dir)
 for d in dirs:
     if d.find("-%s.%s" % (p1, p2)) != -1 and d.find("lib.") != -1:
-        sys.path.insert(0, os.path.join(build_dir, d) )
+        sys.path.insert(0, os.path.join(build_dir, d, "_lz4", "block") )
 
         import importlib
-        module = importlib.import_module("_lz4.block._block")
+        module = importlib.import_module("_block")
 
         compress = module.compress
         decompress = module.decompress

@@ -144,8 +144,11 @@ def main(): # {{{1
     if len(compression_methods_cmd) > 1:
         msg += " %r will try all compression methods and choose one with smaller result data." % constants.COMPRESSION_TYPE_BEST
         msg += " %r will try selected compression methods (--custom-compress) and choose one with smaller result data." % constants.COMPRESSION_TYPE_CUSTOM
+    msg += "\nDefaults to %r." % constants.COMPRESSION_TYPE_NONE
 
-    parser.add_argument('--compress', dest='compression_method', metavar='METHOD', default=constants.COMPRESSION_TYPE_NONE, help=msg)
+    parser.add_argument('--compress', dest='compression', metavar='METHOD', action="append",
+                              choices=compression_methods_cmd,
+                              default=[constants.COMPRESSION_TYPE_NONE], help=msg)
 
     msg = "Enable compression of data blocks using one or more of the supported compression methods: %s"
     msg %= ', '.join('%r' % mth for mth in compression_methods_cmd[:-2])

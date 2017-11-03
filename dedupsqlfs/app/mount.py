@@ -188,7 +188,9 @@ def main(): # {{{1
         msg += "\n- Method %r will try all compression methods with 'fast' level and choose one with smaller result data." % constants.COMPRESSION_TYPE_FAST
     msg += "\nDefaults to %r." % constants.COMPRESSION_TYPE_NONE
 
-    grp_compress.add_argument('--compress', dest='compression', metavar='METHOD', action="append", default=[constants.COMPRESSION_TYPE_NONE], help=msg)
+    grp_compress.add_argument('--compress', dest='compression', metavar='METHOD', action="append",
+                              choices=compression_methods_cmd,
+                              default=[constants.COMPRESSION_TYPE_NONE], help=msg)
 
     grp_compress.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")
     grp_compress.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=1024, help="Minimal block data size for compression. Defaults to 1024 bytes. Value -1 means auto - per method absolute minimum. Do not compress if data size is less than BYTES long. If not forced to.")
@@ -211,7 +213,9 @@ def main(): # {{{1
     msg = "R|Enable compression of snapshot sqlite database files using one of the supported compression programs: %s"
     msg %= ', '.join('%r' % mth for mth in compression_progs)
     msg += ".\nDefaults to %r." % constants.COMPRESSION_PROGS_DEFAULT
-    grp_compress.add_argument('--sqlite-compression-prog', dest='sqlite_compression_prog', metavar='PROGNAME', default=constants.COMPRESSION_PROGS_DEFAULT, help=msg)
+    grp_compress.add_argument('--sqlite-compression-prog', dest='sqlite_compression_prog', metavar='PROGNAME',
+                              choices=compression_progs,
+                              default=constants.COMPRESSION_PROGS_DEFAULT, help=msg)
 
     grp_compress.add_argument('--recompress-on-fly', dest='compression_recompress_now', action="store_true", help="Do recompress blocks which compressed with deprecated compression method.")
 

@@ -511,8 +511,9 @@ class Subvolume(object):
             # Check if FS tree has inode
             inode_id = int(item["inode_id"])
             getSize = True
-            if inode_id not in nodesInodes:
-                getSize = False
+            if checkTree:
+                if inode_id not in nodesInodes:
+                    getSize = False
             if getSize:
                 apparentSize += tableInode.get_size(inode_id)
 

@@ -2478,6 +2478,9 @@ class DedupOperations(llfuse.Operations): # {{{1
                 subv = Subvolume(self)
                 subv.clean_stats(self.mounted_subvolume_name)
 
+                if self.mounted_subvolume_name == constants.ROOT_SUBVOLUME_NAME:
+                    subv.clean_non_root_subvol_diff_stats()
+
             elapsed_time = time() - start_time
             self.getLogger().info("Finished garbage collection in %s.", format_timespan(elapsed_time))
         return

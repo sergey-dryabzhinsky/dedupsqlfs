@@ -127,6 +127,42 @@ class TableInodeHashBlock( Table ):
         self.stopTimer('get_count_uniq_inodes')
         return item
 
+    def get_uniq_hashes(self):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT `hash_id` FROM `%s`" % self.getName())
+        hashes = set(int(item['hash_id']) for item in iter(cur.fetchone,None))
+        self.stopTimer('get_uniq_hashes')
+        return hashes
+
+    def count_hashes_by_hashes(self, hash_ids):
+        self.startTimer()
+        count = 0
+        id_str = ",".join(str(hid) for hid in hash_ids)
+        if id_str:
+            cur = self.getCursor()
+            cur.execute("SELECT COUNT(1) as `cnt` FROM `%s` " % self.getName()+
+                        " WHERE `hash_id` IN (%s)" % (id_str,))
+            item = cur.fetchone()
+            if item:
+                count = item["cnt"]
+        self.stopTimer('count_hashes_by_hashes')
+        return count
+
+    def count_realsize_by_hashes(self, hash_ids):
+        self.startTimer()
+        count = 0
+        id_str = ",".join(str(hid) for hid in hash_ids)
+        if id_str:
+            cur = self.getCursor()
+            cur.execute("SELECT SUM(`real_size`) as `srs` FROM `%s` " % self.getName()+
+                        " WHERE `hash_id` IN (%s)" % (id_str,))
+            item = cur.fetchone()
+            if item and item["srs"]:
+                count = int(item["srs"])
+        self.stopTimer('count_realsize_by_hashes')
+        return count
+
     def get_inode_ids(self, start_id, end_id):
         self.startTimer()
         cur = self.getCursor()

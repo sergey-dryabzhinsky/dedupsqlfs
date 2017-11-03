@@ -51,7 +51,7 @@ class TableSubvolume( Table ):
         bname = sqlite3.Binary(name)
 
         cur.execute("INSERT INTO `%s`(hash, name, created_at, mounted_at, updated_at, stats_at, stats, root_diff_at, root_diff) " % self.getName()+
-                    "VALUES (?, ?, ?, ?, ?, ?, ?)", (digest, bname, int(created_at), mounted_at, updated_at, stats_at, stats, root_diff_at, root_diff,))
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (digest, bname, int(created_at), mounted_at, updated_at, stats_at, stats, root_diff_at, root_diff,))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item

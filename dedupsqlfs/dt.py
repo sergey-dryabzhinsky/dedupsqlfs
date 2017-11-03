@@ -103,9 +103,9 @@ class CleanUpPlan:
         wc = int( math.floor(dc / 7.0) )
 
         score = 1
-        if wc > self._max_weekly:
+        if wc >= self._max_weekly + 1:
             score -= 1
-        elif dc < self._max_daily:
+        elif wc == 1 and dc < self._max_daily:
             score -= 1
 
         weeks = {}
@@ -137,9 +137,9 @@ class CleanUpPlan:
         wc = int( math.floor(dc / 7.0) )
 
         score = 1
-        if mc >= self._max_monthly:
+        if mc >= self._max_monthly + 1:
             score -= 1
-        elif wc < self._max_weekly:
+        elif mc == 1 and wc < self._max_weekly:
             score -= 1
 
         months = {}
@@ -168,9 +168,11 @@ class CleanUpPlan:
         yc = last.year - cur_date.year
 
         score = 1
-        if yc >= self._max_yearly:
+        # wee need more distance
+        if yc >= self._max_yearly + 1:
             score -= 1
-        elif mc < self._max_monthly:
+        # or at least one year diff
+        elif yc == 1 and mc < self._max_monthly:
             score -= 1
 
         years = {}

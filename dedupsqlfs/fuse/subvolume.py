@@ -514,6 +514,10 @@ class Subvolume(object):
             if checkTree:
                 if inode_id not in nodesInodes:
                     getSize = False
+            else:
+                if inode_id in nodesInodes:
+                    getSize = False
+                nodesInodes.add(inode_id)
             if getSize:
                 apparentSize += tableInode.get_size(inode_id)
 

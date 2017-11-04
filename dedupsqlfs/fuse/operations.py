@@ -846,7 +846,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.__log_call('removexattr', '->(inode=%i, name=%r)', inode, name)
 
             xattrs = self.__get_cached_xattrs(inode)
-            self.__log_call('removexattr', '--(xattrs=%r)', inode, xattrs)
+            self.__log_call('removexattr', '==(xattrs=%r)', xattrs)
             if not xattrs:
                 raise FUSEError(llfuse.ENOATTR)
             if name not in xattrs:
@@ -854,6 +854,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             del xattrs[name]
             self.getTable("xattr").update(inode, xattrs)
             self.cached_xattrs.set(inode, xattrs)
+            self.__log_call('removexattr', '<-(xattrs=%r)', xattrs)
+            self.__setattr_ctime(inode)
             return 0
         except FUSEError:
             raise
@@ -1080,6 +1082,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                 newxattr = True
                 xattrs = {}
 
+            self.__log_call('setxattr', '==(xattrs=%r)', xattrs)
+
             # Don't do DB write if value not changed
             if xattrs.get(name) != value:
                 xattrs[name] = value
@@ -1088,6 +1092,10 @@ class DedupOperations(llfuse.Operations): # {{{1
                     self.getTable("xattr").update(inode, xattrs)
                 else:
                     self.getTable("xattr").insert(inode, xattrs)
+
+                self.__setattr_ctime(inode)
+
+                self.__log_call('setxattr', '<-(xattrs=%r)', xattrs)
 
             # Update cache ttl
             self.cached_xattrs.set(inode, xattrs)

@@ -799,7 +799,7 @@ class Subvolume(object):
 
         tableNames = ('inode_hash_block', 'tree', 'inode', 'inode_option', 'link', 'xattr',)
 
-        prog = manager.getCompressionProg()
+        prog = self.getManager().getOption("sqlite_compression_prog")
 
         for subvol_id in tableSubvol.get_ids('created_at'):
 

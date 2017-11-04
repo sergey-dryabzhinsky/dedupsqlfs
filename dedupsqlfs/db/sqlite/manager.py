@@ -18,7 +18,7 @@ class DbManager( object ):
 
     _log = None
 
-    _compresssion_prog = None
+    _compression_prog = None
 
     tables = (
         "option",
@@ -244,11 +244,11 @@ class DbManager( object ):
 
 
     def setCompressionProg(self, prog):
-        self._compressed_prog = prog
+        self._compression_prog = prog
         return self
 
     def getCompressionProg(self):
-        return self._compressed_prog
+        return self._compression_prog
 
 
     def copy(self, oldTableName, newTableName, compress=False):

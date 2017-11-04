@@ -8,6 +8,7 @@ import sys
 import math
 from datetime import datetime
 from dedupsqlfs.my_formats import format_size
+from dedupsqlfs.lib.constants import ROOT_SUBVOLUME_NAME
 import json
 
 class Subvolume(object):
@@ -108,6 +109,8 @@ class Subvolume(object):
 
         tableSubvol = self.getTable('subvolume')
 
+        checkTree = self.getManager().getOption('check_tree_inodes')
+
         self.print_out("Subvolumes:\n")
 
         nameMaxLen = 1
@@ -125,12 +128,12 @@ class Subvolume(object):
                 "Name", "ReadOnly", "Apparent Size", "Created", "Last mounted", "Last updated"))
             self.print_out("-"*(nameMaxLen+11+16+22+22+22+1) + "\n")
         else:
-            self.print_out("-"*(nameMaxLen+11+16+14+18+16+22+22+22+1) + "\n")
-            self.print_out((("%%-%d" % nameMaxLen) + "s| %-9s| %-14s| %-12s| %-16s| %-14s| %-20s| %-20s| %-20s|\n") % (
+            self.print_out("-"*(nameMaxLen+11+16+14+18+16+13+22+22+22+1) + "\n")
+            self.print_out((("%%-%d" % nameMaxLen) + "s| %-9s| %-14s| %-12s| %-16s| %-14s| %-11s| %-20s| %-20s| %-20s|\n") % (
                 "Name", "ReadOnly",
-                "Apparent Size", "Unique Size", "Compressed Size", "Dedupped Size",
+                "Apparent Size", "Unique Size", "Compressed Size", "Dedupped Size", "Diff Size",
                 "Created", "Last mounted", "Last updated"))
-            self.print_out("-"*(nameMaxLen+11+16+14+18+16+22+22+22+1) + "\n")
+            self.print_out("-"*(nameMaxLen+11+16+14+18+16+13+22+22+22+1) + "\n")
 
         for subvol_id in tableSubvol.get_ids('created_at'):
 
@@ -138,7 +141,10 @@ class Subvolume(object):
 
             apparent_size = 0
             if not with_stats:
-                apparent_size = self.get_apparent_size(subvol)
+                if checkTree:
+                    apparent_size = self.get_apparent_size(subvol)
+                else:
+                    apparent_size = self.get_apparent_size_fast(subvol)
             else:
                 usage = self.get_usage(subvol["name"])
 
@@ -168,13 +174,19 @@ class Subvolume(object):
                     utime,
                     ))
             else:
-                self.print_out((("%%-%d" % nameMaxLen) + "s| %-9s| %-14s| %-12s| %-16s| %-14s| %-20s| %-20s| %-20s|\n") % (
+
+                diffStats = self.get_root_diff(subvol["name"])
+                if not diffStats:
+                    diffStats = {"diffRealSize":0}
+
+                self.print_out((("%%-%d" % nameMaxLen) + "s| %-9s| %-14s| %-12s| %-16s| %-14s| %-11s| %-20s| %-20s| %-20s|\n") % (
                     subvol["name"].decode(),
                     readonly,
                     format_size(usage["apparentSize"]),
                     format_size(usage["uniqueSize"]),
                     format_size(usage["compressedSize"]),
                     format_size(usage["dedupSize"]),
+                    format_size(diffStats["diffRealSize"]),
                     ctime,
                     mtime,
                     utime,
@@ -183,7 +195,7 @@ class Subvolume(object):
         if not with_stats:
             self.print_out("-"*(nameMaxLen+11+16+22+22+22+1) + "\n")
         else:
-            self.print_out("-"*(nameMaxLen+11+16+14+18+16+22+22+22+1) + "\n")
+            self.print_out("-"*(nameMaxLen+11+16+14+18+16+13+22+22+22+1) + "\n")
 
         self.getManager().getManager().close()
 
@@ -246,8 +258,6 @@ class Subvolume(object):
             curIndex = tableIndex.getCursor()
             curIndex.execute("SELECT DISTINCT hash_id,inode_id FROM `%s`" % tableIndex.getName())
 
-            nodesInodes = {}
-
             while True:
 
                 items = curIndex.fetchmany(pageSize)
@@ -263,15 +273,8 @@ class Subvolume(object):
                     # Check if FS tree has inode
 
                     inode_id = item["inode_id"]
-                    if inode_id in nodesInodes:
-                        if not nodesInodes[inode_id]:
-                            continue
-                    else:
-                        if inode_id not in inodes_in_tree:
-                            nodesInodes[inode_id] = False
-                            continue
-                        else:
-                            nodesInodes[inode_id] = True
+                    if inode_id not in inodes_in_tree:
+                        continue
 
                     hash_id = item["hash_id"]
                     hashIds.add(hash_id)
@@ -319,6 +322,7 @@ class Subvolume(object):
                 if not len(items):
                     break
 
+                inodes_in_tree = set()
                 if checkTree:
                     inode_ids = ",".join(set(str(item["inode_id"]) for item in items))
                     inodes_in_tree = set(tableTree.get_inodes_by_inodes_intgen(inode_ids))
@@ -420,7 +424,7 @@ class Subvolume(object):
         if subvolItem["stats_at"] and subvolItem["stats"]:
             stats_at = int(subvolItem["stats_at"])
             updated_at = int(subvolItem["updated_at"])
-            if not updated_at > stats_at:
+            if updated_at <= stats_at:
                 # No updates since last stats calculated
                 stats = json.loads(subvolItem["stats"])
                 return stats["apparentSize"]
@@ -428,11 +432,11 @@ class Subvolume(object):
         tableTree = self.getTable('tree_' + subvolItem["hash"])
         tableInode = self.getTable('inode_' + subvolItem["hash"])
 
-        cur = tableTree.getCursor()
-        cur.execute("SELECT `inode_id` FROM `%s` " % tableTree.getName())
-        apparentSize = 0
-        for item in iter(cur.fetchone,None):
-            apparentSize += tableInode.get_size(item["inode_id"])
+        allInodes = tableTree.get_all_inodes_set()
+        apparentSize = tableInode.get_sizes_by_inodes(allInodes)
+
+        tableTree.close()
+        tableInode.close()
 
         return apparentSize
 
@@ -454,8 +458,9 @@ class Subvolume(object):
                 return stats["apparentSize"]
 
         tableInode = self.getTable('inode_' + subvolItem["hash"])
-
-        return tableInode.get_sizes()
+        sz = tableInode.get_sizes()
+        tableInode.close()
+        return sz
 
     def get_usage(self, name, hashTypes=False):
         """
@@ -479,14 +484,13 @@ class Subvolume(object):
         if subvolItem["stats_at"] and subvolItem["stats"]:
             stats_at = int(subvolItem["stats_at"])
             updated_at = int(subvolItem["updated_at"])
-            if not updated_at > stats_at:
+            if updated_at <= stats_at:
                 # No updates since last stats calculated
                 return json.loads(subvolItem["stats"])
 
         compMethods = {}
         hashCT = {}
         hashSZ = {}
-        nodesInodes = {}
 
         checkTree = self.getManager().getOption('check_tree_inodes')
 
@@ -495,6 +499,10 @@ class Subvolume(object):
         tableIndex = self.getTable('inode_hash_block_' + subvolItem["hash"])
         tableTree = self.getTable('tree_' + subvolItem["hash"])
         tableInode = self.getTable('inode_' + subvolItem["hash"])
+
+        nodesInodes = set()
+        if checkTree:
+            nodesInodes = tableTree.get_all_inodes_set()
 
         dataSize = 0
         compressedSize = 0
@@ -505,21 +513,17 @@ class Subvolume(object):
         for item in tableIndex.get_hash_inode_ids():
 
             # Check if FS tree has inode
-            inode_id = item["inode_id"]
-            if inode_id in nodesInodes:
-                if not nodesInodes[inode_id]:
-                    continue
+            inode_id = int(item["inode_id"])
+            getSize = True
+            if checkTree:
+                if inode_id not in nodesInodes:
+                    getSize = False
             else:
-                if checkTree:
-                    node = tableTree.find_by_inode(inode_id)
-                else:
-                    node = True
-                if not node:
-                    nodesInodes[inode_id] = False
-                    continue
-                else:
-                    nodesInodes[inode_id] = True
-                    apparentSize += tableInode.get_size(inode_id)
+                if inode_id in nodesInodes:
+                    getSize = False
+                nodesInodes.add(inode_id)
+            if getSize:
+                apparentSize += tableInode.get_size(inode_id)
 
             hash_id = item["hash_id"]
 
@@ -556,6 +560,10 @@ class Subvolume(object):
                 count_all += cnt
                 comp_types[ cnt ] = method
 
+        tableInode.close()
+        tableTree.close()
+        tableIndex.close()
+
         stats = {
             "apparentSize": apparentSize,
             "dataSize": dataSize,
@@ -575,7 +583,84 @@ class Subvolume(object):
 
         return stats
 
+    def get_root_diff(self, name):
+        """
+        @param name: Subvolume name
+        @type  name: bytes
+
+        @rtype: dict|false
+        """
+
+        if not name:
+            self.getLogger().error("Select subvolume which you need to process!")
+            return False
+
+        tableSubvol = self.getTable('subvolume')
+
+        subvolRootItem = tableSubvol.find(ROOT_SUBVOLUME_NAME)
+        if not subvolRootItem:
+            self.getLogger().error("Subvolume with name %r not found!" % ROOT_SUBVOLUME_NAME)
+            return False
+
+        if name == ROOT_SUBVOLUME_NAME:
+            stats = {
+                "diffRealSize": 0,
+                "diffBlocksCount": 0
+            }
+            tableSubvol.root_diff_time(subvolRootItem["id"])
+            tableSubvol.set_root_diff(subvolRootItem["id"], json.dumps(stats))
+            tableSubvol.commit()
+            return stats
+
+
+        subvolItem = tableSubvol.find(name)
+        if not subvolItem:
+            self.getLogger().error("Subvolume with name %r not found!" % name)
+            return False
+
+        if subvolItem["root_diff_at"] and subvolItem["root_diff"]:
+            root_diff_at = int(subvolItem["root_diff_at"])
+            updated_at = int(subvolRootItem["updated_at"])
+            if updated_at <= root_diff_at:
+                # No updates since last stats calculated
+                return json.loads(subvolItem["root_diff"])
+
+        tableRootIndex = self.getTable('inode_hash_block_' + subvolRootItem["hash"])
+        tableIndex = self.getTable('inode_hash_block_' + subvolItem["hash"])
+
+        rootUniqHashes = tableRootIndex.get_uniq_hashes()
+        subvolUniqHashes = tableIndex.get_uniq_hashes()
+
+        diffUniqHashes = subvolUniqHashes - rootUniqHashes
+        rootUniqHashes = None
+        subvolUniqHashes = None
+
+        diffBlocksCount = tableIndex.count_hashes_by_hashes(diffUniqHashes)
+        diffRealSize = tableIndex.count_realsize_by_hashes(diffUniqHashes)
+
+        tableIndex.close()
+
+        stats = {
+            "diffRealSize": diffRealSize,
+            "diffBlocksCount": diffBlocksCount
+        }
+
+        tableSubvol.root_diff_time(subvolItem["id"])
+        tableSubvol.set_root_diff(subvolItem["id"], json.dumps(stats))
+
+        tableSubvol.commit()
+
+        return stats
+
+
     def clean_stats(self, name):
+        """
+        Called only if garbage collector found garbage on subvol
+
+        @param name:
+        @return:
+        """
+
         if not name:
             self.getLogger().error("Select subvolume which you need to process!")
             return False
@@ -590,6 +675,33 @@ class Subvolume(object):
         tableSubvol.stats_time(subvolItem["id"], 0)
         tableSubvol.set_stats(subvolItem["id"], None)
 
+        tableSubvol.root_diff_time(subvolItem["id"], 0)
+        tableSubvol.set_root_diff(subvolItem["id"], None)
+
+        tableSubvol.commit()
+
+        return
+
+    def clean_non_root_subvol_diff_stats(self):
+        """
+        Called only if garbage collector found garbage on subvol
+
+        @param name:
+        @return:
+        """
+
+        tableSubvol = self.getTable('subvolume')
+
+        for subvol_id in tableSubvol.get_ids():
+
+            subvol = tableSubvol.get(subvol_id)
+
+            if subvol['name'] == ROOT_SUBVOLUME_NAME:
+                continue
+
+            tableSubvol.root_diff_time(subvol["id"], 0)
+            tableSubvol.set_root_diff(subvol["id"], None)
+
         tableSubvol.commit()
 
         return
@@ -602,6 +714,8 @@ class Subvolume(object):
         usage = self.get_usage(name, True)
         if not usage:
             return
+
+        diff = self.get_root_diff(name)
 
         self.print_msg("\n")
 
@@ -618,6 +732,9 @@ class Subvolume(object):
             self.print_out("Compressed unique data size is %s (%.2f %%).\n" % (
                 format_size(usage["compressedUniqueSize"]), usage["compressedUniqueSize"] * 100.0 / usage["uniqueSize"]
             ))
+
+        if diff and diff["diffRealSize"]:
+            self.print_out("Difference between @root: %s.\n" % format_size(diff["diffRealSize"]))
 
         count_all = usage["compressionTypesAll"]
         comp_types = usage["compressionTypes"]

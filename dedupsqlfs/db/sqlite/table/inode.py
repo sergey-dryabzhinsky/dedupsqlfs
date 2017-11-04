@@ -179,16 +179,14 @@ class TableInode( Table ):
         self.startTimer()
 
         item = 0
-        id_str = ",".join(inodes)
+        id_str = ",".join(str(i) for i in inodes)
         if id_str:
             cur = self.getCursor()
             cur.execute("SELECT SUM(`size`) as `s` FROM `%s` " % self.getName()+
                         " WHERE `id` IN (%s) AND `nlinks`>0" % id_str)
             item = cur.fetchone()
-            if not item or item["s"] is None:
-                item = 0
-            else:
-                item = item["s"]
+            if item and item["s"]:
+                item = int(item["s"])
         self.stopTimer('get_sizes_by_inodes')
         return item
 

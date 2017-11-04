@@ -43,6 +43,7 @@ from dedupsqlfs.lib import constants
 from dedupsqlfs.db import check_engines
 from dedupsqlfs.fs import which
 from dedupsqlfs.argp import SmartFormatter
+from dedupsqlfs.my_formats import format_size
 import dedupsqlfs
 
 def create_subvolume(options, _fuse):
@@ -124,6 +125,27 @@ def print_subvol_stats(options, _fuse):
     from dedupsqlfs.fuse.subvolume import Subvolume
     sv = Subvolume(_fuse.operations)
     sv.report_usage(options.subvol_stats.encode('utf8'))
+
+    _fuse.operations.destroy()
+    return
+
+
+def calc_subvol_diff(options, _fuse):
+    """
+    @param options: Commandline options
+    @type  options: object
+
+    @param _fuse: FUSE wrapper
+    @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
+    """
+    _fuse.setOption("gc_umount_enabled", False)
+    _fuse.setOption("gc_vacuum_enabled", False)
+    _fuse.setOption("gc_enabled", False)
+    _fuse.setReadonly(True)
+
+    from dedupsqlfs.fuse.subvolume import Subvolume
+    sv = Subvolume(_fuse.operations)
+    sv.get_root_diff(options.subvol_diff.encode('utf8'))
 
     _fuse.operations.destroy()
     return
@@ -269,6 +291,24 @@ def print_snapshot_stats(options, _fuse):
     snap.report_usage(options.snapshot_stats.encode('utf8'))
     return
 
+def calc_snapshot_diff(options, _fuse):
+    """
+    @param options: Commandline options
+    @type  options: object
+
+    @param _fuse: FUSE wrapper
+    @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
+    """
+    _fuse.setOption("gc_umount_enabled", False)
+    _fuse.setOption("gc_vacuum_enabled", False)
+    _fuse.setOption("gc_enabled", False)
+    _fuse.setReadonly(True)
+
+    from dedupsqlfs.fuse.snapshot import Snapshot
+    snap = Snapshot(_fuse.operations)
+    snap.get_root_diff(options.snapshot_diff.encode('utf8'))
+    return
+
 def set_snapshot_readonly(options, _fuse, flag):
     """
     @param options: Commandline options
@@ -371,6 +411,9 @@ def do(options, compression_methods=None):
         if options.subvol_stats:
             print_subvol_stats(options, _fuse)
 
+        if options.subvol_diff:
+            calc_subvol_diff(options, _fuse)
+
         if options.snapshot_create:
             create_snapshot(options, _fuse)
 
@@ -401,6 +444,9 @@ def do(options, compression_methods=None):
         if options.snapshot_stats:
             print_snapshot_stats(options, _fuse)
 
+        if options.snapshot_diff:
+            calc_snapshot_diff(options, _fuse)
+
         if options.defragment:
             data_defragment(options, _fuse)
 
@@ -428,7 +474,7 @@ def do(options, compression_methods=None):
             logger = ops.getApplication().getLogger()
             logger.important("\n  ~~ DO ~~")
             logger.important("-= Memory statistics: =-")
-            logger.important("Peak memory usage: %.2f Mb\n" % (kbytes/1000.0))
+            logger.important("Peak memory usage: %s\n" % format_size(kbytes * 1024))
 
     return ret
 
@@ -582,6 +628,7 @@ def main(): # {{{1
     snapshot.add_argument('--count-snapshots-by-plan', dest='snapshot_count_plan', metavar='PLAN', help="Count snapshots to be removed by cleanup plan order by creation date. Plan format: 'Nd(ays),Nw(eeks),Nm(onths),Ny(ears)'. Example: 14d,8w,6m,2y. Default: 7d,4w,2m,1y")
     snapshot.add_argument('--select-snapshots-by-last-update-time', dest='snapshot_select_by_last_update_time', action='store_true', help="Remove or count snapshots older than selected date by last update time.")
     snapshot.add_argument('--snapshot-stats', dest='snapshot_stats', metavar='NAME', help="Print information about selected snapshot")
+    snapshot.add_argument('--calc-snapshot-diff', dest='snapshot_diff', metavar='NAME', help="Recalculate information about difference between @root and selected snapshot")
     snapshot.add_argument('--set-snapshot-readonly', dest='snapshot_readonly_set', metavar='NAME', help="Set subvolume READONLY flag for selected snapshot.")
     snapshot.add_argument('--unset-snapshot-readonly', dest='snapshot_readonly_unset', metavar='NAME', help="UnSet subvolume READONLY flag for selected snapshot.")
 
@@ -591,6 +638,7 @@ def main(): # {{{1
     subvol.add_argument('--create-subvol', dest='subvol_create', metavar='NAME', help="Create new subvolume")
     subvol.add_argument('--remove-subvol', dest='subvol_remove', metavar='NAME', help="Remove selected subvolume")
     subvol.add_argument('--subvol-stats', dest='subvol_stats', metavar='NAME', help="Print information about selected subvolume")
+    subvol.add_argument('--calc-subvol-diff', dest='subvol_diff', metavar='NAME', help="Recalculate information about difference between @root and selected subvolume")
 
 
     # Dynamically check for profiling support.

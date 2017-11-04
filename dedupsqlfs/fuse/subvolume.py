@@ -435,6 +435,9 @@ class Subvolume(object):
         allInodes = tableTree.get_all_inodes_set()
         apparentSize = tableInode.get_sizes_by_inodes(allInodes)
 
+        tableTree.close()
+        tableInode.close()
+
         return apparentSize
 
     def get_apparent_size_fast(self, name):
@@ -455,8 +458,9 @@ class Subvolume(object):
                 return stats["apparentSize"]
 
         tableInode = self.getTable('inode_' + subvolItem["hash"])
-
-        return tableInode.get_sizes()
+        sz = tableInode.get_sizes()
+        tableInode.close()
+        return sz
 
     def get_usage(self, name, hashTypes=False):
         """
@@ -556,6 +560,10 @@ class Subvolume(object):
                 count_all += cnt
                 comp_types[ cnt ] = method
 
+        tableInode.close()
+        tableTree.close()
+        tableIndex.close()
+
         stats = {
             "apparentSize": apparentSize,
             "dataSize": dataSize,
@@ -629,6 +637,8 @@ class Subvolume(object):
 
         diffBlocksCount = tableIndex.count_hashes_by_hashes(diffUniqHashes)
         diffRealSize = tableIndex.count_realsize_by_hashes(diffUniqHashes)
+
+        tableIndex.close()
 
         stats = {
             "diffRealSize": diffRealSize,

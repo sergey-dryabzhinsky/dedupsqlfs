@@ -21,6 +21,7 @@ from dedupsqlfs.db import check_engines
 from dedupsqlfs.log import logging
 from dedupsqlfs.fs import which
 from dedupsqlfs.argp import SmartFormatter
+from dedupsqlfs.my_formats import format_size
 import dedupsqlfs
 
 def fuse_mount(options, compression_methods=None):
@@ -59,7 +60,7 @@ def fuse_mount(options, compression_methods=None):
             logger = ops.getApplication().getLogger()
             logger.important("\n  ~~ MOUNT ~~")
             logger.important("-= Memory statistics: =-")
-            logger.important("Peak memory usage: %.2f Mb\n" % (kbytes/1000.0))
+            logger.important("Peak memory usage: %s\n" % format_size(kbytes * 1024))
 
     return ret
 

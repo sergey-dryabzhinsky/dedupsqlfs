@@ -43,6 +43,7 @@ from dedupsqlfs.lib import constants
 from dedupsqlfs.db import check_engines
 from dedupsqlfs.fs import which
 from dedupsqlfs.argp import SmartFormatter
+from dedupsqlfs.my_formats import format_size
 import dedupsqlfs
 
 def create_subvolume(options, _fuse):
@@ -473,7 +474,7 @@ def do(options, compression_methods=None):
             logger = ops.getApplication().getLogger()
             logger.important("\n  ~~ DO ~~")
             logger.important("-= Memory statistics: =-")
-            logger.important("Peak memory usage: %.2f Mb\n" % (kbytes/1000.0))
+            logger.important("Peak memory usage: %s\n" % format_size(kbytes * 1024))
 
     return ret
 

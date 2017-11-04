@@ -8,7 +8,7 @@ import sys
 import math
 from datetime import datetime
 from dedupsqlfs.my_formats import format_size
-from dedupsqlfs.lib.constants import ROOT_SUBVOLUME_NAME
+from dedupsqlfs.lib.constants import ROOT_SUBVOLUME_NAME, COMPRESSION_PROGS_NONE
 import json
 
 class Subvolume(object):
@@ -751,5 +751,83 @@ class Subvolume(object):
             ))
 
         return
+
+
+    def decompress_all_non_root_tables(self):
+        """
+        Decompress all subvolumes sqlite table files
+        """
+
+        manager = self.getManager().getManager()
+        if manager.TYPE != 'sqlite':
+            return
+
+        tableSubvol = self.getTable('subvolume')
+
+        tableNames = ('inode_hash_block', 'tree', 'inode', 'inode_option', 'link', 'xattr',)
+
+        for subvol_id in tableSubvol.get_ids('created_at'):
+
+            subvol = tableSubvol.get(subvol_id)
+
+            if subvol['name'] == ROOT_SUBVOLUME_NAME:
+                continue
+
+            for tn in tableNames:
+                """
+                @var table: L{dedupsqlfs.db.sqlite.table._base.Table}
+                """
+                table = self.getTable(tn + '_' + subvol["hash"])
+                table.setCompressed(False)
+                table.close(nocompress=True)
+
+        manager.close()
+
+        return
+
+
+    def compress_all_non_root_tables(self):
+        """
+        Compress all subvolumes sqlite table files
+        """
+
+        manager = self.getManager().getManager()
+        if manager.TYPE != 'sqlite':
+            return
+
+        tableSubvol = self.getTable('subvolume')
+
+        tableNames = ('inode_hash_block', 'tree', 'inode', 'inode_option', 'link', 'xattr',)
+
+        prog = manager.getCompressionProg()
+
+        for subvol_id in tableSubvol.get_ids('created_at'):
+
+            subvol = tableSubvol.get(subvol_id)
+
+            if subvol['name'] == ROOT_SUBVOLUME_NAME:
+                continue
+
+            for tn in tableNames:
+                """
+                @var table: L{dedupsqlfs.db.sqlite.table._base.Table}
+                """
+                table = self.getTable(tn + '_' + subvol["hash"])
+
+                compress = False
+
+                if os.path.getsize(table.getDbFilePath()) > 1024 * 1024:
+                    compress = True
+                    table.setCompressed()
+                    if prog in (None, COMPRESSION_PROGS_NONE,):
+                        compress = False
+                    else:
+                        table.setCompressionProg(prog)
+                table.close(compress is False)
+
+        manager.close()
+
+        return
+
 
     pass

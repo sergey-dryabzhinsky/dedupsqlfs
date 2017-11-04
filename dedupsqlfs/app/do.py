@@ -108,7 +108,6 @@ def remove_subvolume(options, _fuse):
     _fuse.operations.destroy()
     return
 
-
 def print_subvol_stats(options, _fuse):
     """
     @param options: Commandline options
@@ -128,7 +127,6 @@ def print_subvol_stats(options, _fuse):
 
     _fuse.operations.destroy()
     return
-
 
 def calc_subvol_diff(options, _fuse):
     """
@@ -150,6 +148,47 @@ def calc_subvol_diff(options, _fuse):
     _fuse.operations.destroy()
     return
 
+def decompress_subvol_tables(options, _fuse):
+    """
+    @param options: Commandline options
+    @type  options: object
+
+    @param _fuse: FUSE wrapper
+    @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
+    """
+    _fuse.setOption("gc_umount_enabled", False)
+    _fuse.setOption("gc_vacuum_enabled", False)
+    _fuse.setOption("gc_enabled", False)
+    _fuse.setReadonly(True)
+
+    from dedupsqlfs.fuse.subvolume import Subvolume
+    sv = Subvolume(_fuse.operations)
+    sv.decompress_all_non_root_tables()
+
+    _fuse.operations.destroy()
+    return
+
+def compress_subvol_tables(options, _fuse):
+    """
+    @param options: Commandline options
+    @type  options: object
+
+    @param _fuse: FUSE wrapper
+    @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
+    """
+    _fuse.setOption("gc_umount_enabled", False)
+    _fuse.setOption("gc_vacuum_enabled", False)
+    _fuse.setOption("gc_enabled", False)
+    _fuse.setReadonly(True)
+
+    from dedupsqlfs.fuse.subvolume import Subvolume
+    sv = Subvolume(_fuse.operations)
+    sv.compress_all_non_root_tables()
+
+    _fuse.operations.destroy()
+    return
+
+# ----------------- SNAPS ----------------------
 
 def create_snapshot(options, _fuse):
     """
@@ -414,6 +453,12 @@ def do(options, compression_methods=None):
         if options.subvol_diff:
             calc_subvol_diff(options, _fuse)
 
+        if options.decompress_subvol_tables:
+            decompress_subvol_tables(options, _fuse)
+
+        if options.compress_subvol_tables:
+            compress_subvol_tables(options, _fuse)
+
         if options.snapshot_create:
             create_snapshot(options, _fuse)
 
@@ -639,6 +684,9 @@ def main(): # {{{1
     subvol.add_argument('--remove-subvol', dest='subvol_remove', metavar='NAME', help="Remove selected subvolume")
     subvol.add_argument('--subvol-stats', dest='subvol_stats', metavar='NAME', help="Print information about selected subvolume")
     subvol.add_argument('--calc-subvol-diff', dest='subvol_diff', metavar='NAME', help="Recalculate information about difference between @root and selected subvolume")
+
+    subvol.add_argument('--decompress-subvol-tables', dest='decompress_subvol_tables', action='store_true', help="Decompress all subvolumes sqlite table files")
+    subvol.add_argument('--compress-subvol-tables', dest='compress_subvol_tables', action='store_true', help="Compress all subvolumes sqlite table files")
 
 
     # Dynamically check for profiling support.

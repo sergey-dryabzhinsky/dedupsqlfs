@@ -829,5 +829,41 @@ class Subvolume(object):
 
         return
 
+    def count_today_created_subvols(self, count_readonly=False):
+        """
+        Count subvolumes/snapshots by create time
+        If create DATE equals TODAY DATE
+
+        @param count_readonly: Snapshots is readonly
+        """
+
+        manager = self.getManager().getManager()
+
+        tableSubvol = self.getTable('subvolume')
+
+        today = datetime.now().date()
+
+        count = 0
+
+        for subvol_id in tableSubvol.get_ids('created_at'):
+
+            subvol = tableSubvol.get(subvol_id)
+
+            if subvol['name'] == ROOT_SUBVOLUME_NAME:
+                continue
+
+            if not subvol['readonly'] and count_readonly:
+                continue
+
+            subDay = datetime.fromtimestamp(subvol['created_at']).date()
+
+            if subDay == today:
+                count += 1
+
+        manager.close()
+
+        self.print_msg("%s\n" % count)
+
+        return
 
     pass

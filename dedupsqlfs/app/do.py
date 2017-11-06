@@ -188,6 +188,26 @@ def compress_subvol_tables(options, _fuse):
     _fuse.operations.destroy()
     return
 
+def count_subvol_created_today(options, _fuse):
+    """
+    @param options: Commandline options
+    @type  options: object
+
+    @param _fuse: FUSE wrapper
+    @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
+    """
+    _fuse.setOption("gc_umount_enabled", False)
+    _fuse.setOption("gc_vacuum_enabled", False)
+    _fuse.setOption("gc_enabled", False)
+    _fuse.setReadonly(True)
+
+    from dedupsqlfs.fuse.subvolume import Subvolume
+    sv = Subvolume(_fuse.operations)
+    sv.count_today_created_subvols()
+
+    _fuse.operations.destroy()
+    return
+
 # ----------------- SNAPS ----------------------
 
 def create_snapshot(options, _fuse):
@@ -370,6 +390,27 @@ def set_snapshot_readonly(options, _fuse, flag):
         snap.readonly(options.snapshot_readonly_unset.encode('utf8'))
     return
 
+def count_snapshot_created_today(options, _fuse):
+    """
+    @param options: Commandline options
+    @type  options: object
+
+    @param _fuse: FUSE wrapper
+    @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
+    """
+    _fuse.setOption("gc_umount_enabled", False)
+    _fuse.setOption("gc_vacuum_enabled", False)
+    _fuse.setOption("gc_enabled", False)
+    _fuse.setReadonly(True)
+
+    from dedupsqlfs.fuse.subvolume import Subvolume
+    sv = Subvolume(_fuse.operations)
+    sv.count_today_created_subvols(True)
+
+    _fuse.operations.destroy()
+    return
+
+# ------------------------- Other ------------------------
 
 def print_fs_stats(options, _fuse):
     _fuse.setReadonly(True)
@@ -458,6 +499,12 @@ def do(options, compression_methods=None):
 
         if options.compress_subvol_tables:
             compress_subvol_tables(options, _fuse)
+
+        if options.count_created_today_subvol:
+            count_subvol_created_today(options, _fuse)
+
+        if options.count_created_today_snapshot:
+            count_snapshot_created_today(options, _fuse)
 
         if options.snapshot_create:
             create_snapshot(options, _fuse)
@@ -677,6 +724,8 @@ def main(): # {{{1
     snapshot.add_argument('--set-snapshot-readonly', dest='snapshot_readonly_set', metavar='NAME', help="Set subvolume READONLY flag for selected snapshot.")
     snapshot.add_argument('--unset-snapshot-readonly', dest='snapshot_readonly_unset', metavar='NAME', help="UnSet subvolume READONLY flag for selected snapshot.")
 
+    snapshot.add_argument('--count-created-today-snapshot', dest='count_created_today_snapshot', action='store_true', help="Count shapshots that created today")
+
     subvol = parser.add_argument_group('Subvolume')
     subvol.add_argument('--list-subvol', dest='subvol_list', action='store_true', help="Show list of all subvolumes")
     subvol.add_argument('--list-subvol-with-stats', dest='subvol_list_with_stats', action='store_true', help="Show more statistics in subvolumes list. Slow.")
@@ -688,6 +737,7 @@ def main(): # {{{1
     subvol.add_argument('--decompress-subvol-tables', dest='decompress_subvol_tables', action='store_true', help="Decompress all subvolumes sqlite table files")
     subvol.add_argument('--compress-subvol-tables', dest='compress_subvol_tables', action='store_true', help="Compress all subvolumes sqlite table files")
 
+    subvol.add_argument('--count-created-today-subvol', dest='count_created_today_subvol', action='store_true', help="Count subvolumes that created today")
 
     # Dynamically check for profiling support.
     grp_profile = parser.add_argument_group('Profiling')

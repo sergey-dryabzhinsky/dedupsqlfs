@@ -40,6 +40,11 @@ class Subvolume(object):
         return self._last_error
 
     def print_msg(self, msg):
+        """
+        Print message only if verbosity ON
+        @param msg:
+        @return:
+        """
         if self.getManager().getOption("verbosity") <= 0:
             return self
         sys.stdout.write(msg)
@@ -47,6 +52,11 @@ class Subvolume(object):
         return self
 
     def print_out(self, msg):
+        """
+        Forced message print out
+        @param msg:
+        @return:
+        """
         sys.stdout.write(msg)
         sys.stdout.flush()
         return self
@@ -862,7 +872,7 @@ class Subvolume(object):
 
         manager.close()
 
-        self.print_msg("%s\n" % count)
+        self.print_out("%s\n" % count)
 
         return
 

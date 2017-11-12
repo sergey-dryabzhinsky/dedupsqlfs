@@ -106,7 +106,7 @@ class TableTree( Table ):
     def get_children_inodes(self, parent_id):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT inode_id FROM `%s` WHERE parent_id=? ORDER BY `id` ASC" % self.getName(), (parent_id, ))
+        cur.execute("SELECT `inode_id` FROM `%s` WHERE `parent_id`=? ORDER BY `id` ASC" % self.getName(), (parent_id, ))
         items = (str(_i["inode_id"]) for _i in iter(cur.fetchone, None))
         self.stopTimer('get_children_inodes')
         return items
@@ -114,9 +114,9 @@ class TableTree( Table ):
     def get_children(self, parent_id, offset=0):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT * FROM `%s` WHERE `parent_id`=? AND `id`>? ORDER BY `id` ASC" % self.getName(),
+        cur.execute("SELECT `id`,`name_id`,`inode_id` FROM `%s` WHERE `parent_id`=? AND `id`>? ORDER BY `id` ASC" % self.getName(),
                     (parent_id, offset, ))
-        items = cur.fetchall()
+        items = (item for item in iter(cur.fetchone, None))
         self.stopTimer('get_children')
         return items
 

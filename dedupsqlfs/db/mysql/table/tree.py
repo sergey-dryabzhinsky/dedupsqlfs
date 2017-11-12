@@ -153,14 +153,14 @@ class TableTree( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT * FROM `%s` " % self.getName()+
+            "SELECT `id`,`name_id`,`inode_id` FROM `%s` " % self.getName()+
             " WHERE `parent_id`=%(parent)s AND `id`>%(offset)s ORDER BY `id` ASC",
             {
                 "parent": parent_id,
                 "offset": offset
             }
         )
-        items = cur.fetchall()
+        items = (item for item in cur)
         self.stopTimer('get_children')
         return items
 

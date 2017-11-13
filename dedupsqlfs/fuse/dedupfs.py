@@ -524,7 +524,7 @@ class DedupFS(object): # {{{1
             for key in keys:
                 compression = comp_types[key]
                 self.getLogger().info(" %8s used by %.2f%% blocks",
-                    compression, 100.0 * key / count_all
+                    compression, 100.0 * int(key) / count_all
                 )
 
         return

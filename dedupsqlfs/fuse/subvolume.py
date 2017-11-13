@@ -757,7 +757,7 @@ class Subvolume(object):
         for key in keys:
             compression = comp_types[key]
             self.print_out(" %8s used by %.2f%% blocks\n" % (
-                compression, 100.0 * key / count_all
+                compression, 100.0 * int(key) / count_all
             ))
 
         return

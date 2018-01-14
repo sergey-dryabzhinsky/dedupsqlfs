@@ -235,7 +235,12 @@ class CleanUpPlan:
 
             dateList.sort()
 
-            cleaned.append(dateList[0])
+            dt = dateRange[1] - dateRange[0]
+            # Get most recent on day, but most early on other ranges
+            if dt <= timedelta(days=1):
+                cleaned.append(dateList[-1])
+            else:
+                cleaned.append(dateList[0])
 
         cleaned = list(set(cleaned))
         cleaned.sort()

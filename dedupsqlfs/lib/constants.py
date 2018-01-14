@@ -5,9 +5,13 @@ Constants for modules
 
 __author__ = 'sergey'
 
-COMPRESSION_SUPPORTED=('lzo', 'zlib', 'bz2', 'lzma', 'snappy', 'lz4', 'lz4h',
+COMPRESSION_SUPPORTED=('lzo', 'zlib', 'bz2', 'lzma', 'snappy',
+                       'lz4', 'lz4h', 'lz4r07',
                        'quicklz', 'quicklzf', 'quicklzm', 'quicklzb',
-                       'zstd', 'zstd001', 'zstd036', 'zstd047', 'zstd061', 'lz4r07')
+                       'brotli',
+                       'zstd',
+                       'zstd001', 'zstd036', 'zstd047', 'zstd061',
+                       )
 COMPRESSION_READONLY=("quicklz", "zstd001", "zstd036", "zstd047", 'zstd061', 'lz4r07')
 COMPRESSION_TYPE_BEST="all_best"
 COMPRESSION_TYPE_FAST="all_fast"

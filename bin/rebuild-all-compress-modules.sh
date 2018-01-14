@@ -8,6 +8,12 @@
 
 THIS_DIR=`dirname $0`
 
+if [ -z "$PY" ]; then
+    PY=python3
+fi
+
+PY=`which $PY`
+
 EXTRA_OPT=$1
 if [ -n "${EXTRA_OPT}" ]; then
     EXTRA_OPT="--extra-optimization"
@@ -21,9 +27,9 @@ for mdir in `ls .`
 do
     if [ -d ${mdir} ]; then
         cd ${mdir}
-        python3 setup.py clean -a
-        python3 setup.py build_ext ${EXTRA_OPT}
-        python3 setup.py build_ext clean
+        $PY setup.py clean -a
+        $PY setup.py build_ext ${EXTRA_OPT}
+        $PY setup.py build_ext clean
         cd ..
     fi
 done

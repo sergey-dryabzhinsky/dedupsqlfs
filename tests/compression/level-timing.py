@@ -223,6 +223,47 @@ def do_level_ctest_lzma(method, name, level):
     print("")
     return dt / nROUNDS, ldata / nROUNDS, 100.0 * lcdata / ldata
 
+def do_level_ctest_brotli(method, name, level):
+    global compressedData
+
+    key = name + "_" + str(level)
+    dt = 0.0
+    lcdata = 0.0
+
+    nblk = len(processData)
+
+    ldata = processDataLength * nROUNDS
+
+    for n in range(nROUNDS):
+        sys.stdout.write(".")
+        sys.stdout.flush()
+
+        last_p = 0
+        iblk = 0
+        for data in processData:
+            t1 = time.time()
+            cdata = method.compress(data, method.MODE_GENERIC, level)
+            t2 = time.time()
+            dt += t2 - t1
+
+            if n == 0:
+                if not compressedData.get(key):
+                    compressedData[ key ] = ()
+                compressedData[ key ] += (cdata,)
+
+            lcdata += len(cdata)
+
+            p = int(20.0 * iblk / nblk)
+            if p > last_p:
+                last_p = p
+                sys.stdout.write("*")
+                sys.stdout.flush()
+
+            iblk += 1
+
+    print("")
+    return dt / nROUNDS, ldata / nROUNDS, 100.0 * lcdata / ldata
+
 
 def do_simple_dtest(method, name):
     global compressedData
@@ -315,36 +356,30 @@ def do_level_dtest(method, name, level):
 COMPRESSION_SUPPORTED=[
     ('lzo' , False, do_simple_ctest,),
     ('lz4' , False, do_simple_ctest,),
-    ('lz4r07' , False, do_simple_ctest,),
     ('snappy' , False, do_simple_ctest,),
-#    ('zstd' , False, do_simple_ctest,),
     ('zstd' , range(1,21), do_level_ctest,),
+    ('brotli' , range(0,11), do_level_ctest_brotli,),
     ('quicklzf' , False, do_simple_ctest,),
     ('quicklzm' , False, do_simple_ctest,),
     ('quicklzb' , False, do_simple_ctest,),
     ('lz4h' , False, do_simple_ctest,),
-#    ('zlib' , range(1,5), do_level_ctest,),
     ('zlib' , range(0,10), do_level_ctest,),
     ('bz2' , range(1,10), do_level_ctest,),
-#    ('lzma' , range(0,2), do_level_ctest_lzma,),
     ('lzma' , range(0,10), do_level_ctest_lzma,),
     ]
 
 DECOMPRESSION_SUPPORTED=[
     ('lzo' , False, do_simple_dtest,),
     ('lz4' , False, do_simple_dtest,),
-    ('lz4r07' , False, do_simple_dtest,),
     ('snappy' , False, do_simple_dtest,),
-#    ('zstd' , False, do_simple_dtest,),
     ('zstd' , range(1,21), do_level_dtest,),
+    ('brotli' , range(0,11), do_level_dtest,),
     ('quicklzf' , False, do_simple_dtest,),
     ('quicklzm' , False, do_simple_dtest,),
     ('quicklzb' , False, do_simple_dtest,),
     ('lz4h' , False, do_simple_dtest,),
-#    ('zlib' , range(1,5), do_level_dtest,),
     ('zlib' , range(0,10), do_level_dtest,),
     ('bz2' , range(1,10), do_level_dtest,),
-#    ('lzma' , range(0,2), do_level_dtest,),
     ('lzma' , range(0,10), do_level_dtest,),
     ]
 

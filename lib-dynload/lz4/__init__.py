@@ -25,6 +25,9 @@ for d in dirs:
         compress = module.compress
         decompress = module.decompress
 
+        def compressHC(data):
+            return compress(data, mode='high_compression')
+
         sys.path.pop(0)
 
         break

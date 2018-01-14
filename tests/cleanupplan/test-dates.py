@@ -27,15 +27,18 @@ cleanUp.setCleanUpPlanMonthly(6)
 cleanUp.setCleanUpPlanYearly(2)
 
 now = datetime.now()
-dates = [now]
+dates = [now,]
 
-for x in range(1, 750):
+for x in range(1, 800):
 
     dt = timedelta(days=x)
 
     dates.append(now - dt)
 
 dates.sort()
+
+# pprint(dates)
+
 cleanUp.setDates(dates)
 
 cleanedDates = cleanUp.getCleanedUpList()

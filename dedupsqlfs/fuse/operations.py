@@ -74,6 +74,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.subvol_uptate_last_run = time()
 
         self.cached_names = CacheTTLseconds()
+        self.cached_name_ids = CacheTTLseconds()
         self.cached_nodes = CacheTTLseconds()
         self.cached_attrs = InodesTime()
         self.cached_xattrs = CacheTTLseconds()
@@ -104,6 +105,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.timing_report_last_run = time()
 
+        self.time_spent_logging = 0
         self.time_spent_caching_nodes = 0
         self.time_spent_hashing = 0
         self.time_spent_interning = 0
@@ -457,8 +459,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def getattr(self, inode): # {{{3
         self.__log_call('getattr', '->(inode=%r)', inode)
-        attr = self.__getattr(inode)
         v = self.__get_inode_row(inode)
+        attr = self.__fill_attr_inode_row(v)
         self.__log_call('getattr', '<-(inode=%r, attr=%r)', inode, v)
         return attr
 
@@ -529,6 +531,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.cached_indexes.setMaxTtl(0)
                 self.cached_nodes.set_max_ttl(0)
                 self.cached_names.set_max_ttl(0)
+                self.cached_name_ids.set_max_ttl(0)
                 self.cached_attrs.set_max_ttl(0)
                 self.cached_xattrs.set_max_ttl(0)
             else:
@@ -551,6 +554,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
                 self.cached_nodes.set_max_ttl(self.cache_meta_timeout)
                 self.cached_names.set_max_ttl(self.cache_meta_timeout)
+                self.cached_name_ids.set_max_ttl(self.cache_meta_timeout)
                 self.cached_attrs.set_max_ttl(self.cache_meta_timeout)
                 self.cached_xattrs.set_max_ttl(self.cache_meta_timeout)
                 self.cached_indexes.setMaxTtl(self.cache_meta_timeout)
@@ -650,27 +654,14 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.__log_call('lookup', '->(parent_inode=%r, name=%r)', parent_inode, name)
 
         node = self.__get_tree_node_by_parent_inode_and_name(parent_inode, name)
-        attr = self.__getattr(node["inode_id"])
+        v = self.__get_inode_row(node["inode_id"])
+        attr = self.__fill_attr_inode_row(v)
         self.__log_call('lookup', '-- node=%r', node)
-
-        v = {}
-        for a in attr.__slots__:
-            v[a] = getattr(attr, a)
 
         self.__log_call('lookup', '<-(attr=%r)', v)
 
         self.__cache_meta_hook()
         return attr
-
-    def get_tree_node_by_parent_inode_and_name(self, parent_inode, name):
-        """
-        @TODO: move to LowLevelOperations
-        """
-        self.__log_call('get_tree_node_by_parent_inode_and_name', '->(parent_inode=%r, name=%r)', parent_inode, name)
-        node = self.__get_tree_node_by_parent_inode_and_name(parent_inode, name)
-        self.__log_call('lookup', '<-(attr=%r)', node)
-        self.__cache_meta_hook()
-        return node
 
     def mkdir(self, parent_inode, name, mode, ctx): # {{{3
         if self.isReadonly(): raise FUSEError(errno.EROFS)
@@ -806,10 +797,11 @@ class DedupOperations(llfuse.Operations): # {{{1
         for node in self.getTable("tree").get_children(cur_node["id"], offset):
             #if node["id"] <= offset:
             #    continue
-            name = self.getTable("name").get(node["name_id"])
-            attrs = self.__getattr(node["inode_id"])
+            name = self.__get_name_by_id(node['name_id'])
+            irow = self.__get_inode_row(node["inode_id"])
+            attrs = self.__fill_attr_inode_row(irow)
             self.__log_call('readdir', '<-(name=%r, attrs=%r, node=%i)',
-                            name, self.__get_inode_row(node["inode_id"]), node["id"])
+                            name, irow, node["id"])
             yield (name, attrs, node["id"],)
 
 
@@ -899,6 +891,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.cached_nodes.unset((inode_parent_old, name_old))
             self.cached_names.unset(name_old)
+            self.cached_name_ids.unset(node_old['name_id'])
 
             self.__cache_meta_hook()
 
@@ -1244,6 +1237,32 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.getTable('subvolume').update_time(self.mounted_subvolume["id"])
         return self
 
+    def __get_id_by_name(self, name):
+        self.__log_call('__get_id_by_name', '->(name=%r)', name)
+
+        name_id = self.cached_names.get(name)
+        if not name_id:
+            name_id = self.getTable("name").find(name)
+            if name_id:
+                self.cached_names.set(name, name_id)
+                self.cached_name_ids.set(name_id, name)
+        if not name_id:
+            self.getLogger().debug("! No name %r found, cant find name.id" % name)
+            raise FUSEError(errno.ENOENT)
+
+    def __get_name_by_id(self, name_id):
+        self.__log_call('__get_name_by_id', '->(name_id=%r)', name_id)
+
+        name = self.cached_name_ids.get(name_id)
+        if not name:
+            name = self.getTable("name").get(name_id)
+            if name:
+                self.cached_names.set(name, name_id)
+                self.cached_name_ids.set(name_id, name)
+        if not name:
+            self.getLogger().debug("! No name for %r found, cant find name" % name_id)
+            raise FUSEError(errno.ENOENT)
+
     def __get_tree_node_by_parent_inode_and_name(self, parent_inode, name):
         self.__log_call('__get_tree_node_by_parent_inode_and_name', '->(parent_inode=%i, name=%r)', parent_inode, name)
 
@@ -1253,14 +1272,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             start_time = time()
 
-            name_id = self.cached_names.get(name)
-            if not name_id:
-                name_id = self.getTable("name").find(name)
-                if name_id:
-                    self.cached_names.set(name, name_id)
-            if not name_id:
-                self.getLogger().debug("! No name %r found, cant find name.id" % name)
-                raise FUSEError(errno.ENOENT)
+            name_id = self.__get_id_by_name(name)
 
             par_node = self.__get_tree_node_by_inode(parent_inode)
             if not par_node:
@@ -1715,8 +1727,10 @@ class DedupOperations(llfuse.Operations): # {{{1
         #  :%s/^\(\s\+\)\(self\.__log_call\)/\1#\2
         # To re enable them:
         #  :%s/^\(\s\+\)#\(self\.__log_call\)/\1\2
+        begin_t = time()
         if not self.calls_log_filter or fun in self.calls_log_filter:
             self.getLogger().debugv("%s %s" % (fun, msg,), *args)
+        self.time_spent_logging += time() - begin_t
 
 
     def __get_opts_from_db(self): # {{{3
@@ -1776,6 +1790,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if not result:
                 result = nameTable.insert(string)
             self.cached_names.set(string, result)
+            self.cached_name_ids.set(result, string)
 
             self.time_spent_interning += time() - start_time
         return int(result)
@@ -1823,6 +1838,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.cached_nodes.unset((parent_inode, name))
         self.cached_nodes.unset(cur_node["inode_id"])
         self.cached_names.unset(name)
+        self.cached_name_ids.unset(cur_node["name_id"])
         self.cached_indexes.expire(cur_node["inode_id"])
 
         self.__cache_meta_hook()
@@ -1916,6 +1932,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __report_timings(self): # {{{3
         timings = [
+            (self.time_spent_logging, 'Logging debug info'),
             (self.time_spent_caching_nodes, 'Caching tree nodes'),
             (self.time_spent_interning, 'Interning path components'),
             (self.time_spent_reading, 'Reading data stream'),
@@ -2415,6 +2432,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             flushed_nodes = self.cached_nodes.clear()
             flushed_names = self.cached_names.clear()
+            flushed_names += self.cached_name_ids.clear()
             flushed_indexes = self.cached_indexes.expired()
 
             flushed_xattrs = self.cached_xattrs.clear()

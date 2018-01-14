@@ -1249,6 +1249,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         if not name_id:
             self.getLogger().debug("! No name %r found, cant find name.id" % name)
             raise FUSEError(errno.ENOENT)
+        return name_id
 
     def __get_name_by_id(self, name_id):
         self.__log_call('__get_name_by_id', '->(name_id=%r)', name_id)
@@ -1262,6 +1263,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         if not name:
             self.getLogger().debug("! No name for %r found, cant find name" % name_id)
             raise FUSEError(errno.ENOENT)
+        return name
 
     def __get_tree_node_by_parent_inode_and_name(self, parent_inode, name):
         self.__log_call('__get_tree_node_by_parent_inode_and_name', '->(parent_inode=%i, name=%r)', parent_inode, name)

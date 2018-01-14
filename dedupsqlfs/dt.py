@@ -6,6 +6,7 @@ Module to work with dates
 __author__ = 'sergey'
 
 import math
+from datetime import datetime, timedelta
 
 class CleanUpPlan:
     """
@@ -33,8 +34,11 @@ class CleanUpPlan:
     _max_monthly = 2
     _max_yearly = 1
 
+    _intervals = None
+
     def __init__(self):
         self._dates = []
+        self._intervals = {}
         pass
 
     def setCleanUpPlan(self, max_daily, max_weekly, max_monthly, max_yearly):
@@ -83,135 +87,163 @@ class CleanUpPlan:
         return self
 
 
+    def _setupIntervals(self):
+        if self._intervals:
+            return self
+
+        now = datetime.now()
+
+        deltaMicSec = timedelta(microseconds=1)
+        deltaDay = timedelta(days=1)
+        deltaWeek = timedelta(weeks=1)
+
+        # Astro month
+        deltaMonth = timedelta(seconds=2630016)
+        # Astro year
+        deltaYear = timedelta(seconds=31557600)
+
+        self._intervals["days"] = []
+        self._intervals["weeks"] = []
+        self._intervals["months"] = []
+        self._intervals["years"] = []
+
+        startDate = now
+        for d in range(self._max_daily):
+            self._intervals["days"].append((
+                startDate - deltaDay,
+                startDate - deltaMicSec,
+            ))
+            startDate -= deltaDay
+
+        startDate = now
+        for d in range(self._max_weekly):
+            self._intervals["weeks"].append((
+                startDate - deltaWeek,
+                startDate - deltaMicSec,
+            ))
+            startDate -= deltaWeek
+
+        startDate = now
+        for d in range(self._max_monthly):
+            self._intervals["months"].append((
+                startDate - deltaMonth,
+                startDate - deltaMicSec,
+            ))
+            startDate -= deltaMonth
+
+        startDate = now
+        for d in range(self._max_yearly):
+            self._intervals["years"].append((
+                startDate - deltaYear,
+                startDate - deltaMicSec,
+            ))
+            startDate -= deltaYear
+
+        return self
+
+
     def _check_daily_numbers(self, cur_date):
-        last = self._dates[-1]
 
-        dt = last - cur_date
-        dc = dt.days
+        isInDays = 0
+        foundRange = None
+        for dayRange in self._intervals["days"]:
+            dateBegin, dateEnd = dayRange
+            if cur_date >= dateBegin and cur_date <= dateEnd:
+                isInDays = 1
+                foundRange = dayRange
+                break
 
-        score = 1
-        if dc >= self._max_daily:
-            score -= 1
-
-        return score > 0
+        return isInDays, foundRange
 
     def _check_weekly_numbers(self, cur_date):
-        last = self._dates[-1]
 
-        dt = last - cur_date
-        dc = dt.days
-        wc = int( math.floor(dc / 7.0) )
+        isInDays = 0
+        foundRange = None
+        for dayRange in self._intervals["weeks"]:
+            dateBegin, dateEnd = dayRange
+            if cur_date >= dateBegin and cur_date <= dateEnd:
+                isInDays = 1
+                foundRange = dayRange
+                break
 
-        score = 1
-        if wc >= self._max_weekly + 1:
-            score -= 1
-        elif wc == 1 and dc < self._max_daily:
-            score -= 1
-
-        weeks = {}
-        for d in self._dates:
-            dt = last - d
-            wn = int( math.floor(dt.days / 7.0) )
-            if wn not in weeks:
-                weeks[ wn ] = set()
-            weeks[ wn ].add( d )
-
-        for wn in weeks:
-            s = weeks[ wn ]
-            if cur_date in s:
-                if len(s) > 1:
-                    # keep most old
-                    l = list(s)
-                    l.sort(reverse=True)
-                    if l[-1] != cur_date:
-                        score -= 1
-
-        return score > 0
+        return isInDays, foundRange
 
     def _check_monthly_numbers(self, cur_date):
-        last = self._dates[-1]
 
-        mc = (last.year - cur_date.year)*12 + last.month - cur_date.month
-        dt = last - cur_date
-        dc = dt.days
-        wc = int( math.floor(dc / 7.0) )
+        isInDays = 0
+        foundRange = None
+        for dayRange in self._intervals["months"]:
+            dateBegin, dateEnd = dayRange
+            if cur_date >= dateBegin and cur_date <= dateEnd:
+                isInDays = 1
+                foundRange = dayRange
+                break
 
-        score = 1
-        if mc >= self._max_monthly + 1:
-            score -= 1
-        elif mc == 1 and wc < self._max_weekly:
-            score -= 1
-
-        months = {}
-        for d in self._dates:
-            mn = (last.year - d.year)*12 + last.month - d.month
-            if mn not in months:
-                months[ mn ] = set()
-            months[ mn ].add( d )
-
-        for mn in months:
-            s = months[ mn ]
-            if cur_date in s:
-                if len(s) > 1:
-                    # keep most old
-                    l = list(s)
-                    l.sort(reverse=True)
-                    if l[-1] != cur_date:
-                        score -= 1
-
-        return score > 0
+        return isInDays, foundRange
 
     def _check_yearly_numbers(self, cur_date):
-        last = self._dates[-1]
 
-        mc = (last.year - cur_date.year)*12 + last.month - cur_date.month
-        yc = last.year - cur_date.year
+        isInDays = 0
+        foundRange = None
+        for dayRange in self._intervals["years"]:
+            dateBegin, dateEnd = dayRange
+            if cur_date >= dateBegin and cur_date <= dateEnd:
+                isInDays = 1
+                foundRange = dayRange
+                break
 
-        score = 1
-        # wee need more distance
-        if yc >= self._max_yearly + 1:
-            score -= 1
-        # or at least one year diff
-        elif yc == 1 and mc < self._max_monthly:
-            score -= 1
-
-        years = {}
-        for d in self._dates:
-            yn = last.year - d.year
-            if yn not in years:
-                years[ yn ] = set()
-            years[ yn ].add( d )
-
-        for yn in years:
-            s = years[ yn ]
-            if cur_date in s:
-                if len(s) > 1:
-                    # keep most old
-                    l = list(s)
-                    l.sort(reverse=True)
-                    if l[0] != cur_date:
-                        score -= 1
-
-        return score > 0
+        return isInDays, foundRange
 
     def getCleanedUpList(self):
         """
         @return: list of saved dates
         @rtype: list
         """
+        self._setupIntervals()
 
         cleaned = []
 
-        for d in self._dates:
-            chk = 0
-            chk += self._check_daily_numbers(d)
-            chk += self._check_weekly_numbers(d)
-            chk += self._check_monthly_numbers(d)
-            chk += self._check_yearly_numbers(d)
+        dayRanges = {}
 
-            if not chk:
-                continue
-            cleaned.append(d)
+        for d in self._dates:
+
+            chkD, rangeD = self._check_daily_numbers(d)
+            if chkD:
+                if dayRanges.get(rangeD, None) is None:
+                    dayRanges[rangeD] = []
+                dayRanges[ rangeD ].append(d)
+
+            chkD, rangeD = self._check_weekly_numbers(d)
+            if chkD:
+                if dayRanges.get(rangeD, None) is None:
+                    dayRanges[rangeD] = []
+                dayRanges[ rangeD ].append(d)
+
+            chkD, rangeD = self._check_monthly_numbers(d)
+            if chkD:
+                if dayRanges.get(rangeD, None) is None:
+                    dayRanges[rangeD] = []
+                dayRanges[ rangeD ].append(d)
+
+            chkD, rangeD = self._check_yearly_numbers(d)
+            if chkD:
+                if dayRanges.get(rangeD, None) is None:
+                    dayRanges[rangeD] = []
+                dayRanges[ rangeD ].append(d)
+
+        for dateRange, dateList in dayRanges.items():
+
+            dateList.sort()
+
+            dt = dateRange[1] - dateRange[0]
+            # Get most recent on day, but most early on other ranges
+            if dt <= timedelta(days=1):
+                cleaned.append(dateList[-1])
+            else:
+                cleaned.append(dateList[0])
+
+        cleaned = list(set(cleaned))
+        cleaned.sort()
 
         return cleaned
 
@@ -221,16 +253,14 @@ class CleanUpPlan:
         @rtype: list
         """
 
+        self._setupIntervals()
+
         removed = []
 
-        for d in self._dates:
-            chk = 0
-            chk += self._check_daily_numbers(d)
-            chk += self._check_weekly_numbers(d)
-            chk += self._check_monthly_numbers(d)
-            chk += self._check_yearly_numbers(d)
+        cleaned = set(self.getCleanedUpList())
 
-            if chk:
+        for d in self._dates:
+            if d in cleaned:
                 continue
             removed.append(d)
 

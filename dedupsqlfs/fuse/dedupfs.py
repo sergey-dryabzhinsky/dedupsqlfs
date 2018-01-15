@@ -199,8 +199,9 @@ class DedupFS(object): # {{{1
             # Real signal, try to umount FS
             self.getLogger().warning("Catch signal %r! Try to umount FS!" % signum)
             try:
-                subprocess.Popen(["umount", self.mountpoint]).wait()
-                return
+                ret = subprocess.Popen(["umount", self.mountpoint]).wait()
+                if ret == 0:
+                    return
             except:
                 pass
 

@@ -190,7 +190,6 @@ def main(): # {{{1
     msg += "\nDefaults to %r." % constants.COMPRESSION_TYPE_NONE
 
     grp_compress.add_argument('--compress', dest='compression', metavar='METHOD', action="append",
-                              choices=compression_methods_cmd,
                               default=[constants.COMPRESSION_TYPE_NONE], help=msg)
 
     grp_compress.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")

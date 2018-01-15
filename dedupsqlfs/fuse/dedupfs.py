@@ -196,19 +196,26 @@ class DedupFS(object): # {{{1
 
     def onSignalUmount(self, signum=None, frame=None, error=False):
         if signum:
+            # Real signal, try to umount FS
             self.getLogger().warning("Catch signal %r! Try to umount FS!" % signum)
+            try:
+                subprocess.Popen(["umount", self.mountpoint]).wait()
+                return
+            except:
+                pass
 
+        # Or simulate umount on errors
         try:
             if error:
                 self.getLogger().warning("Try to umount FS manual!")
-                fuse.close(umount=False)
+                fuse.close(False)
             else:
-                fuse.close()
+                fuse.close(True)
         except:
             pass
 
         try:
-            subprocess.Popen(["umount", self.mountpoint]).wait()
+            subprocess.Popen(["umount", "-l", self.mountpoint]).wait()
         except:
             pass
 

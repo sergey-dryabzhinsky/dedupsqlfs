@@ -82,7 +82,7 @@ class TableTree( Table ):
     def find_by_parent_name(self, parent_id, name_id):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT id, inode_id FROM `%s` WHERE parent_id=? AND name_id=?" % self.getName(), (parent_id, name_id,))
+        cur.execute("SELECT id, inode_id, name_id FROM `%s` WHERE parent_id=? AND name_id=?" % self.getName(), (parent_id, name_id,))
         item = cur.fetchone()
         self.stopTimer('find_by_parent_name')
         return item

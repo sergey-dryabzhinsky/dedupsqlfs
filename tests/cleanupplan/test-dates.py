@@ -20,43 +20,46 @@ from pprint import pprint
 from datetime import datetime, timedelta
 from dedupsqlfs.dt import CleanUpPlan
 
-cleanUp = CleanUpPlan()
-cleanUp.setCleanUpPlanDaily(14)
-cleanUp.setCleanUpPlanWeekly(8)
-cleanUp.setCleanUpPlanMonthly(6)
-cleanUp.setCleanUpPlanYearly(2)
+daysToTest = 800
 
-now = datetime.now()
-dates = [now,]
+today = datetime.now() - timedelta(days=daysToTest)
+dates = []
 
-for x in range(1, 800):
+# Days to test
+for x in range(1, daysToTest):
 
-    dt = timedelta(days=x)
+    dt = timedelta(days=1)
 
-    dates.append(now - dt)
+    today += dt
 
-dates.sort()
+    print("\nToday: %s" % today)
 
-# pprint(dates)
+    dates.append(today)
 
-cleanUp.setDates(dates)
+    cleanUp = CleanUpPlan(today)
+    cleanUp.setCleanUpPlanDaily(14)
+    cleanUp.setCleanUpPlanWeekly(8)
+    cleanUp.setCleanUpPlanMonthly(6)
+    cleanUp.setCleanUpPlanYearly(2)
 
-cleanedDates = cleanUp.getCleanedUpList()
+    dates.sort()
 
-pprint(cleanedDates)
+    print("Dates to clean:")
+    pprint(dates)
 
-# Add one more day
+    cleanUp.setDates(dates)
 
-dt = timedelta(days=1)
+    cleanedDates = cleanUp.getCleanedUpList()
 
-dates = cleanedDates
+    print("Cleaned dates:")
+    pprint(cleanedDates)
 
-dates.append(now + dt)
+    removedDates = cleanUp.getRemovedList()
 
-dates.sort()
-cleanUp.setDates(dates)
+    print("Removed dates:")
+    pprint(removedDates)
 
-cleanedDates = cleanUp.getCleanedUpList()
+    dates = cleanedDates
 
-pprint(cleanedDates)
+    print("")
 

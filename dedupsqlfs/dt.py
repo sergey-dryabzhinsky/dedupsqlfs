@@ -5,8 +5,7 @@ Module to work with dates
 
 __author__ = 'sergey'
 
-import math
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time as dtime
 
 class CleanUpPlan:
     """
@@ -36,10 +35,18 @@ class CleanUpPlan:
 
     _intervals = None
 
-    def __init__(self):
+    _now = None
+
+    def __init__(self, now=None):
         self._dates = []
         self._intervals = {}
+        self._now = now
         pass
+
+    def getNow(self):
+        if self._now is None:
+            self._now = datetime.now()
+        return self._now
 
     def setCleanUpPlan(self, max_daily, max_weekly, max_monthly, max_yearly):
         if type(max_daily) is not int:
@@ -91,7 +98,7 @@ class CleanUpPlan:
         if self._intervals:
             return self
 
-        now = datetime.now()
+        now = self.getNow()
 
         deltaMicSec = timedelta(microseconds=1)
         deltaDay = timedelta(days=1)
@@ -107,37 +114,65 @@ class CleanUpPlan:
         self._intervals["months"] = []
         self._intervals["years"] = []
 
-        startDate = now
+        todayMax = datetime.combine(now.date(), dtime()) + deltaDay - deltaMicSec
+        todayMin = datetime.combine(now.date(), dtime())
+
         for d in range(self._max_daily):
             self._intervals["days"].append((
-                startDate - deltaDay,
-                startDate - deltaMicSec,
+                todayMin,
+                todayMax,
             ))
-            startDate -= deltaDay
+            todayMin -= deltaDay
+            todayMax -= deltaDay
 
-        startDate = now
+        weekMax = datetime.combine(now.date(), dtime()) + deltaDay - deltaMicSec
+        weekMin = datetime.combine(now.date(), dtime()) - deltaWeek + deltaDay
         for d in range(self._max_weekly):
             self._intervals["weeks"].append((
-                startDate - deltaWeek,
-                startDate - deltaMicSec,
+                weekMin,
+                weekMax,
             ))
-            startDate -= deltaWeek
+            weekMin -= deltaWeek
+            weekMax -= deltaWeek
 
-        startDate = now
+
+        nextM = now.date()
+        nextM = nextM.replace(day=1)
+        try:
+            nextM = nextM.replace(month=nextM.month+1)
+        except:
+            if nextM.month == 12:
+                nextM = nextM.replace(year=nextM.year + 1, month=1)
+        currM = now.date()
+        currM = currM.replace(day=1)
+
+        monthMax = datetime.combine(nextM, dtime()) - deltaMicSec
+        monthMin = datetime.combine(currM, dtime())
         for d in range(self._max_monthly):
             self._intervals["months"].append((
-                startDate - deltaMonth,
-                startDate - deltaMicSec,
+                monthMin,
+                monthMax,
             ))
-            startDate -= deltaMonth
+            try:
+                monthMin = monthMin.replace(month=monthMin.month-1)
+            except:
+                if monthMin.month == 1:
+                    monthMin = monthMin.replace(year=nextM.year - 1, month=12)
 
-        startDate = now
+            monthMax = monthMax.replace(day=1)
+            monthMax = datetime.combine(monthMax.date(), dtime()) - deltaMicSec
+
+
+        yearMax = datetime.combine(now.replace(now.year+1, month=1, day=1).date(), dtime()) - deltaMicSec
+        yearMin = datetime.combine(now.replace(month=1, day=1).date(), dtime())
         for d in range(self._max_yearly):
             self._intervals["years"].append((
-                startDate - deltaYear,
-                startDate - deltaMicSec,
+                yearMin,
+                yearMax,
             ))
-            startDate -= deltaYear
+            yearMax = yearMin - deltaMicSec
+            yearMin = datetime.combine(yearMin.replace(year=yearMin.year-1).date(), dtime())
+
 
         return self
 

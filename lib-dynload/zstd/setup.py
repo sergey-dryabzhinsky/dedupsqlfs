@@ -7,7 +7,7 @@ from setuptools.command.build_ext import build_ext
 from distutils import ccompiler
 
 
-VERSION = (1, 3, 1)
+VERSION = (1, 3, 3)
 VERSION_STR = ".".join([str(x) for x in VERSION])
 
 # Minor versions
@@ -102,9 +102,12 @@ zstdFiles = []
 if not SUP_EXTERNAL:
 
     for f in [
-            'compress/zstd_compress.c', 'compress/zstdmt_compress.c', 'compress/fse_compress.c', 'compress/huf_compress.c',
+            'compress/zstd_compress.c', 'compress/zstdmt_compress.c',
+            'compress/zstd_fast.c', 'compress/zstd_double_fast.c', 'compress/zstd_lazy.c', 'compress/zstd_opt.c', 'compress/zstd_ldm.c',
+            'compress/fse_compress.c', 'compress/huf_compress.c',
+
             'decompress/zstd_decompress.c', 'common/fse_decompress.c', 'decompress/huf_decompress.c',
-#            'dictBuilder/zdict.c', 'dictBuilder/divsufsort.c',
+
             'common/entropy_common.c', 'common/zstd_common.c', 'common/xxhash.c', 'common/error_private.c', 'common/pool.c',
         ]:
         zstdFiles.append('zstd/lib/'+f)
@@ -117,9 +120,6 @@ if not SUP_EXTERNAL:
 
 zstdFiles.append('src/python-zstd.c')
 
-#tests="tests.generic"
-#if SUP_LEGACY:
-#    tests="tests.legacy"
 tests="tests"
 
 setup(

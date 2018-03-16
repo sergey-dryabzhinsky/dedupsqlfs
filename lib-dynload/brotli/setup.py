@@ -4,6 +4,7 @@
 # See file LICENSE for detail or copy at https://opensource.org/licenses/MIT
 
 import os
+import sys
 import platform
 import re
 import unittest
@@ -21,6 +22,12 @@ from distutils import log
 
 
 CURR_DIR = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
+
+EXTRA_OPT=0
+if "--extra-optimization" in sys.argv:
+    # Support legacy output format functions
+    EXTRA_OPT=1
+    sys.argv.remove("--extra-optimization")
 
 
 def get_version():
@@ -78,6 +85,18 @@ class BuildExt(build_ext):
             else:
                 cxx_sources.append(source)
         extra_args = ext.extra_compile_args or []
+
+        if self.compiler.compiler_type == "msvc":
+            if EXTRA_OPT:
+                extra_args.insert(0, "/O2")
+            else:
+                extra_args.insert(0, "/Ot")
+        else:
+            if EXTRA_OPT:
+                extra_args.insert(0, "-march=native")
+                extra_args.insert(0, "-O3")
+            else:
+                extra_args.insert(0, "-O2")
 
         objects = []
         for lang, sources in (('c', c_sources), ('c++', cxx_sources)):

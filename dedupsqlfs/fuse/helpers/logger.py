@@ -53,6 +53,10 @@ class DDSFlogger(object):
         self._filter_calls.add(call)
 
 
+    def isEnabledFor(self, level):
+        return self._logger.isEnabledFor(level)
+
+
     def _init(self):
         self._logger = logging.getLogger(self._app.__class__.__name__)
         self._logger.setLevel(logging.ERROR)

@@ -83,27 +83,25 @@ class DDSFlogger(object):
             self._logger.addHandler(logging.StreamHandler(sys.stderr))
         # Convert verbosity argument to logging level?
         if self._app.getOption("verbosity") > 0:
-            if self._app.getOption("verbosity") <= 1:
+            if self._app.getOption("verbosity") >= 1:
                 self._logger.setLevel(logging.WARNING)
                 self.warning = self._log_warning
                 self.warn = self._log_warning
                 self.note = self._log_note
 
-            if self._app.getOption("verbosity") <= 2:
+            if self._app.getOption("verbosity") >= 2:
                 self._logger.setLevel(logging.INFO)
                 self.info = self._log_info
 
-            if self._app.getOption("verbosity") <= 3:
+            if self._app.getOption("verbosity") >= 3:
                 self._logger.setLevel(logging.DEBUG)
                 self.debug = self._log_debug
 
-            if self._app.getOption("verbosity") <= 4:
+            if self._app.getOption("verbosity") >= 4:
                 self._logger.setLevel(DEBUG_VERBOSE)
                 self.debugv = self._log_debugv
                 self.logCall = self._log_call
-
-            else:
-                self._logger.setLevel(logging.NOTSET)
+        return
 
 
     def _empty_log_call(self, func, msg, *args):

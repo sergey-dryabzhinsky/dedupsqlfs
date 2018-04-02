@@ -59,6 +59,9 @@ class DDSFlogger(object):
     def getEffectiveLevel(self):
         return self._logger.getEffectiveLevel()
 
+    def setLevel(self, level):
+        return self._logger.setLevel(level)
+
 
     def _init(self):
         self._logger = logging.getLogger(self._app.__class__.__name__)

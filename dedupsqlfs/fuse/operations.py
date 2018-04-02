@@ -1161,12 +1161,12 @@ class DedupOperations(llfuse.Operations): # {{{1
             raise self.__except_to_status('unlink', e, errno.EIO)
 
     def write(self, fh, offset, buf): # {{{3
-        if self.isReadonly(): raise FUSEError(errno.EROFS)
+        if self.isReadonly():
+            raise FUSEError(errno.EROFS)
+
         try:
             start_time = time()
 
-            # Too much output
-            # self.__log_call('write', 'write(fh=%i, offset=%i, buf=%r)', fh, offset, buf)
             self.getLogger().logCall('write', '->(fh=%i, offset=%i)', fh, offset)
 
             #length = len(buf)
@@ -1178,12 +1178,11 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             attrs = self.__get_inode_row(fh)
             if attrs["size"] < offset + length:
-                # self.getTable("inode").set_size(fh, offset + length)
                 attrs["size"] = offset + length
-                self.cached_attrs.set(fh, attrs, writed=True)
 
-            if not self.isReadonly():
-                self.__setattr_mtime(fh)
+            attrs["mtime"] = self.newctime64()
+
+            self.cached_attrs.set(fh, attrs, writed=True)
 
             # self.bytes_written is incremented from release().
             self.__cache_meta_hook()
@@ -1920,7 +1919,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             (self.time_spent_caching_nodes, 'Caching tree nodes'),
             (self.time_spent_interning, 'Interning path components'),
             (self.time_spent_reading, 'Reading data stream'),
-            (self.time_spent_writing, 'Writing data stream'),
+            (self.time_spent_writing, 'Writing data stream (cumulative)'),
             (self.time_spent_writing_blocks, 'Writing data blocks (cumulative)'),
             (self.time_spent_writing_blocks - self.time_spent_compressing - self.time_spent_hashing, 'Writing blocks to database'),
             (self.getManager().getTimeSpent(), 'Database operations'),
@@ -2175,14 +2174,24 @@ class DedupOperations(llfuse.Operations): # {{{1
 
                 if self.getOption('compression_recompress_now'):
 
-                    if self.application.isDeprecated(compression):
+                    if compression != "none" and self.application.isDeprecated(compression):
+                        self.getLogger().note("FS thinks that compression %r is deprecated. Block data will be recompressed!")
+                        self.getLogger().note("hash id: %s, value: %r, inode: %s, block-number: %s",
+                            hash_id, hash_value, inode, block_number
+                        )
+
                         result["recompress"] = True
                         result["data"] = data_block
 
 
                 if self.getOption('compression_recompress_current'):
 
-                    if not self.application.isMethodSelected(compression):
+                    if compression != "none" and not self.application.isMethodSelected(compression):
+                        self.getLogger().note("FS thinks that compression %r is not selected. Block data will be recompressed!")
+                        self.getLogger().note("hash id: %s, value: %r, inode: %s, block-number: %s",
+                            hash_id, hash_value, inode, block_number
+                        )
+
                         result["recompress"] = True
                         result["data"] = data_block
 
@@ -2266,7 +2275,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             cmethod_id = self.getCompressionTypeId(cmethod)
 
-            if blocksReCompress.get(hash_id):
+            if blocksReCompress.get(hash_id, False) is True:
                 tableBlock.update(hash_id, cdata)
             else:
                 tableBlock.insert(hash_id, cdata)

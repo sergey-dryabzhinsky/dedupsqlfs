@@ -104,7 +104,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.timing_report_last_run = time()
 
         self.time_spent_logging = 0
-        self.time_spent_caching_nodes = 0
+        self.time_spent_caching_items = 0
         self.time_spent_hashing = 0
         self.time_spent_interning = 0
         self.time_spent_querying_tree = 0
@@ -1197,16 +1197,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     # ---------------------------- Miscellaneous methods: {{{2
 
-    def __get_cached_xattrs(self, inode):
-        xattrs = self.cached_xattrs.get(inode)
-        if xattrs is None:
-            xattrs = self.getTable("xattr").find(inode)
-            if xattrs:
-                self.cached_xattrs.set(inode, xattrs)
-            else:
-                self.cached_xattrs.set(inode, False)
-        return xattrs
-
     def __update_mounted_subvolume_time(self):
         t_now = time()
         if t_now - self.subvol_uptate_last_run < 1:
@@ -1218,15 +1208,29 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.getTable('subvolume').update_time(self.mounted_subvolume["id"])
         return self
 
+    def __get_cached_xattrs(self, inode):
+        xattrs = self.cached_xattrs.get(inode)
+        if xattrs is None:
+            start_time = time()
+            xattrs = self.getTable("xattr").find(inode)
+            if xattrs:
+                self.cached_xattrs.set(inode, xattrs)
+            else:
+                self.cached_xattrs.set(inode, False)
+            self.time_spent_caching_items += time() - start_time
+        return xattrs
+
     def __get_id_by_name(self, name):
         self.getLogger().logCall('__get_id_by_name', '->(name=%r)', name)
 
         name_id = self.cached_names.get(name)
         if not name_id:
+            start_time = time()
             name_id = self.getTable("name").find(name)
             if name_id:
                 self.cached_names.set(name, name_id)
                 self.cached_name_ids.set(name_id, name)
+            self.time_spent_caching_items += time() - start_time
         if not name_id:
             self.getLogger().debug("! No name %r found, cant find name.id" % name)
             raise FUSEError(errno.ENOENT)
@@ -1237,10 +1241,12 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         name = self.cached_name_ids.get(name_id)
         if not name:
+            start_time = time()
             name = self.getTable("name").get(name_id)
             if name:
                 self.cached_names.set(name, name_id)
                 self.cached_name_ids.set(name_id, name)
+            self.time_spent_caching_items += time() - start_time
         if not name:
             self.getLogger().debug("! No name for %r found, cant find name" % name_id)
             raise FUSEError(errno.ENOENT)
@@ -1269,7 +1275,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.cached_nodes.set((parent_inode, name), node)
 
-            self.time_spent_caching_nodes += time() - start_time
+            self.time_spent_caching_items += time() - start_time
 
         return node
 
@@ -1289,7 +1295,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.cached_nodes.set(inode, node)
 
-            self.time_spent_caching_nodes += time() - start_time
+            self.time_spent_caching_items += time() - start_time
 
         return node
 
@@ -1306,7 +1312,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.cached_attrs.set(inode_id, row)
 
-            self.time_spent_caching_nodes += time() - start_time
+            self.time_spent_caching_items += time() - start_time
 
         self.getLogger().logCall('__get_inode_row', '<-(row=%r)', row)
         return row
@@ -1916,7 +1922,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.time_spent_logging = self.getLogger().getTimeIn()
         timings = [
             (self.time_spent_logging, 'Logging debug info'),
-            (self.time_spent_caching_nodes, 'Caching tree nodes'),
+            (self.time_spent_caching_items, 'Caching all items - inodes, tree-nodes, names, xattrs'),
             (self.time_spent_interning, 'Interning path components'),
             (self.time_spent_reading, 'Reading data stream'),
             (self.time_spent_writing, 'Writing data stream (cumulative)'),

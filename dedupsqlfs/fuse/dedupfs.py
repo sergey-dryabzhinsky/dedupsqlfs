@@ -36,7 +36,7 @@ if int(fv[0]) < 1 and int(fv[1]) < 41:
 
 # Local modules that are mostly useful for debugging.
 from dedupsqlfs.my_formats import format_size
-from dedupsqlfs.log import logging, DEBUG_VERBOSE, IMPORTANT
+from dedupsqlfs.fuse.helpers.logger import DDSFlogger
 from dedupsqlfs.fuse.compress.mp import MultiProcCompressTool, BaseCompressTool
 from dedupsqlfs.fuse.compress.mt import MultiThreadCompressTool
 from dedupsqlfs.lib import constants
@@ -65,7 +65,8 @@ class DedupFS(object): # {{{1
         self.operations = operations
         self.operations.setApplication(self)
 
-        self.__init_logging()
+        # Initialize a Logger() object to handle logging.
+        self.logger = DDSFlogger(application=self)
 
         kwargs = kw
         kwargs.update(self.parseFuseOptions(self.getOption("mountoption")))
@@ -79,9 +80,9 @@ class DedupFS(object): # {{{1
                 self._opts.append("%s=%s" % (key, value,))
                 self.options[ key ] = value
 
-        self.getLogger().debug("DedupFS options: %r" % (self.options,))
-        self.getLogger().debug("DedupFS mount options: %r" % (self._opts,))
-        self.getLogger().debug("DedupFS mountpoint: %r" % (self.mountpoint,))
+        self.getLogger().debug("DedupFS options: %r", self.options)
+        self.getLogger().debug("DedupFS mount options: %r", self._opts)
+        self.getLogger().debug("DedupFS mountpoint: %r", self.mountpoint)
 
         if self.getOption("multi_cpu") == "process":
             self._compressTool = MultiProcCompressTool()
@@ -112,7 +113,7 @@ class DedupFS(object): # {{{1
 
         cf_path = os.path.join(os.path.dirname(mf_path), 'cache_flusher')
         if not os.path.isfile(cf_path):
-            self.getLogger().warning("Can't find cache flushing helper! By path: %r" % cf_path)
+            self.getLogger().warning("Can't find cache flushing helper! By path: %r", cf_path)
             return
 
         self._cache_flusher_proc = Popen(
@@ -145,7 +146,7 @@ class DedupFS(object): # {{{1
                 f.write("pre-init\n")
                 f.close()
             except:
-                self.getLogger().warning("DedupFS::preInit - can't write to %r" % self.getOption('lock_file'))
+                self.getLogger().warning("DedupFS::preInit - can't write to %r", self.getOption('lock_file'))
                 pass
 
 
@@ -164,7 +165,7 @@ class DedupFS(object): # {{{1
                 f.write("check-not-unmounted\n")
                 f.close()
             except:
-                self.getLogger().warning("DedupFS::preInit - can't write to %r" % self.getOption('lock_file'))
+                self.getLogger().warning("DedupFS::preInit - can't write to %r", self.getOption('lock_file'))
                 pass
 
 
@@ -172,7 +173,7 @@ class DedupFS(object): # {{{1
         manager = self.operations.getManager()
 
         is_mounted = manager.getTable('option').get('mounted')
-        self.getLogger().debug("DedupFS::preInit - FS flag mounted = %r" % is_mounted)
+        self.getLogger().debug("DedupFS::preInit - FS flag mounted = %r", is_mounted)
         if is_mounted and int(is_mounted):
             self.getLogger().critical("Error: Seems like filesystem was not unmounted correctly! Run defragmentation!")
 
@@ -187,7 +188,7 @@ class DedupFS(object): # {{{1
             try:
                 os.unlink(self.getOption('lock_file'))
             except:
-                self.getLogger().warning("DedupFS::postDestroy can't remove %r" % self.getOption('lock_file'))
+                self.getLogger().warning("DedupFS::postDestroy can't remove %r", self.getOption('lock_file'))
                 pass
         self._compressTool.stop()
         self.operations.getManager().close()
@@ -197,7 +198,7 @@ class DedupFS(object): # {{{1
     def onSignalUmount(self, signum=None, frame=None, error=False):
         if signum:
             # Real signal, try to umount FS
-            self.getLogger().warning("Catch signal %r! Try to umount FS!" % signum)
+            self.getLogger().warning("Catch signal %r! Try to umount FS!", signum)
             try:
                 ret = subprocess.Popen(["umount", self.mountpoint]).wait()
                 if ret == 0:
@@ -300,7 +301,7 @@ class DedupFS(object): # {{{1
         defaultLevel = self.getOption("compression_level")
 
         methods = self.getOption("compression")
-        self.getLogger().info("_fixCompressionOptions - Compression methods = %r" % (methods,))
+        self.getLogger().info("_fixCompressionOptions - Compression methods = %r", methods)
         if methods and type(methods) in (tuple, list,):
             methods = list(methods)
             auto_type = None
@@ -315,11 +316,11 @@ class DedupFS(object): # {{{1
                     continue
                 if method == constants.COMPRESSION_TYPE_NONE:
                     continue
-                self.getLogger().info("_fixCompressionOptions - Compression method %r set level %r" % (method, level,))
+                self.getLogger().info("_fixCompressionOptions - Compression method %r set level %r",  method, level)
                 self._compressTool.getCompressor(method).setCustomCompressionLevel(level)
             if auto_type:
                 methods = [auto_type]
-            self.getLogger().info("_fixCompressionOptions - Compression methods after fix = %r" % (methods,))
+            self.getLogger().info("_fixCompressionOptions - Compression methods after fix = %r", methods)
             self._compressTool.setOption("compression", methods)
 
         self._compressTool.setOption("compression_minimal_ratio", self.getOption("compression_minimal_ratio"))
@@ -365,34 +366,6 @@ class DedupFS(object): # {{{1
         return self
 
     # Miscellaneous methods: {{{2
-
-    def __init_logging(self): # {{{3
-        # Initialize a Logger() object to handle logging.
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.setLevel(logging.ERROR)
-        if self.getOption('memory_usage'):
-            self.logger.setLevel(IMPORTANT)
-
-        # Configure logging of messages to a file.
-        if self.getOption("log_file"):
-            handler = logging.StreamHandler(open(self.getOption("log_file"), 'a'))
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-            handler.setFormatter(formatter)
-            self.getLogger().addHandler(handler)
-        if not self.getOption("log_file_only"):
-            self.logger.addHandler(logging.StreamHandler(sys.stderr))
-        # Convert verbosity argument to logging level?
-        if self.getOption("verbosity") > 0:
-            if self.getOption("verbosity") <= 1:
-                self.getLogger().setLevel(logging.WARNING)
-            elif self.getOption("verbosity") <= 2:
-                self.getLogger().setLevel(logging.INFO)
-            elif self.getOption("verbosity") <= 3:
-                self.getLogger().setLevel(logging.DEBUG)
-            elif self.getOption("verbosity") <= 4:
-                self.getLogger().setLevel(DEBUG_VERBOSE)
-            else:
-                self.getLogger().setLevel(logging.NOTSET)
 
     def report_disk_usage(self): # {{{3
 

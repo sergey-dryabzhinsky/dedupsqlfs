@@ -21,7 +21,7 @@ class Snapshot(Subvolume):
             return
 
         if not with_name:
-            self.getLogger().error("Define name for snapshot to which you need to copy %r data!" % from_subvol)
+            self.getLogger().error("Define name for snapshot to which you need to copy %r data!", from_subvol)
             return
 
         subvol_from = from_subvol

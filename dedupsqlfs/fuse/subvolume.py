@@ -84,7 +84,7 @@ class Subvolume(object):
         tableSubvol = self.getTable('subvolume')
         subvolItem = tableSubvol.find(name)
         if subvolItem:
-            self.getLogger().warning("Subvolume with name %r already exists!" % name)
+            self.getLogger().warning("Subvolume with name %r already exists!", name)
             return subvolItem
 
         newt_ns, newt_s = self.getManager().newctime64_32()
@@ -380,7 +380,7 @@ class Subvolume(object):
 
         subvolItem = tableSubvol.find(name)
         if not subvolItem:
-            self.getLogger().error("Subvolume with name %r not found!" % name)
+            self.getLogger().error("Subvolume with name %r not found!", name)
             return False
 
         try:
@@ -393,7 +393,7 @@ class Subvolume(object):
             tableSubvol.delete(subvolItem["id"])
         except Exception as e:
             self.getLogger().warn("Can't remove subvolume!")
-            self.getLogger().error("E: %s" % e)
+            self.getLogger().error("E: %s", e)
             import traceback
             self.getLogger().error(traceback.format_exc())
             return
@@ -420,7 +420,7 @@ class Subvolume(object):
 
         subvol_id = tableSubvol.find(name)
         if not subvol_id:
-            self.getLogger().error("Subvolume with name %r not found!" % name)
+            self.getLogger().error("Subvolume with name %r not found!", name)
             return False
 
         changed = self.getTable('subvolume').readonly(subvol_id, flag)
@@ -456,7 +456,7 @@ class Subvolume(object):
 
         subvolItem = tableSubvol.find(name)
         if not subvolItem:
-            self.getLogger().error("Subvolume with name %r not found!" % name)
+            self.getLogger().error("Subvolume with name %r not found!", name)
             return 0
 
         if subvolItem["stats_at"] and subvolItem["stats"]:
@@ -488,7 +488,7 @@ class Subvolume(object):
 
         subvolItem = tableSubvol.find(name)
         if not subvolItem:
-            self.getLogger().error("Subvolume with name %r not found!" % name)
+            self.getLogger().error("Subvolume with name %r not found!", name)
             return False
 
         if subvolItem["stats_at"] and subvolItem["stats"]:
@@ -609,7 +609,7 @@ class Subvolume(object):
 
         subvolRootItem = tableSubvol.find(ROOT_SUBVOLUME_NAME)
         if not subvolRootItem:
-            self.getLogger().error("Subvolume with name %r not found!" % ROOT_SUBVOLUME_NAME)
+            self.getLogger().error("Subvolume with name %r not found!", ROOT_SUBVOLUME_NAME)
             return False
 
         if name == ROOT_SUBVOLUME_NAME:
@@ -625,7 +625,7 @@ class Subvolume(object):
 
         subvolItem = tableSubvol.find(name)
         if not subvolItem:
-            self.getLogger().error("Subvolume with name %r not found!" % name)
+            self.getLogger().error("Subvolume with name %r not found!", name)
             return False
 
         if subvolItem["root_diff_at"] and subvolItem["root_diff"]:
@@ -642,8 +642,6 @@ class Subvolume(object):
         subvolUniqHashes = tableIndex.get_uniq_hashes()
 
         diffUniqHashes = subvolUniqHashes - rootUniqHashes
-        rootUniqHashes = None
-        subvolUniqHashes = None
 
         diffBlocksCount = tableIndex.count_hashes_by_hashes(diffUniqHashes)
         diffRealSize = tableIndex.count_realsize_by_hashes(diffUniqHashes)
@@ -679,7 +677,7 @@ class Subvolume(object):
 
         subvolItem = tableSubvol.find(name)
         if not subvolItem:
-            self.getLogger().error("Subvolume with name %r not found!" % name)
+            self.getLogger().error("Subvolume with name %r not found!", name)
             return False
 
         tableSubvol.stats_time(subvolItem["id"], 0)

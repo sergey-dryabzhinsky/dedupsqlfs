@@ -206,20 +206,20 @@ class BaseCompressTool(object):
         cdata_length = data_length
         min_len = data_length
 
-        self.getLogger().debug("BaseCompressTool::_compressData - data length = %r" % data_length)
+        self.getLogger().debug("BaseCompressTool::_compressData - data length = %r", data_length)
 
         for m in self._methods:
             comp = self._compressors[ m ]
-            self.getLogger().debug("BaseCompressTool::_compressData - try method = %r" % m)
+            self.getLogger().debug("BaseCompressTool::_compressData - try method = %r", m)
             if comp.isDataMayBeCompressed(data, data_length):
                 # Prefer custom level options
                 useLevel = comp.getCustomCompressionLevel()
                 if not useLevel:
                     useLevel = level
-                self.getLogger().debug("BaseCompressTool::_compressData - try level %r" % useLevel)
+                self.getLogger().debug("BaseCompressTool::_compressData - try level %r", useLevel)
                 _cdata = comp.compressData(data, useLevel)
                 cdata_length = len(_cdata)
-                self.getLogger().debug("BaseCompressTool::_compressData - cdata length = %r" % cdata_length)
+                self.getLogger().debug("BaseCompressTool::_compressData - cdata length = %r", cdata_length)
                 if min_len > cdata_length:
                     self.getLogger().debug("BaseCompressTool::_compressData - good try - compressed data is less than before")
                     min_len = cdata_length
@@ -228,7 +228,7 @@ class BaseCompressTool(object):
 
         cratio = (data_length - cdata_length) * 1.0 / data_length
 
-        self.getLogger().debug("BaseCompressTool::_compressData - RESULT - cratio = %.3f, minRatio = %.3f, cmethod = %r" % (cratio, minRatio, cmethod,))
+        self.getLogger().debug("BaseCompressTool::_compressData - RESULT - cratio = %.3f, minRatio = %.3f, cmethod = %r", cratio, minRatio, cmethod)
 
         if data_length <= min_len and not forced:
             cdata = data

@@ -82,8 +82,6 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.cached_blocks = StorageTimeSize()
         self.cached_indexes = IndexTime()
 
-        self.calls_log_filter = set()
-
         self.fs_mounted_at = time()
         self.mounted_subvolume = None
         self.mounted_subvolume_name = None
@@ -106,7 +104,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.timing_report_last_run = time()
 
         self.time_spent_logging = 0
-        self.time_spent_caching_nodes = 0
+        self.time_spent_caching_items = 0
         self.time_spent_hashing = 0
         self.time_spent_interning = 0
         self.time_spent_querying_tree = 0
@@ -258,11 +256,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         @return:
         @rtype: bool
         """
-        c = {}
-        for key in ctx.__slots__:
-            c[ key ] = getattr(ctx, key)
-
-        self.__log_call('access', '->(inode=%i, mode=%o, ctx=%r)', inode, mode, c)
+        self.getLogger().logCall('access', '->(inode=%i, mode=%o)', inode, mode)
         if mode != os.F_OK and not self.__access(inode, mode, ctx):
             return False
         return True
@@ -289,7 +283,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         @return: @raise FUSEError:
         @rtype: tuple
         """
-        self.__log_call('create', '->(inode_parent=%i, name=%r, mode=%o, flags=%o)',
+        self.getLogger().logCall('create', '->(inode_parent=%i, name=%r, mode=%o, flags=%o)',
                         inode_parent, name, mode, flags)
         if self.isReadonly(): return errno.EROFS
 
@@ -297,7 +291,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             node = self.__get_tree_node_by_parent_inode_and_name(inode_parent, name)
         except FUSEError as e:
             node = None
-            self.__log_call('create', '-- node with that name not found, creating...')
+            self.getLogger().logCall('create', '-- node with that name not found, creating...')
             if e.errno != errno.ENOENT:
                 raise
 
@@ -305,7 +299,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             inode, parent_ino = self.__insert(inode_parent, name, mode, 0, ctx)
         else:
             if flags & os.O_CREAT and flags & os.O_EXCL:
-                self.__log_call('open', '-- exception for existed file! cant create!')
+                self.getLogger().logCall('open', '-- exception for existed file! cant create!')
                 raise FUSEError(errno.EIO)
 
             inode = node["inode_id"]
@@ -315,7 +309,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         self.__cache_meta_hook()
 
-        self.__log_call('create', '<-(created inode=%i, attrs=%r)', fh, attrs)
+        self.getLogger().logCall('create', '<-(created inode=%i, attrs=%r)', fh, attrs)
 
         return (fh, attrs,)
 
@@ -330,11 +324,11 @@ class DedupOperations(llfuse.Operations): # {{{1
                 f.write("destroy\n")
                 f.close()
             except:
-                self.getLogger().warning("DedupFS: can't write to %r" % self.getOption('lock_file'))
+                self.getLogger().warning("DedupFS: can't write to %r", self.getOption('lock_file'))
                 pass
 
         try:
-            self.__log_call('destroy', '->()')
+            self.getLogger().logCall('destroy', '->()')
             self.getLogger().debug("Umount file system in process...")
             if not self.getOption("readonly"):
 
@@ -370,19 +364,19 @@ class DedupOperations(llfuse.Operations): # {{{1
                 f.write("destroy-done\n")
                 f.close()
             except:
-                self.getLogger().warning("DedupFS: can't write to %r" % self.getOption('lock_file'))
+                self.getLogger().warning("DedupFS: can't write to %r", self.getOption('lock_file'))
                 pass
 
         return 0
 
     def flush(self, fh):
         try:
-            self.__log_call('flush', '->(fh=%i)', fh)
+            self.getLogger().logCall('flush', '->(fh=%i)', fh)
 
             attr = self.__get_inode_row(fh)
-            self.__log_call('flush', '-- inode(%i) size=%i', fh, attr["size"])
+            self.getLogger().logCall('flush', '-- inode(%i) size=%i', fh, attr["size"])
             if not attr["size"]:
-                self.__log_call('flush', '-- inode(%i) zero sized! remove all blocks', fh)
+                self.getLogger().logCall('flush', '-- inode(%i) zero sized! remove all blocks', fh)
                 self.getTable("inode_hash_block").delete(fh)
                 self.cached_blocks.forget(fh)
             else:
@@ -404,7 +398,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         @return: 
         """
         try:
-            self.__log_call('forget', '->(inode_list=%r)', inode_list)
+            self.getLogger().logCall('forget', '->(inode_list=%r)', inode_list)
             # clear block cache
             for ituple in inode_list:
                 self.cached_attrs.expire(ituple[0])
@@ -424,15 +418,15 @@ class DedupOperations(llfuse.Operations): # {{{1
         @param datasync: force sync data
         @return: None
         """
-        self.__log_call('fsync', '->(fh=%i, datasync=%r)', fh, datasync)
+        self.getLogger().logCall('fsync', '->(fh=%i, datasync=%r)', fh, datasync)
 
         if self.isReadonly(): raise FUSEError(errno.EROFS)
 
         try:
             attr = self.__get_inode_row(fh)
-            self.__log_call('fsync', '-- inode(%i) size=%i', fh, attr["size"])
+            self.getLogger().logCall('fsync', '-- inode(%i) size=%i', fh, attr["size"])
             if not attr["size"]:
-                self.__log_call('fsync', '-- inode(%i) zero sized! remove all blocks', fh)
+                self.getLogger().logCall('fsync', '-- inode(%i) zero sized! remove all blocks', fh)
                 self.getTable("inode_hash_block").delete(fh)
                 self.cached_blocks.forget(fh)
                 self.cached_indexes.expire(fh)
@@ -452,20 +446,20 @@ class DedupOperations(llfuse.Operations): # {{{1
             raise self.__except_to_status('fsync', e, errno.EIO)
 
     def fsyncdir(self, fh, datasync):
-        self.__log_call('fsyncdir', '->(fh=%i, datasync=%r)', fh, datasync)
+        self.getLogger().logCall('fsyncdir', '->(fh=%i, datasync=%r)', fh, datasync)
         if self.isReadonly(): raise FUSEError(errno.EROFS)
         self.cached_attrs.flush(fh)
         self.__cache_meta_hook()
 
     def getattr(self, inode): # {{{3
-        self.__log_call('getattr', '->(inode=%r)', inode)
+        self.getLogger().logCall('getattr', '->(inode=%r)', inode)
         v = self.__get_inode_row(inode)
         attr = self.__fill_attr_inode_row(v)
-        self.__log_call('getattr', '<-(inode=%r, attr=%r)', inode, v)
+        self.getLogger().logCall('getattr', '<-(inode=%r, attr=%r)', inode, v)
         return attr
 
     def getxattr(self, inode, name): # {{{3
-        self.__log_call('getxattr', '->(inode=%r, name=%r)', inode, name)
+        self.getLogger().logCall('getxattr', '->(inode=%r, name=%r)', inode, name)
 
         xattrs = self.__get_cached_xattrs(inode)
         if not xattrs:
@@ -478,22 +472,22 @@ class DedupOperations(llfuse.Operations): # {{{1
         try:
             # Disable log for fuse functions
             if self.getOption("verbosity") < 2:
-                self.calls_log_filter.add("none")
+                self.getLogger().addCallToFilter("none")
 
             # Process the custom command line options defined in __init__().
             if self.getOption("block_size") is not None:
                 self.block_size = self.getOption("block_size")
 
             if self.block_size < constants.BLOCK_SIZE_MIN:
-                self.getLogger().warn("Block size less than minimal! (%i<%i) Set to default minimal." % (
+                self.getLogger().warn("Block size less than minimal! (%i<%i) Set to default minimal.",
                     self.block_size, constants.BLOCK_SIZE_MIN
-                ))
+                )
                 self.block_size = constants.BLOCK_SIZE_MIN
 
             if self.block_size > constants.BLOCK_SIZE_MAX:
-                self.getLogger().warn("Block size more than maximal! (%i>%i) Set to default maximal." % (
+                self.getLogger().warn("Block size more than maximal! (%i>%i) Set to default maximal.",
                     self.block_size, constants.BLOCK_SIZE_MAX
-                ))
+                )
                 self.block_size = constants.BLOCK_SIZE_MAX
 
             if self.getOption("compression_method") is not None:
@@ -573,7 +567,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 sys.exit(1)
 
             # Initialize the logging and database subsystems.
-            self.__log_call('init', 'init()')
+            self.getLogger().logCall('init', 'init()')
 
             # Disable synchronous operation. This is supposed to make SQLite perform
             # MUCH better but it has to be enabled wit --nosync because you might
@@ -606,7 +600,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                     f.write("inited\n")
                     f.close()
                 except:
-                    self.getLogger().warning("DedupFS: can't write to %r" % self.getOption('lock_file'))
+                    self.getLogger().warning("DedupFS: can't write to %r", self.getOption('lock_file'))
                     pass
 
             self.getLogger().debug("DedupFS: inited and mounted")
@@ -619,7 +613,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             raise e
 
     def link(self, inode, new_parent_inode, new_name): # {{{3
-        self.__log_call('link', '->(inode=%r, parent_inode=%r, new_name=%r)', inode, new_parent_inode, new_name)
+        self.getLogger().logCall('link', '->(inode=%r, parent_inode=%r, new_name=%r)', inode, new_parent_inode, new_name)
         if self.isReadonly(): raise FUSEError(errno.EROFS)
 
         parent_node = self.__get_tree_node_by_inode(new_parent_inode)
@@ -643,22 +637,22 @@ class DedupOperations(llfuse.Operations): # {{{1
         return self.__getattr(inode)
 
     def listxattr(self, inode):
-        self.__log_call('listxattr', '->(inode=%r)', inode)
+        self.getLogger().logCall('listxattr', '->(inode=%r)', inode)
         xattrs = self.__get_cached_xattrs(inode)
-        self.__log_call('listxattr', '<-(xattrs=%r)', xattrs)
+        self.getLogger().logCall('listxattr', '<-(xattrs=%r)', xattrs)
         if not xattrs:
             return []
         return xattrs.keys()
 
     def lookup(self, parent_inode, name):
-        self.__log_call('lookup', '->(parent_inode=%r, name=%r)', parent_inode, name)
+        self.getLogger().logCall('lookup', '->(parent_inode=%r, name=%r)', parent_inode, name)
 
         node = self.__get_tree_node_by_parent_inode_and_name(parent_inode, name)
         v = self.__get_inode_row(node["inode_id"])
         attr = self.__fill_attr_inode_row(v)
-        self.__log_call('lookup', '-- node=%r', node)
+        self.getLogger().logCall('lookup', '-- node=%r', node)
 
-        self.__log_call('lookup', '<-(attr=%r)', v)
+        self.getLogger().logCall('lookup', '<-(attr=%r)', v)
 
         self.__cache_meta_hook()
         return attr
@@ -667,12 +661,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         if self.isReadonly(): raise FUSEError(errno.EROFS)
 
         try:
-            c = {}
-            for key in ctx.__slots__:
-                c[ key ] = getattr(ctx, key)
-
-            self.__log_call('mkdir', '->(parent_inode=%i, name=%r, mode=%o, ctx=%r)',
-                            parent_inode, name, mode, c)
+            self.getLogger().logCall('mkdir', '->(parent_inode=%i, name=%r, mode=%o)',
+                            parent_inode, name, mode)
 
             nameTable = self.getTable("name")
             inodeTable = self.getTable("inode")
@@ -702,12 +692,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         if self.isReadonly(): raise FUSEError(errno.EROFS)
 
         try:
-            c = {}
-            for key in ctx.__slots__:
-                c[ key ] = getattr(ctx, key)
-
-            self.__log_call('mknod', '->(parent_inode=%i, name=%r, mode=%o, rdev=%i, ctx=%r)',
-                            parent_inode, name, mode, rdev, c)
+            self.getLogger().logCall('mknod', '->(parent_inode=%i, name=%r, mode=%o, rdev=%i)',
+                            parent_inode, name, mode, rdev)
 
             inode, parent_ino = self.__insert(parent_inode, name, mode, 0, ctx, rdev)
             return self.__getattr(inode)
@@ -719,7 +705,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         """
         Return filehandler ID
         """
-        self.__log_call('open', '->(inode=%i, flags=%o)', inode, flags)
+        self.getLogger().logCall('open', '->(inode=%i, flags=%o)', inode, flags)
         # Make sure the file exists?
 
         if not self.isReadonly():
@@ -727,7 +713,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         if flags & os.O_TRUNC:
             if self.isReadonly(): raise FUSEError(errno.EROFS)
-            self.__log_call('open', '-- truncate file!')
+            self.getLogger().logCall('open', '-- truncate file!')
             row = self.__get_inode_row(inode)
             row["size"] = 0
             self.cached_attrs.set(inode, row, writed=True)
@@ -736,7 +722,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         return inode
 
     def opendir(self, inode): # {{{3
-        self.__log_call('opendir', 'opendir(inode=%i)', inode)
+        self.getLogger().logCall('opendir', 'opendir(inode=%i)', inode)
         # Make sure the file exists?
         self.__get_tree_node_by_inode(inode)
         # Make sure the file is readable and/or writable.
@@ -754,23 +740,23 @@ class DedupOperations(llfuse.Operations): # {{{1
         try:
             start_time = time()
 
-            self.__log_call('read', '->(fh=%i, offset=%i, size=%i)', fh, offset, size, )
+            self.getLogger().logCall('read', '->(fh=%i, offset=%i, size=%i)', fh, offset, size, )
 
             row = self.__get_inode_row(fh)
             if row["size"] <= offset:
-                self.__log_call('read', '-- oversized! inode(size)=%i', row["size"] )
+                self.getLogger().logCall('read', '-- oversized! inode(size)=%i', row["size"] )
                 data = b''
             else:
                 if row["size"] < offset + size:
                     size = row["size"] - offset
-                    self.__log_call('read', '-- oversized! inode(size)=%i, corrected read size: %i', row["size"], size )
+                    self.getLogger().logCall('read', '-- oversized! inode(size)=%i, corrected read size: %i', row["size"], size )
                 data = self.__get_block_data_by_offset(fh, offset, size)
             lr = len(data)
             self.bytes_read += lr
 
             # Too much output
             # self.__log_call('read', 'readed: size=%s, data=%r', len(data), data, )
-            self.__log_call('read', '<-readed: size=%s', lr, )
+            self.getLogger().logCall('read', '<-readed: size=%s', lr, )
 
             self.__cache_block_hook()
 
@@ -784,15 +770,15 @@ class DedupOperations(llfuse.Operations): # {{{1
         @param fh: file handler number - inode.id
         @type  fh: int
         """
-        self.__log_call('readdir', '->(fh=%r, offset=%i)', fh, offset)
+        self.getLogger().logCall('readdir', '->(fh=%r, offset=%i)', fh, offset)
 
         inode = fh
 
-        self.__log_call('readdir', '-- (inode=%r)', inode)
+        self.getLogger().logCall('readdir', '-- (inode=%r)', inode)
 
         cur_node = self.__get_tree_node_by_inode(inode)
 
-        self.__log_call('readdir', '-- (node=%r)', cur_node)
+        self.getLogger().logCall('readdir', '-- (node=%r)', cur_node)
 
         for node in self.getTable("tree").get_children(cur_node["id"], offset):
             #if node["id"] <= offset:
@@ -800,13 +786,13 @@ class DedupOperations(llfuse.Operations): # {{{1
             name = self.__get_name_by_id(node['name_id'])
             irow = self.__get_inode_row(node["inode_id"])
             attrs = self.__fill_attr_inode_row(irow)
-            self.__log_call('readdir', '<-(name=%r, attrs=%r, node=%i)',
+            self.getLogger().logCall('readdir', '<-(name=%r, attrs=%r, node=%i)',
                             name, irow, node["id"])
             yield (name, attrs, node["id"],)
 
 
     def readlink(self, inode): # {{{3
-        self.__log_call('readlink', '->(inode=%i)', inode)
+        self.getLogger().logCall('readlink', '->(inode=%i)', inode)
 
         target = self.getTable("link").find_by_inode(inode)
         if not target:
@@ -814,7 +800,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         return target
 
     def release(self, fh): # {{{3
-        self.__log_call('release', '->(fh=%i)', fh)
+        self.getLogger().logCall('release', '->(fh=%i)', fh)
         #self.__flush_inode_cached_blocks(fh, clean=True)
         self.cached_blocks.expire(fh)
         self.cached_attrs.expire(fh)
@@ -824,7 +810,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         return 0
 
     def releasedir(self, fh):
-        self.__log_call('releasedir', '->(fh=%r)', fh)
+        self.getLogger().logCall('releasedir', '->(fh=%r)', fh)
         self.cached_attrs.expire(fh)
         self.__cache_meta_hook()
         self.__gc_hook()
@@ -835,10 +821,10 @@ class DedupOperations(llfuse.Operations): # {{{1
             raise FUSEError(errno.EROFS)
 
         try:
-            self.__log_call('removexattr', '->(inode=%i, name=%r)', inode, name)
+            self.getLogger().logCall('removexattr', '->(inode=%i, name=%r)', inode, name)
 
             xattrs = self.__get_cached_xattrs(inode)
-            self.__log_call('removexattr', '==(xattrs=%r)', xattrs)
+            self.getLogger().logCall('removexattr', '==(xattrs=%r)', xattrs)
             if not xattrs:
                 raise FUSEError(llfuse.ENOATTR)
             if name not in xattrs:
@@ -846,7 +832,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             del xattrs[name]
             self.getTable("xattr").update(inode, xattrs)
             self.cached_xattrs.set(inode, xattrs)
-            self.__log_call('removexattr', '<-(xattrs=%r)', xattrs)
+            self.getLogger().logCall('removexattr', '<-(xattrs=%r)', xattrs)
             self.__setattr_ctime(inode)
             return 0
         except FUSEError:
@@ -861,7 +847,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             raise FUSEError(errno.EROFS)
 
         try:
-            self.__log_call('rename', '->(inode_parent_old=%i, name_old=%r, inode_parent_new=%i, name_new=%r)',
+            self.getLogger().logCall('rename', '->(inode_parent_old=%i, name_old=%r, inode_parent_new=%i, name_new=%r)',
                             inode_parent_old, name_old, inode_parent_new, name_new)
 
             # Try to remove the existing target path (if if exists).
@@ -908,7 +894,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             raise FUSEError(errno.EROFS)
 
         try:
-            self.__log_call('rmdir', '->(inode_parent=%i, name=%r)', inode_parent, name)
+            self.getLogger().logCall('rmdir', '->(inode_parent=%i, name=%r)', inode_parent, name)
 
             if not self.isReadonly():
                 self.__setattr_mtime(inode_parent)
@@ -935,7 +921,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             for a in attr.__slots__:
                 v[a] = getattr(attr, a)
 
-            self.__log_call('setattr', '->(inode=%i, attr=%r)', inode, v)
+            self.getLogger().logCall('setattr', '->(inode=%i, attr=%r)', inode, v)
 
             row = self.__get_inode_row(inode)
             self.getLogger().debug("-- current row: %r", row)
@@ -1066,7 +1052,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             raise FUSEError(errno.EROFS)
 
         try:
-            self.__log_call('setxattr', '->(inode=%i, name=%r, value=%r)', inode, name, value)
+            self.getLogger().logCall('setxattr', '->(inode=%i, name=%r, value=%r)', inode, name, value)
 
             xattrs = self.__get_cached_xattrs(inode)
 
@@ -1075,7 +1061,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 newxattr = True
                 xattrs = {}
 
-            self.__log_call('setxattr', '==(xattrs=%r)', xattrs)
+            self.getLogger().logCall('setxattr', '==(xattrs=%r)', xattrs)
 
             # Don't do DB write if value not changed
             if xattrs.get(name) != value:
@@ -1088,7 +1074,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
                 self.__setattr_ctime(inode)
 
-                self.__log_call('setxattr', '<-(xattrs=%r)', xattrs)
+                self.getLogger().logCall('setxattr', '<-(xattrs=%r)', xattrs)
 
             # Update cache ttl
             self.cached_xattrs.set(inode, xattrs)
@@ -1101,11 +1087,11 @@ class DedupOperations(llfuse.Operations): # {{{1
             raise self.__except_to_status('setxattr', e, errno.ENOENT)
 
     def stacktrace(self):
-        self.__log_call('stacktrace', '->()')
+        self.getLogger().logCall('stacktrace', '->()')
 
     def statfs(self): # {{{3
         try:
-            self.__log_call('statfs', '->()')
+            self.getLogger().logCall('statfs', '->()')
             # Use os.statvfs() to report the host file system's storage capacity.
             host_fs = os.statvfs(os.path.expanduser( self.getOption("data")) )
 
@@ -1142,12 +1128,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def symlink(self, inode_parent, name, target, ctx): # {{{3
         try:
-            c = {}
-            for key in ctx.__slots__:
-                c[ key ] = getattr(ctx, key)
-
-            self.__log_call('symlink', '->(inode_parent=%i, name=%r, target=%r, ctx=%r)',
-                            inode_parent, name, target, c)
+            self.getLogger().logCall('symlink', '->(inode_parent=%i, name=%r, target=%r)',
+                            inode_parent, name, target)
             if self.isReadonly(): return -errno.EROFS
 
             # Create an inode to hold the symbolic link.
@@ -1163,7 +1145,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def unlink(self, parent_inode, name): # {{{3
         try:
-            self.__log_call('unlink', '->(parent_inode=%i, name=%r)', parent_inode, name)
+            self.getLogger().logCall('unlink', '->(parent_inode=%i, name=%r)', parent_inode, name)
             if self.isReadonly():
                 raise FUSEError(errno.EROFS)
 
@@ -1179,29 +1161,28 @@ class DedupOperations(llfuse.Operations): # {{{1
             raise self.__except_to_status('unlink', e, errno.EIO)
 
     def write(self, fh, offset, buf): # {{{3
-        if self.isReadonly(): raise FUSEError(errno.EROFS)
+        if self.isReadonly():
+            raise FUSEError(errno.EROFS)
+
         try:
             start_time = time()
 
-            # Too much output
-            # self.__log_call('write', 'write(fh=%i, offset=%i, buf=%r)', fh, offset, buf)
-            self.__log_call('write', '->(fh=%i, offset=%i)', fh, offset)
+            self.getLogger().logCall('write', '->(fh=%i, offset=%i)', fh, offset)
 
             #length = len(buf)
             #self.__log_call('write', 'length(buf)=%i', length)
 
             length = self.__write_block_data_by_offset(fh, offset, buf)
 
-            self.__log_call('write', 'length(writed)=%i', length)
+            self.getLogger().logCall('write', 'length(writed)=%i', length)
 
             attrs = self.__get_inode_row(fh)
             if attrs["size"] < offset + length:
-                # self.getTable("inode").set_size(fh, offset + length)
                 attrs["size"] = offset + length
-                self.cached_attrs.set(fh, attrs, writed=True)
 
-            if not self.isReadonly():
-                self.__setattr_mtime(fh)
+            attrs["mtime"] = self.newctime64()
+
+            self.cached_attrs.set(fh, attrs, writed=True)
 
             # self.bytes_written is incremented from release().
             self.__cache_meta_hook()
@@ -1216,16 +1197,6 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     # ---------------------------- Miscellaneous methods: {{{2
 
-    def __get_cached_xattrs(self, inode):
-        xattrs = self.cached_xattrs.get(inode)
-        if xattrs is None:
-            xattrs = self.getTable("xattr").find(inode)
-            if xattrs:
-                self.cached_xattrs.set(inode, xattrs)
-            else:
-                self.cached_xattrs.set(inode, False)
-        return xattrs
-
     def __update_mounted_subvolume_time(self):
         t_now = time()
         if t_now - self.subvol_uptate_last_run < 1:
@@ -1237,36 +1208,52 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.getTable('subvolume').update_time(self.mounted_subvolume["id"])
         return self
 
+    def __get_cached_xattrs(self, inode):
+        xattrs = self.cached_xattrs.get(inode)
+        if xattrs is None:
+            start_time = time()
+            xattrs = self.getTable("xattr").find(inode)
+            if xattrs:
+                self.cached_xattrs.set(inode, xattrs)
+            else:
+                self.cached_xattrs.set(inode, False)
+            self.time_spent_caching_items += time() - start_time
+        return xattrs
+
     def __get_id_by_name(self, name):
-        self.__log_call('__get_id_by_name', '->(name=%r)', name)
+        self.getLogger().logCall('__get_id_by_name', '->(name=%r)', name)
 
         name_id = self.cached_names.get(name)
         if not name_id:
+            start_time = time()
             name_id = self.getTable("name").find(name)
             if name_id:
                 self.cached_names.set(name, name_id)
                 self.cached_name_ids.set(name_id, name)
+            self.time_spent_caching_items += time() - start_time
         if not name_id:
             self.getLogger().debug("! No name %r found, cant find name.id" % name)
             raise FUSEError(errno.ENOENT)
         return name_id
 
     def __get_name_by_id(self, name_id):
-        self.__log_call('__get_name_by_id', '->(name_id=%r)', name_id)
+        self.getLogger().logCall('__get_name_by_id', '->(name_id=%r)', name_id)
 
         name = self.cached_name_ids.get(name_id)
         if not name:
+            start_time = time()
             name = self.getTable("name").get(name_id)
             if name:
                 self.cached_names.set(name, name_id)
                 self.cached_name_ids.set(name_id, name)
+            self.time_spent_caching_items += time() - start_time
         if not name:
             self.getLogger().debug("! No name for %r found, cant find name" % name_id)
             raise FUSEError(errno.ENOENT)
         return name
 
     def __get_tree_node_by_parent_inode_and_name(self, parent_inode, name):
-        self.__log_call('__get_tree_node_by_parent_inode_and_name', '->(parent_inode=%i, name=%r)', parent_inode, name)
+        self.getLogger().logCall('__get_tree_node_by_parent_inode_and_name', '->(parent_inode=%i, name=%r)', parent_inode, name)
 
         node = self.cached_nodes.get((parent_inode, name))
 
@@ -1278,22 +1265,22 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             par_node = self.__get_tree_node_by_inode(parent_inode)
             if not par_node:
-                self.getLogger().debug("! No parent inode %i found, cant get tree node" % parent_inode)
+                self.getLogger().debug("! No parent inode %i found, cant get tree node", parent_inode)
                 raise FUSEError(errno.ENOENT)
 
             node = self.getTable("tree").find_by_parent_name(par_node["id"], name_id)
             if not node:
-                self.getLogger().debug("! No node %i and name %i found, cant get tree node" % (par_node["id"], name_id,))
+                self.getLogger().debug("! No node %i and name %i found, cant get tree node", par_node["id"], name_id)
                 raise FUSEError(errno.ENOENT)
 
             self.cached_nodes.set((parent_inode, name), node)
 
-            self.time_spent_caching_nodes += time() - start_time
+            self.time_spent_caching_items += time() - start_time
 
         return node
 
     def __get_tree_node_by_inode(self, inode):
-        self.__log_call('__get_tree_node_by_inode', '->(inode=%i)', inode)
+        self.getLogger().logCall('__get_tree_node_by_inode', '->(inode=%i)', inode)
 
         node = self.cached_nodes.get(inode)
 
@@ -1303,35 +1290,35 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             node = self.getTable("tree").find_by_inode(inode)
             if not node:
-                self.getLogger().debug("! No inode %i found, cant get tree node" % inode)
+                self.getLogger().debug("! No inode %i found, cant get tree node", inode)
                 raise FUSEError(errno.ENOENT)
 
             self.cached_nodes.set(inode, node)
 
-            self.time_spent_caching_nodes += time() - start_time
+            self.time_spent_caching_items += time() - start_time
 
         return node
 
     def __get_inode_row(self, inode_id):
-        self.__log_call('__get_inode_row', '->(inode=%i)', inode_id)
+        self.getLogger().logCall('__get_inode_row', '->(inode=%i)', inode_id)
         row = self.cached_attrs.get(inode_id)
         if not row:
             start_time = time()
 
             row = self.getTable("inode").get(inode_id)
             if not row:
-                self.getLogger().debug("! No inode %i found, cant get row" % inode_id)
+                self.getLogger().debug("! No inode %i found, cant get row", inode_id)
                 raise FUSEError(errno.ENOENT)
 
             self.cached_attrs.set(inode_id, row)
 
-            self.time_spent_caching_nodes += time() - start_time
+            self.time_spent_caching_items += time() - start_time
 
-        self.__log_call('__get_inode_row', '<-(row=%r)', row)
+        self.getLogger().logCall('__get_inode_row', '<-(row=%r)', row)
         return row
 
     def __fill_attr_inode_row(self, row): # {{{3
-        self.__log_call('__fill_attr_inode_row', '->(row=%r)', row)
+        self.getLogger().logCall('__fill_attr_inode_row', '->(row=%r)', row)
 
         result = llfuse.EntryAttributes()
 
@@ -1364,13 +1351,13 @@ class DedupOperations(llfuse.Operations): # {{{1
 
 
     def __getattr(self, inode_id): # {{{3
-        self.__log_call('__getattr', '->(inode=%i)', inode_id)
+        self.getLogger().logCall('__getattr', '->(inode=%i)', inode_id)
         row = self.__get_inode_row(inode_id)
         return self.__fill_attr_inode_row(row)
 
 
     def __get_index_from_cache(self, inode, block_number):
-        self.__log_call('__get_index_from_cache', '->(inode=%i, block_number=%i)', inode, block_number)
+        self.getLogger().logCall('__get_index_from_cache', '->(inode=%i, block_number=%i)', inode, block_number)
 
         item = self.cached_indexes.get(inode, block_number)
 
@@ -1390,7 +1377,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         return item
 
     def __get_block_from_cache(self, inode, block_number):
-        self.__log_call('__get_block_from_cache', '->(inode=%i, block_number=%i)', inode, block_number)
+        self.getLogger().logCall('__get_block_from_cache', '->(inode=%i, block_number=%i)', inode, block_number)
 
         block = self.cached_blocks.get(inode, block_number)
 
@@ -1442,9 +1429,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
                 item = tableBlock.get(indexItem["hash_id"])
                 if not item:
-                    err_str = "get block from DB: block not found! (inode=%i, block_number=%i, hash_id=%s)" % (inode, block_number, indexItem["hash_id"],)
-                    self.getLogger().error(err_str)
-                    raise OSError(err_str)
+                    self.getLogger().error("get block from DB: block not found! (inode=%i, block_number=%i, hash_id=%s)", inode, block_number, indexItem["hash_id"])
+                    raise OSError("get block from DB: block not found!")
 
             # XXX: how block can be defragmented away?
             if item:
@@ -1452,13 +1438,13 @@ class DedupOperations(llfuse.Operations): # {{{1
                 compType = tableHCT.get(indexItem["hash_id"])
 
                 self.getLogger().debug("-- decompress block")
-                self.getLogger().debug("-- in db size: %s" % len(item["data"]))
+                self.getLogger().debug("-- in db size: %s", len(item["data"]))
 
                 block.seek(0)
 
                 compression = self.getCompressionTypeName(compType["type_id"])
 
-                self.getLogger().debug("READ: Hash = %r, method = %r" % (indexItem["hash_id"], compression,))
+                self.getLogger().debug("READ: Hash = %r, method = %r", (indexItem["hash_id"], compression,))
 
                 tryAll = self.getOption('decompress_try_all')
 
@@ -1485,15 +1471,14 @@ class DedupOperations(llfuse.Operations): # {{{1
                                 # If stored wrong method - recompress
                                 if type_id != compType["type_id"]:
                                     self.getLogger().debug("-- Different compression types! Do recompress!")
-                                    self.getLogger().debug("----   compressed with: %s" % compression)
-                                    self.getLogger().debug("---- decompressed with: %s" % compressionT)
+                                    self.getLogger().debug("----   compressed with: %s", compression)
+                                    self.getLogger().debug("---- decompressed with: %s", compressionT)
                                     recompress = True
                                 break
                         if bdata is False:
-                            err_str = "Can't decompress data block! Data corruption? Original method was: %s (%d)" % (
-                                compression, compType["type_id"],)
-                            self.getLogger().error(err_str)
-                            raise OSError(err_str)
+                            self.getLogger().error("Can't decompress data block! Data corruption? Original method was: %s (%d)",
+                                compression, compType["type_id"])
+                            raise OSError("Can't decompress data block! Data corruption?")
                     block.write(bdata)
 
                 else:
@@ -1509,7 +1494,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                 if recompress:
                     self.getLogger().debug("-- will recompress block")
 
-                self.getLogger().debug("-- decomp size: %s" % len(block.getvalue()))
+                self.getLogger().debug("-- decomp size: %s", len(block.getvalue()))
 
             self.cached_blocks.set(inode, block_number, block, writed=recompress)
         return block
@@ -1526,7 +1511,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         @return: bytes
         """
-        self.getLogger().debug("__get_block_data_by_offset: inode = %s, offset = %s, size = %s" % (inode, offset, size,))
+        self.getLogger().debug("__get_block_data_by_offset: inode = %s, offset = %s, size = %s", inode, offset, size)
         if not size:
             return b''
 
@@ -1539,7 +1524,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         if not read_blocks:
             read_blocks = 1
 
-        self.getLogger().debug("-- first block number = %s, read blocks = %s, inblock offset = %s" % (first_block_number, read_blocks, inblock_offset,))
+        self.getLogger().debug("-- first block number = %s, read blocks = %s, inblock offset = %s", first_block_number, read_blocks, inblock_offset)
 
         readed_size = 0
 
@@ -1563,8 +1548,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         raw_value = raw_data.getvalue()
 
-        self.getLogger().debug("-- readed size = %s" % (readed_size,))
-        self.getLogger().debug("-- raw data size = %s" % (len(raw_value),))
+        self.getLogger().debug("-- readed size = %s", readed_size)
+        self.getLogger().debug("-- raw data size = %s", len(raw_value))
 
         return raw_value
 
@@ -1581,7 +1566,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         """
         size = len(block_data)
 
-        self.getLogger().debug("__write_block_data_by_offset: inode = %s, offset = %s, block size = %s" % (inode, offset, size,))
+        self.getLogger().debug("__write_block_data_by_offset: inode = %s, offset = %s, block size = %s", inode, offset, size)
 
         if not size:
             return 0
@@ -1595,7 +1580,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         if not write_blocks:
             write_blocks = 1
 
-        self.getLogger().debug("-- first block number = %s, size = %s, write blocks = %s, inblock offset = %s" % (first_block_number, size, write_blocks, inblock_offset,))
+        self.getLogger().debug("-- first block number = %s, size = %s, write blocks = %s, inblock offset = %s",
+                               first_block_number, size, write_blocks, inblock_offset)
 
         writed_size = 0
 
@@ -1618,7 +1604,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             writed_size += write_size
 
-        self.getLogger().debug("-- writed size = %s" % (writed_size,))
+        self.getLogger().debug("-- writed size = %s", writed_size)
 
         return writed_size
 
@@ -1633,7 +1619,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         optTable = self.getTable("option")
         inited = optTable.get("inited")
 
-        self.getLogger().debug("__init_store(): inited=%r" % inited)
+        self.getLogger().debug("__init_store(): inited=%r", inited)
 
         if not inited:
 
@@ -1686,7 +1672,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         optTable = self.getTable("option")
         subvTable = self.getTable('subvolume')
 
-        self.getLogger().debug("__select_subvolume(1): mounted_subvolume=%r" % self.mounted_subvolume_name)
+        self.getLogger().debug("__select_subvolume(1): mounted_subvolume=%r", self.mounted_subvolume_name)
 
         if self.mounted_subvolume_name:
             if subvTable.find(self.mounted_subvolume_name):
@@ -1697,7 +1683,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         else:
             check = optTable.get("mounted_subvolume", True)
             if check:
-                self.getLogger().debug("__select_subvolume(1.2): subvolume not found, select previous: %r" % check)
+                self.getLogger().debug("__select_subvolume(1.2): subvolume not found, select previous: %r", check)
                 self.mounted_subvolume_name = check
             else:
                 self.getLogger().warning("__select_subvolume(1.2): previous mounted subvolume not found, select default")
@@ -1719,20 +1705,9 @@ class DedupOperations(llfuse.Operations): # {{{1
         if self.getApplication().mountpoint:
             subvTable.mount_time(self.mounted_subvolume["id"], int(time()))
 
-        self.getLogger().debug("__select_snapshot(2): mounted_subvolume=%r" % self.mounted_subvolume_name)
+        self.getLogger().debug("__select_snapshot(2): mounted_subvolume=%r", self.mounted_subvolume_name)
 
         return
-
-
-    def __log_call(self, fun, msg, *args): # {{{3
-        # To disable all __log_call() invocations:
-        #  :%s/^\(\s\+\)\(self\.__log_call\)/\1#\2
-        # To re enable them:
-        #  :%s/^\(\s\+\)#\(self\.__log_call\)/\1\2
-        begin_t = time()
-        if not self.calls_log_filter or fun in self.calls_log_filter:
-            self.getLogger().debugv("%s %s" % (fun, msg,), *args)
-        self.time_spent_logging += time() - begin_t
 
 
     def __get_opts_from_db(self): # {{{3
@@ -1757,7 +1732,18 @@ class DedupOperations(llfuse.Operations): # {{{1
 
 
     def __insert(self, parent_inode, name, mode, size, ctx, rdev=0): # {{{3
-        self.getLogger().debug("__insert->(parent_inode=%i,name=%r,mode=%o,size=%i)", parent_inode, name, mode, size)
+        """
+
+        @param parent_inode:
+        @param name:
+        @param mode:
+        @param size:
+        @param ctx: llfuse.RequestContext
+        @param rdev:
+        @return:
+        """
+        self.getLogger().debug("__insert->(parent_inode=%i,name=%r,mode=%o,size=%i,ctx.uid=%i,ctx.gid=%i)",
+                               parent_inode, name, mode, size, ctx.uid, ctx.gid)
 
         nlinks = mode & stat.S_IFDIR and 2 or 1
 
@@ -1803,11 +1789,11 @@ class DedupOperations(llfuse.Operations): # {{{1
         @param  check_empty:    Check is this directory not empty
         @param  check_empty:    bool
         """
-        self.getLogger().debug("__remove->(parent_inode=%i,name=%r,check_empty=%r)" % (parent_inode, name, check_empty,))
+        self.getLogger().debug("__remove->(parent_inode=%i,name=%r,check_empty=%r)", parent_inode, name, check_empty)
 
         cur_node = self.__get_tree_node_by_parent_inode_and_name(parent_inode, name)
 
-        self.getLogger().debug("__remove -- (cur_node=%r)" % (cur_node,))
+        self.getLogger().debug("__remove -- (cur_node=%r)", cur_node)
 
         treeTable = self.getTable("tree")
         inodeTable = self.getTable("inode")
@@ -1866,7 +1852,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         attrs = self.__get_inode_row(inode)
         # Determine by whom the request is being made.
 
-        self.getLogger().debug("ctx.uid=%i, ctx.gid=%i", ctx.uid, ctx.gid)
+        self.getLogger().debug("__access: ctx.uid=%i, ctx.gid=%i", ctx.uid, ctx.gid)
 
         # Allow ROOT everything
         if ctx.uid == 0 or ctx.gid == 0:
@@ -1913,7 +1899,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         """
         start_time = time()
         compression = self.getCompressionTypeName( compression_type_id )
-        self.getLogger().debug("-- decompress block: type = %s" % compression)
+        self.getLogger().debug("-- decompress block: type = %s", compression)
         result = self.application.decompressData(compression, block_data)
         self.time_spent_decompressing += time() - start_time
         return result
@@ -1933,12 +1919,13 @@ class DedupOperations(llfuse.Operations): # {{{1
 
 
     def __report_timings(self): # {{{3
+        self.time_spent_logging = self.getLogger().getTimeIn()
         timings = [
             (self.time_spent_logging, 'Logging debug info'),
-            (self.time_spent_caching_nodes, 'Caching tree nodes'),
+            (self.time_spent_caching_items, 'Caching all items - inodes, tree-nodes, names, xattrs'),
             (self.time_spent_interning, 'Interning path components'),
             (self.time_spent_reading, 'Reading data stream'),
-            (self.time_spent_writing, 'Writing data stream'),
+            (self.time_spent_writing, 'Writing data stream (cumulative)'),
             (self.time_spent_writing_blocks, 'Writing data blocks (cumulative)'),
             (self.time_spent_writing_blocks - self.time_spent_compressing - self.time_spent_hashing, 'Writing blocks to database'),
             (self.getManager().getTimeSpent(), 'Database operations'),
@@ -1969,7 +1956,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                     self.getLogger().info("Cumulative timings of slowest operations:")
                     printed_heading = True
                 self.getLogger().info(
-                    " - %-*s%s (%.1f%%)" % (maxdescwidth, description + ':', format_timespan(timespan), percentage))
+                    " - %-*s%s (%.1f%%)", maxdescwidth, description + ':', format_timespan(timespan), percentage)
 
     def __report_database_timings(self): # {{{3
         if self.getLogger().isEnabledFor(logging.INFO):
@@ -1995,7 +1982,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                         self.getLogger().info("Cumulative timings of slowest tables:")
                         printed_heading = True
                     self.getLogger().info(
-                        " - %-*s%s (%.1f%%)" % (maxdescwidth, description + ':', format_timespan(timespan), percentage))
+                        " - %-*s%s (%.1f%%)", maxdescwidth, description + ':', format_timespan(timespan), percentage)
 
     def __report_database_operations(self): # {{{3
         if self.getLogger().isEnabledFor(logging.INFO):
@@ -2022,7 +2009,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                         self.getLogger().info("Cumulative count of operations:")
                         printed_heading = True
                     self.getLogger().info(
-                        " - %-*s%s (%.1f%%)" % (maxdescwidth, description + ':', count, percentage))
+                        " - %-*s%s (%.1f%%)", maxdescwidth, description + ':', count, percentage)
 
     def __report_memory_usage(self): # {{{3
         memory_usage = get_memory_usage()
@@ -2136,7 +2123,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             "writed_size": block_length,
         }
 
-        self.getLogger().debug("write block: inode=%s, block number=%s, data length=%s" % (inode, block_number, block_length,))
+        self.getLogger().debug("write block: inode=%s, block number=%s, data length=%s", inode, block_number, block_length)
 
         indexItem = self.__get_index_from_cache(inode, block_number)
 
@@ -2193,14 +2180,24 @@ class DedupOperations(llfuse.Operations): # {{{1
 
                 if self.getOption('compression_recompress_now'):
 
-                    if self.application.isDeprecated(compression):
+                    if compression != constants.COMPRESSION_TYPE_NONE and self.application.isDeprecated(compression):
+                        self.getLogger().debug("FS thinks that compression %r is deprecated. Block data will be recompressed!", compression)
+                        self.getLogger().debug("hash id: %s, value: %r, inode: %s, block-number: %s",
+                            hash_id, hash_value, inode, block_number
+                        )
+
                         result["recompress"] = True
                         result["data"] = data_block
 
 
                 if self.getOption('compression_recompress_current'):
 
-                    if not self.application.isMethodSelected(compression):
+                    if compression != constants.COMPRESSION_TYPE_NONE and not self.application.isMethodSelected(compression):
+                        self.getLogger().debug("FS thinks that compression %r is not selected. Block data will be recompressed!", compression)
+                        self.getLogger().debug("hash id: %s, value: %r, inode: %s, block-number: %s",
+                            hash_id, hash_value, inode, block_number
+                        )
+
                         result["recompress"] = True
                         result["data"] = data_block
 
@@ -2210,9 +2207,9 @@ class DedupOperations(llfuse.Operations): # {{{1
 
                     old_data = self.__decompress(old_block["data"], hash_CT["type_id"])
                     if old_data != data_block:
-                        self.getLogger().error("EEE: weird hashed data collision detected! hash id: %s, value: %r, inode: %s, block-number: %s" % (
+                        self.getLogger().error("EEE: weird hashed data collision detected! hash id: %s, value: %r, inode: %s, block-number: %s",
                             hash_id, hash_value, inode, block_number
-                        ))
+                        )
                         self.getLogger().warn("Use more strong hashing algo! I'm continue, but you are warned...")
                     old_hash = self.__hash(old_data)
                     if old_hash != hash_value:
@@ -2276,7 +2273,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         for hash_id, cItem in self.application.compressData(blocksToCompress):
             cdata, cmethod = cItem
 
-            self.getLogger().debug("WRITE: Hash = %r, method = %r" % (hash_id, cmethod,))
+            self.getLogger().debug("WRITE: Hash = %r, method = %r", hash_id, cmethod)
 
             comp_size = len(cdata)
 
@@ -2284,7 +2281,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             cmethod_id = self.getCompressionTypeId(cmethod)
 
-            if blocksReCompress.get(hash_id):
+            if blocksReCompress.get(hash_id, False) is True:
                 tableBlock.update(hash_id, cdata)
             else:
                 tableBlock.insert(hash_id, cdata)
@@ -2473,8 +2470,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             prsz = format_size(abs(sz))
 
-            self.getLogger().info("Total DB size change after vacuum: %s%.2f%% (%s%s)" % (
-                diffSign, abs(sz) * 100.0 / dbsz, diffSign, prsz,))
+            self.getLogger().info("Total DB size change after vacuum: %s%.2f%% (%s%s)",
+                diffSign, abs(sz) * 100.0 / dbsz, diffSign, prsz)
 
             self.getLogger().debug("Finished data vacuum in %s.", format_timespan(elapsed_time))
         return
@@ -2523,7 +2520,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.getLogger().debug("Clean unused path segments...")
 
         countNames = tableName.get_count()
-        self.getLogger().debug(" path segments: %d" % countNames)
+        self.getLogger().debug(" path segments: %d", countNames)
 
         count = 0
         current = 0
@@ -2571,7 +2568,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.getLogger().debug("Clean unused inodes (all)...")
 
         countInodes = tableInode.get_count()
-        self.getLogger().debug(" inodes: %d" % countInodes)
+        self.getLogger().debug(" inodes: %d", countInodes)
 
         count = 0
         current = 0
@@ -2620,7 +2617,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.getLogger().debug("Clean unused xattrs...")
 
         countXattrs = tableXattr.get_count()
-        self.getLogger().debug(" xattrs: %d" % countXattrs)
+        self.getLogger().debug(" xattrs: %d", countXattrs)
 
         count = 0
         current = 0
@@ -2668,7 +2665,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.getLogger().debug("Clean unused links...")
 
         countLinks = tableLink.get_count()
-        self.getLogger().debug(" links: %d" % countLinks)
+        self.getLogger().debug(" links: %d", countLinks)
 
         count = 0
         current = 0
@@ -2717,7 +2714,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.getLogger().debug("Clean unused block indexes...")
 
         countInodes = tableIndex.get_count_uniq_inodes()
-        self.getLogger().debug(" block inodes: %d" % countInodes)
+        self.getLogger().debug(" block inodes: %d", countInodes)
 
         count = 0
         countTrunc = 0
@@ -2788,7 +2785,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.getLogger().debug("Clean unused data blocks and hashes...")
 
         countHashes = tableHash.get_count()
-        self.getLogger().debug(" hashes: %d" % countHashes)
+        self.getLogger().debug(" hashes: %d", countHashes)
 
         count = 0
         current = 0
@@ -2847,7 +2844,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         sz = 0
         sub_start_time = time()
         if self.should_vacuum and self.gc_vacuum_enabled:
-            self.getLogger().debug(" vacuum %s table" % tableName)
+            self.getLogger().debug(" vacuum %s table", tableName)
             sz += self.getTable(tableName).vacuum()
             msg = "  vacuumed SQLite data store in %s."
         if msg:

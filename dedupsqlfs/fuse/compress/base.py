@@ -76,17 +76,16 @@ class BaseCompressTool(object):
     def init(self, logger):
         self.time_spent_compressing = 0
 
-        methods = self.getOption("compression")
-        if methods[0] in (constants.COMPRESSION_TYPE_FAST, constants.COMPRESSION_TYPE_BEST,):
-            methods = self._compressors.keys()
-        self._methods = set(methods)
+        methods = set(self.getOption("compression"))
+        if constants.COMPRESSION_TYPE_FAST in methods or constants.COMPRESSION_TYPE_BEST in methods:
+            methods = set(self._compressors.keys())
+        self._methods = methods
         if constants.COMPRESSION_TYPE_NONE in self._methods:
             self._methods.remove(constants.COMPRESSION_TYPE_NONE)
 
         self._logger = logger
 
-
-        self.getLogger().info("BaseCompressTool::init - methods = %r" % (self._methods,))
+        self.getLogger().info("BaseCompressTool::init - selected methods = %r", self._methods)
         return self
 
     def stop(self):

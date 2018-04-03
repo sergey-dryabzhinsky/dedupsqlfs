@@ -56,7 +56,6 @@ class DedupFS(object): # {{{1
 
         self.options = dict(vars(options))
 
-        self._compressors = {}
         self._readonly = False
 
         self._cache_flusher_proc = None

@@ -7,7 +7,7 @@ from setuptools.command.build_ext import build_ext
 from distutils import ccompiler
 
 
-VERSION = (1, 3, 3)
+VERSION = (1, 3, 4)
 VERSION_STR = ".".join([str(x) for x in VERSION])
 
 # Minor versions

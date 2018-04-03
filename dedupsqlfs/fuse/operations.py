@@ -2181,8 +2181,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                 if self.getOption('compression_recompress_now'):
 
                     if compression != constants.COMPRESSION_TYPE_NONE and self.application.isDeprecated(compression):
-                        self.getLogger().note("FS thinks that compression %r is deprecated. Block data will be recompressed!", compression)
-                        self.getLogger().note("hash id: %s, value: %r, inode: %s, block-number: %s",
+                        self.getLogger().debug("FS thinks that compression %r is deprecated. Block data will be recompressed!", compression)
+                        self.getLogger().debug("hash id: %s, value: %r, inode: %s, block-number: %s",
                             hash_id, hash_value, inode, block_number
                         )
 
@@ -2193,8 +2193,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                 if self.getOption('compression_recompress_current'):
 
                     if compression != constants.COMPRESSION_TYPE_NONE and not self.application.isMethodSelected(compression):
-                        self.getLogger().note("FS thinks that compression %r is not selected. Block data will be recompressed!", compression)
-                        self.getLogger().note("hash id: %s, value: %r, inode: %s, block-number: %s",
+                        self.getLogger().debug("FS thinks that compression %r is not selected. Block data will be recompressed!", compression)
+                        self.getLogger().debug("hash id: %s, value: %r, inode: %s, block-number: %s",
                             hash_id, hash_value, inode, block_number
                         )
 

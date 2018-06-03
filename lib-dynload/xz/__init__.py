@@ -30,7 +30,6 @@ if not imported:
     dirs = []
     if not build_dir or not os.path.isdir(build_dir):
         pass
-#        raise OSError("not found module build dir: lzma")
     else:
         dirs = os.listdir(build_dir)
     for d in dirs:
@@ -41,8 +40,7 @@ if not imported:
                 from .module import compress, decompress
 
                 imported = True
-            except Exception as e:
-                print(e)
+            except:
                 pass
 
             sys.path.pop(0)
@@ -54,14 +52,12 @@ if not imported:
     try:
         import importlib
         module = importlib.import_module("lzma")
-        print(dir(module))
 
         compress = module.compress
         decompress = module.decompress
 
         imported = True
-    except Exception as e:
-        print(e)
+    except:
         pass
 
     sys.path.insert(0, path)

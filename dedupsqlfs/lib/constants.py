@@ -5,7 +5,7 @@ Constants for modules
 
 __author__ = 'sergey'
 
-COMPRESSION_SUPPORTED=('lzo', 'zlib', 'bz2', 'lzma', 'snappy',
+COMPRESSION_SUPPORTED=('lzo', 'zlib', 'bz2', 'xz', 'snappy',
                        'lz4', 'lz4h', 'lz4r07',
                        'quicklz', 'quicklzf', 'quicklzm', 'quicklzb',
                        'brotli',
@@ -42,8 +42,8 @@ COMPRESSION_PROGS = {
     "lz4": {"ext": ".lz4", "comp": ["-1q"], "decomp": ["-dq"], "priority": 1, "can-comp": True, "can-decomp": True},
 
     # As of 0.8 -- need to be forced to remove compressed file
-    "pzstd": {"ext": ".zst", "comp": ["-4q", "--rm"], "decomp": ["-dq", "--rm"], "priority": 10, "can-comp": True, "can-decomp": True},
-    "zstd": {"ext": ".zst", "comp": ["-4q", "--rm"], "decomp": ["-dq", "--rm"], "priority": 1, "can-comp": True, "can-decomp": True},
+    "pzstd": {"ext": ".zst", "comp": ["-6q", "--rm"], "decomp": ["-dq", "--rm"], "priority": 10, "can-comp": True, "can-decomp": True},
+    "zstd": {"ext": ".zst", "comp": ["-6q", "--rm"], "decomp": ["-dq", "--rm"], "priority": 1, "can-comp": True, "can-decomp": True},
 }
 COMPRESSION_PROGS_EXT = {
     ".gz": ("pigz", "gzip",),

@@ -8,11 +8,11 @@ if os.path.islink(curpath):
     curpath = os.readlink(curpath)
 currentdir = os.path.dirname( curpath )
 
-build_dir = os.path.abspath( os.path.join(currentdir, "lib-dynload", "pyhashxx", "build") )
+build_dir = os.path.abspath( os.path.join(currentdir, "lib-dynload", "ddsf_xxhash", "build") )
 if not os.path.isdir(build_dir):
-    build_dir = os.path.abspath( os.path.join(currentdir, "..", "lib-dynload", "pyhashxx", "build") )
+    build_dir = os.path.abspath( os.path.join(currentdir, "..", "lib-dynload", "ddsf_xxhash", "build") )
 if not os.path.isdir(build_dir):
-    build_dir = os.path.abspath( os.path.join(currentdir, "..", "..", "lib-dynload", "pyhashxx", "build") )
+    build_dir = os.path.abspath( os.path.join(currentdir, "..", "..", "lib-dynload", "ddsf_xxhash", "build") )
 
 dirs = os.listdir(build_dir)
 for d in dirs:
@@ -20,9 +20,10 @@ for d in dirs:
         sys.path.insert(0, os.path.join(build_dir, d) )
 
         import importlib
-        module = importlib.import_module("_pyhashxx")
+        module = importlib.import_module("cpython")
 
-        hashxx = module.hashxx
+        xxh32 = module.xxh32
+        xxh64 = module.xxh64
 
         sys.path.pop(0)
 

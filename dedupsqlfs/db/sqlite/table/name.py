@@ -2,7 +2,7 @@
 
 __author__ = 'sergey'
 
-import hashlib
+from pyhashxx import hashxx
 import sqlite3
 from dedupsqlfs.db.sqlite.table import Table
 
@@ -16,10 +16,8 @@ class TableName( Table ):
         # Create table
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
-                "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
-                "`hash` BINARY(16) NOT NULL, "+
-                "value BLOB NOT NULL, "+
-                "UNIQUE(hash) "
+                "id INTEGER PRIMARY KEY, "+
+                "value BLOB NOT NULL"+
             ");"
         )
         return
@@ -30,7 +28,7 @@ class TableName( Table ):
         :return: int
         """
         bvalue = sqlite3.Binary(value)
-        return 8 + len(bvalue)*2+16
+        return 8 + len(bvalue)*2
 
     def insert(self, value):
         """
@@ -40,13 +38,11 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        context = hashlib.new('md5')
-        context.update(value)
-        digest = sqlite3.Binary(context.digest())
+        digest = hashxx(value)
 
         bvalue = sqlite3.Binary(value)
 
-        cur.execute("INSERT INTO `%s`(hash,value) VALUES (?,?)" % self.getName(), (digest,bvalue,))
+        cur.execute("INSERT INTO `%s`(id,value) VALUES (?,?)" % self.getName(), (digest,bvalue,))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
@@ -59,11 +55,9 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        context = hashlib.new('md5')
-        context.update(value)
-        digest = sqlite3.Binary(context.digest())
+        digest = hashxx(value)
 
-        cur.execute("SELECT id FROM `%s` WHERE hash=?" % self._table_name, (digest,))
+        cur.execute("SELECT id FROM `%s` WHERE id=?" % self._table_name, (digest,))
         item = cur.fetchone()
         if item:
             item = item["id"]

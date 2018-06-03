@@ -2,7 +2,7 @@
 
 __author__ = 'sergey'
 
-import hashlib
+from pyhashxx import hashxx
 import sqlite3
 from time import time
 from dedupsqlfs.db.sqlite.table import Table
@@ -17,8 +17,7 @@ class TableSubvolume( Table ):
         # Create table
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
-                "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
-                "`hash` CHAR(32) NOT NULL, "+
+                "id INTEGER PRIMARY KEY, "+
                 "`name` BLOB NOT NULL, "+
                 "`stats` TEXT, "+
                 "`root_diff` TEXT, "+
@@ -30,7 +29,6 @@ class TableSubvolume( Table ):
                 "updated_at INTEGER"
             ");"
         )
-        self.createIndexIfNotExists("hash", ('hash',), unique=True)
         return
 
     def insert( self, name, created_at, mounted_at=None, updated_at=None, stats_at=None, stats=None, root_diff_at=None, root_diff=None ):
@@ -44,13 +42,11 @@ class TableSubvolume( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        context = hashlib.new('md5')
-        context.update(name)
-        digest = context.hexdigest()
+        digest = hashxx(name)
 
         bname = sqlite3.Binary(name)
 
-        cur.execute("INSERT INTO `%s`(hash, name, created_at, mounted_at, updated_at, stats_at, stats, root_diff_at, root_diff) " % self.getName()+
+        cur.execute("INSERT INTO `%s`(id, name, created_at, mounted_at, updated_at, stats_at, stats, root_diff_at, root_diff) " % self.getName()+
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (digest, bname, int(created_at), mounted_at, updated_at, stats_at, stats, root_diff_at, root_diff,))
         item = cur.lastrowid
         self.stopTimer('insert')
@@ -141,7 +137,6 @@ class TableSubvolume( Table ):
         cur.execute("SELECT * FROM `%s` WHERE id=?" % self.getName(), (subvol_id,))
         item = cur.fetchone()
         if item:
-            item['hash'] = item['hash'].decode()
             if item['stats']:
                 item['stats'] = item['stats'].decode()
         self.stopTimer('get')
@@ -151,17 +146,14 @@ class TableSubvolume( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        context = hashlib.new('md5')
-        context.update(name)
-        digest = context.hexdigest()
+        digest = hashxx(name)
 
         cur.execute(
             "SELECT * FROM `%s` " % self.getName()+
-            " WHERE `hash`=?", (digest,)
+            " WHERE `id`=?", (digest,)
         )
         item = cur.fetchone()
         if item:
-            item['hash'] = item['hash'].decode()
             if item['stats']:
                 item['stats'] = item['stats'].decode()
             if item['root_diff']:

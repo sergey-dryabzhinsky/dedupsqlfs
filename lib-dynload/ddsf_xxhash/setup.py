@@ -3,6 +3,7 @@
 
 from setuptools import setup, Extension
 import os
+import sys
 
 with open('xxhash/__init__.py') as f:
     for line in f:
@@ -12,10 +13,15 @@ with open('xxhash/__init__.py') as f:
 USE_CPYTHON = os.getenv('XXHASH_FORCE_CFFI') in (None, '0')
 setup_kwargs = {}
 
+EXTRA_OPT=0
+if "--extra-optimization" in sys.argv:
+    # Support legacy output format functions
+    EXTRA_OPT=1
+    sys.argv.remove("--extra-optimization")
+
 if os.name == 'posix':
     extra_compile_args = [
         "-std=c99",
-        "-O2",
         "-Wall",
         "-W",
         "-Wundef",
@@ -23,7 +29,14 @@ if os.name == 'posix':
         "-Wno-error=declaration-after-statement",
     ]
 else:
-    extra_compile_args = None
+    extra_compile_args = []
+
+if EXTRA_OPT:
+    extra_compile_args.insert(0, "-march=native")
+    extra_compile_args.insert(0, "-O3")
+else:
+    extra_compile_args.insert(0, "-O2")
+
 
 if USE_CPYTHON:
     setup_kwargs['ext_modules'] = [

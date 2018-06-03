@@ -2,7 +2,7 @@
 
 __author__ = 'sergey'
 
-from pyhashxx import hashxx
+from ddsf_xxhash import xxh64
 import sqlite3
 from dedupsqlfs.db.sqlite.table import Table
 
@@ -38,7 +38,7 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        digest = hashxx(value)
+        digest = xxh64(value).intdigest()
 
         bvalue = sqlite3.Binary(value)
 
@@ -55,7 +55,7 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        digest = hashxx(value)
+        digest = xxh64(value).intdigest()
 
         cur.execute("SELECT id FROM `%s` WHERE id=?" % self._table_name, (digest,))
         item = cur.fetchone()

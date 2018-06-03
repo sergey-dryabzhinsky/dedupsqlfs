@@ -119,7 +119,7 @@ class BaseCompressTool(object):
         elif name == "bz2":
             from dedupsqlfs.compression.bz2 import Bz2Compression
             self._compressors[name] = Bz2Compression()
-        elif name == "lzma":
+        elif name == "xz":
             from dedupsqlfs.compression.lzma import LzmaCompression
             self._compressors[name] = LzmaCompression()
         elif name == "lzo":

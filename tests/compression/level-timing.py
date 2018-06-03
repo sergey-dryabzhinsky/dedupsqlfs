@@ -365,7 +365,7 @@ COMPRESSION_SUPPORTED=[
     ('lz4h' , False, do_simple_ctest,),
     ('zlib' , range(0,10), do_level_ctest,),
     ('bz2' , range(1,10), do_level_ctest,),
-    ('lzma' , range(0,10), do_level_ctest_lzma,),
+    ('xz' , range(0,10), do_level_ctest_lzma,),
     ]
 
 DECOMPRESSION_SUPPORTED=[
@@ -380,7 +380,7 @@ DECOMPRESSION_SUPPORTED=[
     ('lz4h' , False, do_simple_dtest,),
     ('zlib' , range(0,10), do_level_dtest,),
     ('bz2' , range(1,10), do_level_dtest,),
-    ('lzma' , range(0,10), do_level_dtest,),
+    ('xz' , range(0,10), do_level_dtest,),
     ]
 
 CTIMING={}

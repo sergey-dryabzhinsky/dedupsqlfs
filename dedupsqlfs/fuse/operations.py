@@ -191,7 +191,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def getTable(self, table_name):
         if self.mounted_subvolume and table_name in ("tree", "inode", "link", "xattr", "inode_hash_block", "inode_option"):
-            table_name += "_" + self.mounted_subvolume["hash"]
+            table_name += "_%s" % self.mounted_subvolume["id"]
         return self.getManager().getTable(table_name)
 
     def getApplication(self):

@@ -117,7 +117,8 @@ def main(): # {{{1
     msg = "Specify the hashing algorithm that will be used to recognize duplicate data blocks: one of %s"
     hash_functions = list({}.fromkeys([h.lower() for h in hashlib.algorithms_available]).keys())
     hash_functions.sort()
-    msg %= ', '.join('%r' % fun for fun in hash_functions)
+    work_hash_funcs = set(hash_functions) & constants.WANTED_HASH_FUCTIONS
+    msg %= ', '.join('%r' % fun for fun in work_hash_funcs)
     msg += ". Defaults to 'sha1'."
     parser.add_argument('--hash', dest='hash_function', metavar='FUNCTION', choices=hash_functions, default='sha1', help=msg)
 

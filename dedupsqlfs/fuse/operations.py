@@ -114,6 +114,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.time_spent_writing = 0
         self.time_spent_writing_meta = 0
         self.time_spent_writing_blocks = 0
+        self.time_spent_commiting = 0
 
         self.time_spent_flushing_block_cache = 0
         self.time_spent_flushing_writed_block_cache = 0
@@ -1933,6 +1934,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             (self.time_spent_writing_blocks, 'Writing data blocks (cumulative)'),
             (self.time_spent_writing_blocks - self.time_spent_compressing - self.time_spent_hashing, 'Writing blocks to database'),
             (self.getManager().getTimeSpent(), 'Database operations'),
+            (self.time_spent_commiting, 'Commiting all changes to database'),
             (self.time_spent_flushing_writed_block_cache - self.time_spent_writing_blocks, 'Flushing writed block cache'),
             (self.time_spent_flushing_readed_block_cache, 'Flushing readed block cache (cumulative)'),
             (self.time_spent_flushing_writed_block_cache, 'Flushing writed block cache (cumulative)'),
@@ -2862,8 +2864,10 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __commit_changes(self): # {{{3
         if not self.use_transactions:
+            start_time = time()
             self.getManager().commit()
             self.getManager().begin()
+            self.time_spent_commiting += time() - start_time
 
 
     def __rollback_changes(self): # {{{3

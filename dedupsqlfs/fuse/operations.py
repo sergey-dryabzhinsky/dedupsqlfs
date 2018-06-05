@@ -39,6 +39,7 @@ from dedupsqlfs.lib.cache.index import IndexTime
 from dedupsqlfs.lib.cache.inodes import InodesTime
 from dedupsqlfs.fuse.subvolume import Subvolume
 from dedupsqlfs import __fsversion__
+from ddsf_xxhash import xxh64
 
 class DedupOperations(llfuse.Operations): # {{{1
 
@@ -111,6 +112,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.time_spent_reading = 0
         self.time_spent_traversing_tree = 0
         self.time_spent_writing = 0
+        self.time_spent_writing_meta = 0
         self.time_spent_writing_blocks = 0
 
         self.time_spent_flushing_block_cache = 0
@@ -1885,9 +1887,10 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __hash(self, data): # {{{3
         start_time = time()
-        context = hashlib.new(self.hash_function)
-        context.update(data)
-        digest = context.digest()
+        #context = hashlib.new(self.hash_function)
+        #context.update(data)
+        #digest = context.digest()
+        digest = xxh64(data).hexdigest()
         self.time_spent_hashing += time() - start_time
         return digest
 
@@ -1925,7 +1928,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             (self.time_spent_caching_items, 'Caching all items - inodes, tree-nodes, names, xattrs'),
             (self.time_spent_interning, 'Interning path components'),
             (self.time_spent_reading, 'Reading data stream'),
-            (self.time_spent_writing, 'Writing data stream (cumulative)'),
+            (self.time_spent_writing, 'Writing data stream (cumulative: meta + blocks)'),
+            (self.time_spent_writing_meta, 'Writing inode metadata'),
             (self.time_spent_writing_blocks, 'Writing data blocks (cumulative)'),
             (self.time_spent_writing_blocks - self.time_spent_compressing - self.time_spent_hashing, 'Writing blocks to database'),
             (self.getManager().getTimeSpent(), 'Database operations'),
@@ -2423,6 +2427,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         flushed_indexes = 0
 
         start_time = time()
+
         if start_time - self.cache_gc_meta_last_run >= self.flush_interval:
 
             flushed_nodes = self.cached_nodes.clear()
@@ -2443,6 +2448,11 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.cache_gc_meta_last_run = time()
 
         if flushed_attrs + flushed_nodes + flushed_names + flushed_indexes + flushed_xattrs > 0:
+
+            elapsed_time = time() - start_time
+
+            self.time_spent_writing_meta += elapsed_time
+
             elapsed_time = self.cache_gc_meta_last_run - start_time
             self.getLogger().debug("Meta cache cleanup: flushed %i nodes, %i attrs,  %i xattrs, %i names, %i indexes in %s.",
                                   flushed_nodes, flushed_attrs, flushed_xattrs, flushed_names, flushed_indexes,

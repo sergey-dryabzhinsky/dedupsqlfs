@@ -2096,7 +2096,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         return
 
 
-    def __write_block_data(self, inode, block_number, block):
+    def __write_block_data(self, inode, block_number, block, blocks_from_cache={}):
         """
         @param  inode: inode ID
         @type   inode: int
@@ -2206,8 +2206,14 @@ class DedupOperations(llfuse.Operations): # {{{1
                 if self.getOption('collision_check_enabled'):
 
                     old_block = self.getTable("block").get(hash_id)
+                    if not old_block:
+                        # Not written yeat
+                        old_data = blocks_from_cache.get(hash_id)
 
-                    old_data = self.__decompress(old_block["data"], hash_CT["type_id"])
+                    else:
+                        old_block = old_block["data"]
+                        old_data = self.__decompress(old_block["data"], hash_CT["type_id"])
+
                     if old_data != data_block:
                         self.getLogger().error("EEE: weird hashed data collision detected! hash id: %s, value: %r, inode: %s, block-number: %s",
                             hash_id, hash_value, inode, block_number
@@ -2253,15 +2259,20 @@ class DedupOperations(llfuse.Operations): # {{{1
         blocksReCompress = {}
         blockSize = {}
 
+        hashToBlock = {}
+
         for inode, inode_data in cached_blocks.items():
             for block_number, block_data in inode_data.items():
                 if block_data[self.cached_blocks.OFFSET_WRITTEN]:
                     block = block_data[self.cached_blocks.OFFSET_BLOCK]
-                    item = self.__write_block_data(int(inode), int(block_number), block)
+                    item = self.__write_block_data(int(inode), int(block_number), block, hashToBlock)
                     if item["hash"] and (item["new"] or item["recompress"]):
                         blocksToCompress[ item["hash"] ] = item["data"]
                         blocksReCompress[ item["hash"] ] = item["recompress"]
                         blockSize[ item["hash"] ] = item["writed_size"]
+
+                        if item["hash"] not in hashToBlock:
+                            hashToBlock[ item["hash"] ] = item["data"]
                     if writed:
                         count += 1
                 else:

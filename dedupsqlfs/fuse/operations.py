@@ -2203,17 +2203,22 @@ class DedupOperations(llfuse.Operations): # {{{1
                         result["recompress"] = True
                         result["data"] = data_block
 
-                if self.getOption('collision_check_enabled'):
+            if self.getOption('collision_check_enabled'):
 
-                    old_block = self.getTable("block").get(hash_id)
-                    if not old_block:
-                        # Not written yeat
-                        old_data = blocks_from_cache.get(hash_id)
+                old_block = self.getTable("block").get(hash_id)
+                if not old_block:
+                    # Not written yeat
+                    old_data = blocks_from_cache.get(hash_id)
 
-                    else:
-                        old_data = self.__decompress(old_block["data"], hash_CT["type_id"])
-                        del old_block
+                elif hash_CT:
+                    old_data = self.__decompress(old_block["data"], hash_CT["type_id"])
+                    del old_block
 
+                else:
+                    old_data = b''
+
+                # Is it exists? Not empty?
+                if old_data:
                     if old_data != data_block:
                         self.getLogger().error("EEE: weird hashed data collision detected! hash id: %s, value: %r, inode: %s, block-number: %s",
                             hash_id, hash_value, inode, block_number

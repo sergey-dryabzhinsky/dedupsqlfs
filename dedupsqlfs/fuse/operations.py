@@ -1890,7 +1890,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         #context = hashlib.new(self.hash_function)
         #context.update(data)
         #digest = context.digest()
-        digest = xxh64(data).hexdigest()
+        digest = xxh64(data).digest()
         self.time_spent_hashing += time() - start_time
         return digest
 

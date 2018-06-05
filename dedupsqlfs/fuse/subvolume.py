@@ -93,8 +93,8 @@ class Subvolume(object):
         subvolItem = self.getTable('subvolume').get(subvol_id)
 
         tableName = self.getTable("name")
-        tableTree = self.getTable('tree_' + subvolItem["hash"])
-        tableInode = self.getTable('inode_' + subvolItem["hash"])
+        tableTree = self.getTable('tree_' + subvolItem["id"])
+        tableInode = self.getTable('inode_' + subvolItem["id"])
 
         uid, gid = os.getuid(), os.getgid()
         nameRoot = b''
@@ -227,7 +227,7 @@ class Subvolume(object):
 
             subvol = tableSubvol.get(subvol_id)
 
-            tableTree = self.getTable("tree_" + subvol["hash"])
+            tableTree = self.getTable("tree_" + subvol["id"])
 
             curTree = tableTree.getCursor()
             curTree.execute("SELECT DISTINCT name_id FROM `%s`" % tableTree.getName())
@@ -262,8 +262,8 @@ class Subvolume(object):
 
             subvol = tableSubvol.get(subvol_id)
 
-            tableIndex = self.getTable("inode_hash_block_" + subvol["hash"])
-            tableTree = self.getTable('tree_' + subvol["hash"])
+            tableIndex = self.getTable("inode_hash_block_" + subvol["id"])
+            tableTree = self.getTable('tree_' + subvol["id"])
 
             curIndex = tableIndex.getCursor()
             curIndex.execute("SELECT DISTINCT hash_id,inode_id FROM `%s`" % tableIndex.getName())
@@ -313,10 +313,10 @@ class Subvolume(object):
 
             subvol = tableSubvol.get(subvol_id)
 
-            tableIndex = self.getTable("inode_hash_block_" + subvol["hash"])
+            tableIndex = self.getTable("inode_hash_block_" + subvol["id"])
 
             if checkTree:
-                tableTree = self.getTable('tree_' + subvol["hash"])
+                tableTree = self.getTable('tree_' + subvol["id"])
 
             # DEBUG
             # self.print_out("-- debug: %s, walk index table %r - begin\n" % (datetime.now(), subvol["hash"]))
@@ -384,12 +384,12 @@ class Subvolume(object):
             return False
 
         try:
-            self.getTable('tree_' + subvolItem["hash"]).drop()
-            self.getTable('inode_' + subvolItem["hash"]).drop()
-            self.getTable('inode_hash_block_' + subvolItem["hash"]).drop()
-            self.getTable('inode_option_' + subvolItem["hash"]).drop()
-            self.getTable('link_' + subvolItem["hash"]).drop()
-            self.getTable('xattr_' + subvolItem["hash"]).drop()
+            self.getTable('tree_' + subvolItem["id"]).drop()
+            self.getTable('inode_' + subvolItem["id"]).drop()
+            self.getTable('inode_hash_block_' + subvolItem["id"]).drop()
+            self.getTable('inode_option_' + subvolItem["id"]).drop()
+            self.getTable('link_' + subvolItem["id"]).drop()
+            self.getTable('xattr_' + subvolItem["id"]).drop()
             tableSubvol.delete(subvolItem["id"])
         except Exception as e:
             self.getLogger().warn("Can't remove subvolume!")
@@ -439,8 +439,8 @@ class Subvolume(object):
                 stats = json.loads(subvolItem["stats"])
                 return stats["apparentSize"]
 
-        tableTree = self.getTable('tree_' + subvolItem["hash"])
-        tableInode = self.getTable('inode_' + subvolItem["hash"])
+        tableTree = self.getTable('tree_' + subvolItem["id"])
+        tableInode = self.getTable('inode_' + subvolItem["id"])
 
         allInodes = tableTree.get_all_inodes_set()
         apparentSize = tableInode.get_sizes_by_inodes(allInodes)
@@ -467,7 +467,7 @@ class Subvolume(object):
                 stats = json.loads(subvolItem["stats"])
                 return stats["apparentSize"]
 
-        tableInode = self.getTable('inode_' + subvolItem["hash"])
+        tableInode = self.getTable('inode_' + subvolItem["id"])
         sz = tableInode.get_sizes()
         tableInode.close()
         return sz
@@ -506,9 +506,9 @@ class Subvolume(object):
 
         tableHCT = self.getTable('hash_compression_type')
         tableHS = self.getTable('hash_sizes')
-        tableIndex = self.getTable('inode_hash_block_' + subvolItem["hash"])
-        tableTree = self.getTable('tree_' + subvolItem["hash"])
-        tableInode = self.getTable('inode_' + subvolItem["hash"])
+        tableIndex = self.getTable('inode_hash_block_' + subvolItem["id"])
+        tableTree = self.getTable('tree_' + subvolItem["id"])
+        tableInode = self.getTable('inode_' + subvolItem["id"])
 
         nodesInodes = set()
         if checkTree:
@@ -635,8 +635,8 @@ class Subvolume(object):
                 # No updates since last stats calculated
                 return json.loads(subvolItem["root_diff"])
 
-        tableRootIndex = self.getTable('inode_hash_block_' + subvolRootItem["hash"])
-        tableIndex = self.getTable('inode_hash_block_' + subvolItem["hash"])
+        tableRootIndex = self.getTable('inode_hash_block_' + subvolRootItem["id"])
+        tableIndex = self.getTable('inode_hash_block_' + subvolItem["id"])
 
         rootUniqHashes = tableRootIndex.get_uniq_hashes()
         subvolUniqHashes = tableIndex.get_uniq_hashes()
@@ -785,7 +785,7 @@ class Subvolume(object):
                 """
                 @var table: L{dedupsqlfs.db.sqlite.table._base.Table}
                 """
-                table = self.getTable(tn + '_' + subvol["hash"])
+                table = self.getTable(tn + '_' + subvol["id"])
                 table.setCompressed(False)
                 table.close(nocompress=True)
 
@@ -820,7 +820,7 @@ class Subvolume(object):
                 """
                 @var table: L{dedupsqlfs.db.sqlite.table._base.Table}
                 """
-                table = self.getTable(tn + '_' + subvol["hash"])
+                table = self.getTable(tn + '_' + subvol["id"])
 
                 compress = False
 

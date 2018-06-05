@@ -2,7 +2,7 @@
 
 __author__ = 'sergey'
 
-from ddsf_xxhash import xxh64
+from ddsf_xxhash import xxh32
 import sqlite3
 from time import time
 from dedupsqlfs.db.sqlite.table import Table
@@ -42,7 +42,7 @@ class TableSubvolume( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        digest = xxh64(name).intdigest()
+        digest = xxh32(name).intdigest()
 
         bname = sqlite3.Binary(name)
 
@@ -146,7 +146,7 @@ class TableSubvolume( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        digest = xxh64(name).intdigest()
+        digest = xxh32(name).intdigest()
 
         cur.execute(
             "SELECT * FROM `%s` " % self.getName()+

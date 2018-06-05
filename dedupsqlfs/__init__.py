@@ -38,4 +38,5 @@ if sys.version_info[0] < 3 or \
 
 # Do not abuse GC - we generate alot objects
 import gc
-gc.set_threshold(100000, 2000, 200)
+if hasattr(gc, "set_threshold"):
+    gc.set_threshold(100000, 2000, 200)

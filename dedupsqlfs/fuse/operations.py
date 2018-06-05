@@ -2211,8 +2211,8 @@ class DedupOperations(llfuse.Operations): # {{{1
                         old_data = blocks_from_cache.get(hash_id)
 
                     else:
-                        old_block = old_block["data"]
                         old_data = self.__decompress(old_block["data"], hash_CT["type_id"])
+                        del old_block
 
                     if old_data != data_block:
                         self.getLogger().error("EEE: weird hashed data collision detected! hash id: %s, value: %r, inode: %s, block-number: %s",

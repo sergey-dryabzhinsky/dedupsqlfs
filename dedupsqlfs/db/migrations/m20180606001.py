@@ -2,7 +2,7 @@
 #
 # DB migration 001 by 2017-11-03
 #
-# Tables `name` and `subvolume` uses xxh32 hash as ID value
+# Table `subvolume` uses xxh32 hash as ID value
 #
 __author__ = 'sergey'
 
@@ -25,17 +25,11 @@ def run(manager):
                         dedupsqlfs.db.mysql.table.subvolume.TableSubvolume
         """
 
-        table_nm = manager.getTable("name")
-        """
-        :type table_name: dedupsqlfs.db.sqlite.table.subvolume.TableName |
-                        dedupsqlfs.db.mysql.table.subvolume.TableName
-        """
-
         from dedupsqlfs.lib.constants import ROOT_SUBVOLUME_NAME
 
         manager.getLogger().info("Migration #%s" % (__NUMBER__,))
 
-        manager.getLogger().info("1. Migrate subvolume table")
+        manager.getLogger().info("Migrate subvolume table to use xxHash")
 
         cur = table_sv.getCursor(True)
 
@@ -60,10 +54,10 @@ def run(manager):
                             subvol['stats_at'], subvol['stats'], subvol['root_diff_at'], subvol['root_diff'])
 
             if checkId != newId:
-                manager.getLogger().error("EEE: genrated subvolume IDs not equal: %r != %r!" % (checkId, newId,))
+                manager.getLogger().error("EEE: generated subvolume IDs not equal: %r != %r!" % (checkId, newId,))
                 raise RuntimeError('Error while migrating subvolume table!')
 
-            oldHash = subvol['hash']
+            oldHash = subvol['hash'].decode()
 
             manager.getLogger().info("Rename all subvolume %r dependant table files" % newId)
 
@@ -84,42 +78,6 @@ def run(manager):
 
         table_sv.commit()
         table_sv.close()
-
-
-        manager.getLogger().info("2. Migrate name table")
-
-        cur = table_nm.getCursor(True)
-
-        # Rename table to _old
-        manager.getLogger().info("Rename old table")
-        if manager.TYPE == "mysql":
-            cur.execute("RENAME TABLE `%s` TO `%s_old`;" % (table_nm.getName(),table_nm.getName(),))
-        if manager.TYPE == "sqlite":
-            cur.execute("ALTER TABLE `%s` RENAME TO `%s_old`;" % (table_nm.getName(), table_nm.getName(),))
-
-        # Create new table
-        manager.getLogger().info("Create new table")
-        table_nm.create()
-
-        cur.execute("SELECT * FROM `%s_old`" % table_nm.getName())
-
-        for nm in iter(cur.fetchone, None):
-
-            newId = xxh32(nm['value']).intdigest()
-
-            checkId = table_nm.insert(nm['value'])
-
-            if checkId != newId:
-                manager.getLogger().error("EEE: genrated subvolume IDs not equal: %r != %r!" % (checkId, newId,))
-                raise RuntimeError('Error while migrating name table!')
-
-        table_nm.commit()
-
-        manager.getLogger().info("Drop old table")
-        cur.execute("DROP TABLE `%s_old`;" % (table_nm.getName(),))
-
-        table_nm.commit()
-        table_nm.close()
 
 
     except Exception as e:

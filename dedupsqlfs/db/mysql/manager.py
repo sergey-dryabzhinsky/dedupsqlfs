@@ -240,6 +240,12 @@ class DbManager( object ):
         return self._table[ name ]
 
 
+    def unsetTable(self, name):
+        if name in self._table:
+            del self._table[name]
+        return self
+
+
     def isSupportedStorage(self):
         s = False
         datadir = self.getBasePath() + "/mysql-db-data"
@@ -656,24 +662,15 @@ class DbManager( object ):
             s += t.getSize()
         return s
 
-    def getFileSize(self):
-        s = 0
-        for name in self.tables:
-            t = self.getTable(name, True)
-            s += t.getFileSize()
-        return s
-
     def getOperationsCount(self):
         s = 0
-        for name in self.tables:
-            t = self.getTable(name, True)
+        for name, t in self._table.items():
             s += t.getAllOperationsCount()
         return s
 
     def getTimeSpent(self):
         s = 0
-        for name in self.tables:
-            t = self.getTable(name, True)
+        for name, t in self._table.items():
             s += t.getAllTimeSpent()
         return s
 

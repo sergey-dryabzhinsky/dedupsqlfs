@@ -198,6 +198,9 @@ class Table( object ):
         self._compressed = flag
         return self
 
+    def getCompressed(self):
+        return self._compressed
+
     def _compress(self):
         db_path = self.getDbFilePath()
 
@@ -222,10 +225,6 @@ class Table( object ):
             os.makedirs(db_dir)
 
         self._decompress()
-
-        isNew = False
-        if not os.path.isfile(db_path):
-            isNew = True
 
         pageSize = self.calcFilePageSize()
 
@@ -256,9 +255,6 @@ class Table( object ):
             conn.isolation_level = None
 
         self._conn = conn
-
-        if isNew:
-            self.create()
         return
 
     def getConnection(self):

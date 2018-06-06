@@ -2,7 +2,7 @@
 
 __author__ = 'sergey'
 
-import hashlib
+from ddsf_xxhash import xxh32
 from dedupsqlfs.db.mysql.table import Table
 
 class TableName( Table ):
@@ -17,13 +17,12 @@ class TableName( Table ):
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`id` BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
-                "`hash` BINARY(16) NOT NULL, "+
+                "`hash` INTEGER UNSIGNED NOT NULL, "+
                 "`value` BLOB NOT NULL"+
             ")"+
             self._getCreationAppendString()
         )
-
-        self.createIndexIfNotExists("hash", ('hash',), unique=True)
+        self.createIndexIfNotExists('hash', ('hash',), True)
         return
 
     def getRowSize(self, value):
@@ -31,7 +30,7 @@ class TableName( Table ):
         :param value: bytes
         :return: int
         """
-        return 8 + 16 + len(value)+2
+        return 8 + 4 + len(value)+2
 
     def insert(self, value):
         """
@@ -41,13 +40,28 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        context = hashlib.new('md5')
-        context.update(value)
-        digest = context.digest()
+        digest = xxh32(value).intdigest()
 
         cur.execute(
             "INSERT INTO `%s` " % self.getName()+
             " (`hash`,`value`) VALUES (%s,%s)", (digest,value,))
+        item = cur.lastrowid
+        self.stopTimer('insert')
+        return item
+
+    def insertRaw(self, rowId, value):
+        """
+        :param value: bytes
+        :return: int
+        """
+        self.startTimer()
+        cur = self.getCursor()
+
+        digest = xxh32(value).intdigest()
+
+        cur.execute(
+            "INSERT INTO `%s` " % self.getName()+
+            " (`id`,`hash`,`value`) VALUES (%s,%s,%s)", (rowId, digest, value,))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
@@ -60,9 +74,7 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        context = hashlib.new('md5')
-        context.update(value)
-        digest = context.digest()
+        digest = xxh32(value).intdigest()
 
         cur.execute(
             "SELECT `id` FROM `%s` " % self.getName()+

@@ -647,13 +647,26 @@ def main(): # {{{1
     data.add_argument('--verify', dest='verify', action='store_true', help="Verify all stored data hashes. (@todo)")
 
     # Dynamically check for supported hashing algorithms.
-    msg = "Specify the hashing algorithm that will be used to recognize duplicate data blocks: one of %s"
+    msg = "Specify the hashing algorithm that will be used to recognize duplicate data blocks: one of %s. Choose wisely - it can't be changed on the fly."
     hash_functions = list({}.fromkeys([h.lower() for h in hashlib.algorithms_available]).keys())
+
+    try:
+        module = __import__('ddsf_xxhash')
+        if hasattr(module, 'xxh32') and hasattr(module, 'xxh64'):
+            hash_functions.append('xxhash')
+    except ImportError:
+        sys.stderr.write("Error: The Python xxHash module must be builded!\n" + \
+                         "Run `cd lib-dynload/ddsf_xxhash; python3 setup.py build_ext clean`.\n")
+        return 1
+
     hash_functions.sort()
     work_hash_funcs = set(hash_functions) & constants.WANTED_HASH_FUCTIONS
     msg %= ', '.join('%r' % fun for fun in work_hash_funcs)
-    msg += ". Defaults to 'sha1'. (@todo)"
-    data.add_argument('--rehash', dest='hash_function', metavar='FUNCTION', choices=hash_functions, default='sha1', help=msg)
+    defHash = 'md5' # Hope it will be there always. Stupid.
+    if 'xxhash' in work_hash_funcs:
+        defHash = 'xxhash'
+    msg += ". Defaults to %r." % defHash
+    data.add_argument('--rehash', dest='hash_function', metavar='FUNCTION', choices=work_hash_funcs, default=defHash, help=msg)
 
     grp_compress = parser.add_argument_group('Compression')
 

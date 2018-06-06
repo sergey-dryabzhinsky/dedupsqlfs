@@ -401,12 +401,12 @@ class DedupFS(object): # {{{1
             subvol = tableSubvol.get(subvol_id)
             apparentSize += subv.get_apparent_size_fast(subvol["name"])
 
-            disk_usage += manager.getTable("inode_" + subvol["hash"], True).getFileSize()
-            disk_usage += manager.getTable("inode_option_" + subvol["hash"], True).getFileSize()
-            disk_usage += manager.getTable("inode_hash_block_" + subvol["hash"], True).getFileSize()
-            disk_usage += manager.getTable("link_" + subvol["hash"], True).getFileSize()
-            disk_usage += manager.getTable("xattr_" + subvol["hash"], True).getFileSize()
-            disk_usage += manager.getTable("tree_" + subvol["hash"], True).getFileSize()
+            disk_usage += manager.getTable("inode_%s" % subvol["id"], True).getFileSize()
+            disk_usage += manager.getTable("inode_option_%s" % subvol["id"], True).getFileSize()
+            disk_usage += manager.getTable("inode_hash_block_%s" % subvol["id"], True).getFileSize()
+            disk_usage += manager.getTable("link_%s" % subvol["id"], True).getFileSize()
+            disk_usage += manager.getTable("xattr_%s" % subvol["id"], True).getFileSize()
+            disk_usage += manager.getTable("tree_%s" % subvol["id"], True).getFileSize()
 
 
         tableHCT = manager.getTable('hash_compression_type', True)

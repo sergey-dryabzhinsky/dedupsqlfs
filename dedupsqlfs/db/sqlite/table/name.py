@@ -2,7 +2,7 @@
 
 __author__ = 'sergey'
 
-import hashlib
+from ddsf_xxhash import xxh32
 import sqlite3
 from dedupsqlfs.db.sqlite.table import Table
 
@@ -17,9 +17,9 @@ class TableName( Table ):
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
-                "`hash` BINARY(16) NOT NULL, "+
+                "hash INTEGER NOT NULL, "+
                 "value BLOB NOT NULL, "+
-                "UNIQUE(hash) "
+                "UNIQUE(hash) " +
             ");"
         )
         return
@@ -30,7 +30,7 @@ class TableName( Table ):
         :return: int
         """
         bvalue = sqlite3.Binary(value)
-        return 8 + len(bvalue)*2+16
+        return 8 + 8 + len(bvalue)*2
 
     def insert(self, value):
         """
@@ -40,13 +40,28 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        context = hashlib.new('md5')
-        context.update(value)
-        digest = sqlite3.Binary(context.digest())
+        digest = xxh32(value).intdigest()
 
         bvalue = sqlite3.Binary(value)
 
         cur.execute("INSERT INTO `%s`(hash,value) VALUES (?,?)" % self.getName(), (digest,bvalue,))
+        item = cur.lastrowid
+        self.stopTimer('insert')
+        return item
+
+    def insertRaw(self, rowId, value):
+        """
+        :param value: bytes
+        :return: int
+        """
+        self.startTimer()
+        cur = self.getCursor()
+
+        digest = xxh32(value).intdigest()
+
+        bvalue = sqlite3.Binary(value)
+
+        cur.execute("INSERT INTO `%s`(id,hash,value) VALUES (?,?,?)" % self.getName(), (rowId, digest, bvalue,))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
@@ -59,9 +74,7 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        context = hashlib.new('md5')
-        context.update(value)
-        digest = sqlite3.Binary(context.digest())
+        digest = xxh32(value).intdigest()
 
         cur.execute("SELECT id FROM `%s` WHERE hash=?" % self._table_name, (digest,))
         item = cur.fetchone()

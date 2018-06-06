@@ -28,6 +28,14 @@ except ImportError:
                      "If you're on Ubuntu try running `sudo apt-get install python-fuse'.\n")
     sys.exit(1)
 
+try:
+    from ddsf_xxhash import xxh64
+except ImportError:
+    sys.stderr.write("Error: The Python xxHash module must be builded!\n" + \
+                     "Run `cd lib-dynload/ddsf_xxhash; python3 setup.py build_ext clean`.\n")
+    sys.exit(1)
+
+
 # Local modules that are mostly useful for debugging.
 from dedupsqlfs.log import logging
 from dedupsqlfs.lib import constants
@@ -111,7 +119,9 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.time_spent_reading = 0
         self.time_spent_traversing_tree = 0
         self.time_spent_writing = 0
+        self.time_spent_writing_meta = 0
         self.time_spent_writing_blocks = 0
+        self.time_spent_commiting = 0
 
         self.time_spent_flushing_block_cache = 0
         self.time_spent_flushing_writed_block_cache = 0
@@ -191,7 +201,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def getTable(self, table_name):
         if self.mounted_subvolume and table_name in ("tree", "inode", "link", "xattr", "inode_hash_block", "inode_option"):
-            table_name += "_" + self.mounted_subvolume["hash"]
+            table_name += "_%s" % self.mounted_subvolume["id"]
         return self.getManager().getTable(table_name)
 
     def getApplication(self):
@@ -559,13 +569,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             if self.getOption("use_transactions") is not None:
                 self.use_transactions = self.getOption("use_transactions")
 
-            try:
-                # Get a reference to the hash function.
-                hashlib.new(self.hash_function)
-            except:
-                self.getLogger().critical("Error: The selected hash function %r doesn't exist!", self.hash_function)
-                sys.exit(1)
-
             # Initialize the logging and database subsystems.
             self.getLogger().logCall('init', 'init()')
 
@@ -586,6 +589,15 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.__select_subvolume()
             self.__get_opts_from_db()
             # Make sure the hash function is (still) valid (since the database was created).
+
+            if self.hash_function != 'xxhash':
+                try:
+                    # Get a reference to the hash function.
+                    hashlib.new(self.hash_function)
+                except:
+                    self.getLogger().critical("Error: The selected hash function %r doesn't exist!", self.hash_function)
+                    sys.exit(1)
+
 
             # NOT READONLY - AND - Mountpoint defined (mount action)
             self.getApplication().startCacheFlusher()
@@ -1725,7 +1737,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         hash_function = options.get("hash_function")
         if hash_function is not None and hash_function != self.hash_function:
-            self.getLogger().warning("Ignoring --hash=%r argument, using previously chosen hash function %s instead",
+            self.getLogger().warning("Ignoring --hash=%r argument, using previously chosen hash function %r instead",
                 self.hash_function, hash_function)
             self.hash_function = hash_function
         pass
@@ -1885,9 +1897,12 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __hash(self, data): # {{{3
         start_time = time()
-        context = hashlib.new(self.hash_function)
-        context.update(data)
-        digest = context.digest()
+        if self.hash_function == 'xxhash':
+            digest = xxh64(data).digest()
+        else:
+            context = hashlib.new(self.hash_function)
+            context.update(data)
+            digest = context.digest()
         self.time_spent_hashing += time() - start_time
         return digest
 
@@ -1925,10 +1940,12 @@ class DedupOperations(llfuse.Operations): # {{{1
             (self.time_spent_caching_items, 'Caching all items - inodes, tree-nodes, names, xattrs'),
             (self.time_spent_interning, 'Interning path components'),
             (self.time_spent_reading, 'Reading data stream'),
-            (self.time_spent_writing, 'Writing data stream (cumulative)'),
+            (self.time_spent_writing, 'Writing data stream (cumulative: meta + blocks)'),
+            (self.time_spent_writing_meta, 'Writing inode metadata'),
             (self.time_spent_writing_blocks, 'Writing data blocks (cumulative)'),
             (self.time_spent_writing_blocks - self.time_spent_compressing - self.time_spent_hashing, 'Writing blocks to database'),
             (self.getManager().getTimeSpent(), 'Database operations'),
+            (self.time_spent_commiting, 'Commiting all changes to database'),
             (self.time_spent_flushing_writed_block_cache - self.time_spent_writing_blocks, 'Flushing writed block cache'),
             (self.time_spent_flushing_readed_block_cache, 'Flushing readed block cache (cumulative)'),
             (self.time_spent_flushing_writed_block_cache, 'Flushing writed block cache (cumulative)'),
@@ -2090,7 +2107,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         return
 
 
-    def __write_block_data(self, inode, block_number, block):
+    def __write_block_data(self, inode, block_number, block, blocks_from_cache={}):
         """
         @param  inode: inode ID
         @type   inode: int
@@ -2197,11 +2214,22 @@ class DedupOperations(llfuse.Operations): # {{{1
                         result["recompress"] = True
                         result["data"] = data_block
 
-                if self.getOption('collision_check_enabled'):
+            if self.getOption('collision_check_enabled'):
 
-                    old_block = self.getTable("block").get(hash_id)
+                old_block = self.getTable("block").get(hash_id)
+                if not old_block:
+                    # Not written yeat
+                    old_data = blocks_from_cache.get(hash_id)
 
+                elif hash_CT:
                     old_data = self.__decompress(old_block["data"], hash_CT["type_id"])
+                    del old_block
+
+                else:
+                    old_data = b''
+
+                # Is it exists? Not empty?
+                if old_data:
                     if old_data != data_block:
                         self.getLogger().error("EEE: weird hashed data collision detected! hash id: %s, value: %r, inode: %s, block-number: %s",
                             hash_id, hash_value, inode, block_number
@@ -2247,15 +2275,20 @@ class DedupOperations(llfuse.Operations): # {{{1
         blocksReCompress = {}
         blockSize = {}
 
+        hashToBlock = {}
+
         for inode, inode_data in cached_blocks.items():
             for block_number, block_data in inode_data.items():
                 if block_data[self.cached_blocks.OFFSET_WRITTEN]:
                     block = block_data[self.cached_blocks.OFFSET_BLOCK]
-                    item = self.__write_block_data(int(inode), int(block_number), block)
+                    item = self.__write_block_data(int(inode), int(block_number), block, hashToBlock)
                     if item["hash"] and (item["new"] or item["recompress"]):
                         blocksToCompress[ item["hash"] ] = item["data"]
                         blocksReCompress[ item["hash"] ] = item["recompress"]
                         blockSize[ item["hash"] ] = item["writed_size"]
+
+                        if item["hash"] not in hashToBlock:
+                            hashToBlock[ item["hash"] ] = item["data"]
                     if writed:
                         count += 1
                 else:
@@ -2423,6 +2456,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         flushed_indexes = 0
 
         start_time = time()
+
         if start_time - self.cache_gc_meta_last_run >= self.flush_interval:
 
             flushed_nodes = self.cached_nodes.clear()
@@ -2443,6 +2477,11 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.cache_gc_meta_last_run = time()
 
         if flushed_attrs + flushed_nodes + flushed_names + flushed_indexes + flushed_xattrs > 0:
+
+            elapsed_time = time() - start_time
+
+            self.time_spent_writing_meta += elapsed_time
+
             elapsed_time = self.cache_gc_meta_last_run - start_time
             self.getLogger().debug("Meta cache cleanup: flushed %i nodes, %i attrs,  %i xattrs, %i names, %i indexes in %s.",
                                   flushed_nodes, flushed_attrs, flushed_xattrs, flushed_names, flushed_indexes,
@@ -2457,7 +2496,9 @@ class DedupOperations(llfuse.Operations): # {{{1
             start_time = time()
             self.getLogger().debug("Performing data vacuum (this might take a while) ..")
             sz = 0
-            dbsz = self.getManager().getFileSize()
+            dbsz = 0
+            for table_name in self.getManager().tables:
+                dbsz += self.getTable(table_name).getFileSize()
             for table_name in self.getManager().tables:
                 sz += self.__vacuum_datatable(table_name, True)
             elapsed_time = time() - start_time
@@ -2852,8 +2893,10 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __commit_changes(self): # {{{3
         if not self.use_transactions:
+            start_time = time()
             self.getManager().commit()
             self.getManager().begin()
+            self.time_spent_commiting += time() - start_time
 
 
     def __rollback_changes(self): # {{{3

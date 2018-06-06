@@ -84,8 +84,11 @@ def run(manager):
                     isCompressed = oldTable.getCompressed()
                     oldTable.setCompressed(False)
                     oldTable.close()
+                    del oldTable
 
                     os.rename(oldPath, newPath)
+                    if os.path.exists(oldPath):
+                        os.unlink(oldPath)
 
                     if isCompressed:
                         newTable.connect()

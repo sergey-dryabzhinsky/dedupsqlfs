@@ -229,24 +229,15 @@ class DbManager( object ):
                 s = True
         return s
 
-    def getFileSize(self):
-        s = 0
-        for name in self.tables:
-            t = self.getTable(name, True)
-            s += t.getFileSize()
-        return s
-
     def getOperationsCount(self):
         s = 0
-        for name in self.tables:
-            t = self.getTable(name, True)
+        for t in self._table:
             s += t.getAllOperationsCount()
         return s
 
     def getTimeSpent(self):
         s = 0
-        for name in self.tables:
-            t = self.getTable(name, True)
+        for t in self._table:
             s += t.getAllTimeSpent()
         return s
 

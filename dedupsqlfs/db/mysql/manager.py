@@ -662,13 +662,6 @@ class DbManager( object ):
             s += t.getSize()
         return s
 
-    def getFileSize(self):
-        s = 0
-        for name in self.tables:
-            t = self.getTable(name, True)
-            s += t.getFileSize()
-        return s
-
     def getOperationsCount(self):
         s = 0
         for name in self.tables:

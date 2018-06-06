@@ -2496,7 +2496,9 @@ class DedupOperations(llfuse.Operations): # {{{1
             start_time = time()
             self.getLogger().debug("Performing data vacuum (this might take a while) ..")
             sz = 0
-            dbsz = self.getManager().getFileSize()
+            dbsz = 0
+            for table_name in self.getManager().tables:
+                dbsz += self.getTable(table_name).getFileSize()
             for table_name in self.getManager().tables:
                 sz += self.__vacuum_datatable(table_name, True)
             elapsed_time = time() - start_time

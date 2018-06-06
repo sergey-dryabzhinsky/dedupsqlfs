@@ -28,6 +28,14 @@ except ImportError:
                      "If you're on Ubuntu try running `sudo apt-get install python-fuse'.\n")
     sys.exit(1)
 
+try:
+    from ddsf_xxhash import xxh64
+except ImportError:
+    sys.stderr.write("Error: The Python xxHash module must be builded!\n" + \
+                     "Run `cd lib-dynload/ddsf_xxhash; python3 setup.py build_ext clean`.\n")
+    sys.exit(1)
+
+
 # Local modules that are mostly useful for debugging.
 from dedupsqlfs.log import logging
 from dedupsqlfs.lib import constants
@@ -39,7 +47,6 @@ from dedupsqlfs.lib.cache.index import IndexTime
 from dedupsqlfs.lib.cache.inodes import InodesTime
 from dedupsqlfs.fuse.subvolume import Subvolume
 from dedupsqlfs import __fsversion__
-from ddsf_xxhash import xxh64
 
 class DedupOperations(llfuse.Operations): # {{{1
 
@@ -562,13 +569,6 @@ class DedupOperations(llfuse.Operations): # {{{1
             if self.getOption("use_transactions") is not None:
                 self.use_transactions = self.getOption("use_transactions")
 
-            try:
-                # Get a reference to the hash function.
-                hashlib.new(self.hash_function)
-            except:
-                self.getLogger().critical("Error: The selected hash function %r doesn't exist!", self.hash_function)
-                sys.exit(1)
-
             # Initialize the logging and database subsystems.
             self.getLogger().logCall('init', 'init()')
 
@@ -589,6 +589,15 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.__select_subvolume()
             self.__get_opts_from_db()
             # Make sure the hash function is (still) valid (since the database was created).
+
+            if self.hash_function != 'xxhash':
+                try:
+                    # Get a reference to the hash function.
+                    hashlib.new(self.hash_function)
+                except:
+                    self.getLogger().critical("Error: The selected hash function %r doesn't exist!", self.hash_function)
+                    sys.exit(1)
+
 
             # NOT READONLY - AND - Mountpoint defined (mount action)
             self.getApplication().startCacheFlusher()

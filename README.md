@@ -109,9 +109,16 @@ And Sqlite wins!
 
 ## Dependencies
 
-DedupSQLfs was developed using Python 3.2, though it might also work on newer versions. It definitely doesn't work
- with Python 2. It requires the [Python llFUSE binding](http://www.rath.org/llfuse-docs/example.html) in addition
+DedupSQLfs was developed using Python 3.2, though it also work with newer versions. 
+ It definitely doesn't work with Python 2.
+ It requires the [Python llFUSE binding](http://www.rath.org/llfuse-docs/example.html) in addition
  to several Python standard libraries like [sqlite3](http://docs.python.org/library/sqlite3.html), [hashlib](http://docs.python.org/library/hashlib.html).
+
+As of 1.2.935 application hardly depends on `xxhash` module. It must be compiled:
+
+    $ cd lib-dynload/ddsf_xxhash
+    $ python3 setup.py clean -a
+    $ python3 setup.py build_ext clean
 
 Additional compression modules can be builded with commands:
 
@@ -141,7 +148,7 @@ Additional performance gain about 1-5% via Cython:
 ### Notes about Cython
 
 1. Profiling via cProfile not working for compiled code.
-2. Always keep copy of dedupsqlfs directory if you will run ```cleanpy``` command.
+2. Always keep copy of dedupsqlfs directory if you will run `cleanpy` command.
 
 ## Contact
 
@@ -153,6 +160,6 @@ The latest version of DedupSqlFS is available at <https://github.com/sergey-drya
 
 This software is licensed under the MIT license.
 
-© 2013-2017 Sergey Dryabzhinsky &lt;<sergey.dryabzhinsky@gmail.com>&gt;.
+© 2013-2018 Sergey Dryabzhinsky &lt;<sergey.dryabzhinsky@gmail.com>&gt;.
 
 © 2010 Peter Odding &lt;<peter@peterodding.com>&gt;.

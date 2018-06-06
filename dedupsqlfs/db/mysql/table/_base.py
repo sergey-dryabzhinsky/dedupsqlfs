@@ -122,11 +122,6 @@ class Table( object ):
         return self._manager
 
     def connect( self ):
-        cur = self.getCursor()
-        cur.execute("SHOW TABLES LIKE '%s'" % self.getName())
-        row = cur.fetchone()
-        if not row:
-            self.create()
         return
 
     def getConnection(self):

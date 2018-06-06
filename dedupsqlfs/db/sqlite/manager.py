@@ -231,13 +231,13 @@ class DbManager( object ):
 
     def getOperationsCount(self):
         s = 0
-        for t in self._table:
+        for name, t in self._table.items():
             s += t.getAllOperationsCount()
         return s
 
     def getTimeSpent(self):
         s = 0
-        for t in self._table:
+        for name, t in self._table.items():
             s += t.getAllTimeSpent()
         return s
 

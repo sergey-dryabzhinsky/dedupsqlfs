@@ -114,6 +114,42 @@ class DDSFlogger(object):
         return
 
 
+    def resetVerbosityByLogLevel(self):
+        """
+        Needed by `do` command and sub-actions
+        """
+        curLevel = self.getEffectiveLevel()
+
+        # By default - almos all disabled
+        self.critical = self._log_critical
+        self.error = self._log_error
+        self.important = self._log_important
+        self.warning = self._empty_log
+        self.warn = self._empty_log
+        self.note = self._empty_log
+        self.info = self._empty_log
+        self.debug = self._empty_log
+        self.debugv = self._empty_log
+
+        self.logCall = self._empty_log_call
+
+        if curLevel <= logging.WARNING:
+            self.warning = self._log_warning
+            self.warn = self._log_warning
+            self.note = self._log_note
+
+        if curLevel <= logging.INFO:
+            self.info = self._log_info
+
+        if curLevel <= logging.DEBUG:
+            self.debug = self._log_debug
+
+        if curLevel <= DEBUG_VERBOSE:
+            self.debugv = self._log_debugv
+            self.logCall = self._log_call
+
+        return
+
     def _empty_log_call(self, func, msg, *args):
         return
 

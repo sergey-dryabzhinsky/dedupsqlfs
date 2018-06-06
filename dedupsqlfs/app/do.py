@@ -416,8 +416,10 @@ def print_fs_stats(options, _fuse):
     _fuse.setReadonly(True)
     lvl = _fuse.getLogger().getEffectiveLevel()
     _fuse.getLogger().setLevel(logging.INFO)
+    _fuse.getLogger().resetVerbosityByLogLevel()
     _fuse.report_disk_usage()
     _fuse.getLogger().setLevel(lvl)
+    _fuse.getLogger().resetVerbosityByLogLevel()
     _fuse.operations.destroy()
     return 0
 
@@ -432,8 +434,10 @@ def data_vacuum(options, _fuse):
     _fuse.operations.should_vacuum = True
     lvl = _fuse.getLogger().getEffectiveLevel()
     _fuse.getLogger().setLevel(logging.INFO)
+    _fuse.getLogger().resetVerbosityByLogLevel()
     _fuse.operations.forced_vacuum()
     _fuse.getLogger().setLevel(lvl)
+    _fuse.getLogger().resetVerbosityByLogLevel()
     _fuse.operations.destroy()
     return 0
 

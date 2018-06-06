@@ -1737,7 +1737,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         hash_function = options.get("hash_function")
         if hash_function is not None and hash_function != self.hash_function:
-            self.getLogger().warning("Ignoring --hash=%r argument, using previously chosen hash function %s instead",
+            self.getLogger().warning("Ignoring --hash=%r argument, using previously chosen hash function %r instead",
                 self.hash_function, hash_function)
             self.hash_function = hash_function
         pass

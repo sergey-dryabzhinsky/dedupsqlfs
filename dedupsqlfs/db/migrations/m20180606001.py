@@ -65,11 +65,23 @@ def run(manager):
 
                 oldName = "%s_%s" % (tableName, oldHash,)
                 newName = "%s_%s" % (tableName, newId,)
-                oldPath = manager.getTable(oldName, True).getDbFilePath()
-                newPath = manager.getTable(newName, True).getDbFilePath()
+                oldTable = manager.getTable(oldName, True)
+                oldPath = oldTable.getDbFilePath()
+                newTable = manager.getTable(newName, True)
+                newPath = newTable.getDbFilePath()
+
+                # Decompress and no compress
+                oldTable.connect()
+                isCompressed = oldTable.getCompressed()
+                oldTable.close(True)
 
                 manager.getLogger().info("-- %r -> %r" % (oldName, newName,))
                 os.rename(oldPath, newPath)
+
+                if isCompressed:
+                    newTable.connect()
+                    newTable.setCompressed(isCompressed)
+                    newTable.close()
 
         table_sv.commit()
 

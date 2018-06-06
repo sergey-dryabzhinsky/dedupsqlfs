@@ -61,27 +61,36 @@ def run(manager):
 
             manager.getLogger().info("Rename all subvolume %r dependant table files" % newId)
 
-            for tableName in ("inode", "inode_option", "inode_hash_block", "link", "xattr", "tree"):
+            for tableName in ("inode", "inode_option", "inode_hash_block", "link", "xattr", "tree",):
 
                 oldName = "%s_%s" % (tableName, oldHash,)
                 newName = "%s_%s" % (tableName, newId,)
-                oldTable = manager.getTable(oldName, True)
-                oldPath = oldTable.getDbFilePath()
-                newTable = manager.getTable(newName, True)
-                newPath = newTable.getDbFilePath()
-
-                # Decompress and no compress
-                oldTable.connect()
-                isCompressed = oldTable.getCompressed()
-                oldTable.close(True)
 
                 manager.getLogger().info("-- %r -> %r" % (oldName, newName,))
-                os.rename(oldPath, newPath)
 
-                if isCompressed:
-                    newTable.connect()
-                    newTable.setCompressed(isCompressed)
-                    newTable.close()
+                if manager.TYPE == "mysql":
+                    cur.execute("RENAME TABLE `%s` TO `%s`;" % (oldName, newName,))
+
+                if manager.TYPE == "sqlite":
+
+                    oldTable = manager.getTable(oldName, True)
+                    oldPath = oldTable.getDbFilePath()
+
+                    newTable = manager.getTable(newName, True)
+                    newPath = newTable.getDbFilePath()
+
+                    # Decompress and no compress
+                    oldTable.connect()
+                    isCompressed = oldTable.getCompressed()
+                    oldTable.setCompressed(False)
+                    oldTable.close()
+
+                    os.rename(oldPath, newPath)
+
+                    if isCompressed:
+                        newTable.connect()
+                        newTable.setCompressed(isCompressed)
+                        newTable.close()
 
         table_sv.commit()
 

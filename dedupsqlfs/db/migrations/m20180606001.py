@@ -85,6 +85,7 @@ def run(manager):
                     oldTable.setCompressed(False)
                     oldTable.close()
                     del oldTable
+                    manager.unsetTable(oldName)
 
                     os.rename(oldPath, newPath)
                     if os.path.exists(oldPath):

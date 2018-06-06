@@ -240,6 +240,12 @@ class DbManager( object ):
         return self._table[ name ]
 
 
+    def unsetTable(self, name):
+        if name in self._table:
+            del self._table[name]
+        return self
+
+
     def isSupportedStorage(self):
         s = False
         datadir = self.getBasePath() + "/mysql-db-data"

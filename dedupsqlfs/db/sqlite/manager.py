@@ -182,6 +182,12 @@ class DbManager( object ):
         return self._table[ name ]
 
 
+    def unsetTable(self, name):
+        if name in self._table:
+            del self._table[name]
+        return self
+
+
     def begin(self):
         for name, t in self._table.items():
             t.begin()

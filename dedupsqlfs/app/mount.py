@@ -95,7 +95,6 @@ def main(): # {{{1
     generic.add_argument('--data', dest='data', metavar='DIRECTORY', default="~/data", help="Specify the base location for the files in which metadata and blocks data is stored. Defaults to ~/data")
     generic.add_argument('--name', dest='name', metavar='DATABASE', default="dedupsqlfs", help="Specify the name for the database directory in which metadata and blocks data is stored. Defaults to dedupsqlfs")
     generic.add_argument('--temp', dest='temp', metavar='DIRECTORY', help="Specify the location for the files in which temporary data is stored. By default honour TMPDIR environment variable value.")
-    generic.add_argument('-b', '--block-size', dest='block_size', metavar='BYTES', default=1024*128, type=int, help="Specify the maximum block size in bytes" + option_stored_in_db + ". Defaults to 128kB.")
     generic.add_argument('--mount-subvolume', dest='mounted_subvolume', metavar='NAME', default=None, help="Use subvolume NAME as root fs.")
 
     generic.add_argument('--memory-limit', dest='memory_limit', action='store_true', help="Use some lower values for less memory consumption.")
@@ -135,13 +134,24 @@ def main(): # {{{1
     grp_data.add_argument('--gc-interval', dest='gc_interval', metavar="N", type=int, default=60, help="Call garbage callector after Nth seconds on FUSE operations, if GC enabled. Defaults to 60.")
 
     # Dynamically check for supported hashing algorithms.
-    msg = "Specify the hashing algorithm that will be used to recognize duplicate data blocks: one of %s"
+    msg = "Specify the hashing algorithm that will be used to recognize duplicate data blocks: one of %s. Choose wisely - it can't be changed on the fly."
     hash_functions = list({}.fromkeys([h.lower() for h in hashlib.algorithms_available]).keys())
+
+    try:
+        module = __import__('ddsf_xxhash')
+        if hasattr(module, 'xxh32') and hasattr(module, 'xxh64'):
+            hash_functions.append('xxhash')
+    except ImportError:
+        pass
+
     hash_functions.sort()
     work_hash_funcs = set(hash_functions) & constants.WANTED_HASH_FUCTIONS
     msg %= ', '.join('%r' % fun for fun in work_hash_funcs)
-    msg += ". Defaults to 'sha1'."
-    grp_data.add_argument('--hash', dest='hash_function', metavar='FUNCTION', choices=hash_functions, default='sha1', help=msg)
+    defHash = 'md5' # Hope it will be there always. Stupid.
+    if 'xxhash' in work_hash_funcs:
+        defHash = 'xxhash'
+    msg += ". Defaults to %r." % defHash
+    grp_data.add_argument('--hash', dest='hash_function', metavar='FUNCTION', choices=work_hash_funcs, default=defHash, help=msg)
 
     grp_data.add_argument('--collision-check', dest='collision_check_enabled', action='store_true', help="Check for hash collision on writed data.")
 

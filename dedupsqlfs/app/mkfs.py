@@ -114,12 +114,24 @@ def main(): # {{{1
     parser.add_argument('--nosync', dest='synchronous', action='store_false', help="Disable SQLite's normal synchronous behavior which guarantees that data is written to disk immediately, because it slows down the file system too much (this means you might lose data when the mount point isn't cleanly unmounted).")
 
     # Dynamically check for supported hashing algorithms.
-    msg = "Specify the hashing algorithm that will be used to recognize duplicate data blocks: one of %s"
+    msg = "Specify the hashing algorithm that will be used to recognize duplicate data blocks: one of %s. Choose wisely - it can't be changed on the fly."
     hash_functions = list({}.fromkeys([h.lower() for h in hashlib.algorithms_available]).keys())
+
+    try:
+        module = __import__('ddsf_xxhash')
+        if hasattr(module, 'xxh32') and hasattr(module, 'xxh64'):
+            hash_functions.append('xxhash')
+    except ImportError:
+        pass
+
     hash_functions.sort()
-    msg %= ', '.join('%r' % fun for fun in hash_functions)
-    msg += ". Defaults to 'sha1'."
-    parser.add_argument('--hash', dest='hash_function', metavar='FUNCTION', choices=hash_functions, default='sha1', help=msg)
+    work_hash_funcs = set(hash_functions) & constants.WANTED_HASH_FUCTIONS
+    msg %= ', '.join('%r' % fun for fun in work_hash_funcs)
+    defHash = 'md5' # Hope it will be there always. Stupid.
+    if 'xxhash' in work_hash_funcs:
+        defHash = 'xxhash'
+    msg += ". Defaults to %r." % defHash
+    parser.add_argument('--hash', dest='hash_function', metavar='FUNCTION', choices=work_hash_funcs, default=defHash, help=msg)
 
     # Dynamically check for supported compression methods.
     compression_methods = [constants.COMPRESSION_TYPE_NONE]

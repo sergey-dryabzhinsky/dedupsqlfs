@@ -1888,10 +1888,12 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __hash(self, data): # {{{3
         start_time = time()
-        #context = hashlib.new(self.hash_function)
-        #context.update(data)
-        #digest = context.digest()
-        digest = xxh64(data).digest()
+        if self.hash_function == 'xxhash':
+            digest = xxh64(data).digest()
+        else:
+            context = hashlib.new(self.hash_function)
+            context.update(data)
+            digest = context.digest()
         self.time_spent_hashing += time() - start_time
         return digest
 

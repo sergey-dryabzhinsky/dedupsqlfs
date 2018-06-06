@@ -25,7 +25,7 @@ from dedupsqlfs.log import logging
 import dedupsqlfs
 
 
-def fuse_mount(options, compression_methods=None, hash_functions=None):
+def fuse_mount(options, compression_methods=None):
     from dedupsqlfs.fuse.dedupfs import DedupFS
     from dedupsqlfs.fuse.operations import DedupOperations
 
@@ -70,7 +70,6 @@ def main(): # {{{1
         conflict_handler="resolve")
 
     # Register some custom command line options with the option parser.
-    option_stored_in_db = " (this option is only useful when creating a new database, because your choice is stored in the database and can't be changed after that)"
 
     parser.add_argument('-h', '--help', action='help', help="show this help message followed by the command line options defined by the Python FUSE binding and exit")
     parser.add_argument('-v', '--verbose', action='count', dest='verbosity', default=0, help="increase verbosity: 0 - error, 1 - warning, 2 - info, 3 - debug, 4 - verbose")
@@ -182,7 +181,7 @@ def main(): # {{{1
         import cProfile, pstats
         profile = '.dedupsqlfs.cprofile-%i' % time()
         profiler = cProfile.Profile()
-        result = profiler.runcall(fuse_mount, args, compression_methods, None)
+        result = profiler.runcall(fuse_mount, args, compression_methods)
         profiler.dump_stats(profile)
         sys.stderr.write("\n Profiling statistics:\n\n")
         s = pstats.Stats(profile)
@@ -191,7 +190,7 @@ def main(): # {{{1
         s.sort_stats('tottime').print_stats(0.1)
         os.unlink(profile)
     else:
-        result = fuse_mount(args, compression_methods, None)
+        result = fuse_mount(args, compression_methods)
 
     return result
 

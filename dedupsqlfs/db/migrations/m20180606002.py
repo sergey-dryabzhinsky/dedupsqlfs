@@ -48,7 +48,7 @@ def run(manager):
 
         for nm in iter(cur.fetchone, None):
 
-            newId = xxh32(nm['value']).intdigest()
+            newId = nm['id']
 
             checkId = table_nm.insertRaw(nm['id'], nm['value'])
 

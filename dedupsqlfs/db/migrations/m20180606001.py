@@ -92,7 +92,7 @@ def run(manager):
 
                     if isCompressed:
                         newTable.connect()
-                        newTable.setCompressed(isCompressed)
+                        newTable.setCompressed(not isCompressed)
                         newTable.close()
 
         table_sv.commit()

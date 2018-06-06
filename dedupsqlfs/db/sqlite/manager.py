@@ -87,6 +87,13 @@ class DbManager( object ):
         return self._db_name
 
     def getTable(self, name, nocreate=False):
+        """
+
+        @param name:
+        @param nocreate:
+        @return: L{dedupsqlfs.db.sqlite.table.Table}
+        @rtype: dedupsqlfs.db.sqlite.table.Table
+        """
         if name not in self._table:
             if name == "option":
                 from dedupsqlfs.db.sqlite.table.option import TableOption

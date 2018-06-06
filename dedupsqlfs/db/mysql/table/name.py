@@ -61,7 +61,7 @@ class TableName( Table ):
 
         cur.execute(
             "INSERT INTO `%s` " % self.getName()+
-            " (`id`,`hash`,`value`) VALUES (%s,%s)", (rowId, digest, value,))
+            " (`id`,`hash`,`value`) VALUES (%s,%s,%s)", (rowId, digest, value,))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item

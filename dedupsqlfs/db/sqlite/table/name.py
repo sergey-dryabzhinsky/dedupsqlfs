@@ -61,7 +61,7 @@ class TableName( Table ):
 
         bvalue = sqlite3.Binary(value)
 
-        cur.execute("INSERT INTO `%s`(id,hash,value) VALUES (?,?)" % self.getName(), (rowId, digest, bvalue,))
+        cur.execute("INSERT INTO `%s`(id,hash,value) VALUES (?,?,?)" % self.getName(), (rowId, digest, bvalue,))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item

@@ -16,8 +16,10 @@ class TableName( Table ):
         # Create table
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
-                "id INTEGER PRIMARY KEY, "+
-                "value BLOB NOT NULL"+
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
+                "hash INTEGER NOT NULL, "+
+                "value BLOB NOT NULL, "+
+                "UNIQUE(hash) " +
             ");"
         )
         return
@@ -28,7 +30,7 @@ class TableName( Table ):
         :return: int
         """
         bvalue = sqlite3.Binary(value)
-        return 8 + len(bvalue)*2
+        return 8 + 8 + len(bvalue)*2
 
     def insert(self, value):
         """
@@ -42,7 +44,24 @@ class TableName( Table ):
 
         bvalue = sqlite3.Binary(value)
 
-        cur.execute("INSERT INTO `%s`(id,value) VALUES (?,?)" % self.getName(), (digest,bvalue,))
+        cur.execute("INSERT INTO `%s`(hash,value) VALUES (?,?)" % self.getName(), (digest,bvalue,))
+        item = cur.lastrowid
+        self.stopTimer('insert')
+        return item
+
+    def insertRaw(self, rowId, value):
+        """
+        :param value: bytes
+        :return: int
+        """
+        self.startTimer()
+        cur = self.getCursor()
+
+        digest = xxh32(value).intdigest()
+
+        bvalue = sqlite3.Binary(value)
+
+        cur.execute("INSERT INTO `%s`(id,hash,value) VALUES (?,?)" % self.getName(), (rowId, digest, bvalue,))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
@@ -57,7 +76,7 @@ class TableName( Table ):
 
         digest = xxh32(value).intdigest()
 
-        cur.execute("SELECT id FROM `%s` WHERE id=?" % self._table_name, (digest,))
+        cur.execute("SELECT id FROM `%s` WHERE hash=?" % self._table_name, (digest,))
         item = cur.fetchone()
         if item:
             item = item["id"]

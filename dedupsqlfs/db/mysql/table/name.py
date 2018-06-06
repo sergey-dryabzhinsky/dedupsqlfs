@@ -17,10 +17,12 @@ class TableName( Table ):
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`id` BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
+                "`hash` INTEGER UNSIGNED NOT NULL, "+
                 "`value` BLOB NOT NULL"+
             ")"+
             self._getCreationAppendString()
         )
+        self.createIndexIfNotExists('hash', ('hash',), True)
         return
 
     def getRowSize(self, value):
@@ -28,7 +30,7 @@ class TableName( Table ):
         :param value: bytes
         :return: int
         """
-        return 8 + len(value)+2
+        return 8 + 4 + len(value)+2
 
     def insert(self, value):
         """
@@ -42,7 +44,24 @@ class TableName( Table ):
 
         cur.execute(
             "INSERT INTO `%s` " % self.getName()+
-            " (`id`,`value`) VALUES (%s,%s)", (digest,value,))
+            " (`hash`,`value`) VALUES (%s,%s)", (digest,value,))
+        item = cur.lastrowid
+        self.stopTimer('insert')
+        return item
+
+    def insertRaw(self, rowId, value):
+        """
+        :param value: bytes
+        :return: int
+        """
+        self.startTimer()
+        cur = self.getCursor()
+
+        digest = xxh32(value).intdigest()
+
+        cur.execute(
+            "INSERT INTO `%s` " % self.getName()+
+            " (`id`,`hash`,`value`) VALUES (%s,%s)", (rowId, digest, value,))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
@@ -59,7 +78,7 @@ class TableName( Table ):
 
         cur.execute(
             "SELECT `id` FROM `%s` " % self.getName()+
-            " WHERE `id`=%s", (digest,))
+            " WHERE `hash`=%s", (digest,))
         item = cur.fetchone()
         if item:
             item = item["id"]

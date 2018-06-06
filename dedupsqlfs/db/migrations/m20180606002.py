@@ -50,7 +50,7 @@ def run(manager):
 
             newId = xxh32(nm['value']).intdigest()
 
-            checkId = table_nm.insert(nm['value'])
+            checkId = table_nm.insertRaw(nm['id'], nm['value'])
 
             if checkId != newId:
                 manager.getLogger().error("EEE: generated name IDs not equal: %r != %r!" % (checkId, newId,))

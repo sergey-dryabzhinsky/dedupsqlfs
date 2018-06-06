@@ -12,7 +12,10 @@ def format_timespan(seconds): # {{{1
     if seconds >= size:
       count = seconds / size
       seconds %= size
-      result.append('%i %s%s' % (count, name, floor(count) != 1 and 's' or ''))
+      if seconds < 1:
+        result.append('%.3f %s%s' % (count, name, floor(count) != 1 and 's' or ''))
+      else:
+        result.append('%i %s%s' % (count, name, floor(count) != 1 and 's' or ''))
   if result == []:
     return 'less than a second'
   if len(result) == 1:

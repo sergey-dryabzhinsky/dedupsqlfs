@@ -35,7 +35,8 @@ class MultiThreadCompressTool(BaseCompressTool):
                 self._np = self._np_limit
         return self._np
 
-    def init(self):
+    def init(self, logger):
+        super().init(logger)
 
         self._threads = []
         self._task_queues = []

@@ -2897,7 +2897,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         if not self.use_transactions:
             start_time = time()
             self.getManager().commit()
-            self.getManager().begin()
+            # self.getManager().begin()
             self.time_spent_commiting += time() - start_time
 
 

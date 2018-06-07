@@ -245,8 +245,7 @@ class Table( object ):
         if isPyPy:
             # Something wrong with sqlite3 module in pypy3
             # Works correctly only with autocommit
-            #self.getManager().setAutocommit(True)
-            pass
+            self.getManager().setAutocommit(True)
 
         if not self.getManager().getAutocommit():
             conn.execute("PRAGMA read_uncommitted=ON")
@@ -341,21 +340,20 @@ class Table( object ):
         raise NotImplemented
 
     def begin( self ):
-#        if not self.getManager().getAutocommit():
-#            cur = self.getCursor()
-#            cur.execute("BEGIN")
+        if not self.getManager().getAutocommit():
+            cur = self.getCursor()
+            cur.execute("BEGIN")
         return self
 
     def commit(self):
         if not self.getManager().getAutocommit():
             self.startTimer()
-            self.getConnection().commit()
-#            cur = self.getCursor()
-#            try:
-#                cur.execute("COMMIT")
-#            except Exception as e:
-#                self.getLogger().debug("EEE: Exception on commit? %s" % e)
-#                pass
+            cur = self.getCursor()
+            try:
+                cur.execute("COMMIT")
+            except Exception as e:
+                self.getLogger().debug("EEE: Exception on commit? %s" % e)
+                pass
             self.stopTimer("commit")
         return self
 

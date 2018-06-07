@@ -238,6 +238,7 @@ class Table( object ):
 
         # Set journal mode early as possible
         conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA journal_size_limit=0")
 
         # Dirty hack again for pypy
         isPyPy = platform.python_implementation() == 'PyPy'

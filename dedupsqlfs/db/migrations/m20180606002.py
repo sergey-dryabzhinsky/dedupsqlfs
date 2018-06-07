@@ -39,6 +39,9 @@ def run(manager):
             cur.execute("RENAME TABLE `%s` TO `%s_old`;" % (table_nm.getName(),table_nm.getName(),))
         if manager.TYPE == "sqlite":
             cur.execute("ALTER TABLE `%s` RENAME TO `%s_old`;" % (table_nm.getName(), table_nm.getName(),))
+            # Sqlite indexes not connected to tables
+            table_nm.createIndexOnTableIfNotExists("%s_old" % table_nm.getName(), "hash", ("hash",), True)
+            table_nm.dropIndex("hash")
 
         # Create new table
         manager.getLogger().info("Create new table")
@@ -60,6 +63,9 @@ def run(manager):
 
         manager.getLogger().info("Drop old table")
         cur.execute("DROP TABLE `%s_old`;" % (table_nm.getName(),))
+        if manager.TYPE == "sqlite":
+            # Sqlite indexes not connected to tables
+            table_nm.dropIndexOnTable("%s_old" % table_nm.getName(), "hash")
 
         table_nm.commit()
         table_nm.close()

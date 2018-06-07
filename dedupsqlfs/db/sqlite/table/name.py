@@ -18,10 +18,10 @@ class TableName( Table ):
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
                 "hash INTEGER NOT NULL, "+
-                "value BLOB NOT NULL, "+
-                "UNIQUE(hash) " +
+                "value BLOB NOT NULL "+
             ");"
         )
+        self.createIndexIfNotExists('hash', ('hash',), True)
         return
 
     def getRowSize(self, value):

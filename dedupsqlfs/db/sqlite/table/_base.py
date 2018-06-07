@@ -448,20 +448,26 @@ class Table( object ):
         @type unique: bool
         @type indexSizes: dict
         """
+        return self.createIndexOnTableIfNotExists(self.getName(), indexName, fieldList, unique=unique, indexSizes=indexSizes)
+
+    def createIndexOnTableIfNotExists(self, tableName, indexName, fieldList, unique=False, indexSizes=None):
+        """
+        @param tableName: Table name
+        @param indexName: Index name
+        @param fieldList: List of table fields for index
+        @param unique: Is index unique?
+        @param indexSizes: Sizes for CHAR/BINARY/BLOB/TEXT indexes. How many starting symbols to index
+
+        @type tableName: str
+        @type indexName: str
+        @type fieldList: list|tuple
+        @type unique: bool
+        @type indexSizes: dict
+        """
         if not len(fieldList):
             raise ValueError("Define table field list for index!")
 
-        cur = self.getCursor()
-
-        cur.execute(
-            "PRAGMA index_info(`%s`);" %
-            (self.getName()+"_" + indexName,)
-        )
-        row = cur.fetchone()
-
-        exists = (row is not None) and (len(row) > 0)
-
-        if not exists:
+        if not self.hasIndexOnTable(tableName, indexName):
             _u = ""
             if unique:
                 _u = "UNIQUE"
@@ -482,12 +488,41 @@ class Table( object ):
 
             _f = ",".join(_f)
 
+            fullIndexName = tableName + "_" + indexName
+            cur = self.getCursor()
             cur.execute(
-                "CREATE "+_u+" INDEX `%s` " % (self.getName() + "_" + indexName)+
-                " ON `%s` " % self.getName()+
+                "CREATE "+_u+" INDEX `%s` " % fullIndexName+
+                " ON `%s` " % tableName+
                 "("+_f+")")
 
-        return exists
+        return self
+
+    def dropIndex(self, indexName):
+        return self.dropIndexOnTable(self.getName(), indexName)
+
+    def dropIndexOnTable(self, tableName, indexName):
+        fullIndexName = tableName + "_" + indexName
+        if self.hasIndexOnTable(tableName, indexName):
+            cur = self.getCursor()
+            cur.execute("DROP INDEX `%s`;" % fullIndexName)
+        return self
+
+    def hasIndex(self, indexName):
+        return self.hasIndexOnTable(self.getName(), indexName)
+
+    def hasIndexOnTable(self, tableName, indexName):
+        cur = self.getCursor()
+
+        fullIndexName = tableName + "_" + indexName
+
+        cur.execute(
+            "PRAGMA index_info(`%s`);" %
+            fullIndexName
+        )
+        row = cur.fetchone()
+
+        return (row is not None) and (len(row) > 0)
+
 
     def drop(self):
         self.startTimer()

@@ -5,6 +5,7 @@
 
 from time import time
 import heapq
+import copy
 
 class StorageTimeSize(object):
     """
@@ -259,7 +260,7 @@ class StorageTimeSize(object):
                     if inode not in write_inodes:
                         write_inodes[inode] = {}
 
-                    write_inodes[inode][bn] = block_data.copy()
+                    write_inodes[inode][bn] = copy.copy(block_data)
 
                     block_data[self.OFFSET_TOFLUSH] = False
 
@@ -269,7 +270,7 @@ class StorageTimeSize(object):
                         if inode not in write_inodes:
                             write_inodes[inode] = {}
 
-                        write_inodes[inode][bn] = block_data.copy()
+                        write_inodes[inode][bn] = copy.copy(block_data)
 
                         self._cur_write_cache_size -= block_data[self.OFFSET_SIZE]
                     else:
@@ -377,7 +378,7 @@ class StorageTimeSize(object):
                     if inode not in oversize_inodes:
                         oversize_inodes[inode] = {}
 
-                    oversize_inodes[inode][bn] = block_data.copy()
+                    oversize_inodes[inode][bn] = copy.copy(block_data)
 
                     self._cur_write_cache_size -= block_data[self.OFFSET_SIZE]
                 else:
@@ -416,7 +417,7 @@ class StorageTimeSize(object):
                     if inode not in old_inodes:
                         old_inodes[inode] = {}
 
-                    old_inodes[inode][bn] = block_data.copy()
+                    old_inodes[inode][bn] = copy.copy(block_data)
 
                     block_data[self.OFFSET_TOFLUSH] = False
 
@@ -426,7 +427,7 @@ class StorageTimeSize(object):
                 if inode not in old_inodes:
                     old_inodes[inode] = {}
 
-                old_inodes[inode][bn] = block_data.copy()
+                old_inodes[inode][bn] = copy.copy(block_data)
 
         self._inodes = {}
         return old_inodes

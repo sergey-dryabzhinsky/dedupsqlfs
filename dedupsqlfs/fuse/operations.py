@@ -1676,6 +1676,8 @@ class DedupOperations(llfuse.Operations): # {{{1
             else:
                 optTable.update(name, "%i" % popt)
 
+        optTable.commit()
+
         return
 
 

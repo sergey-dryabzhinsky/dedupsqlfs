@@ -178,6 +178,9 @@ class DbManager( object ):
             if not nocreate:
                 if not self._table[ name ].hasTable():
                     self._table[ name ].create()
+                    # Ugly fix for pypy3
+                    self._table[ name ].commit()
+                    self._table[ name ].close()
 
         return self._table[ name ]
 

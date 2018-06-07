@@ -263,7 +263,8 @@ class Table( object ):
             cur = self.getCursor()
             try:
                 cur.execute("COMMIT")
-            except:
+            except Exception as e:
+                self.getLogger().debug("EEE: Exception on commit? %s" % e)
                 pass
             self.stopTimer("commit")
         return self

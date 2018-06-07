@@ -235,6 +235,9 @@ class Table( object ):
         conn.row_factory = dict_factory
         conn.text_factory = bytes
 
+        # Set journal mode early as possible
+        conn.execute("PRAGMA journal_mode=WAL")
+
         # We don't expect many connections here
         conn.execute('PRAGMA locking_mode=EXCLUSIVE')
         if not self.getManager().getSynchronous():
@@ -246,7 +249,6 @@ class Table( object ):
         conn.execute("PRAGMA max_page_count=2147483646")
         conn.execute("PRAGMA page_size=%i" % pageSize)
         conn.execute("PRAGMA cache_size=%i" % cacheSize)
-        conn.execute("PRAGMA journal_mode=WAL")
 
         if not self.getManager().getAutocommit():
             conn.execute("PRAGMA read_uncommitted=ON")

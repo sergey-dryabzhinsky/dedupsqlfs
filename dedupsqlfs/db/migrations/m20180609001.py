@@ -48,7 +48,7 @@ def run(manager):
 
         for h in iter(cur.fetchone, None):
 
-            table_h.insertRaw(h['id'], h['value'])
+            table_h.insertRaw(h['id'], h['hash'])
 
         table_h.commit()
 

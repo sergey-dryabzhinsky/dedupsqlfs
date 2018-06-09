@@ -1,6 +1,6 @@
 # -*- coding: utf8 -*-
 #
-# DB migration 001 by 2017-11-03
+# DB migration 001 by 2018-06-06
 #
 # Table `subvolume` uses md5 hash as BINARY(16) now
 #

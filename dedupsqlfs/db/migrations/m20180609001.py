@@ -1,6 +1,6 @@
 # -*- coding: utf8 -*-
 #
-# DB migration 001 by 2017-11-03
+# DB migration 001 by 2018-06-09
 #
 # Table `hash` uses binary(64) hash now
 #

@@ -2,7 +2,7 @@
 
 __author__ = 'sergey'
 
-from ddsf_xxhash import xxh32
+import hashlib
 import sqlite3
 from dedupsqlfs.db.sqlite.table import Table
 
@@ -17,7 +17,7 @@ class TableName( Table ):
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self._table_name+
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
-                "hash INTEGER NOT NULL, "+
+                "hash BINARY(16) NOT NULL, "+
                 "value BLOB NOT NULL "+
             ");"
         )
@@ -30,7 +30,7 @@ class TableName( Table ):
         :return: int
         """
         bvalue = sqlite3.Binary(value)
-        return 8 + 8 + len(bvalue)*2
+        return 8 + 16 + len(bvalue)*2
 
     def insert(self, value):
         """
@@ -40,7 +40,7 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        digest = xxh32(value).intdigest()
+        digest = sqlite3.Binary(hashlib.new('md5', value).digest())
 
         bvalue = sqlite3.Binary(value)
 
@@ -57,7 +57,7 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        digest = xxh32(value).intdigest()
+        digest = sqlite3.Binary(hashlib.new('md5', value).digest())
 
         bvalue = sqlite3.Binary(value)
 
@@ -74,7 +74,7 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        digest = xxh32(value).intdigest()
+        digest = sqlite3.Binary(hashlib.new('md5', value).digest())
 
         cur.execute("SELECT id FROM `%s` WHERE hash=?" % self._table_name, (digest,))
         item = cur.fetchone()

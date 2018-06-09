@@ -2,7 +2,7 @@
 
 __author__ = 'sergey'
 
-from ddsf_xxhash import xxh32
+import hashlib
 import sqlite3
 from time import time
 from dedupsqlfs.db.sqlite.table import Table
@@ -18,6 +18,7 @@ class TableSubvolume( Table ):
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "id INTEGER PRIMARY KEY, "+
+                "`hash` BINARY(16) NOT NULL, "+
                 "`name` BLOB NOT NULL, "+
                 "`stats` TEXT, "+
                 "`root_diff` TEXT, "+
@@ -42,11 +43,11 @@ class TableSubvolume( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        digest = xxh32(name).intdigest()
+        digest = sqlite3.Binary(hashlib.new('md5', name).digest())
 
         bname = sqlite3.Binary(name)
 
-        cur.execute("INSERT INTO `%s`(id, name, created_at, mounted_at, updated_at, stats_at, stats, root_diff_at, root_diff) " % self.getName()+
+        cur.execute("INSERT INTO `%s`(hash, name, created_at, mounted_at, updated_at, stats_at, stats, root_diff_at, root_diff) " % self.getName()+
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (digest, bname, int(created_at), mounted_at, updated_at, stats_at, stats, root_diff_at, root_diff,))
         item = cur.lastrowid
         self.stopTimer('insert')
@@ -146,11 +147,11 @@ class TableSubvolume( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        digest = xxh32(name).intdigest()
+        digest = sqlite3.Binary(hashlib.new('md5', name).digest())
 
         cur.execute(
             "SELECT * FROM `%s` " % self.getName()+
-            " WHERE `id`=?", (digest,)
+            " WHERE `hash`=?", (digest,)
         )
         item = cur.fetchone()
         if item:

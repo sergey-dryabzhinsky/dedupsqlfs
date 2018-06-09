@@ -8,9 +8,6 @@ __author__ = 'sergey'
 
 __NUMBER__ = 20180606002
 
-import os
-from ddsf_xxhash import xxh32
-
 def run(manager):
     """
     :param manager: Database manager
@@ -51,13 +48,7 @@ def run(manager):
 
         for nm in iter(cur.fetchone, None):
 
-            newId = nm['id']
-
-            checkId = table_nm.insertRaw(nm['id'], nm['value'])
-
-            if checkId != newId:
-                manager.getLogger().error("EEE: generated name IDs not equal: %r != %r!" % (checkId, newId,))
-                raise RuntimeError('Error while migrating name table!')
+            table_nm.insertRaw(nm['id'], nm['value'])
 
         table_nm.commit()
 

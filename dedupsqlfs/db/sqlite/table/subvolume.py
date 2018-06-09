@@ -17,7 +17,7 @@ class TableSubvolume( Table ):
         # Create table
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
-                "id INTEGER PRIMARY KEY, "+
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
                 "`hash` BINARY(16) NOT NULL, "+
                 "`name` BLOB NOT NULL, "+
                 "`stats` TEXT, "+

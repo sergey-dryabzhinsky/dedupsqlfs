@@ -16,7 +16,7 @@ def run(manager):
     """
 
     try:
-        table_h = manager.getTable("hahs")
+        table_h = manager.getTable("hash")
         """
         :type table_name: dedupsqlfs.db.sqlite.table.subvolume.TableHash |
                         dedupsqlfs.db.mysql.table.subvolume.TableHash

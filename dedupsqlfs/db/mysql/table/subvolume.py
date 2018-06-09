@@ -2,7 +2,7 @@
 
 __author__ = 'sergey'
 
-from ddsf_xxhash import xxh32
+import hashlib
 from time import time
 from dedupsqlfs.db.mysql.table import Table
 
@@ -17,6 +17,7 @@ class TableSubvolume( Table ):
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`id` INT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
+                "`hash` BINARY(16) NOT NULL, "+
                 "`name` BLOB NOT NULL, "+
                 "`stats` TEXT, "+
                 "`root_diff` TEXT, "+
@@ -29,6 +30,7 @@ class TableSubvolume( Table ):
             ")"+
             self._getCreationAppendString()
         )
+        self.createIndexIfNotExists('hash', ('hash',), True)
         return
 
     def insert( self, name, created_at, mounted_at=None, updated_at=None, stats_at=None, stats=None, root_diff_at=None, root_diff=None ):
@@ -42,11 +44,11 @@ class TableSubvolume( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        digest = xxh32(name).intdigest()
+        digest = hashlib.new('md5', name).digest()
 
         cur.execute(
             "INSERT INTO `%s` " % self.getName()+
-            " (`id`,`name`,`created_at`, `mounted_at`, `updated_at`, `stats_at`, `stats`, `root_diff_at`, `root_diff`) "+
+            " (`hash`,`name`,`created_at`, `mounted_at`, `updated_at`, `stats_at`, `stats`, `root_diff_at`, `root_diff`) "+
             "VALUES (%(hash)s, %(name)s, %(created)s, %(mounted)s, %(updated)s, %(statsed)s, %(stats)s, %(diffed)s, %(root_diff)s)",
             {
                 "hash": digest,
@@ -206,7 +208,7 @@ class TableSubvolume( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        digest = xxh32(name).intdigest()
+        digest = hashlib.new('md5', name).digest()
 
         cur.execute(
             "SELECT * FROM `%s` " % self.getName()+

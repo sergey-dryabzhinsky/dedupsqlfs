@@ -2,14 +2,13 @@
 #
 # DB migration 001 by 2017-11-03
 #
-# Table `subvolume` uses xxh32 hash as ID value
+# Table `subvolume` uses md5 hash as BINARY(16) now
 #
 __author__ = 'sergey'
 
 __NUMBER__ = 20180606001
 
 import os
-from ddsf_xxhash import xxh32
 
 def run(manager):
     """
@@ -29,7 +28,7 @@ def run(manager):
 
         manager.getLogger().info("Migration #%s" % (__NUMBER__,))
 
-        manager.getLogger().info("Migrate subvolume table to use xxHash")
+        manager.getLogger().info("Migrate subvolume table")
 
         cur = table_sv.getCursor(True)
 
@@ -48,14 +47,8 @@ def run(manager):
 
         for subvol in iter(cur.fetchone, None):
 
-            newId = xxh32(subvol['name']).intdigest()
-
-            checkId = table_sv.insert(subvol['name'], subvol['created_at'], subvol['mounted_at'], subvol['updated_at'],
+            newId = table_sv.insert(subvol['name'], subvol['created_at'], subvol['mounted_at'], subvol['updated_at'],
                             subvol['stats_at'], subvol['stats'], subvol['root_diff_at'], subvol['root_diff'])
-
-            if checkId != newId:
-                manager.getLogger().error("EEE: generated subvolume IDs not equal: %r != %r!" % (checkId, newId,))
-                raise RuntimeError('Error while migrating subvolume table!')
 
             oldHash = subvol['hash'].decode()
 
@@ -64,7 +57,7 @@ def run(manager):
             for tableName in ("inode", "inode_option", "inode_hash_block", "link", "xattr", "tree",):
 
                 oldName = "%s_%s" % (tableName, oldHash,)
-                newName = "%s_%s" % (tableName, newId,)
+                newName = "%s_%d" % (tableName, newId,)
 
                 manager.getLogger().info("-- %r -> %r" % (oldName, newName,))
 

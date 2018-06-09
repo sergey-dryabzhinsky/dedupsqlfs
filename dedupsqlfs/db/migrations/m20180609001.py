@@ -2,11 +2,11 @@
 #
 # DB migration 001 by 2017-11-03
 #
-# Table `name` uses md5 hash as BINARY(16) now
+# Table `hash` uses binary(64) hash now
 #
 __author__ = 'sergey'
 
-__NUMBER__ = 20180606002
+__NUMBER__ = 20180609001
 
 def run(manager):
     """
@@ -16,50 +16,50 @@ def run(manager):
     """
 
     try:
-        table_nm = manager.getTable("name")
+        table_h = manager.getTable("hash")
         """
-        :type table_name: dedupsqlfs.db.sqlite.table.subvolume.TableName |
-                        dedupsqlfs.db.mysql.table.subvolume.TableName
+        :type table_name: dedupsqlfs.db.sqlite.table.subvolume.TableHash |
+                        dedupsqlfs.db.mysql.table.subvolume.TableHash
         """
 
         from dedupsqlfs.lib.constants import ROOT_SUBVOLUME_NAME
 
         manager.getLogger().info("Migration #%s" % (__NUMBER__,))
 
-        manager.getLogger().info("Migrate name table")
+        manager.getLogger().info("Migrate hash table")
 
-        cur = table_nm.getCursor(True)
+        cur = table_h.getCursor(True)
 
         # Rename table to _old
         manager.getLogger().info("Rename old table")
         if manager.TYPE == "mysql":
-            cur.execute("RENAME TABLE `%s` TO `%s_old`;" % (table_nm.getName(),table_nm.getName(),))
+            cur.execute("RENAME TABLE `%s` TO `%s_old`;" % (table_h.getName(),table_h.getName(),))
         if manager.TYPE == "sqlite":
-            cur.execute("ALTER TABLE `%s` RENAME TO `%s_old`;" % (table_nm.getName(), table_nm.getName(),))
+            cur.execute("ALTER TABLE `%s` RENAME TO `%s_old`;" % (table_h.getName(), table_h.getName(),))
             # Sqlite indexes not connected to tables
-            table_nm.createIndexOnTableIfNotExists("%s_old" % table_nm.getName(), "hash", ("hash",), True)
-            table_nm.dropIndex("hash")
+            table_h.createIndexOnTableIfNotExists("%s_old" % table_h.getName(), "hash", ("hash",), True)
+            table_h.dropIndex("hash")
 
         # Create new table
         manager.getLogger().info("Create new table")
-        table_nm.create()
+        table_h.create()
 
-        cur.execute("SELECT * FROM `%s_old`" % table_nm.getName())
+        cur.execute("SELECT * FROM `%s_old`" % table_h.getName())
 
-        for nm in iter(cur.fetchone, None):
+        for h in iter(cur.fetchone, None):
 
-            table_nm.insertRaw(nm['id'], nm['value'])
+            table_h.insertRaw(h['id'], h['hash'])
 
-        table_nm.commit()
+        table_h.commit()
 
         manager.getLogger().info("Drop old table")
-        cur.execute("DROP TABLE `%s_old`;" % (table_nm.getName(),))
+        cur.execute("DROP TABLE `%s_old`;" % (table_h.getName(),))
         if manager.TYPE == "sqlite":
             # Sqlite indexes not connected to tables
-            table_nm.dropIndexOnTable("%s_old" % table_nm.getName(), "hash")
+            table_h.dropIndexOnTable("%s_old" % table_h.getName(), "hash")
 
-        table_nm.commit()
-        table_nm.close()
+        table_h.commit()
+        table_h.close()
 
 
     except Exception as e:

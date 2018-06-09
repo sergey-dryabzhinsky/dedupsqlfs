@@ -2,7 +2,7 @@
 
 __author__ = 'sergey'
 
-from ddsf_xxhash import xxh32
+import hashlib
 from dedupsqlfs.db.mysql.table import Table
 
 class TableName( Table ):
@@ -17,7 +17,7 @@ class TableName( Table ):
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`id` BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
-                "`hash` INTEGER UNSIGNED NOT NULL, "+
+                "`hash` BINARY(16) NOT NULL, "+
                 "`value` BLOB NOT NULL"+
             ")"+
             self._getCreationAppendString()
@@ -30,7 +30,7 @@ class TableName( Table ):
         :param value: bytes
         :return: int
         """
-        return 8 + 4 + len(value)+2
+        return 8 + 16 + len(value)+2
 
     def insert(self, value):
         """
@@ -40,7 +40,7 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        digest = xxh32(value).intdigest()
+        digest = hashlib.new('md5', value).digest()
 
         cur.execute(
             "INSERT INTO `%s` " % self.getName()+
@@ -57,13 +57,13 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        digest = xxh32(value).intdigest()
+        digest = hashlib.new('md5', value).digest()
 
         cur.execute(
             "INSERT INTO `%s` " % self.getName()+
             " (`id`,`hash`,`value`) VALUES (%s,%s,%s)", (rowId, digest, value,))
         item = cur.lastrowid
-        self.stopTimer('insert')
+        self.stopTimer('insertRaw')
         return item
 
     def find(self, value):
@@ -74,7 +74,7 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        digest = xxh32(value).intdigest()
+        digest = hashlib.new('md5', value).digest()
 
         cur.execute(
             "SELECT `id` FROM `%s` " % self.getName()+

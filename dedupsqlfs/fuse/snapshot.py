@@ -59,8 +59,8 @@ class Snapshot(Subvolume):
             )
 
             self.getManager().getManager().copy(
-                tName + "_%s" % subvolItemFrom["id"],
-                tName + "_%s" % subvolItemTo["id"],
+                tName + "_%d" % subvolItemFrom["id"],
+                tName + "_%d" % subvolItemTo["id"],
                 True
             )
 

@@ -16,10 +16,10 @@ class TableHash( Table ):
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
-                "hash BLOB NOT NULL, "+
-                "UNIQUE(hash) " +
+                "hash BINARY(64) NOT NULL"+
             ")"
         )
+        self.createIndexIfNotExists('hash', ('hash',), True)
         return
 
     def insert( self, value):
@@ -30,6 +30,16 @@ class TableHash( Table ):
                     (bvalue,))
         item = cur.lastrowid
         self.stopTimer('insert')
+        return item
+
+    def insertRaw( self, rowId, value):
+        self.startTimer()
+        cur = self.getCursor()
+        bvalue = sqlite3.Binary(value)
+        cur.execute("INSERT INTO `%s`(id,hash) VALUES (?,?)" % self.getName(),
+                    (rowId,bvalue,))
+        item = cur.lastrowid
+        self.stopTimer('insertRaw')
         return item
 
     def update( self, item_id, value ):

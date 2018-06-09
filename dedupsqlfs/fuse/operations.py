@@ -28,14 +28,6 @@ except ImportError:
                      "If you're on Ubuntu try running `sudo apt-get install python-fuse'.\n")
     sys.exit(1)
 
-try:
-    from ddsf_xxhash import xxh64
-except ImportError:
-    sys.stderr.write("Error: The Python xxHash module must be builded!\n" + \
-                     "Run `cd lib-dynload/ddsf_xxhash; python3 setup.py build_ext clean`.\n")
-    sys.exit(1)
-
-
 # Local modules that are mostly useful for debugging.
 from dedupsqlfs.log import logging
 from dedupsqlfs.lib import constants
@@ -201,7 +193,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def getTable(self, table_name):
         if self.mounted_subvolume and table_name in ("tree", "inode", "link", "xattr", "inode_hash_block", "inode_option"):
-            table_name += "_%s" % self.mounted_subvolume["id"]
+            table_name += "_%d" % self.mounted_subvolume["id"]
         return self.getManager().getTable(table_name)
 
     def getApplication(self):
@@ -590,13 +582,12 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.__get_opts_from_db()
             # Make sure the hash function is (still) valid (since the database was created).
 
-            if self.hash_function != 'xxhash':
-                try:
-                    # Get a reference to the hash function.
-                    hashlib.new(self.hash_function)
-                except:
-                    self.getLogger().critical("Error: The selected hash function %r doesn't exist!", self.hash_function)
-                    sys.exit(1)
+            try:
+                # Get a reference to the hash function.
+                hashlib.new(self.hash_function)
+            except:
+                self.getLogger().critical("Error: The selected hash function %r doesn't exist!", self.hash_function)
+                sys.exit(1)
 
 
             # NOT READONLY - AND - Mountpoint defined (mount action)
@@ -1899,12 +1890,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def __hash(self, data): # {{{3
         start_time = time()
-        if self.hash_function == 'xxhash':
-            digest = xxh64(data).digest()
-        else:
-            context = hashlib.new(self.hash_function)
-            context.update(data)
-            digest = context.digest()
+        digest = hashlib.new(self.hash_function, data).digest()
         self.time_spent_hashing += time() - start_time
         return digest
 

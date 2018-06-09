@@ -114,12 +114,6 @@ DedupSQLfs was developed using Python 3.2, though it also work with newer versio
  It requires the [Python llFUSE binding](http://www.rath.org/llfuse-docs/example.html) in addition
  to several Python standard libraries like [sqlite3](http://docs.python.org/library/sqlite3.html), [hashlib](http://docs.python.org/library/hashlib.html).
 
-As of 1.2.935 application hardly depends on `xxhash` module. It must be compiled:
-
-    $ cd lib-dynload/ddsf_xxhash
-    $ python3 setup.py clean -a
-    $ python3 setup.py build_ext clean
-
 Additional compression modules can be builded with commands:
 
     $ sudo apt-get install build-essential python3-dev liblzo2-dev libsnappy-dev liblz4-dev liblzma-dev

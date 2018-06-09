@@ -28,7 +28,7 @@ def run(manager):
 
         manager.getLogger().info("Migration #%s" % (__NUMBER__,))
 
-        manager.getLogger().info("Migrate subvolume table to use xxHash")
+        manager.getLogger().info("Migrate subvolume table")
 
         cur = table_sv.getCursor(True)
 

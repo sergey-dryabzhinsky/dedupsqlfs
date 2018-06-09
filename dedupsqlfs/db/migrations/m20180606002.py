@@ -26,7 +26,7 @@ def run(manager):
 
         manager.getLogger().info("Migration #%s" % (__NUMBER__,))
 
-        manager.getLogger().info("Migrate name table to use xxHash")
+        manager.getLogger().info("Migrate name table")
 
         cur = table_nm.getCursor(True)
 

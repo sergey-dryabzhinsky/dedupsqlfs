@@ -30,6 +30,7 @@ class TableSubvolume( Table ):
                 "updated_at INTEGER"
             ");"
         )
+        self.createIndexIfNotExists('hash', ('hash',), True)
         return
 
     def insert( self, name, created_at, mounted_at=None, updated_at=None, stats_at=None, stats=None, root_diff_at=None, root_diff=None ):

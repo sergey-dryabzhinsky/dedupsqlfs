@@ -2,7 +2,7 @@
 #
 # DB migration 001 by 2017-11-03
 #
-# Table `subvolume` uses xxh32 hash as ID value
+# Table `subvolume` uses md5 hash as BINARY(16) now
 #
 __author__ = 'sergey'
 

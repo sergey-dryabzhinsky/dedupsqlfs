@@ -63,7 +63,7 @@ class TableName( Table ):
             "INSERT INTO `%s` " % self.getName()+
             " (`id`,`hash`,`value`) VALUES (%s,%s,%s)", (rowId, digest, value,))
         item = cur.lastrowid
-        self.stopTimer('insert')
+        self.stopTimer('insertRaw')
         return item
 
     def find(self, value):

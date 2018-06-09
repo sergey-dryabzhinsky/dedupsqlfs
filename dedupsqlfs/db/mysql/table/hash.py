@@ -10,16 +10,14 @@ class TableHash( Table ):
 
     def create( self ):
         cur = self.getCursor()
-
         # Create table
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`id` BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
-                "`hash` VARBINARY(128) NOT NULL "+
+                "`hash` BINARY(64) NOT NULL "+
             ")"+
             self._getCreationAppendString()
         )
-
         self.createIndexIfNotExists("hash", ("hash",), unique=True)
         return
 
@@ -35,6 +33,21 @@ class TableHash( Table ):
         )
         item = cur.lastrowid
         self.stopTimer('insert')
+        return item
+
+    def insertRaw( self, rowId, value):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute(
+            "INSERT INTO `%s` " %self.getName()+
+            " (`id`,`hash`) VALUES (%(id)s,%(value)s)",
+            {
+                'id': rowId,
+                'value': value
+            }
+        )
+        item = cur.lastrowid
+        self.stopTimer('insertRaw')
         return item
 
     def update( self, item_id, value ):

@@ -729,7 +729,7 @@ class Subvolume(object):
 
         self.print_out("Apparent size is %s.\n" % format_size(usage["apparentSize"]) )
         self.print_out("Unique data size is %s.\n" % format_size(usage["uniqueSize"]) )
-        self.print_out("Sparce data size is %s.\n" % format_size(usage["sparseSize"]) )
+        self.print_out("Sparse data size is %s.\n" % format_size(usage["sparseSize"]) )
         self.print_out("Deduped data size is %s.\n" % format_size(usage["dedupSize"]) )
 
         if usage["apparentSize"]:

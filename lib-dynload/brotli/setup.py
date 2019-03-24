@@ -4,7 +4,6 @@
 # See file LICENSE for detail or copy at https://opensource.org/licenses/MIT
 
 import os
-import sys
 import platform
 import re
 import unittest
@@ -22,12 +21,6 @@ from distutils import log
 
 
 CURR_DIR = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
-
-EXTRA_OPT=0
-if "--extra-optimization" in sys.argv:
-    # Support legacy output format functions
-    EXTRA_OPT=1
-    sys.argv.remove("--extra-optimization")
 
 
 def get_version():
@@ -85,18 +78,6 @@ class BuildExt(build_ext):
             else:
                 cxx_sources.append(source)
         extra_args = ext.extra_compile_args or []
-
-        if self.compiler.compiler_type == "msvc":
-            if EXTRA_OPT:
-                extra_args.insert(0, "/O2")
-            else:
-                extra_args.insert(0, "/Ot")
-        else:
-            if EXTRA_OPT:
-                extra_args.insert(0, "-march=native")
-                extra_args.insert(0, "-O3")
-            else:
-                extra_args.insert(0, "-O2")
 
         objects = []
         for lang, sources in (('c', c_sources), ('c++', cxx_sources)):
@@ -201,6 +182,7 @@ EXT_MODULES = [
         sources=[
             'python/_brotli.cc',
             'c/common/dictionary.c',
+            'c/common/transform.c',
             'c/dec/bit_reader.c',
             'c/dec/decode.c',
             'c/dec/huffman.c',
@@ -215,6 +197,7 @@ EXT_MODULES = [
             'c/enc/compress_fragment_two_pass.c',
             'c/enc/dictionary_hash.c',
             'c/enc/encode.c',
+            'c/enc/encoder_dict.c',
             'c/enc/entropy_encode.c',
             'c/enc/histogram.c',
             'c/enc/literal_cost.c',
@@ -225,15 +208,15 @@ EXT_MODULES = [
         ],
         depends=[
             'c/common/constants.h',
+            'c/common/context.h',
             'c/common/dictionary.h',
+            'c/common/platform.h',
+            'c/common/transform.h',
             'c/common/version.h',
             'c/dec/bit_reader.h',
-            'c/dec/context.h',
             'c/dec/huffman.h',
-            'c/dec/port.h',
             'c/dec/prefix.h',
             'c/dec/state.h',
-            'c/dec/transform.h',
             'c/enc/backward_references.h',
             'c/enc/backward_references_hq.h',
             'c/enc/backward_references_inc.h',
@@ -248,17 +231,19 @@ EXT_MODULES = [
             'c/enc/command.h',
             'c/enc/compress_fragment.h',
             'c/enc/compress_fragment_two_pass.h',
-            'c/enc/context.h',
             'c/enc/dictionary_hash.h',
+            'c/enc/encoder_dict.h',
             'c/enc/entropy_encode.h',
             'c/enc/entropy_encode_static.h',
             'c/enc/fast_log.h',
             'c/enc/find_match_length.h',
             'c/enc/hash.h',
+            'c/enc/hash_composite_inc.h',
             'c/enc/hash_forgetful_chain_inc.h',
             'c/enc/hash_longest_match64_inc.h',
             'c/enc/hash_longest_match_inc.h',
             'c/enc/hash_longest_match_quickly_inc.h',
+            'c/enc/hash_rolling_inc.h',
             'c/enc/hash_to_binary_tree_inc.h',
             'c/enc/histogram.h',
             'c/enc/histogram_inc.h',
@@ -266,7 +251,7 @@ EXT_MODULES = [
             'c/enc/memory.h',
             'c/enc/metablock.h',
             'c/enc/metablock_inc.h',
-            'c/enc/port.h',
+            'c/enc/params.h',
             'c/enc/prefix.h',
             'c/enc/quality.h',
             'c/enc/ringbuffer.h',

@@ -14,6 +14,13 @@ if not os.path.isdir(build_dir):
 if not os.path.isdir(build_dir):
     build_dir = os.path.abspath( os.path.join(currentdir, "..", "..", "lib-dynload", "brotli", "build") )
 
+if not os.path.isdir(build_dir):
+    build_dir = os.path.abspath( os.path.join(currentdir, "lib-dynload", "brotli", "bin") )
+if not os.path.isdir(build_dir):
+    build_dir = os.path.abspath( os.path.join(currentdir, "..", "lib-dynload", "brotli", "bin") )
+if not os.path.isdir(build_dir):
+    build_dir = os.path.abspath( os.path.join(currentdir, "..", "..", "lib-dynload", "brotli", "bin") )
+
 dirs = os.listdir(build_dir)
 for d in dirs:
     if d.find("-%s.%s" % (p1, p2)) != -1 and d.find("lib.") != -1:

@@ -1,12 +1,11 @@
 Metadata-Version: 1.1
 Name: Brotli
-Version: 1.0.1
+Version: 1.0.7
 Summary: Python bindings for the Brotli compression library
 Home-page: https://github.com/google/brotli
 Author: The Brotli Authors
 Author-email: UNKNOWN
 License: Apache 2.0
-Description-Content-Type: UNKNOWN
 Description: UNKNOWN
 Platform: Posix
 Platform: MacOS X

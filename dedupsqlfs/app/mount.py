@@ -29,6 +29,7 @@ def fuse_mount(options, compression_methods=None):
     from dedupsqlfs.fuse.operations import DedupOperations
 
     ops = None
+    ret = -1
     try:
         ops = DedupOperations()
 
@@ -37,19 +38,19 @@ def fuse_mount(options, compression_methods=None):
             options,
             fsname="dedupsqlfs", allow_root=True)
 
-        _fuse.saveCompressionMethods(compression_methods)
+        if not _fuse.checkIfLocked():
+            _fuse.saveCompressionMethods(compression_methods)
 
-        for modname in compression_methods:
-            _fuse.appendCompression(modname)
+            for modname in compression_methods:
+                _fuse.appendCompression(modname)
 
-        ret = _fuse.main()
+            ret = _fuse.main()
     except Exception:
         import traceback
         err_str = traceback.format_exc()
         logger = ops.getApplication().getLogger()
         logger.error(err_str)
         print(err_str)
-        ret = -1
     if ops:
         ops.getManager().close()
         ops.getApplication().stopCacheFlusher()

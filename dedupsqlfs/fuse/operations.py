@@ -320,14 +320,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         # Stop flushing thread if it started
         self.getApplication().stopCacheFlusher()
 
-        if self.getOption('lock_file'):
-            try:
-                f = open(self.getOption('lock_file'), 'w')
-                f.write("destroy\n")
-                f.close()
-            except:
-                self.getLogger().warning("DedupFS: can't write to %r", self.getOption('lock_file'))
-                pass
+        self.getApplication().addLockMessage("destroy")
 
         try:
             self.getLogger().logCall('destroy', '->()')
@@ -360,14 +353,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         except Exception as e:
             raise self.__except_to_status('destroy', e, errno.EIO)
 
-        if self.getOption('lock_file'):
-            try:
-                f = open(self.getOption('lock_file'), 'w')
-                f.write("destroy-done\n")
-                f.close()
-            except:
-                self.getLogger().warning("DedupFS: can't write to %r", self.getOption('lock_file'))
-                pass
+        self.getApplication().addLockMessage("destroy-done")
 
         return 0
 
@@ -597,14 +583,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             if self.getApplication().mountpoint:
                 self.getManager().getTable('option').update('mounted', 1)
 
-            if self.getOption('lock_file'):
-                try:
-                    f = open(self.getOption('lock_file'), 'w')
-                    f.write("inited\n")
-                    f.close()
-                except:
-                    self.getLogger().warning("DedupFS: can't write to %r", self.getOption('lock_file'))
-                    pass
+            self.getApplication().addLockMessage("inited")
 
             self.getLogger().debug("DedupFS: inited and mounted")
             return 0

@@ -38,15 +38,16 @@ def fuse_mount(options, compression_methods=None):
             options,
             use_ino=True, default_permissions=True, fsname="dedupsqlfs")
 
-        _fuse.saveCompressionMethods(compression_methods)
+        if not _fuse.checkIfLocked():
+            _fuse.saveCompressionMethods(compression_methods)
 
-        for modname in compression_methods:
-            _fuse.appendCompression(modname)
+            for modname in compression_methods:
+                _fuse.appendCompression(modname)
 
-        _fuse.operations.init()
-        _fuse.operations.destroy()
+            _fuse.operations.init()
+            _fuse.operations.destroy()
 
-        ret = 0
+            ret = 0
     except Exception:
         import traceback
         print(traceback.format_exc())

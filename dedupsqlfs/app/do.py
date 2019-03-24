@@ -469,6 +469,9 @@ def do(options, compression_methods=None):
             options,
             use_ino=True, default_permissions=True, fsname="dedupsqlfs")
 
+        if _fuse.checkIfLocked():
+            raise OSError("FS is locked by other process!")
+
         _fuse.preInit()
 
         basePath = os.path.expanduser(_fuse.getOption("data"))

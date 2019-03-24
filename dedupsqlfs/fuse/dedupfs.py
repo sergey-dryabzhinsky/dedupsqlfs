@@ -36,6 +36,7 @@ if int(fv[0]) < 1 and int(fv[1]) < 41:
 
 # Local modules that are mostly useful for debugging.
 from dedupsqlfs.my_formats import format_size
+from dedupsqlfs.proc import pid_exists
 from dedupsqlfs.fuse.helpers.logger import DDSFlogger
 from dedupsqlfs.fuse.compress.mp import MultiProcCompressTool, BaseCompressTool
 from dedupsqlfs.fuse.compress.mt import MultiThreadCompressTool
@@ -138,16 +139,50 @@ class DedupFS(object): # {{{1
         return
 
 
-    def preInit(self):
-        if self.getOption('lock_file'):
+    def checkIfLocked(self):
+        lockFile = self.getOption('lock_file')
+        if lockFile:
+            if os.path.exists(lockFile):
+                f = open(lockFile, 'r')
+                lines = f.readlines()
+                f.close()
+
+                mypid = os.getpid()
+
+                lockPid = 0
+                try:
+                    lockPid = int(lines[0].strip())
+                except:
+                    pass
+
+                if not lockPid:
+                    # Broken lock-file?
+                    return False
+
+                if not pid_exists(lockPid):
+                    # Process is gone?
+                    return False
+
+                return mypid != lockPid
+
+        return False
+
+
+    def addLockMessage(self, message):
+        lockFile = self.getOption('lock_file')
+        if lockFile:
             try:
-                f = open(self.getOption('lock_file'), 'w')
-                f.write("pre-init\n")
+                f = open(lockFile, 'w')
+                f.write("%s\n%s\n" % (os.getpid(), message,))
+                f.flush()
                 f.close()
             except:
-                self.getLogger().warning("DedupFS::preInit - can't write to %r", self.getOption('lock_file'))
+                self.getLogger().warning("DedupFS::addLockMessage - can't write to %r", lockFile)
                 pass
 
+
+    def preInit(self):
+        self.addLockMessage("pre-init")
 
         # Do migrations here, before fs.init callback
         self.operations.getManager()
@@ -158,15 +193,7 @@ class DedupFS(object): # {{{1
 
 
     def _checkNotUnmounted(self):
-        if self.getOption('lock_file'):
-            try:
-                f = open(self.getOption('lock_file'), 'w')
-                f.write("check-not-unmounted\n")
-                f.close()
-            except:
-                self.getLogger().warning("DedupFS::preInit - can't write to %r", self.getOption('lock_file'))
-                pass
-
+        self.addLockMessage("check-not-unmounted")
 
         # Do migrations here, before fs.init callback
         manager = self.operations.getManager()
@@ -183,11 +210,14 @@ class DedupFS(object): # {{{1
 
 
     def postDestroy(self):
-        if self.getOption('lock_file'):
+        lockFile = self.getOption('lock_file')
+        if lockFile:
             try:
-                os.unlink(self.getOption('lock_file'))
+                if not self.checkIfLocked():
+                    # remove only if locked by US
+                    os.unlink(lockFile)
             except:
-                self.getLogger().warning("DedupFS::postDestroy can't remove %r", self.getOption('lock_file'))
+                self.getLogger().warning("DedupFS::postDestroy can't remove %r", lockFile)
                 pass
         self._compressTool.stop()
         self.operations.getManager().close()

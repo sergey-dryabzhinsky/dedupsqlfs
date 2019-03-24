@@ -37,17 +37,18 @@ def mkfs(options, compression_methods=None, hash_functions=None):
             options,
             fsname="dedupsqlfs", allow_root=True)
 
-        _fuse.saveCompressionMethods(compression_methods)
+        if not _fuse.checkIfLocked():
+            _fuse.saveCompressionMethods(compression_methods)
 
-        for modname in compression_methods:
-            _fuse.appendCompression(modname)
+            for modname in compression_methods:
+                _fuse.appendCompression(modname)
 
-        _fuse.setOption("gc_umount_enabled", False)
-        _fuse.setOption("gc_vacuum_enabled", False)
-        _fuse.setOption("gc_enabled", False)
+            _fuse.setOption("gc_umount_enabled", False)
+            _fuse.setOption("gc_vacuum_enabled", False)
+            _fuse.setOption("gc_enabled", False)
 
-        _fuse.operations.init()
-        _fuse.operations.destroy()
+            _fuse.operations.init()
+            _fuse.operations.destroy()
     except Exception:
         import traceback
         print(traceback.format_exc())

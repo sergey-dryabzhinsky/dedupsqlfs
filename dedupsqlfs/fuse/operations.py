@@ -619,25 +619,23 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.getLogger().logCall('link', '->(inode=%r, parent_inode=%r, new_name=%r)', inode, new_parent_inode, new_name)
         if self.isReadonly(): raise FUSEError(errno.EROFS)
 
+        attr = self.__get_inode_row(inode)
+        if attr["mode"] & stat.S_IFDIR:
+            # No links to directory!
+            raise FUSEError(errno.ENOTSUP)
+
         parent_node = self.__get_tree_node_by_inode(new_parent_inode)
         string_id = self.__intern(new_name)
 
         treeTable = self.getTable("tree")
 
-        attr = self.__get_inode_row(inode)
-
         treeTable.insert(parent_node["id"], string_id, inode)
         attr["nlinks"] += 1
         self.cached_attrs.set(inode, attr, writed=True)
 
-        #if attr["mode"] & stat.S_IFDIR:
-            #attr = self.__get_inode_row(new_parent_inode)
-            #attr["nlinks"] += 1
-        #    self.cached_attrs.set(new_parent_inode, attr, writed=True)
-
         self.__cache_meta_hook()
 
-        return self.__getattr(inode)
+        return self.__fill_attr_inode_row(attr)
 
     def listxattr(self, inode):
         self.getLogger().logCall('listxattr', '->(inode=%r)', inode)
@@ -686,6 +684,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             return self.__getattr(inode)
         except FUSEError:
+            self.__rollback_changes()
             raise
         except Exception as e:
             self.__rollback_changes()
@@ -886,6 +885,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.__gc_hook()
         except FUSEError:
+            self.__rollback_changes()
             raise
         except Exception as e:
             self.__rollback_changes()

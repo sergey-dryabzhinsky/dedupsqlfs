@@ -1867,7 +1867,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         return t_i * 10**9 + t_ns, t_i
 
 
-    def __hash(self, data): # {{{3
+    def do_hash(self, data): # {{{3
         start_time = time()
         digest = hashlib.new(self.hash_function, data).digest()
         self.time_spent_hashing += time() - start_time
@@ -2138,7 +2138,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         tableHash = self.getTable("hash")
         tableHCT = self.getTable("hash_compression_type")
 
-        hash_value = self.__hash(data_block)
+        hash_value = self.do_hash(data_block)
         hash_id = tableHash.find(hash_value)
 
         result["hash"] = hash_id
@@ -2202,7 +2202,7 @@ class DedupOperations(llfuse.Operations): # {{{1
                             hash_id, hash_value, inode, block_number
                         )
                         self.getLogger().warn("Use more strong hashing algo! I'm continue, but you are warned...")
-                    old_hash = self.__hash(old_data)
+                    old_hash = self.do_hash(old_data)
                     if old_hash != hash_value:
                         self.getLogger().error("Decompressed block data hash not equal with stored!")
                         self.getLogger().error("FS data corruption? Something wrong with db layer? I'm done with that!")

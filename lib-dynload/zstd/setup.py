@@ -1,17 +1,20 @@
 #!/usr/bin/env python
 
+import os
 import sys
+import subprocess
 
 from setuptools import setup, find_packages, Extension
 from setuptools.command.build_ext import build_ext
-from distutils import ccompiler
 
-
-VERSION = (1, 3, 4)
+# ZSTD version
+VERSION = (1, 3, 8,)
 VERSION_STR = ".".join([str(x) for x in VERSION])
 
-# Minor versions
+# Package version
 PKG_VERSION = VERSION
+# Minor versions
+PKG_VERSION += ("1",)
 PKG_VERSION_STR = ".".join([str(x) for x in PKG_VERSION])
 
 ###
@@ -39,62 +42,65 @@ if "--external" in sys.argv:
     # You should add external library by option: --libraries zstd
     # And probably include paths by option: --include-dirs /usr/include/zstd
     # And probably library paths by option: --library-dirs /usr/lib/i386-linux-gnu
+    # Wee need pkg-config here!
+    pkgconf = "/usr/bin/pkg-config"
+    if os.path.exists(pkgconf):
+        cmd = [pkgconf, "libzstd", "--modversion"]
+        if sys.hexversion >= 0x02070000:
+            VERSION_STR = subprocess.check_output(cmd)
+        else:
+            # Pure Python 2.6
+            VERSION_STR = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
+        if sys.hexversion >= 0x03000000:
+            # It's bytes in PY3
+            VERSION_STR = VERSION_STR.decode()
+        VERSION = tuple(int(v) for v in VERSION_STR.split("."))
     if "--libraries" not in sys.argv:
         # Add something default
         ext_libraries=["zstd"]
 
 
-EXTRA_OPT=0
-if "--extra-optimization" in sys.argv:
-    # Support legacy output format functions
-    EXTRA_OPT=1
-    sys.argv.remove("--extra-optimization")
-
-if ccompiler.get_default_compiler() == "msvc":
-    extra_compile_args = ["/Wall"]
-    if EXTRA_OPT:
-        extra_compile_args.insert(0, "/O2")
-    else:
-        extra_compile_args.insert(0, "/Ot")
-else:
-    extra_compile_args = ["-std=c99", "-Wall", "-DFORTIFY_SOURCE=2", "-fstack-protector"]
-    if EXTRA_OPT:
-        extra_compile_args.insert(0, "-march=native")
-        extra_compile_args.insert(0, "-O3")
-    else:
-        extra_compile_args.insert(0, "-O2")
-
+COPT = {
+    'msvc':     [ '/Ox', '/DVERSION=\"\\\"%s\\\"\"' % PKG_VERSION_STR, ],
+    'mingw32':  [ '-O2', '-DVERSION="%s"' % PKG_VERSION_STR, ],
+    'unix':     [ '-O2', '-DVERSION="%s"' % PKG_VERSION_STR, ],
+    'clang':    [ '-O2', '-DVERSION="%s"' % PKG_VERSION_STR, ],
+    'gcc':      [ '-O2', '-DVERSION="%s"' % PKG_VERSION_STR, ]
+}
 
 if not SUP_EXTERNAL:
-    if ccompiler.get_default_compiler() == "msvc":
-        extra_compile_args.extend([
-            '/Izstd\\lib', '/Izstd\\lib\\common', '/Izstd\\lib\\compress', '/Izstd\\lib\\decompress',
-            '/DVERSION=\"\\\"%s\\\"\"' % VERSION_STR,
-        ])
-    else:
-        extra_compile_args.extend([
-            '-Izstd/lib', '-Izstd/lib/common', '-Izstd/lib/compress', '-Izstd/lib/decompress',
-            '-DVERSION="%s"' % VERSION_STR,
-        ])
+    for comp in COPT:
+        if comp == 'msvc':
+            COPT[comp].extend([ '/DZSTD_MULTITHREAD=1',
+                '/Izstd\\lib', '/Izstd\\lib\\common', '/Izstd\\lib\\compress', '/Izstd\\lib\\decompress',
+            ])
+        else:
+            COPT[comp].extend([ '-DZSTD_MULTITHREAD=1',
+                '-Izstd/lib', '-Izstd/lib/common', '-Izstd/lib/compress', '-Izstd/lib/decompress',
+            ])
 
 if SUP_LEGACY:
-    if ccompiler.get_default_compiler() == "msvc":
-        extra_compile_args.extend(['/Izstd\\lib\\legacy', '/DZSTD_LEGACY_SUPPORT=1'])
-    else:
-        extra_compile_args.extend(['-Izstd/lib/legacy', '-DZSTD_LEGACY_SUPPORT=1'])
+    for comp in COPT:
+        if comp == 'msvc':
+            COPT[comp].extend(['/Izstd\\lib\\legacy', '/DZSTD_LEGACY_SUPPORT=1'])
+        else:
+            COPT[comp].extend(['-Izstd/lib/legacy', '-DZSTD_LEGACY_SUPPORT=1'])
 
 if SUP_PYZSTD_LEGACY:
-    if ccompiler.get_default_compiler() == "msvc":
-        extra_compile_args.extend(['/DPYZSTD_LEGACY=1'])
-    else:
-        extra_compile_args.extend(['-DPYZSTD_LEGACY=1'])
+    for comp in COPT:
+        if comp == 'msvc':
+            COPT[comp].extend(['/DPYZSTD_LEGACY=1'])
+        else:
+            COPT[comp].extend(['-DPYZSTD_LEGACY=1'])
 
 
 class ZstdBuildExt( build_ext ):
 
     def build_extensions(self):
-        for e in self.extensions:
-            e.extra_compile_args = extra_compile_args
+        c = self.compiler.compiler_type
+        if c in COPT:
+           for e in self.extensions:
+               e.extra_compile_args = COPT[c]
         build_ext.build_extensions(self)
 
 zstdFiles = []
@@ -105,10 +111,17 @@ if not SUP_EXTERNAL:
             'compress/zstd_compress.c', 'compress/zstdmt_compress.c',
             'compress/zstd_fast.c', 'compress/zstd_double_fast.c', 'compress/zstd_lazy.c', 'compress/zstd_opt.c', 'compress/zstd_ldm.c',
             'compress/fse_compress.c', 'compress/huf_compress.c',
+            'compress/hist.c',
 
-            'decompress/zstd_decompress.c', 'common/fse_decompress.c', 'decompress/huf_decompress.c',
+            'common/fse_decompress.c',
+            'decompress/zstd_decompress.c',
+            'decompress/zstd_decompress_block.c',
+            'decompress/zstd_ddict.c',
+            'decompress/huf_decompress.c',
 
-            'common/entropy_common.c', 'common/zstd_common.c', 'common/xxhash.c', 'common/error_private.c', 'common/pool.c',
+            'common/entropy_common.c', 'common/zstd_common.c', 'common/xxhash.c', 'common/error_private.c',
+            'common/pool.c',
+            'common/threading.c',
         ]:
         zstdFiles.append('zstd/lib/'+f)
 
@@ -120,7 +133,25 @@ if not SUP_EXTERNAL:
 
 zstdFiles.append('src/python-zstd.c')
 
-tests="tests"
+# Python 2.6 compat
+os.environ["VERSION"] = VERSION_STR
+os.environ["PKG_VERSION"] = PKG_VERSION_STR
+if SUP_LEGACY:
+    os.environ["LEGACY"] = "1"
+if SUP_EXTERNAL:
+    os.environ["ZSTD_EXTERNAL"] = "1"
+if SUP_PYZSTD_LEGACY:
+    os.environ["PYZSTD_LEGACY"] = "1"
+
+# Another dirty hack
+def my_test_suite():
+    import unittest
+
+    test_suite = unittest.TestSuite()
+    for test in os.listdir('tests'):
+        if test.startswith("test_") and test.endswith(".py"):
+            test_suite.addTest(unittest.defaultTestLoader.loadTestsFromName("tests."+test.replace(".py","")))
+    return test_suite
 
 setup(
     name='zstd',
@@ -132,7 +163,7 @@ setup(
     maintainer='Sergey Dryabzhinsky',
     maintainer_email='sergey.dryabzhinsky@gmail.com',
     url='https://github.com/sergey-dryabzhinsky/python-zstd',
-    keywords='zstd, zstandard, compression',
+    keywords=['zstd', 'zstandard', 'compression'],
     license='BSD',
     packages=find_packages('src'),
     package_dir={'': 'src'},
@@ -140,7 +171,7 @@ setup(
         Extension('_zstd', zstdFiles, libraries=ext_libraries)
     ],
     cmdclass = {'build_ext': ZstdBuildExt },
-    test_suite=tests,
+    test_suite='setup.my_test_suite',
     classifiers=[
         'License :: OSI Approved :: BSD License',
         'Intended Audience :: Developers',
@@ -154,6 +185,7 @@ setup(
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6'
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ]
 )

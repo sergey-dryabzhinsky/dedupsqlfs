@@ -58,11 +58,11 @@ def do_rehash(options, _fuse):
 
         if res:
             upd += 1
-        prc = "%0.2f%%" % (cnt*100.0/hashCount)
+        prc = "%6.2f%%" % (cnt*100.0/hashCount)
         if prc != lastPrc:
             lastPrc = prc
             if _fuse.getOption("verbosity") > 0:
-                sys.stdout.write("\r%s   " % prc)
+                sys.stdout.write("\r%s " % prc)
                 sys.stdout.flush()
 
     if _fuse.getOption("verbosity") > 0:

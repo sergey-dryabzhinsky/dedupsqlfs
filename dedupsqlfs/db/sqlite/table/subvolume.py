@@ -54,6 +54,18 @@ class TableSubvolume( Table ):
         self.stopTimer('insert')
         return item
 
+    def get_count(self):
+        self.startTimer()
+        cur = self.getCursor()
+        cur.execute("SELECT COUNT(1) as `cnt` FROM `%s`" % self.getName())
+        item = cur.fetchone()
+        if item:
+            item = item["cnt"]
+        else:
+            item = 0
+        self.stopTimer('get_count')
+        return item
+
     def readonly(self, subvol_id, flag=True):
         self.startTimer()
         if flag:

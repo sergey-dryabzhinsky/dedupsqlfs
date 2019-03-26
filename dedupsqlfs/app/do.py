@@ -433,6 +433,27 @@ def rehash(options, _fuse):
     _fuse.operations.destroy()
     return ret
 
+def recompress(options, _fuse):
+    """
+    @param options: Commandline options
+    @type  options: object
+
+    @param _fuse: FUSE wrapper
+    @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
+    """
+    _fuse.setOption("gc_umount_enabled", False)
+    _fuse.setOption("gc_vacuum_enabled", False)
+    _fuse.setOption("gc_enabled", False)
+    _fuse.setOption("use_transactions", False)
+    _fuse.setOption("synchronous", False)
+    _fuse.setReadonly(True)
+
+    from dedupsqlfs.app.actions.recompress import do_recompress
+    ret = do_recompress(options, _fuse)
+
+    _fuse.operations.destroy()
+    return ret
+
 def print_fs_stats(options, _fuse):
     _fuse.setReadonly(True)
     lvl = _fuse.getLogger().getEffectiveLevel()
@@ -493,8 +514,6 @@ def do(options, compression_methods=None):
         if _fuse.checkIfLocked():
             raise OSError("FS is locked by other process!")
 
-        _fuse.preInit()
-
         basePath = os.path.expanduser(_fuse.getOption("data"))
         if os.path.exists(basePath):
             if not _fuse.getOption("storage_engine"):
@@ -505,10 +524,15 @@ def do(options, compression_methods=None):
         for modname in compression_methods:
             _fuse.appendCompression(modname)
 
+        _fuse.preInit()
+
         # Actions
 
         if options.rehash_function:
             rehash(options, _fuse)
+
+        if options.recompress_data:
+            recompress(options, _fuse)
 
         if options.subvol_create:
             create_subvolume(options, _fuse)
@@ -708,6 +732,7 @@ def main(): # {{{1
         msg += "\n- Method %r will try all compression methods with 'fast' level and choose one with smaller result data." % constants.COMPRESSION_TYPE_FAST
     msg += "\nDefaults to %r." % constants.COMPRESSION_TYPE_NONE
 
+    grp_compress.add_argument('--recompress', dest='recompress_data', action="store_true", help="Do compression of all data blocks again with selected compresstion methods by --compress param. It may take double block-table free system space!")
     grp_compress.add_argument('--compress', dest='compression', metavar='METHOD', action="append",
                               default=[constants.COMPRESSION_TYPE_NONE], help=msg)
 

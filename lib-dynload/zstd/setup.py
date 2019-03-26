@@ -60,13 +60,34 @@ if "--external" in sys.argv:
         ext_libraries=["zstd"]
 
 
+EXTRA_OPT=0
+if "--extra-optimization" in sys.argv:
+    # Support legacy output format functions
+    EXTRA_OPT=1
+    sys.argv.remove("--extra-optimization")
+
 COPT = {
-    'msvc':     [ '/Ox', '/DVERSION=\"\\\"%s\\\"\"' % PKG_VERSION_STR, ],
-    'mingw32':  [ '-O2', '-DVERSION="%s"' % PKG_VERSION_STR, ],
-    'unix':     [ '-O2', '-DVERSION="%s"' % PKG_VERSION_STR, ],
-    'clang':    [ '-O2', '-DVERSION="%s"' % PKG_VERSION_STR, ],
-    'gcc':      [ '-O2', '-DVERSION="%s"' % PKG_VERSION_STR, ]
+    'msvc':     [ '/DVERSION=\"\\\"%s\\\"\"' % PKG_VERSION_STR, ],
+    'mingw32':  [ '-DVERSION="%s"' % PKG_VERSION_STR, ],
+    'unix':     [ '-DVERSION="%s"' % PKG_VERSION_STR, ],
+    'clang':    [ '-DVERSION="%s"' % PKG_VERSION_STR, ],
+    'gcc':      [ '-DVERSION="%s"' % PKG_VERSION_STR, ]
 }
+
+for comp in COPT:
+    if comp == 'msvc':
+        COPT[comp].extend(['/Wall'])
+        if EXTRA_OPT:
+            COPT[comp].insert(0, '/O2')
+        else:
+            COPT[comp].insert(0, '/Ot')
+    else:
+        COPT[comp].extend(["-std=c99", "-Wall", "-DFORTIFY_SOURCE=2", "-fstack-protector"])
+        if EXTRA_OPT:
+            COPT[comp].insert(0, '-march=native')
+            COPT[comp].insert(0, '-O3')
+        else:
+            COPT[comp].insert(0, '-O2')
 
 if not SUP_EXTERNAL:
     for comp in COPT:

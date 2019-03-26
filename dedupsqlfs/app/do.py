@@ -708,7 +708,7 @@ def main(): # {{{1
         msg += "\n- Method %r will try all compression methods with 'fast' level and choose one with smaller result data." % constants.COMPRESSION_TYPE_FAST
     msg += "\nDefaults to %r." % constants.COMPRESSION_TYPE_NONE
 
-    grp_compress.add_argument('--compress', dest='compression', metavar='METHOD', action="append",
+    grp_compress.add_argument('--recompress', dest='compression', metavar='METHOD', action="append",
                               default=[constants.COMPRESSION_TYPE_NONE], help=msg)
 
     grp_compress.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")

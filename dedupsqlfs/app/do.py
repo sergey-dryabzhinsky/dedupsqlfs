@@ -412,6 +412,27 @@ def count_snapshot_created_today(options, _fuse):
 
 # ------------------------- Other ------------------------
 
+def rehash(options, _fuse):
+    """
+    @param options: Commandline options
+    @type  options: object
+
+    @param _fuse: FUSE wrapper
+    @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
+    """
+    _fuse.setOption("gc_umount_enabled", False)
+    _fuse.setOption("gc_vacuum_enabled", False)
+    _fuse.setOption("gc_enabled", False)
+    _fuse.setOption("use_transactions", False)
+    _fuse.setOption("synchronous", False)
+    _fuse.setReadonly(True)
+
+    from dedupsqlfs.app.actions.rehash import do_rehash
+    ret = do_rehash(options, _fuse)
+
+    _fuse.operations.destroy()
+    return ret
+
 def print_fs_stats(options, _fuse):
     _fuse.setReadonly(True)
     lvl = _fuse.getLogger().getEffectiveLevel()
@@ -485,6 +506,9 @@ def do(options, compression_methods=None):
             _fuse.appendCompression(modname)
 
         # Actions
+
+        if options.rehash_function:
+            rehash(options, _fuse)
 
         if options.subvol_create:
             create_subvolume(options, _fuse)
@@ -655,9 +679,7 @@ def main(): # {{{1
     hash_functions.sort()
     work_hash_funcs = set(hash_functions) & constants.WANTED_HASH_FUCTIONS
     msg %= ', '.join('%r' % fun for fun in work_hash_funcs)
-    defHash = 'md5' # Hope it will be there always. Stupid.
-    msg += ". Defaults to %r." % defHash
-    data.add_argument('--rehash', dest='hash_function', metavar='FUNCTION', choices=work_hash_funcs, default=defHash, help=msg)
+    data.add_argument('--rehash', dest='rehash_function', metavar='FUNCTION', choices=work_hash_funcs, help=msg)
 
     grp_compress = parser.add_argument_group('Compression')
 

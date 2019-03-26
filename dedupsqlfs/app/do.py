@@ -423,13 +423,15 @@ def rehash(options, _fuse):
     _fuse.setOption("gc_umount_enabled", False)
     _fuse.setOption("gc_vacuum_enabled", False)
     _fuse.setOption("gc_enabled", False)
+    _fuse.setOption("use_transactions", False)
+    _fuse.setOption("synchronous", False)
     _fuse.setReadonly(True)
 
     from dedupsqlfs.app.actions.rehash import do_rehash
-    do_rehash(options, _fuse)
+    ret = do_rehash(options, _fuse)
 
     _fuse.operations.destroy()
-    return
+    return ret
 
 def print_fs_stats(options, _fuse):
     _fuse.setReadonly(True)

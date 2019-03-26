@@ -36,23 +36,28 @@ def do_rehash(options, _fuse):
     if _fuse.getOption("verbosity") > 0:
         print("Ready to rehash %s blocks." % hashCount)
 
-    cur = tableHash.getCursor()
+    cur = tableHash.getCursor(True)
     cur.execute("SELECT `id` FROM `%s`" % tableHash.getName())
 
-    newHashTypeId = _fuse.operations.getCompressionTypeId(options.rehash_function)
+    cnt = upd = 0
+    lastPrc = ""
 
-    cnt = 0
-    prc = lastPrc = ""
+    _fuse.operations.getManager().setAutocommit(False)
+    tableHash.begin()
+    _fuse.operations.getManager().setAutocommit(True)
+
     for hashItem in iter(cur.fetchone, None):
+
+        cnt += 1
 
         blockItem = tableBlock.get(hashItem["id"])
         hashCT = tableHashCT.get(hashItem["id"])
         blockData = _fuse.decompressData(_fuse.operations.getCompressionTypeName(hashCT["type_id"]), blockItem["data"])
         newHash = _fuse.operations.do_hash(blockData)
-        tableHash.update(hashItem["id"], newHash)
-        tableHashCT.update(hashItem["id"], newHashTypeId)
+        res = tableHash.update(hashItem["id"], newHash)
 
-        cnt += 1
+        if res:
+            upd += 1
         prc = "%0.2f%%" % (cnt*100.0/hashCount)
         if prc != lastPrc:
             lastPrc = prc
@@ -64,10 +69,22 @@ def do_rehash(options, _fuse):
         sys.stdout.write("\n")
         sys.stdout.flush()
 
-    tableHash.commit()
-    tableHashCT.commit()
+    if _fuse.getOption("verbosity") > 0:
+        print("Processed %s hashes, rehashed %s blocks." % (cnt, upd,))
 
-    tableOption.update("hash_function", options.rehash_function)
-    tableOption.commit()
+    if hashCount == cnt:
+        _fuse.operations.getManager().setAutocommit(False)
+        tableHash.commit()
+        _fuse.operations.getManager().setAutocommit(True)
 
-    return
+        tableOption.update("hash_function", options.rehash_function)
+
+        tableHash.vacuum()
+    else:
+        _fuse.operations.getManager().setAutocommit(False)
+        tableHash.rollback()
+        _fuse.operations.getManager().setAutocommit(True)
+        print("Something went wrong? Changes are rolled back!")
+        return 1
+
+    return 0

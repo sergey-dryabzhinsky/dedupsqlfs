@@ -18,16 +18,16 @@ class ZstdCompression(BaseCompression):
     _has_comp_level_options = True
 
     def getFastCompressionOptions(self):
-        return ( 1, )
+        return ( 3, )
 
     def getNormCompressionOptions(self):
-        return ( 6, )
+        return ( 9, )
 
     def getBestCompressionOptions(self):
-        return ( 11, )
+        return ( 15, )
 
     def getDefaultCompressionOptions(self):
-        return ( 3, )
+        return ( 6, )
 
     def getCustomCompressionOptions(self):
         try:

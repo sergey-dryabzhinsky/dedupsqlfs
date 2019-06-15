@@ -33,7 +33,7 @@ def do_verify(options, _fuse):
         print("Ready to verify %s blocks." % hashCount)
 
     cur = tableHash.getCursor(True)
-    cur.execute("SELECT `id` FROM `%s`" % tableHash.getName())
+    cur.execute("SELECT * FROM `%s`" % tableHash.getName())
 
     cnt = equal = 0
     lastPrc = ""
@@ -72,5 +72,7 @@ def do_verify(options, _fuse):
     if cnt != equal:
         print("Data corrupted?! %s block hashes not equals!" % (cnt - equal))
         return 1
+    else:
+        print("All data in good hash ;)")
 
     return 0

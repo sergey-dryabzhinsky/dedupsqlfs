@@ -134,7 +134,7 @@ Additional performance gain about 1-5% via Cython:
     ## Setup tools If not installed
     $ sudo pip3 install setuptools
     $ sudo pip3 install cython
-    $ python3 setup.py build_ext
+    $ python3 setup.py build_ext --cython-build
     $ python3 setup.py stripall
     ## Warning! This deletes all .py files
     $ python3 setup.py cleanpy
@@ -154,6 +154,6 @@ The latest version of DedupSqlFS is available at <https://github.com/sergey-drya
 
 This software is licensed under the MIT license.
 
-© 2013-2018 Sergey Dryabzhinsky &lt;<sergey.dryabzhinsky@gmail.com>&gt;.
+© 2013-2019 Sergey Dryabzhinsky &lt;<sergey.dryabzhinsky@gmail.com>&gt;.
 
 © 2010 Peter Odding &lt;<peter@peterodding.com>&gt;.

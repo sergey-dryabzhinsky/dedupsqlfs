@@ -5,8 +5,17 @@ import sys
 import subprocess
 from distutils.core import setup
 from distutils.extension import Extension
-from Cython.Distutils import build_ext
-from Cython.Build import cythonize
+
+CYTHON_BUILD=0
+if "--cython-build" in sys.argv:
+    # Support compiling with Cython
+    CYTHON_BUILD=1
+    sys.argv.remove("--cython-build")
+
+    from Cython.Distutils import build_ext
+    from Cython.Build import cythonize
+else:
+    from distutils.command.build_ext import build_ext
 
 args = sys.argv[1:]
 
@@ -38,10 +47,10 @@ def cleanAllExtension(extName):
 
     # Just in case the build directory was created by accident,
     # note that shell=True should be OK here because the command is constant.
-    subprocess.Popen("rm -rf __pycache__", shell=True, executable="/bin/bash")
-    subprocess.Popen("rm -rf build", shell=True, executable="/bin/bash")
-    subprocess.Popen("rm -rf *.c", shell=True, executable="/bin/bash")
-    subprocess.Popen("rm -rf *.so", shell=True, executable="/bin/bash")
+    subprocess.Popen("rm -rf __pycache__", shell=True, executable="/bin/sh")
+    subprocess.Popen("rm -rf build", shell=True, executable="/bin/sh")
+    subprocess.Popen("rm -rf *.c", shell=True, executable="/bin/sh")
+    subprocess.Popen("rm -rf *.so", shell=True, executable="/bin/sh")
 
     os.chdir(oldPath)
 
@@ -75,7 +84,7 @@ if "cleanall" in args:
 
     for n in extNames:
         cleanAllExtension(n.replace(".", os.path.sep) + ".py")
-    subprocess.Popen("rm -rf build", shell=True, executable="/bin/bash")
+    subprocess.Popen("rm -rf build", shell=True, executable="/bin/sh")
 
     sys.exit(0)
 
@@ -85,7 +94,7 @@ if "cleanpy" in args:
 
     for n in extNames:
         cleanPyExtension(n.replace(".", os.path.sep) + ".py")
-    subprocess.Popen("rm -rf build", shell=True, executable="/bin/bash")
+    subprocess.Popen("rm -rf build", shell=True, executable="/bin/sh")
 
     sys.exit(0)
 
@@ -107,9 +116,17 @@ if args.count("build_ext") > 0 and args.count("--inplace") == 0:
 # and build up the set of Extension objects
 extensions = [makeExtension(name) for name in extNames]
 
-setup(
-    ext_modules = cythonize(extensions),
-    name="dedupsqlfs",
-    packages=["dedupsqlfs",],
-    cmdclass = {'build_ext': build_ext},
-)
+if CYTHON_BUILD:
+    setup(
+        ext_modules = cythonize(extensions),
+        name="dedupsqlfs",
+        packages=["dedupsqlfs",],
+        cmdclass = {'build_ext': build_ext},
+    )
+else:
+    setup(
+        ext_modules = extensions,
+        name="dedupsqlfs",
+        packages=["dedupsqlfs",],
+        cmdclass = {'build_ext': build_ext},
+    )

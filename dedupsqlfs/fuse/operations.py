@@ -352,7 +352,8 @@ class DedupOperations(llfuse.Operations): # {{{1
 
             self.getManager().close()
         except Exception as e:
-            raise self.__except_to_status('destroy', e, errno.EIO)
+            # Should not raise here anything!
+            self.__except_to_status('destroy', e, errno.EIO)
 
         self.getApplication().addLockMessage("destroy-done")
 
@@ -383,6 +384,7 @@ class DedupOperations(llfuse.Operations): # {{{1
 
     def forget(self, inode_list):
         """
+        Should not raise any excepton here
         @param inode_list: inode_list is a list of (inode, nlookup) tuples. 
         @return: 
         """
@@ -394,10 +396,10 @@ class DedupOperations(llfuse.Operations): # {{{1
                 self.cached_blocks.expire(ituple[0])
                 self.cached_indexes.expire(ituple[0])
         except FUSEError:
-            raise
+            pass
         except Exception as e:
             self.__rollback_changes()
-            raise self.__except_to_status('forget', e, errno.EIO)
+            self.__except_to_status('forget', e, errno.EIO)
 
     def fsync(self, fh, datasync):
         """
@@ -437,17 +439,51 @@ class DedupOperations(llfuse.Operations): # {{{1
     def fsyncdir(self, fh, datasync):
         self.getLogger().logCall('fsyncdir', '->(fh=%i, datasync=%r)', fh, datasync)
         if self.isReadonly(): raise FUSEError(errno.EROFS)
-        self.cached_attrs.flush(fh)
+        if datasync:
+            # flush directory content
+            for name, attr, node in self.readdir(fh, 0):
+                self.cached_attrs.flush(attr.st_ino)
+        else:
+            # flush directory itself
+            self.cached_attrs.flush(fh)
+
         self.__cache_meta_hook()
 
-    def getattr(self, inode): # {{{3
+    def getattr(self, inode, ctx): # {{{3
+        """
+        Get inode attributes
+
+        @param  inode:
+        @type   inode: int
+
+        @param  ctx:
+        @type   ctx: llfuse.RequestContext
+
+        @return:
+        @rtype: llfuse.EntryAttributes
+        """
         self.getLogger().logCall('getattr', '->(inode=%r)', inode)
         v = self.__get_inode_row(inode)
         attr = self.__fill_attr_inode_row(v)
         self.getLogger().logCall('getattr', '<-(inode=%r, attr=%r)', inode, v)
         return attr
 
-    def getxattr(self, inode, name): # {{{3
+    def getxattr(self, inode, name, ctx): # {{{3
+        """
+        Get inode attributes
+
+        @param  inode:
+        @type   inode: int
+
+        @param  name:
+        @type   name: bytes
+
+        @param  ctx:
+        @type   ctx: llfuse.RequestContext
+
+        @return:
+        @rtype: bytes
+        """
         self.getLogger().logCall('getxattr', '->(inode=%r, name=%r)', inode, name)
 
         xattrs = self.__get_cached_xattrs(inode)
@@ -595,7 +631,25 @@ class DedupOperations(llfuse.Operations): # {{{1
             # an internal error message for every FUSE API call...
             raise e
 
-    def link(self, inode, new_parent_inode, new_name): # {{{3
+    def link(self, inode, new_parent_inode, new_name, ctx): # {{{3
+        """
+        Get inode attributes
+
+        @param  inode:
+        @type   inode: int
+
+        @param  new_parent_inode:
+        @type   new_parent_inode: int
+
+        @param  new_name:
+        @type   new_name: bytes
+
+        @param  ctx:
+        @type   ctx: llfuse.RequestContext
+
+        @return:
+        @rtype: llfuse.EntryAttributes
+        """
         self.getLogger().logCall('link', '->(inode=%r, parent_inode=%r, new_name=%r)', inode, new_parent_inode, new_name)
         if self.isReadonly(): raise FUSEError(errno.EROFS)
 
@@ -617,7 +671,19 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         return self.__fill_attr_inode_row(attr)
 
-    def listxattr(self, inode):
+    def listxattr(self, inode, ctx):
+        """
+        Get inode attributes
+
+        @param  inode:
+        @type   inode: int
+
+        @param  ctx:
+        @type   ctx: llfuse.RequestContext
+
+        @return: list of bytes
+        @rtype: list
+        """
         self.getLogger().logCall('listxattr', '->(inode=%r)', inode)
         xattrs = self.__get_cached_xattrs(inode)
         self.getLogger().logCall('listxattr', '<-(xattrs=%r)', xattrs)
@@ -625,13 +691,36 @@ class DedupOperations(llfuse.Operations): # {{{1
             return []
         return xattrs.keys()
 
-    def lookup(self, parent_inode, name):
+    def lookup(self, parent_inode, name, ctx):
+        """
+        Look up a directory entry by name and get its attributes.
+
+        @param  parent_inode:
+        @type   parent_inode: int
+
+        @param  name:
+        @type   name: bytes
+
+        @param  ctx:
+        @type   ctx: llfuse.RequestContext
+
+        @return:
+        @rtype: llfuse.EntryAttributes
+        """
         self.getLogger().logCall('lookup', '->(parent_inode=%r, name=%r)', parent_inode, name)
 
-        node = self.__get_tree_node_by_parent_inode_and_name(parent_inode, name)
-        v = self.__get_inode_row(node["inode_id"])
+        if name == b'.':
+            v = self.__get_inode_row(parent_inode)
+        elif name == b'..':
+            node = self.__get_tree_parent_node_by_inode(parent_inode)
+            self.getLogger().logCall('lookup', '-- parent node=%r', node)
+            v = self.__get_inode_row(node['inode_id'])
+        else:
+            node = self.__get_tree_node_by_parent_inode_and_name(parent_inode, name)
+            self.getLogger().logCall('lookup', '-- node=%r', node)
+            v = self.__get_inode_row(node["inode_id"])
+
         attr = self.__fill_attr_inode_row(v)
-        self.getLogger().logCall('lookup', '-- node=%r', node)
 
         self.getLogger().logCall('lookup', '<-(attr=%r)', v)
 
@@ -639,6 +728,24 @@ class DedupOperations(llfuse.Operations): # {{{1
         return attr
 
     def mkdir(self, parent_inode, name, mode, ctx): # {{{3
+        """
+        Create a directory
+
+        @param  parent_inode:
+        @type   parent_inode: int
+
+        @param  name:
+        @type   name: bytes
+
+        @param  mode:
+        @type   mode: int
+
+        @param  ctx:
+        @type   ctx: llfuse.RequestContext
+
+        @return:
+        @rtype: llfuse.EntryAttributes
+        """
         if self.isReadonly(): raise FUSEError(errno.EROFS)
 
         try:
@@ -671,6 +778,27 @@ class DedupOperations(llfuse.Operations): # {{{1
             raise self.__except_to_status('mkdir', e, errno.EIO)
 
     def mknod(self, parent_inode, name, mode, rdev, ctx): # {{{3
+        """
+        Create (possibly special) file
+
+        @param  parent_inode:
+        @type   parent_inode: int
+
+        @param  name:
+        @type   name: bytes
+
+        @param  mode:
+        @type   mode: int
+
+        @param  rdev:
+        @type   rdev: int
+
+        @param  ctx:
+        @type   ctx: llfuse.RequestContext
+
+        @return:
+        @rtype: llfuse.EntryAttributes
+        """
         if self.isReadonly(): raise FUSEError(errno.EROFS)
 
         try:
@@ -683,7 +811,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.__rollback_changes()
             raise self.__except_to_status('mknod', e, errno.EIO)
 
-    def open(self, inode, flags): # {{{3
+    def open(self, inode, flags, ctx): # {{{3
         """
         Return filehandler ID
         """
@@ -703,7 +831,7 @@ class DedupOperations(llfuse.Operations): # {{{1
         # Make sure the file is readable and/or writable.
         return inode
 
-    def opendir(self, inode): # {{{3
+    def opendir(self, inode, ctx): # {{{3
         self.getLogger().logCall('opendir', 'opendir(inode=%i)', inode)
         # Make sure the file exists?
         self.__get_tree_node_by_inode(inode)
@@ -773,7 +901,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             yield (name, attrs, node["id"],)
 
 
-    def readlink(self, inode): # {{{3
+    def readlink(self, inode, ctx): # {{{3
         self.getLogger().logCall('readlink', '->(inode=%i)', inode)
 
         target = self.getTable("link").find_by_inode(inode)
@@ -798,7 +926,22 @@ class DedupOperations(llfuse.Operations): # {{{1
         self.__gc_hook()
         return 0
 
-    def removexattr(self, inode, name):
+    def removexattr(self, inode, name, ctx):
+        """
+        Remove extended attribute name of inode
+
+        @param  inode:
+        @type   inode: int
+
+        @param  name:
+        @type   name: bytes
+
+        @param  ctx:
+        @type   ctx: llfuse.RequestContext
+
+        @return:
+        @rtype: int
+        """
         if self.isReadonly():
             raise FUSEError(errno.EROFS)
 
@@ -824,7 +967,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             raise self.__except_to_status('removexattr', e, errno.ENOENT)
 
 
-    def rename(self, inode_parent_old, name_old, inode_parent_new, name_new): # {{{3
+    def rename(self, inode_parent_old, name_old, inode_parent_new, name_new, ctx): # {{{3
         if self.isReadonly():
             raise FUSEError(errno.EROFS)
 
@@ -844,13 +987,6 @@ class DedupOperations(llfuse.Operations): # {{{1
                 if e.errno != errno.ENOENT: raise
 
             node_old = self.__get_tree_node_by_parent_inode_and_name(inode_parent_old, name_old)
-
-            # Link the new path to the same inode as the old path.
-#            self.link(node["inode_id"], inode_parent_new, name_new)
-
-            # Finally unlink the old path.
-#            self.__remove(inode_parent_old, name_old)
-
             node_parent_new = self.__get_tree_node_by_inode(inode_parent_new)
             string_id = self.__intern(name_new)
 
@@ -858,8 +994,9 @@ class DedupOperations(llfuse.Operations): # {{{1
             treeTable.rename_inode(node_old["id"], node_parent_new["id"], string_id)
 
             self.cached_nodes.unset((inode_parent_old, name_old))
-            self.cached_names.unset(name_old)
-            self.cached_name_ids.unset(node_old['name_id'])
+            if name_old != name_new:
+                self.cached_names.unset(name_old)
+                self.cached_name_ids.unset(node_old['name_id'])
 
             self.__cache_meta_hook()
 
@@ -872,7 +1009,7 @@ class DedupOperations(llfuse.Operations): # {{{1
             raise self.__except_to_status('rename', e, errno.ENOENT)
         return 0
 
-    def rmdir(self, inode_parent, name): # {{{3
+    def rmdir(self, inode_parent, name, ctx): # {{{3
         if self.isReadonly():
             raise FUSEError(errno.EROFS)
 
@@ -889,12 +1026,25 @@ class DedupOperations(llfuse.Operations): # {{{1
             self.__rollback_changes()
             raise self.__except_to_status('rmdir', e, errno.ENOENT)
 
-    def setattr(self, inode, attr):
+    def setattr(self, inode, attr, fields, fh, ctx):
         """
         @param  inode:  inode ID
         @type   inode:  int
+
         @param  attr:   attributes
         @type   attr:   llfuse.EntryAttributes
+
+        @param  fields: changed fields
+        @type   fields: llfuse.SetattrFields
+
+        @param  fh:     inode
+        @type   fh:     int|None
+
+        @param  ctx:
+        @type   ctx: llfuse.RequestContext
+
+        @return:
+        @rtype: llfuse.EntryAttributes
         """
         if self.isReadonly():
             raise FUSEError(errno.EROFS)
@@ -904,7 +1054,11 @@ class DedupOperations(llfuse.Operations): # {{{1
             for a in attr.__slots__:
                 v[a] = getattr(attr, a)
 
-            self.getLogger().logCall('setattr', '->(inode=%i, attr=%r)', inode, v)
+            f = {}
+            for a in fields.__slots__:
+                f[a] = getattr(attr, a)
+
+            self.getLogger().logCall('setattr', '->(inode=%i, attr=%r, fields=%r)', inode, v, f)
 
             row = self.__get_inode_row(inode)
             self.getLogger().debug("-- current row: %r", row)
@@ -913,48 +1067,34 @@ class DedupOperations(llfuse.Operations): # {{{1
             new_data = {}
 
             # Emulate truncate
-            if attr.st_size is not None:
-                if row["size"] != attr.st_size:
-                    new_data["size"] = attr.st_size
-                    if row["size"] > attr.st_size:
-                        new_data["truncated"] = True
-                    update_db = True
+            if fields.update_size:
+                new_data["size"] = attr.st_size
+                if row["size"] > attr.st_size:
+                    new_data["truncated"] = True
+                update_db = True
 
-            if attr.st_mode is not None:
-                if row["mode"] != attr.st_mode:
-                    new_data["mode"] = attr.st_mode
-                    update_db = True
+            if fields.update_mode:
+                new_data["mode"] = attr.st_mode
+                update_db = True
 
-            if attr.st_uid is not None:
-                if row["uid"] != attr.st_uid:
-                    new_data["uid"] = attr.st_uid
-                    update_db = True
+            if fields.update_uid:
+                new_data["uid"] = attr.st_uid
+                update_db = True
 
-            if attr.st_gid is not None:
-                if row["gid"] != attr.st_gid:
-                    new_data["gid"] = attr.st_gid
-                    update_db = True
+            if fields.update_gid:
+                new_data["gid"] = attr.st_gid
+                update_db = True
 
-            if attr.st_atime_ns is not None and not self.getOption('noatime'):
-                if row["atime"] != attr.st_atime_ns:
-                    new_data["atime"] = attr.st_atime_ns
-                    update_db = True
+            if fields.update_atime and not self.getOption('noatime'):
+                new_data["atime"] = attr.st_atime_ns
+                update_db = True
 
-            if attr.st_mtime_ns is not None:
-                if row["mtime"] != attr.st_mtime_ns:
-                    new_data["mtime"] = attr.st_mtime_ns
-                    update_db = True
-
-            if attr.st_ctime_ns is not None:
-                if row["ctime"] != attr.st_ctime_ns:
-                    new_data["ctime"] = attr.st_ctime_ns
-                    update_db = True
-
-            elif update_db:
-                new_data["ctime"] = self.newctime64()
+            if fields.update_mtime:
+                new_data["mtime"] = attr.st_mtime_ns
                 update_db = True
 
             if update_db:
+                new_data["ctime"] = self.newctime64()
 
                 self.getLogger().debug("-- new attrs: %r", new_data)
 
@@ -977,17 +1117,10 @@ class DedupOperations(llfuse.Operations): # {{{1
         """
         if self.getOption('noatime'):
             return
-
         try:
             row = self.__get_inode_row(inode)
-
-            new_data = {}
-
-            new_data["atime"] = self.newctime64()
-
-            row.update(new_data)
+            row["atime"] = self.newctime64()
             self.cached_attrs.set(inode, row, writed=True)
-
             self.__cache_meta_hook()
         except Exception as e:
             raise self.__except_to_status('__setattr_atime', e, errno.EIO)
@@ -999,14 +1132,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         """
         try:
             row = self.__get_inode_row(inode)
-
-            new_data = {}
-
-            new_data["ctime"] = self.newctime64()
-
-            row.update(new_data)
+            row["ctime"] = self.newctime64()
             self.cached_attrs.set(inode, row, writed=True)
-
             self.__cache_meta_hook()
         except Exception as e:
             raise self.__except_to_status('__setattr_ctime', e, errno.EIO)
@@ -1018,19 +1145,13 @@ class DedupOperations(llfuse.Operations): # {{{1
         """
         try:
             row = self.__get_inode_row(inode)
-
-            new_data = {}
-
-            new_data["mtime"] = self.newctime64()
-
-            row.update(new_data)
+            row["mtime"] = self.newctime64()
             self.cached_attrs.set(inode, row, writed=True)
-
             self.__cache_meta_hook()
         except Exception as e:
             raise self.__except_to_status('__setattr_mtime', e, errno.EIO)
 
-    def setxattr(self, inode, name, value):
+    def setxattr(self, inode, name, value, ctx):
         if self.isReadonly():
             raise FUSEError(errno.EROFS)
 
@@ -1072,7 +1193,7 @@ class DedupOperations(llfuse.Operations): # {{{1
     def stacktrace(self):
         self.getLogger().logCall('stacktrace', '->()')
 
-    def statfs(self): # {{{3
+    def statfs(self, ctx): # {{{3
         try:
             self.getLogger().logCall('statfs', '->()')
             # Use os.statvfs() to report the host file system's storage capacity.
@@ -1113,7 +1234,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         try:
             self.getLogger().logCall('symlink', '->(inode_parent=%i, name=%r, target=%r)',
                             inode_parent, name, target)
-            if self.isReadonly(): return -errno.EROFS
+            if self.isReadonly():
+                raise FUSEError(errno.EROFS)
 
             # Create an inode to hold the symbolic link.
             inode, parent_ino = self.__insert(inode_parent, name, self.link_mode, len(target), ctx)
@@ -1122,11 +1244,13 @@ class DedupOperations(llfuse.Operations): # {{{1
             attr = self.__getattr(inode)
             self.__cache_meta_hook()
             return attr
+        except FUSEError:
+            raise
         except Exception as e:
             self.__rollback_changes()
             raise self.__except_to_status('symlink', e, errno.EIO)
 
-    def unlink(self, parent_inode, name): # {{{3
+    def unlink(self, parent_inode, name, ctx): # {{{3
         try:
             self.getLogger().logCall('unlink', '->(parent_inode=%i, name=%r)', parent_inode, name)
             if self.isReadonly():
@@ -1282,6 +1406,16 @@ class DedupOperations(llfuse.Operations): # {{{1
 
         return node
 
+    def __get_tree_parent_node_by_inode(self, inode):
+        self.getLogger().logCall('__get_tree_parent_node_by_inode', '->(inode=%i)', inode)
+
+        node = self.__get_tree_node_by_inode(inode)
+        node = self.getTable("tree").get(node['parent_id'])
+        if not node:
+            self.getLogger().debug("! No parent node found for inode %i", inode)
+            raise FUSEError(errno.ENOENT)
+        return node
+
     def __get_inode_row(self, inode_id):
         self.getLogger().logCall('__get_inode_row', '->(inode=%i)', inode_id)
         row = self.cached_attrs.get(inode_id)
@@ -1301,6 +1435,15 @@ class DedupOperations(llfuse.Operations): # {{{1
         return row
 
     def __fill_attr_inode_row(self, row): # {{{3
+        """
+        Fill instance of llfuse.EntryAttributes with inodeTable row
+
+        @param row:
+        @type  row: dict
+
+        @return:
+        @rtype: llfuse.EntryAttributes
+        """
         self.getLogger().logCall('__fill_attr_inode_row', '->(row=%r)', row)
 
         result = llfuse.EntryAttributes()
@@ -1316,24 +1459,24 @@ class DedupOperations(llfuse.Operations): # {{{1
         result.st_gid       = int(row["gid"])
         result.st_rdev      = int(row["rdev"])
         result.st_size      = int(row["size"])
-        if hasattr(result, "st_atime"):
-            result.st_atime     = float(row["atime"]) / 10 ** 9
-        if hasattr(result, "st_mtime"):
-            result.st_mtime     = float(row["mtime"]) / 10 ** 9
-        if hasattr(result, "st_ctime"):
-            result.st_ctime     = float(row["ctime"]) / 10 ** 9
-        if hasattr(result, "st_atime_ns"):
-            result.st_atime_ns  = int(row["atime"])
-        if hasattr(result, "st_mtime_ns"):
-            result.st_mtime_ns  = int(row["mtime"])
-        if hasattr(result, "st_ctime_ns"):
-            result.st_ctime_ns  = int(row["ctime"])
+        result.st_atime_ns  = int(row["atime"])
+        result.st_mtime_ns  = int(row["mtime"])
+        result.st_ctime_ns  = int(row["ctime"])
         result.st_blksize   = int(self.block_size)
         result.st_blocks    = int(result.st_size / self.block_size)
         return result
 
 
     def __getattr(self, inode_id): # {{{3
+        """
+        Get inode row and fill llfuse.EntryAttributes
+
+        @param inode_id:
+        @type  inode_id: int
+
+        @return:
+        @rtype: llfuse.EntryAttributes
+        """
         self.getLogger().logCall('__getattr', '->(inode=%i)', inode_id)
         row = self.__get_inode_row(inode_id)
         return self.__fill_attr_inode_row(row)

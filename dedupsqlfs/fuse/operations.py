@@ -47,7 +47,8 @@ class DedupOperations(llfuse.Operations): # {{{1
         llfuse.Operations.__init__(self, **kwargs)
 
         # Initialize instance attributes.
-        self.block_size = 1024 * 128
+        self.block_size = constants.BLOCK_SIZE_DEFAULT
+        self.hash_function = constants.HAS_FUNCTION_DEFAULT
 
         self.bytes_read = 0
         self.bytes_written = 0

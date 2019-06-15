@@ -38,6 +38,9 @@ def fuse_mount(options, compression_methods=None):
             options,
             fsname="dedupsqlfs", allow_root=True)
 
+        logger = ops.getApplication().getLogger()
+        logger.info("Mount: DeDupSQLfs %s/%s" % (dedupsqlfs.__version__, dedupsqlfs.__fsversion__))
+
         if not _fuse.checkIfLocked():
             _fuse.saveCompressionMethods(compression_methods)
 

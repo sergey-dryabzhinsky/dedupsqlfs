@@ -340,8 +340,14 @@ class DedupFS(object): # {{{1
                 if method and method.find(":") != -1:
                     method, level = method.split(":")
                     methods[i] = method
-                if method in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_FAST,):
+                if method in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_FAST, constants.COMPRESSION_TYPE_DEFAULT,):
                     auto_type = method
+                    if method == constants.COMPRESSION_TYPE_BEST:
+                        defaultLevel = constants.COMPRESSION_LEVEL_BEST
+                    if method == constants.COMPRESSION_TYPE_FAST:
+                        defaultLevel = constants.COMPRESSION_LEVEL_FAST
+                    if method == constants.COMPRESSION_TYPE_DEFAULT:
+                        defaultLevel = constants.COMPRESSION_LEVEL_DEFAULT
                     continue
                 if method == constants.COMPRESSION_TYPE_NONE:
                     continue
@@ -354,7 +360,7 @@ class DedupFS(object): # {{{1
 
         self._compressTool.setOption("compression_minimal_ratio", self.getOption("compression_minimal_ratio"))
         self._compressTool.setOption("compression_minimal_size", self.getOption("compression_minimal_size"))
-        self._compressTool.setOption("compression_level", self.getOption("compression_level"))
+        self._compressTool.setOption("compression_level", defaultLevel)
         self._compressTool.setOption("compression_forced", self.getOption("compression_forced"))
 
         return

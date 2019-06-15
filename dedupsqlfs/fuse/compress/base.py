@@ -77,7 +77,11 @@ class BaseCompressTool(object):
         self.time_spent_compressing = 0
 
         methods = set(self.getOption("compression"))
-        if constants.COMPRESSION_TYPE_FAST in methods or constants.COMPRESSION_TYPE_BEST in methods:
+        if constants.COMPRESSION_TYPE_FAST in methods:
+            methods = set(self._compressors.keys())
+        if constants.COMPRESSION_TYPE_BEST in methods:
+            methods = set(self._compressors.keys())
+        if constants.COMPRESSION_TYPE_DEFAULT in methods:
             methods = set(self._compressors.keys())
         self._methods = methods
         if constants.COMPRESSION_TYPE_NONE in self._methods:

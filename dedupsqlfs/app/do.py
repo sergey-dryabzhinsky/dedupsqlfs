@@ -724,6 +724,7 @@ def main(): # {{{1
             pass
     if len(compression_methods) > 1:
         compression_methods_cmd.append(constants.COMPRESSION_TYPE_BEST)
+        compression_methods_cmd.append(constants.COMPRESSION_TYPE_DEFAULT)
         compression_methods_cmd.append(constants.COMPRESSION_TYPE_FAST)
 
     msg = "R|Enable compression of data blocks using one or more of the supported compression methods: %s"
@@ -732,6 +733,7 @@ def main(): # {{{1
     msg += "\n- You can use <method>:<level> syntax, <level> can be integer or value from --compression-level."
     if len(compression_methods_cmd) > 1:
         msg += "\n- Method %r will try all compression methods with 'best' level and choose one with smaller result data." % constants.COMPRESSION_TYPE_BEST
+        msg += "\n- Method %r will try all compression methods with 'default' level and choose one with smaller result data." % constants.COMPRESSION_TYPE_DEFAULT
         msg += "\n- Method %r will try all compression methods with 'fast' level and choose one with smaller result data." % constants.COMPRESSION_TYPE_FAST
     msg += "\nDefaults to %r." % constants.COMPRESSION_TYPE_NONE
 

@@ -1224,6 +1224,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
             stats.f_files = 0 # The total number of file serial numbers.
             # File system flags. Symbols are defined in the <sys/statvfs.h> header file to refer to bits in this field (see The f_flags field).
             stats.f_frsize = self.block_size # The fundamental file system block size in bytes.
+            stats.f_namemax = 65000
             return stats
         except Exception as e:
             raise self.__except_to_status('statfs', e, errno.EIO)

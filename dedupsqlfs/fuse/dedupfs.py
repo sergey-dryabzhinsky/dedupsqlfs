@@ -23,15 +23,16 @@ try:
     from llfuse import FUSEError
 except ImportError:
     sys.stderr.write("Error: The Python FUSE binding isn't installed!\n" + \
-        "If you're on Ubuntu try running `sudo apt-get install python3-fuse'.\n")
+        "If you're on Ubuntu try running `sudo -i apt-get install python3-pip'\n"+
+        " and `sudo pip3 install llfuse`.\n")
     sys.exit(1)
 
 fv = fuse.__version__.split('.')
-if int(fv[0]) < 1 and int(fv[1]) < 41:
+if int(fv[0]) < 1 and int(fv[1]) < 42:
     sys.stderr.write(
-        "Error: The Python FUSE binding v0.41+ isn't installed!\n" + \
-        "If you're on Ubuntu try running `sudo apt-get install python3-fuse'\n"+
-        " or `sudo pip3 install llfuse=0.41.1`.\n")
+        "Error: The Python FUSE binding v0.42+ isn't installed!\n" + \
+        "If you're on Ubuntu try running `sudo -i apt-get install python3-pip'\n"+
+        " and `sudo pip3 install llfuse`.\n")
     sys.exit(1)
 
 # Local modules that are mostly useful for debugging.
@@ -280,7 +281,7 @@ class DedupFS(object): # {{{1
         ex = None
         try:
             fuse.init(self.operations, self.mountpoint, self._opts)
-            fuse.main(single=True)
+            fuse.main(workers=1, handle_signals=False)
         except Exception as e:
             error = True
             ex = e

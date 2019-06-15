@@ -17,8 +17,9 @@ The following shell commands show how to install and use the DedupFS file system
 
     $ sudo apt-get install python3-pip libfuse-dev
     #
-    # !!! STRONG DEPENDANCY on that version !!! @2017-05-11
-    $ sudo pip3 install llfuse==0.41.1
+    $ sudo pip3 install llfuse
+    #
+    # llfuse must be version 0.42+
     #
     $ git clone https://github.com/sergey-dryabzhinsky/dedupsqlfs.git
     #
@@ -154,6 +155,6 @@ The latest version of DedupSqlFS is available at <https://github.com/sergey-drya
 
 This software is licensed under the MIT license.
 
-© 2013-2019 Sergey Dryabzhinsky &lt;<sergey.dryabzhinsky@gmail.com>&gt;.
+© 2013-2019 Sergey Dryabzhinsky &lt;sergey.dryabzhinsky@gmail.com&gt;.
 
-© 2010 Peter Odding &lt;<peter@peterodding.com>&gt;.
+© 2010 Peter Odding &lt;peter@peterodding.com&gt;.

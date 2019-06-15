@@ -11,7 +11,7 @@ Snapshot:
 
 Data:
     verify hashes
-    rehash with new hash alg @todo
+    rehash with new hash alg
     defragment (gc, vacuum)
     (de)compress file(s) and director(y|ies) @todo
     change block size (need double free space) @todo
@@ -433,6 +433,27 @@ def rehash(options, _fuse):
     _fuse.operations.destroy()
     return ret
 
+def verify(options, _fuse):
+    """
+    @param options: Commandline options
+    @type  options: object
+
+    @param _fuse: FUSE wrapper
+    @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
+    """
+    _fuse.setOption("gc_umount_enabled", False)
+    _fuse.setOption("gc_vacuum_enabled", False)
+    _fuse.setOption("gc_enabled", False)
+    _fuse.setOption("use_transactions", False)
+    _fuse.setOption("synchronous", False)
+    _fuse.setReadonly(True)
+
+    from dedupsqlfs.app.actions.verify import do_verify
+    ret = do_verify(options, _fuse)
+
+    _fuse.operations.destroy()
+    return ret
+
 def recompress(options, _fuse):
     """
     @param options: Commandline options
@@ -531,11 +552,16 @@ def do(options, compression_methods=None):
 
         # Actions
 
+        ret = 0
+
         if options.rehash_function:
-            rehash(options, _fuse)
+            ret = rehash(options, _fuse)
+
+        if options.verify:
+            ret = verify(options, _fuse)
 
         if options.recompress_data:
-            recompress(options, _fuse)
+            ret = recompress(options, _fuse)
 
         if options.subvol_create:
             create_subvolume(options, _fuse)
@@ -606,7 +632,6 @@ def do(options, compression_methods=None):
         if options.print_stats:
             print_fs_stats(options, _fuse)
 
-        ret = 0
     except Exception:
         import traceback
         traceback.print_exc()

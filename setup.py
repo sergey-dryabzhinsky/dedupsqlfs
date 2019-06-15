@@ -6,10 +6,11 @@ import subprocess
 from distutils.core import setup
 from distutils.extension import Extension
 
-CYTHON_BUILD=0
+
+CYTHON_BUILD = 0
 if "--cython-build" in sys.argv:
     # Support compiling with Cython
-    CYTHON_BUILD=1
+    CYTHON_BUILD = 1
     sys.argv.remove("--cython-build")
 
     from Cython.Distutils import build_ext
@@ -19,16 +20,21 @@ else:
 
 args = sys.argv[1:]
 
-# scan the 'dvedit' directory for extension files, converting
-# them to extension names in dotted notation
 def scandir(dir, files=[]):
+    """
+    scan the 'dvedit' directory for extension files, converting
+    them to extension names in dotted notation
+
+    @param dir:
+    @param files:
+    @return:
+    """
     d = os.path.dirname(dir)
     if d == "tests":
         return files
     for file in os.listdir(dir):
         path = os.path.join(dir, file)
-        if os.path.isfile(path) and path.endswith(".py") and \
-            path.find("__.py") == -1 and path.find('migrations') == -1:
+        if os.path.isfile(path) and path.endswith(".py") and path.find("__.py") == -1 and path.find('migrations') == -1:
             files.append(path.replace(os.path.sep, ".")[:-3])
         elif os.path.isdir(path):
             scandir(path, files)
@@ -121,12 +127,12 @@ if CYTHON_BUILD:
         ext_modules = cythonize(extensions),
         name="dedupsqlfs",
         packages=["dedupsqlfs",],
-        cmdclass = {'build_ext': build_ext},
+        cmdclass = {'build_ext': build_ext}, requires=['llfuse']
     )
 else:
     setup(
         ext_modules = extensions,
         name="dedupsqlfs",
         packages=["dedupsqlfs",],
-        cmdclass = {'build_ext': build_ext},
+        cmdclass = {'build_ext': build_ext}, requires=['llfuse']
     )

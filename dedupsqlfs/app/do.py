@@ -728,7 +728,7 @@ def main(): # {{{1
         compression_methods_cmd.append(constants.COMPRESSION_TYPE_FAST)
 
     msg = "R|Enable compression of data blocks using one or more of the supported compression methods: %s"
-    msg %= ', '.join('%r' % mth for mth in compression_methods_cmd[:-2])
+    msg %= ', '.join('%r' % mth for mth in compression_methods_cmd[:-3])
     msg += ".\n- To use two or more methods select this option in command line for each compression method."
     msg += "\n- You can use <method>:<level> syntax, <level> can be integer or value from --compression-level."
     if len(compression_methods_cmd) > 1:

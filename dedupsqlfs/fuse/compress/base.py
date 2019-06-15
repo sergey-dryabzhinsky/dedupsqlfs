@@ -199,7 +199,12 @@ class BaseCompressTool(object):
 
         minRatio = self.getOption("compression_minimal_ratio", 0.05)
 
-        if data_length <= self.getOption("compression_minimal_size") and not forced:
+        minSize = self.getOption("compression_minimal_size")
+        if minSize < 0:
+            # AutoSize?
+            minSize = 0
+
+        if data_length <= minSize and not forced:
             return cdata, cmethod
 
         cdata_length = data_length

@@ -38,6 +38,7 @@ from dedupsqlfs.lib.cache.storage import StorageTimeSize
 from dedupsqlfs.lib.cache.index import IndexTime
 from dedupsqlfs.lib.cache.inodes import InodesTime
 from dedupsqlfs.fuse.subvolume import Subvolume
+from dedupsqlfs.fuse.helpers.repr import entry_attributes_to_dict, setattr_fields_to_dict
 from dedupsqlfs import __fsversion__
 
 
@@ -313,7 +314,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
         self.__cache_meta_hook()
 
-        self.getLogger().logCall('create', '<-(created inode=%i, attrs=%r)', fh, attrs)
+        self.getLogger().logCall('create', '<-(created inode=%i, attrs=%r)', fh, entry_attributes_to_dict(attrs))
 
         return fh, attrs
 
@@ -1051,15 +1052,11 @@ class DedupOperations(llfuse.Operations):  # {{{1
             raise FUSEError(errno.EROFS)
 
         try:
-            v = {}
-            for a in attr.__slots__:
-                v[a] = getattr(attr, a)
-
-            f = {}
-            for a in fields.__slots__:
-                f[a] = getattr(attr, a)
-
-            self.getLogger().logCall('setattr', '->(inode=%i, attr=%r, fields=%r)', inode, v, f)
+            if self.getOption('verbosity') >= 3:
+                self.getLogger().logCall('setattr', '->(inode=%i, attr=%r, fields=%r)',
+                                         inode,
+                                         entry_attributes_to_dict(attr),
+                                         setattr_fields_to_dict(fields))
 
             row = self.__get_inode_row(inode)
             self.getLogger().debug("-- current row: %r", row)
@@ -1991,12 +1988,12 @@ class DedupOperations(llfuse.Operations):  # {{{1
     def newctime64(self):  # {{{3
         t_ns, t_i = modf(time())
         t_ns = int(t_ns * 10**9)
-        return t_i * 10**9 + t_ns
+        return int(t_i * 10**9) + t_ns
 
     def newctime64_32(self):  # {{{3
         t_ns, t_i = modf(time())
         t_ns = int(t_ns * 10**9)
-        return t_i * 10**9 + t_ns, t_i
+        return int(t_i * 10**9) + t_ns, t_i
 
     def do_hash(self, data):  # {{{3
         start_time = time()

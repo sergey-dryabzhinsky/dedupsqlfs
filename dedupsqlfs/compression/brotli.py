@@ -17,16 +17,16 @@ class BrotliCompression(BaseCompression):
     _has_comp_level_options = True
 
     def getFastCompressionOptions(self):
-        return ( 0, )
+        return ( self._module.MODE_GENERIC, 0, )
 
     def getNormCompressionOptions(self):
-        return ( 4, )
+        return ( self._module.MODE_GENERIC, 4, )
 
     def getBestCompressionOptions(self):
-        return ( 8, )
+        return ( self._module.MODE_GENERIC, 8, )
 
     def getDefaultCompressionOptions(self):
-        return ( 2, )
+        return ( self._module.MODE_GENERIC, 2, )
 
     def getCustomCompressionOptions(self):
         try:

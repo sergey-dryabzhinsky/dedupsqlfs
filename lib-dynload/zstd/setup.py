@@ -8,13 +8,13 @@ from setuptools import setup, find_packages, Extension
 from setuptools.command.build_ext import build_ext
 
 # ZSTD version
-VERSION = (1, 4, 0,)
+VERSION = (1, 4, 3,)
 VERSION_STR = ".".join([str(x) for x in VERSION])
 
 # Package version
 PKG_VERSION = VERSION
 # Minor versions
-PKG_VERSION += ("0",)
+PKG_VERSION += ("2",)
 PKG_VERSION_STR = ".".join([str(x) for x in PKG_VERSION])
 
 ###
@@ -129,7 +129,10 @@ zstdFiles = []
 if not SUP_EXTERNAL:
 
     for f in [
-            'compress/zstd_compress.c', 'compress/zstdmt_compress.c',
+            'compress/zstd_compress.c',
+            'compress/zstd_compress_literals.c',
+            'compress/zstd_compress_sequences.c',
+            'compress/zstdmt_compress.c',
             'compress/zstd_fast.c', 'compress/zstd_double_fast.c', 'compress/zstd_lazy.c', 'compress/zstd_opt.c', 'compress/zstd_ldm.c',
             'compress/fse_compress.c', 'compress/huf_compress.c',
             'compress/hist.c',

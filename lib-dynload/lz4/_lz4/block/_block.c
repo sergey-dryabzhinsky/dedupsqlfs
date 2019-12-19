@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, Steeve Morin, 2016 Jonathan Underwood
+ * Copyright (c) 2012-2018, Steeve Morin, Jonathan Underwood
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -80,11 +80,7 @@ load_le32 (const char *c)
   return d[0] | (d[1] << 8) | (d[2] << 16) | (d[3] << 24);
 }
 
-#ifdef inline
-#undef inline
-#endif
-
-static const int hdr_size = sizeof (uint32_t);
+static const size_t hdr_size = sizeof (uint32_t);
 
 typedef enum
 {
@@ -93,17 +89,49 @@ typedef enum
   HIGH_COMPRESSION
 } compression_type;
 
+static PyObject * LZ4BlockError;
+
+static inline int
+lz4_compress_generic (int comp, char* source, char* dest, int source_size, int dest_size,
+                      char* dict, int dict_size, int acceleration, int compression)
+{
+  if (comp != HIGH_COMPRESSION)
+    {
+      LZ4_stream_t lz4_state;
+      LZ4_resetStream (&lz4_state);
+      if (dict)
+        {
+          LZ4_loadDict (&lz4_state, dict, dict_size);
+        }
+      if (comp != FAST)
+        {
+          acceleration = 1;
+        }
+      return LZ4_compress_fast_continue (&lz4_state, source, dest, source_size, dest_size, acceleration);
+    }
+  else
+    {
+      LZ4_streamHC_t lz4_state;
+      LZ4_resetStreamHC (&lz4_state, compression);
+      if (dict)
+        {
+          LZ4_loadDictHC (&lz4_state, dict, dict_size);
+        }
+      return LZ4_compress_HC_continue (&lz4_state, source, dest, source_size, dest_size);
+    }
+}
+
+#ifdef inline
+#undef inline
+#endif
+
 static PyObject *
 compress (PyObject * Py_UNUSED (self), PyObject * args, PyObject * kwargs)
 {
   const char *mode = "default";
-  int dest_size, total_size;
+  size_t dest_size, total_size;
   int acceleration = 1;
-#if LZ4_VERSION_NUMBER >= 10705 /* LZ4 v1.7.5 */
   int compression = 9;
-#else
-  int compression = 0;
-#endif
   int store_size = 1;
   PyObject *py_dest;
   char *dest, *dest_start;
@@ -111,8 +139,8 @@ compress (PyObject * Py_UNUSED (self), PyObject * args, PyObject * kwargs)
   int output_size;
   Py_buffer source;
   int source_size;
-
-#if IS_PY3
+  int return_bytearray = 0;
+  Py_buffer dict = {0};
   static char *argnames[] = {
     "source",
     "mode",
@@ -120,41 +148,48 @@ compress (PyObject * Py_UNUSED (self), PyObject * args, PyObject * kwargs)
     "acceleration",
     "compression",
     "return_bytearray",
+    "dict",
     NULL
   };
-  int return_bytearray = 0;
 
-  if (!PyArg_ParseTupleAndKeywords (args, kwargs, "y*|siiip", argnames,
+
+#if IS_PY3
+  if (!PyArg_ParseTupleAndKeywords (args, kwargs, "y*|spiipz*", argnames,
                                     &source,
                                     &mode, &store_size, &acceleration, &compression,
-                                    &return_bytearray))
+                                    &return_bytearray, &dict))
     {
       return NULL;
     }
 #else
-  static char *argnames[] = {
-    "source",
-    "mode",
-    "store_size",
-    "acceleration",
-    "compression",
-    NULL
-  };
-  if (!PyArg_ParseTupleAndKeywords (args, kwargs, "s*|siii", argnames,
+  if (!PyArg_ParseTupleAndKeywords (args, kwargs, "s*|siiiiz*", argnames,
                                     &source,
-                                    &mode, &store_size, &acceleration, &compression))
+                                    &mode, &store_size, &acceleration, &compression,
+                                    &return_bytearray, &dict))
     {
       return NULL;
     }
 #endif
 
-  source_size = (int) source.len;
-  if (source.len != (Py_ssize_t) source_size)
+  if (source.len > INT_MAX)
     {
       PyBuffer_Release(&source);
-      PyErr_Format(PyExc_OverflowError, "Input too large for C 'int'");
+      PyBuffer_Release(&dict);
+      PyErr_Format(PyExc_OverflowError,
+                   "Input too large for LZ4 API");
       return NULL;
     }
+
+  if (dict.len > INT_MAX)
+    {
+      PyBuffer_Release(&source);
+      PyBuffer_Release(&dict);
+      PyErr_Format(PyExc_OverflowError,
+                   "Dictionary too large for LZ4 API");
+      return NULL;
+    }
+
+  source_size = (int) source.len;
 
   if (!strncmp (mode, "default", sizeof ("default")))
     {
@@ -171,9 +206,10 @@ compress (PyObject * Py_UNUSED (self), PyObject * args, PyObject * kwargs)
   else
     {
       PyBuffer_Release(&source);
+      PyBuffer_Release(&dict);
       PyErr_Format (PyExc_ValueError,
-		    "Invalid mode argument: %s. Must be one of: standard, fast, high_compression",
-		    mode);
+                    "Invalid mode argument: %s. Must be one of: standard, fast, high_compression",
+                    mode);
       return NULL;
     }
 
@@ -188,36 +224,11 @@ compress (PyObject * Py_UNUSED (self), PyObject * args, PyObject * kwargs)
       total_size = dest_size;
     }
 
-#if IS_PY3
-  if (return_bytearray)
+  dest = PyMem_Malloc (total_size * sizeof * dest);
+  if (dest == NULL)
     {
-      py_dest = PyByteArray_FromStringAndSize (NULL, total_size);
-      if (py_dest == NULL)
-        {
-          PyBuffer_Release(&source);
-          return PyErr_NoMemory();
-        }
-      dest = PyByteArray_AS_STRING (py_dest);
-    }
-  else
-    {
-      py_dest = PyBytes_FromStringAndSize (NULL, total_size);
-      if (py_dest == NULL)
-        {
-          PyBuffer_Release(&source);
-          return PyErr_NoMemory();
-        }
-      dest = PyBytes_AS_STRING (py_dest);
-    }
-#else
-  py_dest = PyBytes_FromStringAndSize (NULL, total_size);
-  if (py_dest == NULL)
-    {
-      PyBuffer_Release(&source);
       return PyErr_NoMemory();
     }
-  dest = PyBytes_AS_STRING (py_dest);
-#endif
 
   Py_BEGIN_ALLOW_THREADS
 
@@ -231,57 +242,41 @@ compress (PyObject * Py_UNUSED (self), PyObject * args, PyObject * kwargs)
       dest_start = dest;
     }
 
-  switch (comp)
-    {
-    case DEFAULT:
-      output_size = LZ4_compress_default (source.buf, dest_start, source_size,
-                                          dest_size);
-      break;
-    case FAST:
-      output_size = LZ4_compress_fast (source.buf, dest_start, source_size,
-                                       dest_size, acceleration);
-      break;
-    case HIGH_COMPRESSION:
-      output_size = LZ4_compress_HC (source.buf, dest_start, source_size,
-                                     dest_size, compression);
-      break;
-    }
+  output_size = lz4_compress_generic (comp, source.buf, dest_start, source_size,
+                                      (int) dest_size, dict.buf, (int) dict.len,
+                                      acceleration, compression);
 
   Py_END_ALLOW_THREADS
 
   PyBuffer_Release(&source);
+  PyBuffer_Release(&dict);
 
   if (output_size <= 0)
     {
-      PyErr_SetString (PyExc_ValueError, "Compression failed");
-      Py_CLEAR (py_dest);
+      PyErr_SetString (LZ4BlockError, "Compression failed");
+      PyMem_Free (dest);
       return NULL;
     }
 
   if (store_size)
     {
-      output_size += hdr_size;
+      output_size += (int) hdr_size;
     }
 
-  /* Resizes are expensive; tolerate some slop to avoid. */
-  if (output_size < (dest_size / 4) * 3)
+  if (return_bytearray)
     {
-#if IS_PY3
-      if (return_bytearray)
-        {
-          PyByteArray_Resize (py_dest, output_size);
-        }
-      else
-        {
-          _PyBytes_Resize (&py_dest, output_size);
-        }
-#else
-      _PyBytes_Resize (&py_dest, output_size);
-#endif
+      py_dest = PyByteArray_FromStringAndSize (dest, (Py_ssize_t) output_size);
     }
   else
     {
-      Py_SIZE (py_dest) = output_size;
+      py_dest = PyBytes_FromStringAndSize (dest, (Py_ssize_t) output_size);
+    }
+
+  PyMem_Free (dest);
+
+  if (py_dest == NULL)
+    {
+      return PyErr_NoMemory ();
     }
 
   return py_dest;
@@ -292,49 +287,60 @@ decompress (PyObject * Py_UNUSED (self), PyObject * args, PyObject * kwargs)
 {
   Py_buffer source;
   const char * source_start;
-  int source_size;
+  size_t source_size;
   PyObject *py_dest;
   char *dest;
   int output_size;
   size_t dest_size;
   int uncompressed_size = -1;
-
-#if IS_PY3
+  int return_bytearray = 0;
+  Py_buffer dict = {0};
   static char *argnames[] = {
     "source",
     "uncompressed_size",
     "return_bytearray",
+    "dict",
     NULL
   };
-  int return_bytearray = 0;
-  if (!PyArg_ParseTupleAndKeywords (args, kwargs, "y*|ip", argnames,
+
+#if IS_PY3
+  if (!PyArg_ParseTupleAndKeywords (args, kwargs, "y*|ipz*", argnames,
                                     &source, &uncompressed_size,
-                                    &return_bytearray))
+                                    &return_bytearray, &dict))
     {
       return NULL;
     }
 #else
-  static char *argnames[] = {
-    "source",
-    "uncompressed_size",
-    NULL
-  };
-  if (!PyArg_ParseTupleAndKeywords (args, kwargs, "s*|i", argnames,
-                                    &source, &uncompressed_size))
+  if (!PyArg_ParseTupleAndKeywords (args, kwargs, "s*|iiz*", argnames,
+                                    &source, &uncompressed_size,
+                                    &return_bytearray, &dict))
     {
       return NULL;
     }
 #endif
-  source_start = (const char *) source.buf;
-  source_size = (int) source.len;
-  if (source.len != (Py_ssize_t) source_size)
+
+  if (source.len > INT_MAX)
     {
       PyBuffer_Release(&source);
-      PyErr_Format(PyExc_OverflowError, "Input too large for C 'int'");
+      PyBuffer_Release(&dict);
+      PyErr_Format(PyExc_OverflowError,
+                   "Input too large for LZ4 API");
       return NULL;
     }
 
-  if (uncompressed_size > 0)
+  if (dict.len > INT_MAX)
+    {
+      PyBuffer_Release(&source);
+      PyBuffer_Release(&dict);
+      PyErr_Format(PyExc_OverflowError,
+                   "Dictionary too large for LZ4 API");
+      return NULL;
+    }
+
+  source_start = (const char *) source.buf;
+  source_size = (int) source.len;
+
+  if (uncompressed_size >= 0)
     {
       dest_size = uncompressed_size;
     }
@@ -343,6 +349,7 @@ decompress (PyObject * Py_UNUSED (self), PyObject * args, PyObject * kwargs)
       if (source_size < hdr_size)
         {
           PyBuffer_Release(&source);
+          PyBuffer_Release(&dict);
           PyErr_SetString (PyExc_ValueError, "Input source data size too small");
           return NULL;
         }
@@ -351,123 +358,130 @@ decompress (PyObject * Py_UNUSED (self), PyObject * args, PyObject * kwargs)
       source_size -= hdr_size;
     }
 
-  if (dest_size < 0 || dest_size > PY_SSIZE_T_MAX)
+  if (dest_size > INT_MAX)
     {
       PyBuffer_Release(&source);
-      PyErr_Format (PyExc_ValueError, "Invalid size in header: 0x%zu",
+      PyBuffer_Release(&dict);
+      PyErr_Format (PyExc_ValueError, "Invalid size: 0x%zu",
                     dest_size);
       return NULL;
     }
 
-#if IS_PY3
-  if (return_bytearray)
+  dest = PyMem_Malloc (dest_size * sizeof * dest);
+  if (dest == NULL)
     {
-      py_dest = PyByteArray_FromStringAndSize (NULL, dest_size);
-      if (py_dest == NULL)
-        {
-          PyBuffer_Release(&source);
-          return PyErr_NoMemory();
-        }
-      dest = PyByteArray_AS_STRING (py_dest);
-    }
-  else
-    {
-      py_dest = PyBytes_FromStringAndSize (NULL, dest_size);
-      if (py_dest == NULL)
-        {
-          PyBuffer_Release(&source);
-          return PyErr_NoMemory();
-        }
-      dest = PyBytes_AS_STRING (py_dest);
-    }
-#else
-  py_dest = PyBytes_FromStringAndSize (NULL, dest_size);
-  if (py_dest == NULL)
-    {
-      PyBuffer_Release(&source);
       return PyErr_NoMemory();
     }
-  dest = PyBytes_AS_STRING (py_dest);
-#endif
 
   Py_BEGIN_ALLOW_THREADS
 
   output_size =
-    LZ4_decompress_safe (source_start, dest, source_size, dest_size);
+    LZ4_decompress_safe_usingDict (source_start, dest, source_size, (int) dest_size,
+                                   dict.buf, (int) dict.len);
 
   Py_END_ALLOW_THREADS
 
   PyBuffer_Release(&source);
+  PyBuffer_Release(&dict);
 
   if (output_size < 0)
     {
-      PyErr_Format (PyExc_ValueError, "Corrupt input at byte %d", -output_size);
-      Py_CLEAR (py_dest);
+      PyErr_Format (LZ4BlockError,
+                    "Decompression failed: corrupt input or insufficient space in destination buffer. Error code: %u",
+                    -output_size);
+      PyMem_Free (dest);
+      return NULL;
     }
-  else if ((size_t)output_size != dest_size)
+  else if (((size_t)output_size != dest_size) && (uncompressed_size < 0))
     {
-      /* Better to fail explicitly than to allow fishy data to pass through. */
-      PyErr_Format (PyExc_ValueError,
-                    "Decompressor wrote %d bytes, but %zu bytes expected from header",
+      PyErr_Format (LZ4BlockError,
+                    "Decompressor wrote %u bytes, but %zu bytes expected from header",
                     output_size, dest_size);
-      Py_CLEAR (py_dest);
+      PyMem_Free (dest);
+      return NULL;
+    }
+
+  if (return_bytearray)
+    {
+      py_dest = PyByteArray_FromStringAndSize (dest, (Py_ssize_t) output_size);
+    }
+  else
+    {
+      py_dest = PyBytes_FromStringAndSize (dest, (Py_ssize_t) output_size);
+    }
+
+  PyMem_Free (dest);
+
+  if (py_dest == NULL)
+    {
+      return PyErr_NoMemory ();
     }
 
   return py_dest;
 }
 
-#if LZ4_VERSION_NUMBER >= 10705 /* LZ4 v1.7.5 */
-#define __COMPRESSION_DOCSTRING \
-  "    compression (int): When mode is set to `high_compression` this\n" \
-  "        argument specifies the compression. Valid values are between\n" \
-  "        1 and 12. Values between 4-9 are recommended, and 9 is the\n" \
-  "        default.\n"
-#else
-#define __COMPRESSION_DOCSTRING                                         \
-  "    compression (int): When mode is set to `high_compression` this\n" \
-  "        argument specifies the compression. Valid values are between\n" \
-  "        0 and 16. Values between 4-9 are recommended, and 0 is the\n" \
-  "        default.\n"
-#endif
 PyDoc_STRVAR(compress__doc,
-             "compress(source, mode='default', acceleration=1, compression=0)\n\n" \
+             "compress(source, mode='default', acceleration=1, compression=0, return_bytearray=False)\n\n" \
              "Compress source, returning the compressed data as a string.\n" \
-             "Raises an exception if any error occurs.\n\n"             \
+             "Raises an exception if any error occurs.\n"               \
+             "\n"                                                       \
              "Args:\n"                                                  \
              "    source (str, bytes or buffer-compatible object): Data to compress\n" \
-             "    mode (str): If 'default' or unspecified use the default LZ4\n" \
-             "        compression mode. Set to 'fast' to use the fast compression\n" \
+             "\n"                                                       \
+             "Keyword Args:\n"                                          \
+             "    mode (str): If ``'default'`` or unspecified use the default LZ4\n" \
+             "        compression mode. Set to ``'fast'`` to use the fast compression\n" \
              "        LZ4 mode at the expense of compression. Set to\n" \
-             "        'high_compression' to use the LZ4 high-compression mode at\n" \
-             "        the exepense of speed\n"                          \
-             "    acceleration (int): When mode is set to 'fast' this argument\n" \
+             "        ``'high_compression'`` to use the LZ4 high-compression mode at\n" \
+             "        the exepense of speed.\n"                         \
+             "    acceleration (int): When mode is set to ``'fast'`` this argument\n" \
              "        specifies the acceleration. The larger the acceleration, the\n" \
              "        faster the but the lower the compression. The default\n" \
-             "        compression corresponds to a value of 1.\n"       \
-             __COMPRESSION_DOCSTRING                                         \
-             "    store_size (bool): If True (the default) then the size of the\n" \
+             "        compression corresponds to a value of ``1``.\n"       \
+             "    compression (int): When mode is set to ``high_compression`` this\n" \
+             "        argument specifies the compression. Valid values are between\n" \
+             "        ``1`` and ``12``. Values between ``4-9`` are recommended, and\n" \
+             "        ``9`` is the default.\n"
+             "    store_size (bool): If ``True`` (the default) then the size of the\n" \
              "        uncompressed data is stored at the start of the compressed\n" \
              "        block.\n"                                         \
-             "    return_bytearray (bool): Python 3 only. If False (the default)\n" \
-             "        then the function will return a bytes object. If True, then\n" \
-             "        the function will return a bytearray object.\n\n" \
+             "    return_bytearray (bool): If ``False`` (the default) then the function\n" \
+             "        will return a bytes object. If ``True``, then the function will\n" \
+             "        return a bytearray object.\n\n"                   \
+             "    dict (str, bytes or buffer-compatible object): If specified, perform\n" \
+             "        compression using this initial dictionary.\n"     \
              "Returns:\n"                                               \
              "    bytes or bytearray: Compressed data.\n");
 
 PyDoc_STRVAR(decompress__doc,
-             "decompress(source, uncompressed_size=-1)\n\n"                                 \
+             "decompress(source, uncompressed_size=-1, return_bytearray=False)\n\n" \
              "Decompress source, returning the uncompressed data as a string.\n" \
-             "Raises an exception if any error occurs.\n\n"             \
+             "Raises an exception if any error occurs.\n"               \
+             "\n"                                                       \
              "Args:\n"                                                  \
-             "    source (str, bytes or buffer-compatible object): Data to decompress\n\n" \
-             "    uncompressed_size (int): If not specified or < 0, the uncompressed data\n" \
-             "        size is read from the start of the source block. If specified,\n" \
-             "        it is assumed that the full source data is compressed data.\n" \
-             "    return_bytearray (bool): Python 3 only. If False (the default)\n" \
-             "        then the function will return a bytes object. If True, then\n" \
-             "        the function will return a bytearray object.\n\n" \
+             "    source (str, bytes or buffer-compatible object): Data to decompress.\n" \
+             "\n"                                                       \
+             "Keyword Args:\n"                                          \
+             "    uncompressed_size (int): If not specified or negative, the uncompressed\n" \
+             "        data size is read from the start of the source block. If specified,\n" \
+             "        it is assumed that the full source data is compressed data. If this\n" \
+             "        argument is specified, it is considered to be a maximum possible size\n" \
+             "        for the buffer used to hold the uncompressed data, and so less data\n" \
+             "        may be returned. If `uncompressed_size` is too small, `LZ4BlockError`\n" \
+             "        will be raised. By catching `LZ4BlockError` it is possible to increase\n" \
+             "        `uncompressed_size` and try again.\n"             \
+             "    return_bytearray (bool): If ``False`` (the default) then the function\n" \
+             "        will return a bytes object. If ``True``, then the function will\n" \
+             "        return a bytearray object.\n\n" \
+             "    dict (str, bytes or buffer-compatible object): If specified, perform\n" \
+             "        decompression using this initial dictionary.\n"   \
+             "\n"                                                       \
              "Returns:\n"                                               \
-             "    bytes or bytearray: Decompressed data.\n");
+             "    bytes or bytearray: Decompressed data.\n"             \
+             "\n"                                                       \
+             "Raises:\n"                                                \
+             "    LZ4BlockError: raised if the call to the LZ4 library fails. This can be\n" \
+             "        caused by `uncompressed_size` being too small, or invalid data.\n");
 
 PyDoc_STRVAR(lz4block__doc,
              "A Python wrapper for the LZ4 block protocol"
@@ -510,11 +524,19 @@ MODULE_INIT_FUNC (_block)
 
   if (module == NULL)
     return NULL;
-#if LZ4_VERSION_NUMBER >= 10705 /* LZ4 v1.7.5 */
+
   PyModule_AddIntConstant (module, "HC_LEVEL_MIN", LZ4HC_CLEVEL_MIN);
   PyModule_AddIntConstant (module, "HC_LEVEL_DEFAULT", LZ4HC_CLEVEL_DEFAULT);
   PyModule_AddIntConstant (module, "HC_LEVEL_OPT_MIN", LZ4HC_CLEVEL_OPT_MIN);
   PyModule_AddIntConstant (module, "HC_LEVEL_MAX", LZ4HC_CLEVEL_MAX);
-#endif
+
+  LZ4BlockError = PyErr_NewExceptionWithDoc("_block.LZ4BlockError", "Call to LZ4 library failed.", NULL, NULL);
+  if (LZ4BlockError == NULL)
+    {
+      return NULL;
+    }
+  Py_INCREF(LZ4BlockError);
+  PyModule_AddObject(module, "LZ4BlockError", LZ4BlockError);
+  
   return module;
 }

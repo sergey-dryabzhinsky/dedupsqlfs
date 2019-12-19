@@ -9,7 +9,7 @@ from distutils import ccompiler
 # This is the version of the bundled LZ4 library files. This variable was
 # historically set by this library, so we set it for backwards compatibility
 # for now. This neds removing before 1.0 release.
-LZ4_VERSION = "1.7.4.2"
+LZ4_VERSION = "1.9.1"
 
 def pkgconfig_cmd(cmd, libname):
     try:
@@ -186,5 +186,6 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ],
 )

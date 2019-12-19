@@ -1,55 +1,20 @@
-# Package version info, generated on install
+# Although the canonical way to get the package version is using pkg_resources
+# as below, this turns out to be very slow on systems with lots of packages.
+# So, until that is remedied, we'll import the version from a local file
+# created by setuptools_scm.
+
+# from pkg_resources import get_distribution, DistributionNotFound
+# try:
+#     __version__ = get_distribution(__name__).version
+# except DistributionNotFound:
+#     # package is not installed
+#     pass
+
 from .version import version as __version__
 VERSION = __version__
 
-try:
-    from .lz4version import LZ4_VERSION
-except ImportError:
-    LZ4_VERSION = None
 
-from ._version import lz4version
-
-# The following definitions are for backwards compatibility, and will
-# be removed in the future
-import lz4.block
-from .deprecated import deprecated
-
-@deprecated('use lz4.block.compress instead')
-def compress(*args, **kwargs):
-    return lz4.block.compress(*args, **kwargs)
-
-@deprecated('use lz4.block.decompress instead')
-def decompress(*args, **kwargs):
-    return lz4.block.decompress(*args, **kwargs)
-
-@deprecated('use lz4.block.compress instead')
-def LZ4_compress(source):
-    return lz4.block.compress(source)
-
-@deprecated('use lz4.block.compress instead')
-def dumps(source):
-    return lz4.block.compress(source)
-
-@deprecated('use lz4.block.compress instead')
-def LZ4_compress_fast(source):
-    return lz4.block.compress(source, mode='fast')
-
-@deprecated('use lz4.block.compress instead')
-def compress_fast(source):
-    return lz4.block.compress(source, mode='fast')
-
-@deprecated('use lz4.block.compress instead')
-def compressHC(source):
-    return lz4.block.compress(source, mode='high_compression')
-
-@deprecated('use lz4.block.decompress instead')
-def uncompress(source):
-    return lz4.block.decompress(source)
-
-@deprecated('use lz4.block.decompress instead')
-def LZ4_uncompress(source):
-    return lz4.block.decompress(source)
-
-@deprecated('use lz4.block.decompress instead')
-def loads(source):
-    return lz4.block.decompress(source)
+from ._version import (  # noqa: F401
+    library_version_number,
+    library_version_string,
+)

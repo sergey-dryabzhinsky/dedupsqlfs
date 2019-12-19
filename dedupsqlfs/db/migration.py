@@ -89,12 +89,11 @@ class DbMigration( object ):
 
         sys.path.insert(0, self.getMigrationsDir() )
 
-        import imp
+        import importlib
 
         migMod = migFile.replace(".py", "")
 
-        fp, pathname, description = imp.find_module( migMod )
-        module = imp.load_module(migMod, fp, pathname, description)
+        module = importlib.import_module(migMod)
 
         ret = module.run( self._manager )
 

@@ -7,30 +7,46 @@ from time import time
 import heapq
 import copy
 
+"""
+@2020-01-17 New cache item interface
+
+CacheItem:
+    c_time: float, timestamp, then added, updated, set to 0 if expired
+    c_block: BytesIO, block uncompressed data stream-like object
+    c_size: int, size of block data
+    c_written: bool, data was written, updated
+    c_toflush: bool, data must be flushed as soos as possible, but not expired
+
+"""
+
+class CacheItem:
+    __slots__ = 'c_time', 'c_block', 'c_size', 'c_written', 'c_toflush'
+
+    def __init__(self, c_time, c_block, c_size, c_written, c_toflush):
+        self.c_time = c_time
+        self.c_block = c_block
+        self.c_size = c_size
+        self.c_written = c_written
+        self.c_toflush = c_toflush
+
+try:
+    from recordclass import make_dataclass
+    CacheItem = make_dataclass('CacheItem', ('c_time', 'c_block', 'c_size', 'c_written', 'c_toflush'))
+except:
+    pass
+
 class StorageTimeSize(object):
     """
     Cache storage for inode-block index
 
     {
         inode (int) : {
-            block_number (int) : [
-                timestamp (float),      - then added, updated, set to 0 if expired
-                block (BytesIO),        - block uncompressed data stream-like object
-                size (int),             - size of block data
-                written (bool)          - data was written, updated
-                toflush (bool)          - data must be flushed as soos as possible, but not expired
-            ], ...
+            block_number (int) : CacheItem, ...
         }, ...
     }
 
     Just to not lookup in SQLdb
     """
-
-    OFFSET_TIME = 0
-    OFFSET_BLOCK = 1
-    OFFSET_SIZE = 2
-    OFFSET_WRITTEN = 3
-    OFFSET_TOFLUSH = 4
 
     # Maximum seconds after that cache is expired for writed blocks
     _max_write_ttl = 5
@@ -98,9 +114,9 @@ class StorageTimeSize(object):
         inode_data = self._inodes[inode]
 
         if block_number not in inode_data:
-            inode_data[ block_number ] = [
+            inode_data[ block_number ] = CacheItem(
                 0, block, 0, writed, writed
-            ]
+            )
             new = True
 
         block_data = inode_data[block_number]
@@ -109,10 +125,10 @@ class StorageTimeSize(object):
 
         if not new:
             # Not new block
-            oldBlockSize = block_data[self.OFFSET_SIZE]
+            oldBlockSize = block_data.c_size
             if writed:
                 # If it now writed
-                if not block_data[self.OFFSET_WRITTEN]:
+                if not block_data.c_written:
                     # But not was
                     self._cur_read_cache_size -= oldBlockSize
                 else:
@@ -126,17 +142,17 @@ class StorageTimeSize(object):
             self._cur_read_cache_size += blockSize
 
         # If time not set to 0 (expired)
-        if block_data[self.OFFSET_TIME]:
+        if block_data.c_time:
             new = True
 
         if new:
-            block_data[self.OFFSET_TIME] = time()
-        block_data[self.OFFSET_BLOCK] = block
-        block_data[self.OFFSET_SIZE] = blockSize
+            block_data.c_time = time()
+        block_data.c_block = block
+        block_data.c_size = blockSize
 
         if writed:
-            block_data[self.OFFSET_WRITTEN] = True
-            block_data[self.OFFSET_TOFLUSH] = True
+            block_data.c_written = True
+            block_data.c_toflush = True
 
         return self
 
@@ -146,14 +162,14 @@ class StorageTimeSize(object):
 
         inode_data = self._inodes.get(inode, {})
 
-        block_data = inode_data.get(block_number, [
-                0, default, 0, False, False
-            ])
+        block_data = inode_data.get(block_number, CacheItem(
+            0, default, 0, False, False
+        ))
 
-        val = block_data[self.OFFSET_BLOCK]
+        val = block_data.c_block
 
-        t = block_data[self.OFFSET_TIME]
-        if block_data[self.OFFSET_WRITTEN]:
+        t = block_data.c_time
+        if block_data.c_written:
             if now - t > self._max_write_ttl:
                 return val
         else:
@@ -161,7 +177,7 @@ class StorageTimeSize(object):
                 return val
 
         # update last request time
-        block_data[self.OFFSET_TIME] = now
+        block_data.c_time = now
 
         return val
 
@@ -169,10 +185,10 @@ class StorageTimeSize(object):
         size = 0
         for inode in self._inodes.keys():
             for block_data in self._inodes[inode].values():
-                if block_data[self.OFFSET_WRITTEN] != writed:
+                if block_data.c_written != writed:
                     continue
 
-                size += len(block_data[self.OFFSET_BLOCK].getvalue())
+                size += len(block_data.c_block.getvalue())
         return size
 
 
@@ -205,10 +221,10 @@ class StorageTimeSize(object):
             inode_data = self._inodes[inode]
             for bn in inode_data.keys():
                 block_data = inode_data[bn]
-                block_data[self.OFFSET_TIME] = 0
-                if block_data[self.OFFSET_WRITTEN]:
+                block_data.c_time = 0
+                if block_data.c_written:
                     canDel = False
-                if block_data[self.OFFSET_TOFLUSH]:
+                if block_data.c_toflush:
                     canDel = False
             if canDel:
                 del self._inodes[inode]
@@ -225,7 +241,7 @@ class StorageTimeSize(object):
         if inode in self._inodes:
             inode_data = self._inodes[inode]
             for bn in inode_data.keys():
-                inode_data[bn][self.OFFSET_TIME] = 0
+                inode_data[bn].c_time = 0
         return
 
     def flush(self, inode):
@@ -238,7 +254,7 @@ class StorageTimeSize(object):
         if inode in self._inodes:
             inode_data = self._inodes[inode]
             for bn in inode_data.keys():
-                inode_data[bn][self.OFFSET_TOFLUSH] = True
+                inode_data[bn].c_toflush = True
         return
 
     def expired(self):
@@ -255,28 +271,28 @@ class StorageTimeSize(object):
                 block_data = inode_data[bn]
 
                 # Get data to FLUSH (and if requested written blocks)
-                if block_data[self.OFFSET_TOFLUSH]:
+                if block_data.c_toflush:
 
                     if inode not in write_inodes:
                         write_inodes[inode] = {}
 
                     write_inodes[inode][bn] = copy.copy(block_data)
 
-                    block_data[self.OFFSET_TOFLUSH] = False
+                    block_data.c_toflush = False
 
-                t = block_data[self.OFFSET_TIME]
+                t = block_data.c_time
                 if now - t > self._max_write_ttl:
-                    if block_data[self.OFFSET_WRITTEN]:
+                    if block_data.c_written:
                         if inode not in write_inodes:
                             write_inodes[inode] = {}
 
                         write_inodes[inode][bn] = copy.copy(block_data)
 
-                        self._cur_write_cache_size -= block_data[self.OFFSET_SIZE]
+                        self._cur_write_cache_size -= block_data.c_size
                     else:
                         read_inodes += 1
 
-                        self._cur_read_cache_size -= block_data[self.OFFSET_SIZE]
+                        self._cur_read_cache_size -= block_data.c_size
 
                     del inode_data[bn]
 
@@ -309,16 +325,16 @@ class StorageTimeSize(object):
             for bn in inode_data.keys():
                 block_data = inode_data[bn]
 
-                if block_data[self.OFFSET_WRITTEN] != writed:
+                if block_data.c_written != writed:
                     continue
 
-                t = block_data[self.OFFSET_TIME]
+                t = block_data.c_time
                 heapq.heappush(
                     heap, (
                         int((now - t)*10**6),
                         inode,
                         bn,
-                        len(block_data[self.OFFSET_BLOCK].getvalue())
+                        len(block_data.c_block.getvalue())
                     )
                 )
 
@@ -371,7 +387,7 @@ class StorageTimeSize(object):
 
                 block_data = inode_data[bn]
 
-                if block_data[self.OFFSET_WRITTEN] != writed:
+                if block_data.c_written != writed:
                     continue
 
                 if writed:
@@ -380,11 +396,11 @@ class StorageTimeSize(object):
 
                     oversize_inodes[inode][bn] = copy.copy(block_data)
 
-                    self._cur_write_cache_size -= block_data[self.OFFSET_SIZE]
+                    self._cur_write_cache_size -= block_data.c_size
                 else:
                     oversize_inodes += 1
 
-                    self._cur_read_cache_size -= block_data[self.OFFSET_SIZE]
+                    self._cur_read_cache_size -= block_data.c_size
 
                 del inode_data[bn]
 
@@ -412,16 +428,16 @@ class StorageTimeSize(object):
                 block_data = inode_data[bn]
 
                 # Get data to FLUSH (and if requested written blocks)
-                if block_data[self.OFFSET_TOFLUSH]:
+                if block_data.c_toflush:
 
                     if inode not in old_inodes:
                         old_inodes[inode] = {}
 
                     old_inodes[inode][bn] = copy.copy(block_data)
 
-                    block_data[self.OFFSET_TOFLUSH] = False
+                    block_data.c_toflush = False
 
-                if not block_data[self.OFFSET_WRITTEN]:
+                if not block_data.c_written:
                     continue
 
                 if inode not in old_inodes:

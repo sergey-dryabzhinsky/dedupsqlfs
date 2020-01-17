@@ -1,24 +1,41 @@
 # -*- coding: utf8 -*-
+"""
+@author Sergey Dryabzhinsky
+"""
 
 from time import time
 
-__author__ = 'sergey'
+"""
+@2020-01-17 New cache item interface
+
+CacheItem:
+    c_time: float, timestamp, then added, updated, set to 0 if expired
+    c_value: int|str, some data
+
+"""
+
+class CacheItem:
+    __slots__ = 'c_time', 'c_value'
+
+    def __init__(self, c_time, c_value):
+        self.c_time = c_time
+        self.c_value = c_value
+
+try:
+    from recordclass import make_dataclass
+    CacheItem = make_dataclass('CacheItem', ('c_time', 'c_value'))
+except:
+    pass
 
 class CacheTTLseconds(object):
     """
     Simple cache storage
     
     {
-        key (int | str) : [
-            timestamp (float),      - then added, updated, set to 0 if expired
-            values (int | str)      - some data
-        ], ...
+        key (int | str) : CacheItem, ...
     }
     
     """
-
-    OFFSET_TIME = 0
-    OFFSET_VALUE = 1
 
     _max_ttl = 300
 
@@ -36,23 +53,23 @@ class CacheTTLseconds(object):
         return self
 
     def set(self, key, value):
-        self._storage[ key ] = [time(), value]
+        self._storage[ key ] = CacheItem(time(), value)
         return self
 
     def get(self, key, default=None):
         # not setted
         now = time()
 
-        item = self._storage.get(key, [0, default])
-        val = item[self.OFFSET_VALUE]
-        t = item[self.OFFSET_TIME]
+        item = self._storage.get(key, CacheItem(0, default))
+        val = item.c_value
+        t = item.c_time
 
         if now - t > self._max_ttl:
             return val
 
         # update time only if value was set
         if key in self._storage:
-            self._storage[ key ][self.OFFSET_TIME] = now
+            self._storage[ key ].c_time = now
 
         return val
 
@@ -65,7 +82,7 @@ class CacheTTLseconds(object):
         now = time()
         count = 0
         for key, item in tuple(self._storage.items()):
-            if now - item[self.OFFSET_TIME] > self._max_ttl:
+            if now - item.c_time > self._max_ttl:
                 del self._storage[key]
                 count += 1
         return count

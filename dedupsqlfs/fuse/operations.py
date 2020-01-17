@@ -2369,8 +2369,8 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
         for inode, inode_data in cached_blocks.items():
             for block_number, block_data in inode_data.items():
-                if block_data[self.cached_blocks.OFFSET_WRITTEN]:
-                    block = block_data[self.cached_blocks.OFFSET_BLOCK]
+                if block_data.c_written:
+                    block = block_data.c_block
                     item = self.__write_block_data(int(inode), int(block_number), block, hashToBlock)
                     if item["hash"] and (item["new"] or item["recompress"]):
                         blocksToCompress[ item["hash"] ] = item["data"]

@@ -5,27 +5,43 @@
 
 from time import time
 
+"""
+@2020-01-17 New cache item interface
+
+CacheItem:
+    c_time: float, timestamp, then added, updated, set to 0 if expired
+    c_data: dict, inode raw row
+    c_written: bool, data was written, updated
+    c_toflush: bool, data must be flushed as soos as possible, but not expired
+
+"""
+
+class CacheItem:
+    __slots__ = 'c_time', 'c_data', 'c_written', 'c_toflush'
+
+    def __init__(self, c_time, c_data, c_written, c_toflush):
+        self.c_time = c_time
+        self.c_data = c_data
+        self.c_written = c_written
+        self.c_toflush = c_toflush
+
+try:
+    from recordclass import make_dataclass
+    CacheItem = make_dataclass('CacheItem', ('c_time', 'c_data', 'c_written', 'c_toflush'))
+except:
+    pass
+
 class InodesTime(object):
     """
     Cache storage for inode raw attributes
 
     {
-        inode (int) : [
-            timestamp (float),      - then added, updated, set to 0 if expired
-            data (dict),            - inode raw ROW data from SQLdb
-            written (bool)          - data was written, updated
-            toflush (bool)          - data must be flushed as soos as possible, but not expired
-        ], ...
+        inode (int) : CacheItem, ...
     }
 
     Just to not lookup in SQLdb
 
     """
-
-    OFFSET_TIME = 0
-    OFFSET_DATA = 1
-    OFFSET_WRITTEN = 2
-    OFFSET_TOFLUSH = 3
 
     # Maximum seconds after that cache is expired for writed inodes
     _max_ttl = 5
@@ -55,24 +71,24 @@ class InodesTime(object):
 
         new = False
         if inode not in self._inodes:
-            self._inodes[ inode ] = [
+            self._inodes[ inode ] = CacheItem(
                 0, data, writed, writed
-            ]
+            )
             new = True
 
         inode_data = self._inodes[inode]
 
         # If time not set to 0 (expired)
-        if inode_data[self.OFFSET_TIME]:
+        if inode_data.c_time:
             new = True
 
         if new:
-            inode_data[self.OFFSET_TIME] = time()
-        inode_data[self.OFFSET_DATA] = data
+            inode_data.c_time = time()
+        inode_data.c_data = data
 
         if writed:
-            inode_data[self.OFFSET_WRITTEN] = True
-            inode_data[self.OFFSET_TOFLUSH] = True
+            inode_data.c_written = True
+            inode_data.c_toflush = True
 
         return self
 
@@ -80,20 +96,15 @@ class InodesTime(object):
 
         now = time()
 
-        inode_data = self._inodes.get(inode, [
-                0, default, False, False
-            ])
+        inode_data = self._inodes.get(inode, CacheItem(
+            0, default, False, False
+        ))
 
-        val = inode_data[self.OFFSET_DATA]
+        if now - inode_data.c_time <= self._max_ttl:
+            # update last request time
+            inode_data.c_time = now
 
-        t = inode_data[self.OFFSET_TIME]
-        if now - t > self._max_ttl:
-            return val
-
-        # update last request time
-        inode_data[self.OFFSET_TIME] = now
-
-        return val
+        return inode_data.c_data
 
 
     def expired(self):
@@ -116,15 +127,14 @@ class InodesTime(object):
             inode_data = self._inodes[inode]
 
             # Get data to FLUSH (and if requested written attrs)
-            if inode_data[self.OFFSET_TOFLUSH]:
-                write_inodes[inode] = inode_data[self.OFFSET_DATA].copy()
-                inode_data[self.OFFSET_TOFLUSH] = False
+            if inode_data.c_toflush:
+                write_inodes[inode] = inode_data.c_data.copy()
+                inode_data.c_toflush = False
 
-            t = inode_data[self.OFFSET_TIME]
-            if now - t > self._max_ttl:
-                if inode_data[self.OFFSET_WRITTEN]:
+            if now - inode_data.c_time > self._max_ttl:
+                if inode_data.c_written:
                     if not write_inodes.get(inode):
-                        write_inodes[inode] = inode_data[self.OFFSET_DATA].copy()
+                        write_inodes[inode] = inode_data.c_data.copy()
                 else:
                     readed_inodes += 1
 
@@ -138,7 +148,7 @@ class InodesTime(object):
         Do not remove but set flush flag
         """
         if inode in self._inodes:
-            self._inodes[ inode ][self.OFFSET_TOFLUSH] = True
+            self._inodes[ inode ].c_toflush = True
         return self
 
 
@@ -147,7 +157,7 @@ class InodesTime(object):
         Do not remove but expire
         """
         if inode in self._inodes:
-            self._inodes[ inode ][self.OFFSET_TIME] = 0
+            self._inodes[ inode ].c_time = 0
         return self
 
 
@@ -158,10 +168,10 @@ class InodesTime(object):
 
             inode_data = self._inodes[inode]
 
-            if not inode_data[self.OFFSET_WRITTEN]:
+            if not inode_data.c_written:
                 continue
 
-            write_inodes[inode] = inode_data[self.OFFSET_DATA].copy()
+            write_inodes[inode] = inode_data.c_data.copy()
 
         self._inodes = {}
         return write_inodes

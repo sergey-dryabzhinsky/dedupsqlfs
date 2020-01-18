@@ -122,7 +122,7 @@ class InodesTime(object):
         write_inodes = {}
         readed_inodes = 0
 
-        for inode in tuple(self._inodes.keys()):
+        for inode in set(self._inodes.keys()):
 
             inode_data = self._inodes[inode]
 
@@ -164,9 +164,11 @@ class InodesTime(object):
     def clear(self):
         write_inodes = {}
 
-        for inode in self._inodes.keys():
+        for inode in set(self._inodes.keys()):
 
             inode_data = self._inodes[inode]
+
+            del self._inodes[inode]
 
             if not inode_data.c_written:
                 continue

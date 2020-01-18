@@ -136,11 +136,11 @@ class IndexTime(object):
 
         old_inodes = 0
 
-        for inode in tuple(self._inodes.keys()):
+        for inode in set(self._inodes.keys()):
 
             inode_data = self._inodes[inode]
 
-            for bn in tuple(inode_data.keys()):
+            for bn in set(inode_data.keys()):
                 block_data = inode_data[bn]
 
                 if now - block_data.c_time > self._max_ttl:

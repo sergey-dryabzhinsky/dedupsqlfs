@@ -152,7 +152,7 @@ class StorageTimeSize(object):
 
         if writed:
             block_data.c_written = True
-            block_data.c_toflush = True
+#            block_data.c_toflush = True
 
         return self
 

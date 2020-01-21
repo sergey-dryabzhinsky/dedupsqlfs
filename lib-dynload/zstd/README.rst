@@ -8,7 +8,7 @@ python-zstd
 Simple python bindings to Yann Collet ZSTD compression library
 
 **Zstd**, short for Zstandard, is a new lossless compression algorithm,
- which provides both good compression ratio _and_ speed for your standard compression needs.
+ which provides both good compression ratio *and* speed for your standard compression needs.
  "Standard" translates into everyday situations which neither look for highest possible ratio
  (which LZMA and ZPAQ cover) nor extreme speeds (which LZ4 covers).
 
@@ -61,12 +61,18 @@ Build from source
    >>> $ python3 setup.py build_ext clean
 
 Note: legacy format support disabled by default.
-To build with legacy support - pass ``--legacy`` option to setup.py script:
+To build with Zstd legacy versions support - pass ``--legacy`` option to setup.py script:
 
    >>> $ python setup.py build_ext --legacy clean
 
+Note: PyZstd legacy format support disabled by default.
+To build with python-zstd legacy format support (pre 1.1.2) - pass ``--pyzstd-legacy`` option to setup.py script:
+
+   >>> $ python setup.py build_ext --pyzstd-legacy clean
+
 If you want to build with existing distribution of libzstd just add ``--external`` option.
 But beware! Legacy formats support is unknown in this case.
+And if your version not equal with python-zstd - tests may not pass.
 
    >>> $ python setup.py build_ext --external clean
 
@@ -85,6 +91,74 @@ Install from pypi
    >>> $ pip3 install zstd
 
 
+API
+___
+
+Error
+  Standard python Exception for zstd module
+
+ZSTD_compress (data[, level, threads]): string|bytes
+  Function, compress input data block via mutliple threads, return compressed block, or raises Error.
+
+  Params:
+
+  * **data**: string|bytes - input data block, length limited by 2Gb by Python API
+  * **level**: int - compression level, ultra-fast levels from -5 (ultra) to -1 (fast) available since zstd-1.3.4, and from 1 (fast) to 22 (slowest), 0 or unset - means default (3). Default - 3.
+  * **threads**: int - how many threads to use, from 0 to 200, 0 or unset - auto-tune by cpu cores count. Default - 0. Since: 1.4.4.1
+
+  Aliases: *compress(...)*, *dumps(...)*
+
+  Since: 0.1
+
+ZSTD_uncompress (data): string|bytes
+  Function, decompress input compressed data block, return decompressed block, or raises Error.
+
+  Params:
+
+  * **data**: string|bytes - input compressed data block, length limited by 2Gb by Python API
+
+  Aliases: *decompress(...)*, *uncompress(...)*, *loads(...)*
+
+  Since: 0.1
+
+version (): string|bytes
+  Returns this module doted version string.
+
+  Since: 1.3.4.3
+
+ZSTD_version (): string|bytes
+  Returns ZSTD library doted version string.
+
+  Since: 1.3.4.3
+
+ZSTD_version_number (): int
+   Returns ZSTD library version in format: MAJOR*100*100 + MINOR*100 + RELEASE.
+
+   Since: 1.3.4.3
+
+ZSTD_compress_old (data[, level]): string|bytes
+  Function, compress input data block, return compressed block, or raises Error.
+
+  **DEPRECATED**: Returns not compatible with ZSTD block header
+
+  Params:
+
+  * **data**: string|bytes - input data block, length limited by 2Gb by Python API
+  * **level**: int - compression level, ultra-fast levels from -5 (ultra) to -1 (fast) available since zstd-1.3.4, and from 1 (fast) to 22 (slowest), 0 or unset - means default (3). Default - 3.
+
+  Since: 1.0.0.99.1
+
+ZSTD_uncompress (data): string|bytes
+  Function, decompress input compressed data block, return decompressed block, or raises Error.
+
+  **DEPRECATED**: Accepts data with not compatible with ZSTD block header
+
+  Params:
+
+  * **data**: string|bytes - input compressed data block, length limited by 2Gb by Python API
+
+  Since: 1.0.0.99.1
+
 Use
 ___
 
@@ -92,14 +166,28 @@ Module has simple API:
 
    >>> import zstd
    >>> dir(zstd)
-   ['Error', 'ZSTD_compress', 'ZSTD_uncompress', 'ZSTD_version', 'ZSTD_version_number', '__doc__', '__file__', '__name__', '__package__', 'compress', 'decompress', 'dumps', 'loads', 'uncompress', 'version']
+   ['Error', 'ZSTD_compress', 'ZSTD_uncompress', 'ZSTD_version', 'ZSTD_version_number', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__spec__', 'compress', 'decompress', 'dumps', 'loads', 'uncompress', 'version']
    >>> zstd.version()
-   '1.3.8.0'
+   '1.4.4.1'
    >>> zstd.ZSTD_version()
-   '1.3.8'
+   '1.4.4'
    >>> zstd.ZSTD_version_number()
-   10308
+   10404
+
+In python2
+
    >>> data = "123456qwert"
+
+In python3 use bytes
+
+   >>> data = b"123456qwert"
+
+
    >>> cdata = zstd.compress(data, 1)
    >>> data == zstd.decompress(cdata)
+   True
+   >>> cdata_mt = zstd.compress(data, 1, 4)
+   >>> cdata == cdata_mt
+   True
+   >>> data == zstd.decompress(cdata_mt)
    True

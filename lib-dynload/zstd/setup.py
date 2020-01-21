@@ -14,7 +14,7 @@ VERSION_STR = ".".join([str(x) for x in VERSION])
 # Package version
 PKG_VERSION = VERSION
 # Minor versions
-PKG_VERSION += ("0",)
+PKG_VERSION += ("1",)
 PKG_VERSION_STR = ".".join([str(x) for x in PKG_VERSION])
 
 ###
@@ -155,6 +155,7 @@ if not SUP_EXTERNAL:
             ]:
             zstdFiles.append('zstd/lib/'+f)
 
+zstdFiles.append('src/util.c')
 zstdFiles.append('src/python-zstd.c')
 
 # Python 2.6 compat
@@ -211,5 +212,6 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ]
 )

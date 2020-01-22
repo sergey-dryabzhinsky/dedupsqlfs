@@ -17,7 +17,7 @@ CacheItem:
 class CacheItem:
     __slots__ = 'c_time', 'c_value'
 
-    def __init__(self, c_time, c_value):
+    def __init__(self, c_time=0.0, c_value=None):
         self.c_time = c_time
         self.c_value = c_value
 
@@ -55,14 +55,21 @@ class CacheTTLseconds(object):
         return self
 
     def set(self, key, value):
-        self._storage[ key ] = CacheItem(time(), value)
+        c = CacheItem()
+        c.c_time = time()
+        c.c_value = value
+        self._storage[ key ] = c
         return self
 
     def get(self, key, default=None):
         # not setted
         now = time()
 
-        item = self._storage.get(key, CacheItem(0, default))
+        item = self._storage.get(key)
+        if item is None:
+            item = CacheItem()
+            item.c_time = 0
+            item.c_value = default
         val = item.c_value
         t = item.c_time
 

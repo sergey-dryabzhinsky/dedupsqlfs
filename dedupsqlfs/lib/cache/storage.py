@@ -22,7 +22,7 @@ CacheItem:
 class CacheItem:
     __slots__ = 'c_time', 'c_block', 'c_size', 'c_written', 'c_toflush'
 
-    def __init__(self, c_time, c_block, c_size, c_written, c_toflush):
+    def __init__(self, c_time=0.0, c_block=None, c_size=0, c_written=False, c_toflush=False):
         self.c_time = c_time
         self.c_block = c_block
         self.c_size = c_size
@@ -119,9 +119,13 @@ class StorageTimeSize(object):
         inode_data = self._inodes[inode]
 
         if block_number not in inode_data:
-            inode_data[ block_number ] = CacheItem(
-                0, block, 0, writed, writed
-            )
+            c = CacheItem()
+            c.c_time = 0
+            c.c_block = block
+            c.c_size = 0
+            c.c_written = writed
+            c.c_toflush = writed
+            inode_data[ block_number ] = c
             new = True
 
         block_data = inode_data[block_number]
@@ -167,9 +171,13 @@ class StorageTimeSize(object):
 
         inode_data = self._inodes.get(inode, {})
 
-        block_data = inode_data.get(block_number, CacheItem(
-            0, default, 0, False, False
-        ))
+        block_data = inode_data.get(block_number)
+        if block_data is None:
+            block_data = CacheItem()
+            block_data.c_time = 0
+            block_data.c_block = default
+            block_data.c_written = False
+            block_data.c_toflush = False
 
         val = block_data.c_block
 

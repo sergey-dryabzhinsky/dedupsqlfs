@@ -19,7 +19,7 @@ CacheItem:
 class CacheItem:
     __slots__ = 'c_time', 'c_data', 'c_written', 'c_toflush'
 
-    def __init__(self, c_time, c_data, c_written, c_toflush):
+    def __init__(self, c_time=0.0, c_data=None, c_written=False, c_toflush=False):
         self.c_time = c_time
         self.c_data = c_data
         self.c_written = c_written
@@ -75,9 +75,12 @@ class InodesTime(object):
 
         new = False
         if inode not in self._inodes:
-            self._inodes[ inode ] = CacheItem(
-                0, data, writed, writed
-            )
+            c = CacheItem()
+            c.c_time = 0
+            c.c_data = data
+            c.c_written = writed
+            c.c_toflush = writed
+            self._inodes[ inode ] = c
             new = True
 
         inode_data = self._inodes[inode]
@@ -100,9 +103,13 @@ class InodesTime(object):
 
         now = time()
 
-        inode_data = self._inodes.get(inode, CacheItem(
-            0, default, False, False
-        ))
+        inode_data = self._inodes.get(inode)
+        if inode_data is None:
+            inode_data = CacheItem()
+            inode_data.c_time = 0
+            inode_data.c_data = default
+            inode_data.c_written = False
+            inode_data.c_toflush = False
 
         if now - inode_data.c_time <= self._max_ttl:
             # update last request time

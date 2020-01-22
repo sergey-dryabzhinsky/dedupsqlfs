@@ -17,7 +17,7 @@ CacheItem:
 class CacheItem:
     __slots__ = 'c_time', 'c_item'
 
-    def __init__(self, c_time, c_item):
+    def __init__(self, c_time=0.0, c_item=None):
         self.c_time = c_time
         self.c_item = c_item
 
@@ -80,7 +80,10 @@ class IndexTime(object):
         inode_data = self._inodes[inode]
 
         if block_number not in inode_data:
-            inode_data[ block_number ] = CacheItem(0, item)
+            c = CacheItem()
+            c.c_time = 0
+            c.c_item = item
+            inode_data[ block_number ] = c
             new = True
 
         hash_data = inode_data[block_number]
@@ -101,7 +104,11 @@ class IndexTime(object):
 
         inode_data = self._inodes.get(inode, {})
 
-        hash_data = inode_data.get(block_number, CacheItem(0, default))
+        hash_data = inode_data.get(block_number)
+        if hash_data is None:
+            hash_data = CacheItem()
+            hash_data.c_time = 0
+            hash_data.c_item = default
 
         if now - hash_data.c_time <= self._max_ttl:
             # update last request time

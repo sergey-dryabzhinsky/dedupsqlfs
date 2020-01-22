@@ -26,8 +26,12 @@ class CacheItem:
         self.c_toflush = c_toflush
 
 try:
-    from recordclass import make_dataclass
-    CacheItem = make_dataclass('CacheItem', ('c_time', 'c_data', 'c_written', 'c_toflush'))
+    from recordclass import dataobject
+    class CacheItem(dataobject):
+        c_time: float
+        c_data: object
+        c_written: bool
+        c_toflush: bool
 except:
     pass
 

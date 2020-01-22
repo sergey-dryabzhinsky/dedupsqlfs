@@ -22,8 +22,10 @@ class CacheItem:
         self.c_value = c_value
 
 try:
-    from recordclass import make_dataclass
-    CacheItem = make_dataclass('CacheItem', ('c_time', 'c_value'))
+    from recordclass import dataobject
+    class CacheItem(dataobject):
+        c_time: float
+        c_value: object
 except:
     pass
 

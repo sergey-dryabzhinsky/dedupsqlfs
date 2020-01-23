@@ -28,10 +28,10 @@ class CacheItem:
 try:
     from recordclass import dataobject
     class CacheItem(dataobject):
-        c_time: float
-        c_data: object
-        c_written: bool
-        c_toflush: bool
+        c_time: float = 0.0
+        c_data: object = None
+        c_written: bool = False
+        c_toflush: bool = False
 except:
     pass
 

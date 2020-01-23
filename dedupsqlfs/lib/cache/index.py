@@ -24,8 +24,8 @@ class CacheItem:
 try:
     from recordclass import dataobject
     class CacheItem(dataobject):
-        c_time: float
-        c_item: object
+        c_time: float = 0.0
+        c_item: object = None
 except:
     pass
 

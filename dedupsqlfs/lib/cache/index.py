@@ -69,7 +69,7 @@ class IndexTime(object):
         """
         @type   inode: int
         @type   block_number: int
-        @type   item: int
+        @type   item: object
         """
 
         new = False

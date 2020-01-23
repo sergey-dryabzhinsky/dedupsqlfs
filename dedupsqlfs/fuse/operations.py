@@ -83,6 +83,9 @@ class DedupOperations(llfuse.Operations):  # {{{1
         self.cached_attrs = InodesTime()
         self.cached_xattrs = CacheTTLseconds()
 
+        self.cached_hash_sizes = CacheTTLseconds()
+        self.cached_hash_compress = CacheTTLseconds()
+
         self.cached_blocks = StorageTimeSize()
         self.cached_indexes = IndexTime()
 
@@ -1496,6 +1499,42 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 self.cached_indexes.set(inode, block_number, item)
         return item
 
+    def __get_compression_type_by_hash_from_cache(self, hash_id):
+        self.getLogger().logCall('__get_compression_type_by_hash_from_cache', '->(hash_id=%i)', hash_id)
+
+        type_id = self.cached_hash_compress.get(hash_id)
+
+        if type_id is None:
+
+            self.getLogger().debug("get compression type from DB: hash_id=%i", hash_id)
+
+            tableHCT = self.getTable("hash_compression_type")
+
+            item = tableHCT.get(hash_id)
+            if item:
+                type_id = item["type_id"]
+            self.cached_hash_compress.set(hash_id, type_id)
+        return type_id
+
+    def __get_sizes_by_hash_from_cache(self, hash_id):
+        self.getLogger().logCall('__get_sizes_by_hash_from_cache', '->(hash_id=%i)', hash_id)
+
+        citem = self.cached_hash_sizes.get(hash_id)
+
+        if citem is None:
+
+            self.getLogger().debug("get sizes for hash from DB: hash_id=%i", hash_id)
+
+            tableHSZ = self.getTable("hash_sizes")
+
+            item = tableHSZ.get(hash_id)
+            citem = {"compressed_size":0, "writed_size":0}
+            if item:
+                citem["compressed_size"] = item["compressed_size"]
+                citem["writed_size"] = item["writed_size"]
+            self.cached_hash_sizes.set(hash_id, citem)
+        return citem
+
     def __get_block_from_cache(self, inode, block_number):
         self.getLogger().logCall('__get_block_from_cache', '->(inode=%i, block_number=%i)', inode, block_number)
 
@@ -1554,15 +1593,14 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
             # XXX: how block can be defragmented away?
             if item:
-                tableHCT = self.getTable("hash_compression_type")
-                compType = tableHCT.get(indexItem["hash_id"])
+                compTypeId = self.__get_compression_type_by_hash_from_cache(indexItem["hash_id"])
 
                 self.getLogger().debug("-- decompress block")
                 self.getLogger().debug("-- in db size: %s", len(item["data"]))
 
                 block.seek(0)
 
-                compression = self.getCompressionTypeName(compType["type_id"])
+                compression = self.getCompressionTypeName(compTypeId)
 
                 self.getLogger().debug("READ: Hash = %r, method = %r", (indexItem["hash_id"], compression,))
 
@@ -1571,7 +1609,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 # Try all decompression methods
                 if tryAll:
                     try:
-                        bdata = self.__decompress(item["data"], compType["type_id"])
+                        bdata = self.__decompress(item["data"], compTypeId)
                     except:
                         bdata = False
                     if bdata is False:
@@ -1580,7 +1618,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
                             if compressionT == 'none':
                                 continue
                             # Don't repeat
-                            if type_id == compType["type_id"]:
+                            if type_id == compTypeId:
                                 continue
 
                             try:
@@ -1589,7 +1627,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
                                 bdata = False
                             if bdata is not False:
                                 # If stored wrong method - recompress
-                                if type_id != compType["type_id"]:
+                                if type_id != compTypeId:
                                     self.getLogger().debug("-- Different compression types! Do recompress!")
                                     self.getLogger().debug("----   compressed with: %s", compression)
                                     self.getLogger().debug("---- decompressed with: %s", compressionT)
@@ -1597,13 +1635,13 @@ class DedupOperations(llfuse.Operations):  # {{{1
                                 break
                         if bdata is False:
                             self.getLogger().error("Can't decompress data block! Data corruption? Original method was: %s (%d)",
-                                compression, compType["type_id"])
+                                compression, compTypeId)
                             raise OSError("Can't decompress data block! Data corruption?")
                     block.write(bdata)
 
                 else:
                     # If it fails - OSError raised
-                    block.write(self.__decompress(item["data"], compType["type_id"]))
+                    block.write(self.__decompress(item["data"], compTypeId))
 
                 if compression != constants.COMPRESSION_TYPE_NONE:
                     if self.getOption('compression_recompress_now') and self.application.isDeprecated(compression):
@@ -2260,7 +2298,6 @@ class DedupOperations(llfuse.Operations):  # {{{1
         #     return result
 
         tableHash = self.getTable("hash")
-        tableHCT = self.getTable("hash_compression_type")
 
         hash_value = self.do_hash(data_block)
         hash_id = tableHash.find(hash_value)
@@ -2279,12 +2316,12 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
             self.bytes_written += block_length
         else:
-            hash_CT = tableHCT.get(hash_id)
+            hash_CompressType_id = self.__get_compression_type_by_hash_from_cache(hash_id)
 
             # It may not be at this time because at first time only hashes
             # stored in DB. Compression and indexes are stored later.
-            if hash_CT:
-                compression = self.getCompressionTypeName(hash_CT["type_id"])
+            if hash_CompressType_id:
+                compression = self.getCompressionTypeName(hash_CompressType_id)
 
                 if compression != constants.COMPRESSION_TYPE_NONE:
                     if self.getOption('compression_recompress_now') and self.application.isDeprecated(compression):
@@ -2312,8 +2349,8 @@ class DedupOperations(llfuse.Operations):  # {{{1
                     # Not written yeat
                     old_data = blocks_from_cache.get(hash_id)
 
-                elif hash_CT:
-                    old_data = self.__decompress(old_block["data"], hash_CT["type_id"])
+                elif hash_CompressType_id:
+                    old_data = self.__decompress(old_block["data"], hash_CompressType_id)
                     del old_block
 
                 else:
@@ -2405,19 +2442,26 @@ class DedupOperations(llfuse.Operations):  # {{{1
             else:
                 tableBlock.insert(hash_id, cdata)
 
-            hash_CT = tableHCT.get(hash_id)
-            if hash_CT:
-                if hash_CT["type_id"] != cmethod_id:
+            hash_CompressType_id = self.__get_compression_type_by_hash_from_cache(hash_id)
+            if hash_CompressType_id:
+                if hash_CompressType_id != cmethod_id:
                     tableHCT.update(hash_id, cmethod_id)
+                    self.cached_hash_compress.set(hash_id, cmethod_id)
             else:
                 tableHCT.insert(hash_id, cmethod_id)
+                self.cached_hash_compress.set(hash_id, cmethod_id)
 
-            hash_SZ = tableHSZ.get(hash_id)
+            hash_SZ = self.__get_sizes_by_hash_from_cache(hash_id)
             if hash_SZ:
                 if hash_SZ["compressed_size"] != comp_size or hash_SZ["writed_size"] != writed_size:
                     tableHSZ.update(hash_id, writed_size, comp_size)
+                    hash_SZ["compressed_size"] = comp_size
+                    hash_SZ["writed_size"] = writed_size
+                    self.cached_hash_sizes.set(hash_id, hash_SZ)
             else:
                 tableHSZ.insert(hash_id, writed_size, comp_size)
+                hash_SZ = {"compressed_size": comp_size,"writed_size": writed_size}
+                self.cached_hash_sizes.set(hash_id, hash_SZ)
 
             self.bytes_written_compressed += comp_size
 
@@ -2540,6 +2584,8 @@ class DedupOperations(llfuse.Operations):  # {{{1
         flushed_attrs = 0
         flushed_xattrs = 0
         flushed_indexes = 0
+        flushed_hash_compress = 0
+        flushed_hash_sizes = 0
 
         start_time = time()
 
@@ -2552,6 +2598,9 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
             flushed_xattrs = self.cached_xattrs.clear()
 
+            flushed_hash_compress = self.cached_hash_compress.clear()
+            flushed_hash_sizes = self.cached_hash_sizes.clear()
+
             # Just readed...
             expired = self.cached_attrs.expired()
             flushed_attrs += expired[0]
@@ -2562,16 +2611,17 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
             self.cache_gc_meta_last_run = time()
 
-        if flushed_attrs + flushed_nodes + flushed_names + flushed_indexes + flushed_xattrs > 0:
+        if flushed_attrs + flushed_nodes + flushed_names + flushed_indexes + flushed_xattrs + flushed_hash_compress + flushed_hash_sizes > 0:
 
             elapsed_time = time() - start_time
 
             self.time_spent_writing_meta += elapsed_time
 
             elapsed_time = self.cache_gc_meta_last_run - start_time
-            self.getLogger().debug("Meta cache cleanup: flushed %i nodes, %i attrs,  %i xattrs, %i names, %i indexes in %s.",
-                                  flushed_nodes, flushed_attrs, flushed_xattrs, flushed_names, flushed_indexes,
-                                  format_timespan(elapsed_time))
+            self.getLogger().debug("Meta cache cleanup: flushed %i nodes, %i attrs,  %i xattrs, %i names, %i indexes, %i compressTypes, %i hashSizes in %s.",
+                                    flushed_nodes, flushed_attrs, flushed_xattrs, flushed_names, flushed_indexes,
+                                    flushed_hash_compress, flushed_hash_sizes,
+                                    format_timespan(elapsed_time))
 
         self.__timing_report_hook()
 

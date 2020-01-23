@@ -33,6 +33,7 @@ class DbManager( object ):
         "compression_type",
         "hash",
         "hash_compression_type",
+        "hash_sizes",
         "inode_hash_block",
         "subvolume",
     )

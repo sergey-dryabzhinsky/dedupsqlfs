@@ -140,10 +140,15 @@ Additional performance gain about 1-5% via Cython:
     ## Warning! This deletes all .py files
     $ python3 setup.py cleanpy
 
+Lesser memory usage via RecordCalss
+
+    $ sudo pip3 install recordclass
+
 ### Notes about Cython
 
 1. Profiling via cProfile not working for compiled code.
 2. Always keep copy of dedupsqlfs directory if you will run `cleanpy` command.
+3. RecordClass not compatible with Cython - install only one of them
 
 ## Contact
 

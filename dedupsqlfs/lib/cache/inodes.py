@@ -26,12 +26,12 @@ class CacheItem:
         self.c_toflush = c_toflush
 
 try:
-    from recordclass import dataobject
-    class CacheItem(dataobject):
-        c_time: float = 0.0
-        c_data: object = None
-        c_written: bool = False
-        c_toflush: bool = False
+    from recordclass import make_dataclass
+    CacheItem = make_dataclass(
+        "CacheItem",
+        [("c_time", float,), ("c_data", object,), ("c_written", bool,), ("c_toflush", bool,)],
+        defaults=(0.0, None, False, False)
+    )
 except:
     pass
 
@@ -75,12 +75,7 @@ class InodesTime(object):
 
         new = False
         if inode not in self._inodes:
-            c = CacheItem()
-            c.c_time = 0
-            c.c_data = data
-            c.c_written = writed
-            c.c_toflush = writed
-            self._inodes[ inode ] = c
+            self._inodes[ inode ] = CacheItem(0, data, writed, writed)
             new = True
 
         inode_data = self._inodes[inode]
@@ -105,11 +100,7 @@ class InodesTime(object):
 
         inode_data = self._inodes.get(inode)
         if inode_data is None:
-            inode_data = CacheItem()
-            inode_data.c_time = 0
-            inode_data.c_data = default
-            inode_data.c_written = False
-            inode_data.c_toflush = False
+            inode_data = CacheItem(0, default)
 
         if now - inode_data.c_time <= self._max_ttl:
             # update last request time

@@ -22,10 +22,12 @@ class CacheItem:
         self.c_value = c_value
 
 try:
-    from recordclass import dataobject
-    class CacheItem(dataobject):
-        c_time: float = 0.0
-        c_value: object = None
+    from recordclass import make_dataclass
+    CacheItem = make_dataclass(
+        "CacheItem",
+        [("c_time", float,), ("c_value", object,)],
+        defaults=(0.0, None,)
+    )
 except:
     pass
 
@@ -55,10 +57,7 @@ class CacheTTLseconds(object):
         return self
 
     def set(self, key, value):
-        c = CacheItem()
-        c.c_time = time()
-        c.c_value = value
-        self._storage[ key ] = c
+        self._storage[ key ] = CacheItem(time(), value)
         return self
 
     def get(self, key, default=None):
@@ -67,9 +66,7 @@ class CacheTTLseconds(object):
 
         item = self._storage.get(key)
         if item is None:
-            item = CacheItem()
-            item.c_time = 0
-            item.c_value = default
+            item = CacheItem(0, default)
         val = item.c_value
         t = item.c_time
 

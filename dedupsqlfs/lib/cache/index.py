@@ -22,10 +22,12 @@ class CacheItem:
         self.c_item = c_item
 
 try:
-    from recordclass import dataobject
-    class CacheItem(dataobject):
-        c_time: float = 0.0
-        c_item: object = None
+    from recordclass import make_dataclass
+    CacheItem = make_dataclass(
+        "CacheItem",
+        [("c_time", float,), ("c_item", object,)],
+        defaults=(0.0, None,)
+    )
 except:
     pass
 
@@ -80,10 +82,7 @@ class IndexTime(object):
         inode_data = self._inodes[inode]
 
         if block_number not in inode_data:
-            c = CacheItem()
-            c.c_time = 0
-            c.c_item = item
-            inode_data[ block_number ] = c
+            inode_data[ block_number ] = CacheItem(0, item)
             new = True
 
         hash_data = inode_data[block_number]
@@ -106,9 +105,7 @@ class IndexTime(object):
 
         hash_data = inode_data.get(block_number)
         if hash_data is None:
-            hash_data = CacheItem()
-            hash_data.c_time = 0
-            hash_data.c_item = default
+            hash_data = CacheItem(0, default)
 
         if now - hash_data.c_time <= self._max_ttl:
             # update last request time

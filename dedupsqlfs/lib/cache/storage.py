@@ -30,13 +30,12 @@ class CacheItem:
         self.c_toflush = c_toflush
 
 try:
-    from recordclass import dataobject
-    class CacheItem(dataobject):
-        c_time: float = 0.0
-        c_block: object = None
-        c_size: int = 0
-        c_written: bool = False
-        c_toflush: bool = False
+    from recordclass import make_dataclass
+    CacheItem = make_dataclass(
+        "CacheItem",
+        [("c_time", float,), ("c_block", object,), ("c_size", int,), ("c_written", bool,), ("c_toflush", bool,)],
+        defaults=(0.0, None, 0, False, False,)
+    )
 except:
     pass
 
@@ -119,13 +118,7 @@ class StorageTimeSize(object):
         inode_data = self._inodes[inode]
 
         if block_number not in inode_data:
-            c = CacheItem()
-            c.c_time = 0
-            c.c_block = block
-            c.c_size = 0
-            c.c_written = writed
-            c.c_toflush = writed
-            inode_data[ block_number ] = c
+            inode_data[ block_number ] = CacheItem(0, block, 0, writed, writed)
             new = True
 
         block_data = inode_data[block_number]
@@ -173,11 +166,7 @@ class StorageTimeSize(object):
 
         block_data = inode_data.get(block_number)
         if block_data is None:
-            block_data = CacheItem()
-            block_data.c_time = 0
-            block_data.c_block = default
-            block_data.c_written = False
-            block_data.c_toflush = False
+            block_data = CacheItem(0, default)
 
         val = block_data.c_block
 

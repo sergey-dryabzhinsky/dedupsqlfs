@@ -17,7 +17,7 @@ The following shell commands show how to install and use the DedupFS file system
 
     $ sudo apt-get install python3-pip libfuse-dev
     #
-    $ sudo pip3 install llfuse
+    $ sudo pip3 install llfuse==1.3.6
     #
     # llfuse must be version 1.3.6
     #
@@ -35,6 +35,7 @@ The following shell commands show how to install and use the DedupFS file system
     # and touches hidden file in mount_point directory.
     # So umount may fail in that time. Call it repeated with some lag:
     $ umount mount_point || sleep 0.5 && umount mount_point
+    # Or yout can disable it with switch `--no-cache-flusher`
 
 ## Status
 
@@ -48,6 +49,9 @@ Development on DedupSqlFS began as a proof of concept to find out how much disk 
 The file system initially stored everything in a multiple [SQLite](http://www.sqlite.org/) databases.
  It turned out that in single file database after the database grew beyond 8 GB the write speed would drop
  from 8-12 MB/s to 2-3 MB/s. In multiple files it drops to 6-8 MB/s with other changes applied even after 150 GB.
+ Speed highly is depends on hardware - memory, disks, flesystem for data storage.
+
+It's used about 3+ years to store large amount of backups of VMs. Survived several power outages.
 
 ### What's new
 
@@ -56,8 +60,11 @@ The file system initially stored everything in a multiple [SQLite](http://www.sq
  * Delayed writes for blocks (hashing and compression too).
  * Use "stream"-like writes and read of data blocks, don't store complete files in memory.
  * Cached filesystem tree nodes, inodes and data blocks.
+ * Many hashing methods: md5, sha1, and other that supported by `hashlib` module.
  * Many compression methods: zlib, bzip2, lzma, lzo, lz4, quicklz, zstd, snappy.
  * Support for data storage in localy started MySQL server.
+ * Hashes can be rehashed by `do` command.
+ * Data block can be recompressed by `do` command.
 
 ### Limitations
 
@@ -65,9 +72,11 @@ In the current implementation a file's content DON'T needs to fit in a [cStringI
  instance, which limits the maximum file size to your free RAM. But sometimes you need to tune caching timeouts to
  drop caches more friquently, on massive reads.
 
-And there is limit of SQLite database size: about 2 TB with default settings of pages_count (2**31) * page_size (1024).
+There is limit of SQLite database size: about 2 TB with default settings of `pages_count` (2**31) * `page_size` (1024).
+ And `page_size` can be set up to 32kB, so database file theoreticaly limited by 32 TB.
+ Size of `page_size` would be adjusted automaticaly depends on database file size.
 
-Note: dynamic subvolume and snapshot creation available only with MySQL storage enagine.
+Note: dynamic subvolume and snapshot creation available only with MySQL storage engine.
  SQLite is keeping database locked.
  Though dynamic working subvolume switching not available.
  For now MySQL table engine is MyISAM by default - it's fast and not bloated.
@@ -110,14 +119,14 @@ And Sqlite wins!
 
 ## Dependencies
 
-DedupSQLfs was developed using Python 3.2, though it also work with newer versions. 
+DedupSQLfs was developed using Python 3.2, it also work with newer versions.
  It definitely doesn't work with Python 2.
  It requires the [Python llFUSE binding](http://www.rath.org/llfuse-docs/example.html) in addition
  to several Python standard libraries like [sqlite3](http://docs.python.org/library/sqlite3.html), [hashlib](http://docs.python.org/library/hashlib.html).
 
 Additional compression modules can be builded with commands:
 
-    $ sudo apt-get install build-essential python3-dev liblzo2-dev libsnappy-dev liblz4-dev liblzma-dev
+    $ sudo apt-get install build-essential python3-dev liblzo2-dev libsnappy-dev liblz4-dev liblzma-dev libzstd-dev
     $ cd lib-dynload/lzo
     $ python3 setup.py clean -a
     $ python3 setup.py build_ext clean

@@ -130,6 +130,23 @@ class Table( object ):
             self._db_file_path = os.path.abspath(self._db_file_path)
         return self._db_file_path
 
+    def setPageSize(self, page_size):
+        # Sqlite support 512-65536 byte pages
+        for n in range(9,17):
+            ps = 2**n
+            if page_size < ps:
+                page_size = ps
+                break
+
+        if page_size > 2**16:
+            page_size = 2**16
+
+        self._page_size = page_size
+        return self
+
+    def getPageSize(self):
+        return self._page_size
+
     def calcFilePageSize(self):
         db_path = self.getDbFilePath()
 

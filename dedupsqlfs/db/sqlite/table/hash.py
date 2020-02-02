@@ -2,7 +2,7 @@
 
 __author__ = 'sergey'
 
-import sqlite3
+from sqlite3 import Binary
 from dedupsqlfs.db.sqlite.table import Table
 
 class TableHash( Table ):
@@ -25,7 +25,7 @@ class TableHash( Table ):
     def insert( self, value):
         self.startTimer()
         cur = self.getCursor()
-        bvalue = sqlite3.Binary(value)
+        bvalue = Binary(value)
         cur.execute("INSERT INTO `%s`(hash) VALUES (?)" % self.getName(),
                     (bvalue,))
         item = cur.lastrowid
@@ -35,7 +35,7 @@ class TableHash( Table ):
     def insertRaw( self, rowId, value):
         self.startTimer()
         cur = self.getCursor()
-        bvalue = sqlite3.Binary(value)
+        bvalue = Binary(value)
         cur.execute("INSERT INTO `%s`(id,hash) VALUES (?,?)" % self.getName(),
                     (rowId,bvalue,))
         item = cur.lastrowid
@@ -49,7 +49,7 @@ class TableHash( Table ):
         """
         self.startTimer()
         cur = self.getCursor()
-        bvalue = sqlite3.Binary(value)
+        bvalue = Binary(value)
         cur.execute("UPDATE `%s` SET hash=? WHERE id=?" % self.getName(),
                     (bvalue, item_id))
         count = cur.rowcount
@@ -69,7 +69,7 @@ class TableHash( Table ):
     def find( self, value ):
         self.startTimer()
         cur = self.getCursor()
-        bvalue = sqlite3.Binary(value)
+        bvalue = Binary(value)
         cur.execute("SELECT id FROM `%s` WHERE hash=?" % self.getName(), (bvalue,))
         item = cur.fetchone()
         if item:

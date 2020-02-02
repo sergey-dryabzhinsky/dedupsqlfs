@@ -2,8 +2,8 @@
 
 __author__ = 'sergey'
 
-import hashlib
-import sqlite3
+from hashlib import md5
+from sqlite3 import Binary
 from time import time
 from dedupsqlfs.db.sqlite.table import Table
 
@@ -44,9 +44,9 @@ class TableSubvolume( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        digest = sqlite3.Binary(hashlib.new('md5', name).digest())
+        digest = Binary(md5(name).digest())
 
-        bname = sqlite3.Binary(name)
+        bname = Binary(name)
 
         cur.execute("INSERT INTO `%s`(hash, name, created_at, mounted_at, updated_at, stats_at, stats, root_diff_at, root_diff) " % self.getName()+
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (digest, bname, int(created_at), mounted_at, updated_at, stats_at, stats, root_diff_at, root_diff,))
@@ -160,7 +160,7 @@ class TableSubvolume( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        digest = sqlite3.Binary(hashlib.new('md5', name).digest())
+        digest = Binary(md5(name).digest())
 
         cur.execute(
             "SELECT * FROM `%s` " % self.getName()+

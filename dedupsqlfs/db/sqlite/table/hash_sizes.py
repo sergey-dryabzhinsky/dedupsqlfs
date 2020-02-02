@@ -83,4 +83,27 @@ class TableHashSizes( Table ):
         self.stopTimer('get_sizes_by_hash_ids')
         return items
 
+
+    def get_median_compressed_size(self):
+        self.startTimer()
+
+        cur = self.getCursor()
+
+        cur.execute("SELECT SUM(compressed_size) AS s FROM `%s`" % self.getName())
+        item = cur.fetchone()
+
+        need_sum = item["s"] / 2
+
+        cur_sum = 0
+        comp_size = 0
+        cur.execute("SELECT compressed_size FROM `%s` " % self.getName())
+        for _i in iter(cur.fetchone, None):
+            cur_sum += _i["compressed_size"]
+            if cur_sum > need_sum:
+                break
+            comp_size = _i["compressed_size"]
+
+        self.stopTimer('get_median_compressed_size')
+        return comp_size
+
     pass

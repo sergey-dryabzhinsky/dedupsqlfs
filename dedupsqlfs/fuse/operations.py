@@ -2638,6 +2638,12 @@ class DedupOperations(llfuse.Operations):  # {{{1
             self.getLogger().debug("Performing data vacuum (this might take a while) ..")
             sz = 0
             dbsz = 0
+
+            hsz = self.getTable('hash_sizes')
+            pts = hsz.get_median_compressed_size()
+            bt = self.getTable('block')
+            bt.setPageSize(pts)
+
             for table_name in self.getManager().tables:
                 dbsz += self.getTable(table_name).getFileSize()
             for table_name in self.getManager().tables:

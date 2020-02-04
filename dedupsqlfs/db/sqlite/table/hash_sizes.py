@@ -14,7 +14,7 @@ class TableHashSizes( Table ):
         # Create table
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
-                "hash_id INTEGER PRIMARY KEY, "+
+                "`hash_id` INTEGER PRIMARY KEY, "+
                 "`writed_size` INTEGER NOT NULL,"+
                 "`compressed_size` INTEGER NOT NULL"+
             ");"
@@ -82,5 +82,39 @@ class TableHashSizes( Table ):
 
         self.stopTimer('get_sizes_by_hash_ids')
         return items
+
+
+    def get_median_compressed_size(self):
+        self.startTimer()
+
+        cur = self.getCursor()
+
+        cur.execute("SELECT SUM(`compressed_size`) AS `s` FROM `%s`" % self.getName())
+        item = cur.fetchone()
+
+        isum = item["s"]
+        if not isum:
+            return 0
+
+        cur.execute("SELECT COUNT(1) AS `c` FROM `%s`" % self.getName())
+        item = cur.fetchone()
+
+        icount = item["c"]
+        if not icount:
+            return 0
+
+        need_sum = isum / 2
+
+        cur_sum = 0
+        comp_size = 0
+        cur.execute("SELECT `compressed_size` FROM `%s` ORDER BY `compressed_size`" % self.getName())
+        for _i in iter(cur.fetchone, None):
+            cur_sum += _i["compressed_size"]
+            if cur_sum > need_sum:
+                break
+            comp_size = _i["compressed_size"]
+
+        self.stopTimer('get_median_compressed_size')
+        return comp_size
 
     pass

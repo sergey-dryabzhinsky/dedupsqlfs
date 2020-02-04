@@ -2,8 +2,8 @@
 
 __author__ = 'sergey'
 
-import hashlib
-import sqlite3
+from hashlib import md5
+from sqlite3 import Binary
 from dedupsqlfs.db.sqlite.table import Table
 
 class TableName( Table ):
@@ -29,7 +29,7 @@ class TableName( Table ):
         :param value: bytes
         :return: int
         """
-        bvalue = sqlite3.Binary(value)
+        bvalue = Binary(value)
         return 8 + 16 + len(bvalue)*2
 
     def insert(self, value):
@@ -40,9 +40,9 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        digest = sqlite3.Binary(hashlib.new('md5', value).digest())
+        digest = Binary(md5(value).digest())
 
-        bvalue = sqlite3.Binary(value)
+        bvalue = Binary(value)
 
         cur.execute("INSERT INTO `%s`(hash,value) VALUES (?,?)" % self.getName(), (digest,bvalue,))
         item = cur.lastrowid
@@ -57,9 +57,9 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        digest = sqlite3.Binary(hashlib.new('md5', value).digest())
+        digest = Binary(md5(value).digest())
 
-        bvalue = sqlite3.Binary(value)
+        bvalue = Binary(value)
 
         cur.execute("INSERT INTO `%s`(id,hash,value) VALUES (?,?,?)" % self.getName(), (rowId, digest, bvalue,))
         item = cur.lastrowid
@@ -74,7 +74,7 @@ class TableName( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        digest = sqlite3.Binary(hashlib.new('md5', value).digest())
+        digest = Binary(md5(value).digest())
 
         cur.execute("SELECT id FROM `%s` WHERE hash=?" % self._table_name, (digest,))
         item = cur.fetchone()

@@ -18,6 +18,8 @@ class DbManager( object ):
 
     _table = None
     _table_engine = 'MyISAM'
+    _is_mariadb = False
+
     _db_name = "dedupsqlfs"
     _base_path = "/dev/shm/db"
     _autocommit = True
@@ -152,6 +154,10 @@ class DbManager( object ):
         return self._pass
 
 
+    def getIsMariaDB(self):
+        return self._is_mariadb
+
+
     def getTable(self, name, nocreate=False):
         if name not in self._table:
             if name == "option":
@@ -279,13 +285,13 @@ class DbManager( object ):
                 is_new = True
                 os.makedirs(datadir, 0o0750)
 
-            is_mariadb = False
+            self._is_mariadb = False
             has_tokudb = False
 
             output = subprocess.check_output(["mysqld", "--verbose", "--help"], stderr=subprocess.DEVNULL)
 
             if output.find(b'MariaDB'):
-                is_mariadb = True
+                self._is_mariadb = True
             if output.find(b'tokudb'):
                 has_tokudb = True
 
@@ -346,6 +352,7 @@ class DbManager( object ):
                     "--innodb-file-per-table",
                     "--innodb-flush-method=O_DIRECT",
                     "--innodb-file-format=Barracuda",
+                    # drop is MySQL >= 5.7 or MariaDB >= 10.3
                     "--innodb-file-format-max=Barracuda",
                     "--skip-innodb-doublewrite",
                     "--innodb-buffer-pool-size=%dM" % (self._buffer_size/1024/1024),
@@ -353,8 +360,6 @@ class DbManager( object ):
                     "--innodb-log-buffer-size=8M",
                     "--innodb-autoextend-increment=1",
                 ])
-                if is_mariadb:
-                    cmd_opts.extend(["--innodb-flush-neighbors=0"])
 
             else:
                 cmd_opts.extend([
@@ -372,11 +377,13 @@ class DbManager( object ):
                     "--key-buffer-size=8k",
                 ])
 
-            if is_mariadb:
+            if self._is_mariadb:
 
                 if self._table_engine == "InnoDB":
                     cmd_opts.extend([
                         "--innodb-flush-neighbors=0",
+                        "--innodb-default-row-format=dynamic",
+                        ""
                     ])
 
                 if self._table_engine == "TokuDB":

@@ -2457,7 +2457,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 self.cached_hash_compress.set(hash_id, cmethod_id)
 
             hash_SZ = self.__get_sizes_by_hash_from_cache(hash_id)
-            if hash_SZ:
+            if hash_SZ and hash_SZ["compressed_size"] > 0 and hash_SZ["writed_size"] > 0:
                 if hash_SZ["compressed_size"] != comp_size or hash_SZ["writed_size"] != writed_size:
                     tableHSZ.update(hash_id, writed_size, comp_size)
                     hash_SZ["compressed_size"] = comp_size
@@ -2638,13 +2638,23 @@ class DedupOperations(llfuse.Operations):  # {{{1
             self.getLogger().debug("Performing data vacuum (this might take a while) ..")
             sz = 0
             dbsz = 0
+
+            hsz = self.getTable('hash_sizes')
+            pts = hsz.get_median_compressed_size()
+            bt = self.getTable('block')
+            bt.setPageSize(pts)
+
             for table_name in self.getManager().tables:
                 dbsz += self.getTable(table_name).getFileSize()
             for table_name in self.getManager().tables:
                 sz += self.__vacuum_datatable(table_name, True)
             elapsed_time = time() - start_time
 
-            diffSign = sz > 0 and '+' or '-'
+            diffSign = ''
+            if sz > 0:
+                diffSign = '+'
+            elif sz < 0:
+                diffSign = '-'
 
             prsz = format_size(abs(sz))
 

@@ -2,13 +2,10 @@
 
 __author__ = 'sergey'
 
-import sqlite3
+from sqlite3 import Binary
 from dedupsqlfs.db.sqlite.table import Table
 
 class TableBlock( Table ):
-
-    # Use bigger block for data
-    _page_size = 1024*16
 
     _table_name = "block"
 
@@ -32,7 +29,7 @@ class TableBlock( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        bdata = sqlite3.Binary(data)
+        bdata = Binary(data)
 
         cur.execute("INSERT INTO `%s`(hash_id, data) VALUES (?,?)" % self._table_name,
                     (hash_id, bdata,))
@@ -48,7 +45,7 @@ class TableBlock( Table ):
         self.startTimer()
         cur = self.getCursor()
 
-        bdata = sqlite3.Binary(data)
+        bdata = Binary(data)
 
         cur.execute("UPDATE `%s` SET data=? WHERE hash_id=?" % self._table_name,
                     (bdata, hash_id,))

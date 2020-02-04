@@ -54,7 +54,10 @@ class Table( object ):
         if self._engine == "InnoDB":
             _cs += " KEY_BLOCK_SIZE=%d" % self._key_block_size
             if self._compressed:
-                _cs += " ROW_FORMAT=COMPRESSED"
+                if self._manager.getIsMariaDB():
+                    _cs += " ROW_FORMAT=DYNAMIC ROW_COMPRESSED=1"
+                else:
+                    _cs += " ROW_FORMAT=COMPRESSED"
             _cs += ";"
         if self._engine == "TokuDB":
             if not self._compressed:
@@ -138,6 +141,15 @@ class Table( object ):
 
     def getFileSize(self):
         return self.getSize()
+
+    def setPageSize(self, page_size):
+        """
+        Don't do anything.
+        It's emulation of sqlite table function.
+        @param size:
+        @return:
+        """
+        return self
 
     def getSize(self):
         cursor_type = pymysql.cursors.DictCursor

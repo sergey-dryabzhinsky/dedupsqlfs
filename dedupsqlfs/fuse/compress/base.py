@@ -89,7 +89,7 @@ class BaseCompressTool(object):
 
         self._logger = logger
 
-        self.getLogger().info("BaseCompressTool::init - selected methods = %r", self._methods)
+        self.getLogger().debug("BaseCompressTool::init - selected methods = %r", self._methods)
         return self
 
     def stop(self):

@@ -133,12 +133,6 @@ def main(): # {{{1
     grp_data.add_argument('--no-transactions', dest='use_transactions', action='store_false', help="Don't use transactions when making multiple related changes, this might make the file system faster or slower (?).")
     grp_data.add_argument('--nosync', dest='synchronous', action='store_false', help="Disable SQLite's normal synchronous behavior which guarantees that data is written to disk immediately, because it slows down the file system too much (this means you might lose data when the mount point isn't cleanly unmounted).")
 
-    grp_data.add_argument('--nogc-on-umount', dest='gc_umount_enabled', action='store_false', help="Disable garbage collection on umount operation (only do this when you've got disk space to waste or you know that nothing will be be deleted from the file system, which means little to no garbage will be produced).")
-    grp_data.add_argument('--gc', dest='gc_enabled', action='store_true', help="Enable the periodic garbage collection. It degrades performance. Only do this when you don't have disk space to waste or you know that alot of data will be be deleted from the file system.")
-    grp_data.add_argument('--gc-vacuum', dest='gc_vacuum_enabled', action='store_true', help="Enable data vacuum after the periodic garbage collection.")
-    grp_data.add_argument('--gc-fast', dest='gc_fast_enabled', action='store_true', help="Enable faster periodic garbage collection. Don't collect hash and block garbage.")
-    grp_data.add_argument('--gc-interval', dest='gc_interval', metavar="N", type=int, default=60, help="Call garbage callector after Nth seconds on FUSE operations, if GC enabled. Defaults to 60.")
-
     # Dynamically check for supported hashing algorithms.
     msg = "Specify the hashing algorithm that will be used to recognize duplicate data blocks: one of %s. Choose wisely - it can't be changed on the fly."
     hash_functions = list({}.fromkeys([h.lower() for h in hashlib.algorithms_available]).keys())

@@ -93,22 +93,16 @@ class DedupOperations(llfuse.Operations):  # {{{1
         self.mounted_subvolume = None
         self.mounted_subvolume_name = None
 
-        self.gc_enabled = True
-        self.gc_umount_enabled = True
-        self.gc_vacuum_enabled = False
-        self.gc_hook_last_run = time()
-        self.gc_interval = 60
-
         self.link_mode = stat.S_IFLNK | 0o777
 
         self.memory_usage = 0
         self.memory_usage_real = 0
         self.opcount = 0
-        self.should_vacuum = False
 
         self.root_mode = stat.S_IFDIR | 0o755
 
         self.timing_report_last_run = time()
+        self.report_interval = 60
 
         self.time_spent_logging = 0
         self.time_spent_caching_items = 0
@@ -345,10 +339,6 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 self.getLogger().debug("Committing outstanding changes.")
                 self.getManager().commit()
 
-                if self.getOption("gc_umount_enabled"):
-                    # Force vacuum on umount
-                    self.gc_enabled = True
-                    self.__collect_garbage()
             if self.getOption("verbosity") > 1:
                 self.__print_stats()
 
@@ -541,15 +531,6 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 self.cache_meta_timeout = self.getOption("cache_meta_timeout")
             if self.getOption("flush_interval") is not None:
                 self.flush_interval = self.getOption("flush_interval")
-
-            if self.getOption("gc_enabled") is not None:
-                self.gc_enabled = self.getOption("gc_enabled")
-            if self.getOption("gc_umount_enabled") is not None:
-                self.gc_umount_enabled = self.getOption("gc_umount_enabled")
-            if self.getOption("gc_vacuum_enabled") is not None:
-                self.gc_vacuum_enabled = self.getOption("gc_vacuum_enabled")
-            if self.getOption("gc_interval") is not None:
-                self.gc_interval = self.getOption("gc_interval")
 
             if not self.cache_enabled:
                 self.cached_blocks.setMaxReadTtl(0)
@@ -926,14 +907,12 @@ class DedupOperations(llfuse.Operations):  # {{{1
         self.cached_attrs.expire(fh)
         self.__cache_block_hook()
         self.__cache_meta_hook()
-        self.__gc_hook()
         return 0
 
     def releasedir(self, fh):
         self.getLogger().logCall('releasedir', '->(fh=%r)', fh)
         self.cached_attrs.expire(fh)
         self.__cache_meta_hook()
-        self.__gc_hook()
         return 0
 
     def removexattr(self, inode, name, ctx):
@@ -1009,8 +988,6 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 self.cached_name_ids.unset(node_old['name_id'])
 
             self.__cache_meta_hook()
-
-            self.__gc_hook()
         except FUSEError:
             self.__rollback_changes()
             raise
@@ -1030,7 +1007,6 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 self.__setattr_mtime(inode_parent)
 
             self.__remove(inode_parent, name, check_empty=True)
-            self.__gc_hook()
             return 0
         except Exception as e:
             self.__rollback_changes()
@@ -1267,7 +1243,6 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
             self.__remove(parent_inode, name)
             self.__cache_meta_hook()
-            self.__gc_hook()
         except FUSEError:
             raise
         except Exception as e:
@@ -2225,18 +2200,9 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 #    return nbytes / 2, nseconds / 2
             return nbytes, nseconds
 
-    def __gc_hook(self):  # {{{3
-        t_now = time()
-        if t_now - self.gc_hook_last_run >= self.gc_interval:
-            self.gc_hook_last_run = t_now
-            self.__collect_garbage()
-            self.__timing_report_hook()
-            self.gc_hook_last_run = time()
-        return
-
     def __timing_report_hook(self):  # {{{3
         t_now = time()
-        if t_now - self.timing_report_last_run >= self.gc_interval:
+        if t_now - self.timing_report_last_run >= self.report_interval:
             self.timing_report_last_run = t_now
             self.__print_stats()
         return
@@ -2632,413 +2598,6 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
         return flushed_attrs + flushed_names + flushed_nodes
 
-    def forced_vacuum(self):  # {{{3
-        if not self.isReadonly():
-            start_time = time()
-            self.getLogger().debug("Performing data vacuum (this might take a while) ..")
-            sz = 0
-            dbsz = 0
-
-            hsz = self.getTable('hash_sizes')
-            pts = hsz.get_median_compressed_size()
-            bt = self.getTable('block')
-            bt.setPageSize(pts)
-
-            for table_name in self.getManager().tables:
-                dbsz += self.getTable(table_name).getFileSize()
-            for table_name in self.getManager().tables:
-                sz += self.__vacuum_datatable(table_name, True)
-            elapsed_time = time() - start_time
-
-            diffSign = ''
-            if sz > 0:
-                diffSign = '+'
-            elif sz < 0:
-                diffSign = '-'
-
-            prsz = format_size(abs(sz))
-
-            self.getLogger().info("Total DB size change after vacuum: %s%.2f%% (%s%s)",
-                diffSign, abs(sz) * 100.0 / dbsz, diffSign, prsz)
-
-            self.getLogger().debug("Finished data vacuum in %s.", format_timespan(elapsed_time))
-        return
-
-    def __collect_garbage(self):  # {{{3
-        if self.gc_enabled and not self.isReadonly():
-            start_time = time()
-            self.getLogger().info("Performing garbage collection (this might take a while) ..")
-            self.should_vacuum = False
-            clean_stats = False
-            gc_funcs = [
-                self.__collect_strings,
-                self.__collect_inodes_all,
-                self.__collect_xattrs,
-                self.__collect_links,
-                self.__collect_indexes,
-            ]
-            if not self.getOption("gc_fast_enabled"):
-                gc_funcs.append(self.__collect_blocks)
-            for method in gc_funcs:
-                sub_start_time = time()
-                msg = method()
-                if msg:
-                    clean_stats = True
-                    elapsed_time = time() - sub_start_time
-                    self.getLogger().info(msg, format_timespan(elapsed_time))
-
-            if clean_stats:
-                subv = Subvolume(self)
-                subv.clean_stats(self.mounted_subvolume_name)
-
-                if self.mounted_subvolume_name == constants.ROOT_SUBVOLUME_NAME:
-                    subv.clean_non_root_subvol_diff_stats()
-
-            elapsed_time = time() - start_time
-            self.getLogger().info("Finished garbage collection in %s.", format_timespan(elapsed_time))
-        return
-
-    def __collect_strings(self):  # {{{4
-
-        tableName = self.getTable("name")
-
-        subv = Subvolume(self)
-        treeNameIds = subv.prepareTreeNameIds()
-
-        self.getLogger().debug("Clean unused path segments...")
-
-        countNames = tableName.get_count()
-        self.getLogger().debug(" path segments: %d", countNames)
-
-        count = 0
-        current = 0
-        proc = ""
-
-        maxCnt = 10000
-        curBlock = 0
-
-        while True:
-
-            if current == countNames:
-                break
-
-            nameIds = tableName.get_name_ids( curBlock, curBlock+maxCnt )
-
-            current += len(nameIds)
-
-            curBlock += maxCnt
-            if not nameIds:
-                continue
-
-            # SET magick
-            to_delete = nameIds - treeNameIds
-
-            id_str = ",".join((str(_id) for _id in to_delete))
-            count += tableName.remove_by_ids(id_str)
-
-            p = "%6.2f%%" % (100.0 * current / countNames)
-            if p != proc:
-                proc = p
-                self.getLogger().debug("%s (count=%d)", proc, count)
-
-        if count > 0:
-            self.should_vacuum = True
-            self.getTable("name").commit()
-            self.__vacuum_datatable("name")
-            return "Cleaned up %i unused path segment%s in %%s." % (count, count != 1 and 's' or '')
-        return
-
-    def __collect_inodes_all(self):  # {{{4
-
-        tableInode = self.getTable("inode")
-        tableTree = self.getTable("tree")
-
-        self.getLogger().debug("Clean unused inodes (all)...")
-
-        countInodes = tableInode.get_count()
-        self.getLogger().debug(" inodes: %d", countInodes)
-
-        count = 0
-        current = 0
-        proc = ""
-
-        curBlock = 0
-        maxCnt = 10000
-
-        while True:
-
-            if current == countInodes:
-                break
-
-            inodeIds = tableInode.get_inode_ids(curBlock, curBlock+maxCnt)
-            current += len(inodeIds)
-
-            curBlock += maxCnt
-            if not len(inodeIds):
-                continue
-
-            treeInodeIds = tableTree.get_inodes_by_inodes(inodeIds)
-
-            # SET magick
-            to_delete = inodeIds - treeInodeIds
-
-            count += tableInode.remove_by_ids(to_delete)
-
-            p = "%6.2f%%" % (100.0 * current / countInodes)
-            if p != proc:
-                proc = p
-                self.getLogger().debug("%s (count=%d)", proc, count)
-
-        if count > 0:
-            self.should_vacuum = True
-            self.getTable("inode").commit()
-            self.__vacuum_datatable("inode")
-            return "Cleaned up %i unused inode%s in %%s." % (count, count != 1 and 's' or '')
-        return
-
-    def __collect_xattrs(self):  # {{{4
-
-        tableXattr = self.getTable("xattr")
-        tableInode = self.getTable("inode")
-
-        self.getLogger().debug("Clean unused xattrs...")
-
-        countXattrs = tableXattr.get_count()
-        self.getLogger().debug(" xattrs: %d", countXattrs)
-
-        count = 0
-        current = 0
-        proc = ""
-
-        curBlock = 0
-        maxCnt = 10000
-
-        while True:
-
-            if current == countXattrs:
-                break
-
-            inodeIds = tableXattr.get_inode_ids(curBlock, curBlock+maxCnt)
-            current += len(inodeIds)
-
-            curBlock += maxCnt
-            if not inodeIds:
-                continue
-
-            xattrInodeIds = tableInode.get_inodes_by_inodes(inodeIds)
-
-            # SET magick
-            to_delete = inodeIds - xattrInodeIds
-
-            count += tableXattr.remove_by_ids(to_delete)
-
-            p = "%6.2f%%" % (100.0 * current / countXattrs)
-            if p != proc:
-                proc = p
-                self.getLogger().debug("%s (count=%d)", proc, count)
-
-        if count > 0:
-            self.should_vacuum = True
-            self.getTable("xattr").commit()
-            self.__vacuum_datatable("xattr")
-            return "Cleaned up %i unused xattr%s in %%s." % (count, count != 1 and 's' or '')
-        return
-
-    def __collect_links(self):  # {{{4
-
-        tableLink = self.getTable("link")
-        tableInode = self.getTable("inode")
-
-        self.getLogger().debug("Clean unused links...")
-
-        countLinks = tableLink.get_count()
-        self.getLogger().debug(" links: %d", countLinks)
-
-        count = 0
-        current = 0
-        proc = ""
-
-        curBlock = 0
-        maxCnt = 10000
-
-        while True:
-
-            if current == countLinks:
-                break
-
-            inodeIds = tableLink.get_inode_ids(curBlock, curBlock+maxCnt)
-
-            current += len(inodeIds)
-
-            curBlock += maxCnt
-            if not inodeIds:
-                continue
-
-            linkInodeIds = tableInode.get_inodes_by_inodes(inodeIds)
-
-            # SET magick
-            to_delete = inodeIds - linkInodeIds
-
-            count += tableLink.remove_by_ids(to_delete)
-
-            p = "%6.2f%%" % (100.0 * current / countLinks)
-            if p != proc:
-                proc = p
-                self.getLogger().debug("%s (count=%d)", proc, count)
-
-        if count > 0:
-            self.should_vacuum = True
-            self.getTable("link").commit()
-            self.__vacuum_datatable("link")
-            return "Cleaned up %i unused link%s in %%s." % (count, count != 1 and 's' or '')
-        return
-
-    def __collect_indexes(self):  # {{{4
-
-        tableIndex = self.getTable("inode_hash_block")
-        tableInode = self.getTable("inode")
-
-        self.getLogger().debug("Clean unused block indexes...")
-
-        countInodes = tableIndex.get_count_uniq_inodes()
-        self.getLogger().debug(" block inodes: %d", countInodes)
-
-        count = 0
-        countTrunc = 0
-        current = 0
-        proc = ""
-
-        curBlock = 0
-        maxCnt = 10000
-
-        while True:
-
-            if current == countInodes:
-                break
-
-            inodeIds = tableIndex.get_inode_ids(curBlock, curBlock+maxCnt)
-
-            current += len(inodeIds)
-
-            curBlock += maxCnt
-            if not len(inodeIds):
-                continue
-
-            indexInodeIds = tableInode.get_inodes_by_inodes(inodeIds)
-
-            # SET magick
-            to_delete = inodeIds - indexInodeIds
-            to_trunc = inodeIds - to_delete
-
-            count += tableIndex.remove_by_inodes(to_delete)
-
-            # Slow?
-            inodeSizes = tableInode.get_sizes_by_id(to_trunc)
-            for inode_id in to_trunc:
-                size = inodeSizes.get(inode_id, -1)
-                if size < 0:
-                    continue
-
-                inblock_offset = size % self.block_size
-                max_block_number = int(floor(1.0 * (size - inblock_offset) / self.block_size))
-
-                trunced = tableIndex.delete_by_inode_number_more(inode_id, max_block_number)
-                countTrunc += len(trunced)
-
-            p = "%6.2f%%" % (100.0 * current / countInodes)
-            if p != proc:
-                proc = p
-                self.getLogger().debug("%s (count=%d, trunced=%d)", proc, count, countTrunc)
-
-        count += countTrunc
-
-        if count > 0:
-            self.should_vacuum = True
-            self.getTable("inode_hash_block").commit()
-            self.__vacuum_datatable("inode_hash_block")
-            return "Cleaned up %i unused index entr%s in %%s." % (count, count != 1 and 'ies' or 'y')
-        return
-
-    def __collect_blocks(self):  # {{{4
-
-        tableHash = self.getTable("hash")
-        tableBlock = self.getTable("block")
-        tableHCT = self.getTable("hash_compression_type")
-        tableHSZ = self.getTable("hash_sizes")
-
-        subv = Subvolume(self)
-        indexHashIds = subv.prepareIndexHashIds()
-
-        self.getLogger().debug("Clean unused data blocks and hashes...")
-
-        countHashes = tableHash.get_count()
-        self.getLogger().debug(" hashes: %d", countHashes)
-
-        count = 0
-        current = 0
-        proc = ""
-
-        _curBlock = 0
-        maxCnt = 10000
-
-        while True:
-
-            if current == countHashes:
-                break
-
-            hashIds = tableHash.get_hash_ids(_curBlock, _curBlock+maxCnt)
-
-            current += len(hashIds)
-
-            _curBlock += maxCnt
-            if not hashIds:
-                continue
-
-            # SET magick
-            to_delete = hashIds - indexHashIds
-
-            id_str = ",".join((str(_id) for _id in to_delete))
-            count += tableHash.remove_by_ids(id_str)
-            tableBlock.remove_by_ids(id_str)
-            tableHCT.remove_by_ids(id_str)
-            tableHSZ.remove_by_ids(id_str)
-
-            p = "%6.2f%%" % (100.0 * current / countHashes)
-            if p != proc:
-                proc = p
-                self.getLogger().debug("%s (count=%d)", proc, count)
-
-        self.getManager().commit()
-
-        if count > 0:
-            self.should_vacuum = True
-            self.getTable("hash").commit()
-            self.__vacuum_datatable("hash")
-            self.getTable("block").commit()
-            self.__vacuum_datatable("block")
-            self.getTable("hash_compression_type").commit()
-            self.__vacuum_datatable("hash_compression_type")
-            self.getTable("hash_sizes").commit()
-            self.__vacuum_datatable("hash_sizes")
-            return "Cleaned up %i unused data block%s and hashes in %%s." % (
-                count, count != 1 and 's' or '',
-            )
-        return
-
-    def __vacuum_datatable(self, tableName, getsize=False):  # {{{4
-        msg = ""
-        sz = 0
-        sub_start_time = time()
-        if self.should_vacuum and self.gc_vacuum_enabled:
-            self.getLogger().debug(" vacuum %s table", tableName)
-            sz += self.getTable(tableName).vacuum()
-            msg = "  vacuumed SQLite data store in %s."
-        if msg:
-            elapsed_time = time() - sub_start_time
-            self.getLogger().debug(msg, format_timespan(elapsed_time))
-        if getsize:
-            return sz
-        return msg
 
     def __commit_changes(self):  # {{{3
         if not self.use_transactions:

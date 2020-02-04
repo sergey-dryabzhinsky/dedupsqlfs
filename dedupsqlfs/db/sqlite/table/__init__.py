@@ -3,3 +3,4 @@
 __author__ = 'sergey'
 
 from ._base import Table
+from ._memory import MemoryTable

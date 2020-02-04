@@ -314,6 +314,8 @@ class DbManager( object ):
                 "--connect-timeout=10",
                 "--interactive-timeout=3600",
                 "--wait-timeout=3600",
+                "--tmp-table-size=64M",
+                "--max-heap-table-size=64M",
             ]
 
             if os.geteuid() == 0:

@@ -2,9 +2,9 @@
 
 __author__ = 'sergey'
 
-from dedupsqlfs.db.sqlite.table import Table
+from dedupsqlfs.db.sqlite.table import MemoryTable
 
-class TableTmpIds( Table ):
+class TableTmpIds( MemoryTable ):
 
     _table_name = "tmp_ids"
 

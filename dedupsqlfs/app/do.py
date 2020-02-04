@@ -13,7 +13,6 @@ Data:
     verify hashes
     rehash with new hash alg
     defragment (gc, vacuum)
-    (de)compress file(s) and director(y|ies) @todo
     change block size (need double free space) @todo
     statistic
 
@@ -54,9 +53,6 @@ def create_subvolume(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", False)
     _fuse.setOption("use_transactions", True)
     _fuse.setReadonly(False)
 
@@ -75,9 +71,6 @@ def list_subvolume(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(True)
 
     from dedupsqlfs.fuse.subvolume import Subvolume
@@ -95,9 +88,6 @@ def remove_subvolume(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", False)
     _fuse.setOption("use_transactions", True)
     _fuse.setReadonly(False)
 
@@ -116,9 +106,6 @@ def print_subvol_stats(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(True)
 
     from dedupsqlfs.fuse.subvolume import Subvolume
@@ -136,9 +123,6 @@ def calc_subvol_diff(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(True)
 
     from dedupsqlfs.fuse.subvolume import Subvolume
@@ -156,9 +140,6 @@ def decompress_subvol_tables(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(True)
 
     from dedupsqlfs.fuse.subvolume import Subvolume
@@ -176,9 +157,6 @@ def compress_subvol_tables(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(True)
 
     from dedupsqlfs.fuse.subvolume import Subvolume
@@ -196,9 +174,6 @@ def count_subvol_created_today(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(True)
 
     from dedupsqlfs.fuse.subvolume import Subvolume
@@ -226,9 +201,6 @@ def create_snapshot(options, _fuse):
         logger.error("Select subvolume/snapshot from which create new one!")
         return
 
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", False)
     _fuse.setOption("use_transactions", True)
     _fuse.setReadonly(False)
 
@@ -245,9 +217,6 @@ def remove_snapshot(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", False)
     _fuse.setOption("use_transactions", True)
     _fuse.setReadonly(False)
 
@@ -264,9 +233,6 @@ def remove_snapshot_older(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", False)
     _fuse.setOption("use_transactions", True)
     _fuse.setReadonly(False)
 
@@ -283,9 +249,6 @@ def remove_snapshot_plan(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", False)
     _fuse.setOption("use_transactions", True)
     _fuse.setReadonly(False)
 
@@ -302,9 +265,6 @@ def count_snapshot_older(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", False)
     _fuse.setOption("use_transactions", True)
     _fuse.setReadonly(True)
 
@@ -321,9 +281,6 @@ def count_snapshot_plan(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", False)
     _fuse.setOption("use_transactions", True)
     _fuse.setReadonly(True)
 
@@ -340,9 +297,6 @@ def print_snapshot_stats(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(True)
 
     from dedupsqlfs.fuse.snapshot import Snapshot
@@ -358,9 +312,6 @@ def calc_snapshot_diff(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(True)
 
     from dedupsqlfs.fuse.snapshot import Snapshot
@@ -376,9 +327,6 @@ def set_snapshot_readonly(options, _fuse, flag):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", False)
     _fuse.setOption("use_transactions", True)
     _fuse.setReadonly(True)
 
@@ -398,9 +346,6 @@ def count_snapshot_created_today(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", False)
     _fuse.setReadonly(True)
 
     from dedupsqlfs.fuse.subvolume import Subvolume
@@ -420,9 +365,6 @@ def rehash(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", False)
     _fuse.setOption("use_transactions", False)
     _fuse.setOption("synchronous", False)
     _fuse.setReadonly(True)
@@ -441,9 +383,6 @@ def verify(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", False)
     _fuse.setOption("use_transactions", False)
     _fuse.setOption("synchronous", False)
     _fuse.setReadonly(True)
@@ -462,9 +401,6 @@ def recompress(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", False)
     _fuse.setOption("use_transactions", False)
     _fuse.setOption("synchronous", False)
     _fuse.setReadonly(True)
@@ -488,35 +424,25 @@ def print_fs_stats(options, _fuse):
 
 
 def data_vacuum(options, _fuse):
-    _fuse.setOption("gc_umount_enabled", False)
-    _fuse.setOption("gc_vacuum_enabled", True)
-    _fuse.setOption("gc_enabled", False)
-    _fuse.setReadonly(False)
-
     _fuse.operations.init()
-    _fuse.operations.should_vacuum = True
-    lvl = _fuse.getLogger().getEffectiveLevel()
-    _fuse.getLogger().setLevel(logging.INFO)
-    _fuse.getLogger().resetVerbosityByLogLevel()
-    _fuse.operations.forced_vacuum()
-    _fuse.getLogger().setLevel(lvl)
-    _fuse.getLogger().resetVerbosityByLogLevel()
+
+    from dedupsqlfs.app.actions.vacuum import do_vacuum
+
+    ret = do_vacuum(options, _fuse)
+
     _fuse.operations.destroy()
-    return 0
+    return ret
 
 
 def data_defragment(options, _fuse):
-    """
-    @todo
-    """
-    _fuse.setOption("gc_umount_enabled", True)
-    _fuse.setOption("gc_vacuum_enabled", False)
-    _fuse.setOption("gc_enabled", True)
-    _fuse.setReadonly(False)
-
     _fuse.operations.init()
+
+    from dedupsqlfs.app.actions.defragment import do_defragment
+
+    ret = do_defragment(options, _fuse)
+
     _fuse.operations.destroy()
-    return 0
+    return ret
 
 
 def do(options, compression_methods=None):
@@ -533,7 +459,7 @@ def do(options, compression_methods=None):
             use_ino=True, default_permissions=True, fsname="dedupsqlfs")
 
         logger = ops.getApplication().getLogger()
-        logger.info("Mount: DeDupSQLfs %s/%s, LLfuse %s" % (dedupsqlfs.__version__, dedupsqlfs.__fsversion__, dedupsqlfs.fuse.dedupfs.fuse.__version__))
+        logger.info("Do: DeDupSQLfs %s/%s, LLfuse %s" % (dedupsqlfs.__version__, dedupsqlfs.__fsversion__, dedupsqlfs.fuse.dedupfs.fuse.__version__))
 
         if _fuse.checkIfLocked():
             raise OSError("FS is locked by other process!")
@@ -673,6 +599,7 @@ def main(): # {{{1
 
     generic.add_argument('-h', '--help', action='help', help="show this help message followed by the command line options defined by the Python FUSE binding and exit")
     generic.add_argument('-v', '--verbose', action='count', dest='verbosity', default=0, help="increase verbosity: 0 - error, 1 - warning, 2 - info, 3 - debug, 4 - verbose")
+    generic.add_argument('--parsable', action='store_true', dest='parsable', help="Output data in more parsable way")
     generic.add_argument('--log-file', dest='log_file', metavar='PATH', help="specify log file location")
     generic.add_argument('--log-file-only', dest='log_file_only', action='store_true',
                         help="Don't send log messages to stderr.")
@@ -682,11 +609,6 @@ def main(): # {{{1
     generic.add_argument('--temp', dest='temp', metavar='DIRECTORY', help="Specify the location for the files in which temporary data is stored. By default honour TMPDIR environment variable value.")
     generic.add_argument('--no-transactions', dest='use_transactions', action='store_false', help="Don't use transactions when making multiple related changes, this might make the file system faster or slower (?).")
     generic.add_argument('--nosync', dest='synchronous', action='store_false', help="Disable SQLite's normal synchronous behavior which guarantees that data is written to disk immediately, because it slows down the file system too much (this means you might lose data when the mount point isn't cleanly unmounted).")
-    generic.add_argument('--nogc-on-umount', dest='gc_umount_enabled', action='store_false', help="Disable garbage collection on umount operation (only do this when you've got disk space to waste or you know that nothing will be be deleted from the file system, which means little to no garbage will be produced).")
-    generic.add_argument('--gc', dest='gc_enabled', action='store_true', help="Enable the periodic garbage collection because it degrades performance (only do this when you've got disk space to waste or you know that nothing will be be deleted from the file system, which means little to no garbage will be produced).")
-    generic.add_argument('--gc-vacuum', dest='gc_vacuum_enabled', action='store_true', help="Enable data vacuum after the periodic garbage collection.")
-    generic.add_argument('--gc-fast', dest='gc_fast_enabled', action='store_true', help="Enable faster periodic garbage collection. Don't collect hash and block garbage.")
-    generic.add_argument('--gc-interval', dest='gc_interval', metavar="N", type=int, default=60, help="Call garbage callector after Nth seconds on FUSE operations, if GC enabled. Defaults to 60.")
 
     generic.add_argument('--memory-limit', dest='memory_limit', action='store_true', help="Use some lower values for less memory consumption.")
 

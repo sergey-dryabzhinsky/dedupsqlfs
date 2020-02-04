@@ -6,6 +6,8 @@ from dedupsqlfs.db.mysql.table import Table
 
 class TableTmpIdCount( Table ):
 
+    _engine = "MEMORY"
+
     _table_name = "tmp_id_count"
 
     def create( self ):

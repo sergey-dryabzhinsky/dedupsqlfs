@@ -105,4 +105,9 @@ class TableHashSizes( Table ):
         self.stopTimer('get_sizes_by_hash_ids')
         return items
 
+    def get_median_compressed_size(self):
+        self.startTimer()
+        self.stopTimer('get_median_compressed_size')
+        return 0
+
     pass

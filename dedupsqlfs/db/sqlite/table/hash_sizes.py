@@ -14,7 +14,7 @@ class TableHashSizes( Table ):
         # Create table
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
-                "hash_id INTEGER PRIMARY KEY, "+
+                "`hash_id` INTEGER PRIMARY KEY, "+
                 "`writed_size` INTEGER NOT NULL,"+
                 "`compressed_size` INTEGER NOT NULL"+
             ");"
@@ -89,14 +89,17 @@ class TableHashSizes( Table ):
 
         cur = self.getCursor()
 
-        cur.execute("SELECT SUM(compressed_size) AS s FROM `%s`" % self.getName())
+        cur.execute("SELECT SUM(`compressed_size`) AS `s` FROM `%s`" % self.getName())
         item = cur.fetchone()
+
+        if not item["s"]:
+            return 0
 
         need_sum = item["s"] / 2
 
         cur_sum = 0
         comp_size = 0
-        cur.execute("SELECT compressed_size FROM `%s` " % self.getName())
+        cur.execute("SELECT `compressed_size` FROM `%s` ORDER BY `compressed_size`" % self.getName())
         for _i in iter(cur.fetchone, None):
             cur_sum += _i["compressed_size"]
             if cur_sum > need_sum:

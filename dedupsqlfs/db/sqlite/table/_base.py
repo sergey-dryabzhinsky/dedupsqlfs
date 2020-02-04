@@ -278,7 +278,6 @@ class Table( object ):
             conn.execute("PRAGMA synchronous=NORMAL")
 
         conn.execute("PRAGMA temp_store=FILE")
-        conn.execute("PRAGMA max_page_count=2147483646")
         conn.execute("PRAGMA page_size=%i" % pageSize)
         conn.execute("PRAGMA cache_size=%i" % cacheSize)
 

@@ -2650,7 +2650,11 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 sz += self.__vacuum_datatable(table_name, True)
             elapsed_time = time() - start_time
 
-            diffSign = sz > 0 and '+' or '-'
+            diffSign = ''
+            if sz > 0:
+                diffSign = '+'
+            elif sz < 0:
+                diffSign = '-'
 
             prsz = format_size(abs(sz))
 

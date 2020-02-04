@@ -92,10 +92,18 @@ class TableHashSizes( Table ):
         cur.execute("SELECT SUM(`compressed_size`) AS `s` FROM `%s`" % self.getName())
         item = cur.fetchone()
 
-        if not item["s"]:
+        isum = item["s"]
+        if not isum:
             return 0
 
-        need_sum = item["s"] / 2
+        cur.execute("SELECT COUNT(1) AS `c` FROM `%s`" % self.getName())
+        item = cur.fetchone()
+
+        icount = item["c"]
+        if not icount:
+            return 0
+
+        need_sum = isum / 2
 
         cur_sum = 0
         comp_size = 0

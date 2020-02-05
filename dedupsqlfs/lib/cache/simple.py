@@ -10,7 +10,11 @@ from time import time
 
 CacheItem:
     c_time: float, timestamp, then added, updated, set to 0 if expired
-    c_value: int|str, some data
+    c_value: int|str|object, some data
+
+CompressionSizesValue:
+    size_c: int, compressed data size
+    size_w: int, written data size
 
 """
 
@@ -21,12 +25,25 @@ class CacheItem:
         self.c_time = c_time
         self.c_value = c_value
 
+class CompressionSizesValue:
+    __slots__ = 'size_c', 'size_w'
+
+    def __init__(self, size_c=0, size_w=0):
+        self.size_c = size_c
+        self.size_w = size_w
+
 try:
     from recordclass import make_dataclass
+
     CacheItem = make_dataclass(
         "CacheItem",
         [("c_time", float,), ("c_value", object,)],
         defaults=(0.0, None,)
+    )
+    CompressionSizesValue = make_dataclass(
+        "CompressionSizesValue",
+        [("size_c", int,), ("size_w", int,)],
+        defaults=(0, 0,)
     )
 except:
     pass

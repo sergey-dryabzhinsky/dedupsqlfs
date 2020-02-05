@@ -33,7 +33,7 @@ from dedupsqlfs.log import logging
 from dedupsqlfs.lib import constants
 from dedupsqlfs.my_formats import format_size, format_timespan
 from dedupsqlfs.get_memory_usage import get_real_memory_usage, get_memory_usage
-from dedupsqlfs.lib.cache.simple import CacheTTLseconds
+from dedupsqlfs.lib.cache.simple import CacheTTLseconds, CompressionSizesValue
 from dedupsqlfs.lib.cache.storage import StorageTimeSize
 from dedupsqlfs.lib.cache.index import IndexTime
 from dedupsqlfs.lib.cache.inodes import InodesTime
@@ -1508,10 +1508,9 @@ class DedupOperations(llfuse.Operations):  # {{{1
             tableHSZ = self.getTable("hash_sizes")
 
             item = tableHSZ.get(hash_id)
-            citem = {"compressed_size":0, "writed_size":0}
+            citem = CompressionSizesValue()
             if item:
-                citem["compressed_size"] = item["compressed_size"]
-                citem["writed_size"] = item["writed_size"]
+                citem = CompressionSizesValue(item["compressed_size"], item["writed_size"])
             self.cached_hash_sizes.set(hash_id, citem)
         return citem
 
@@ -2427,15 +2426,16 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 self.cached_hash_compress.set(hash_id, cmethod_id)
 
             hash_SZ = self.__get_sizes_by_hash_from_cache(hash_id)
-            if hash_SZ and hash_SZ["compressed_size"] > 0 and hash_SZ["writed_size"] > 0:
-                if hash_SZ["compressed_size"] != comp_size or hash_SZ["writed_size"] != writed_size:
+            if hash_SZ and hash_SZ.size_c > 0 and hash_SZ.size_w > 0:
+                if hash_SZ.size_c != comp_size or hash_SZ.size_w != writed_size:
                     tableHSZ.update(hash_id, writed_size, comp_size)
-                    hash_SZ["compressed_size"] = comp_size
-                    hash_SZ["writed_size"] = writed_size
+                    hash_SZ.size_c = comp_size
+                    hash_SZ.size_w = writed_size
                     self.cached_hash_sizes.set(hash_id, hash_SZ)
             else:
                 tableHSZ.insert(hash_id, writed_size, comp_size)
-                hash_SZ = {"compressed_size": comp_size,"writed_size": writed_size}
+                hash_SZ.size_c = comp_size
+                hash_SZ.size_w = writed_size
                 self.cached_hash_sizes.set(hash_id, hash_SZ)
 
             self.bytes_written_compressed += comp_size

@@ -53,21 +53,21 @@ class StorageTimeSize(object):
     """
 
     # Maximum seconds after that cache is expired for writed blocks
-    _max_write_ttl = 5
+    _max_write_ttl = 30
 
     # Maximum cache size in bytes for block that writed recently
     _max_write_cache_size = 512*1024*1024
     _cur_write_cache_size = 0
 
     # Maximum seconds after that cache is expired for readed blocks
-    _max_read_ttl = 10
+    _max_read_ttl = 30
 
     # Maximum cache size in bytes for block that accessed recently
     _max_read_cache_size = 512*1024*1024
     _cur_read_cache_size = 0
 
     # Expired maximum cache size in %
-    _max_size_trsh = 5
+    _max_size_trsh = 2
 
     _inodes = None
     _block_size = 128*1024
@@ -123,7 +123,7 @@ class StorageTimeSize(object):
 
         block_data = inode_data[block_number]
 
-        blockSize = len(block.getvalue())
+        blockSize = len(block.getbuffer())
 
         if not new:
             # Not new block
@@ -190,7 +190,7 @@ class StorageTimeSize(object):
                 if block_data.c_written != writed:
                     continue
 
-                size += len(block_data.c_block.getvalue())
+                size += len(block_data.c_block.getbuffer())
         return size
 
 
@@ -336,7 +336,7 @@ class StorageTimeSize(object):
                         int((now - t)*10**6),
                         inode,
                         bn,
-                        len(block_data.c_block.getvalue())
+                        len(block_data.c_block.getbuffer())
                     )
                 )
 

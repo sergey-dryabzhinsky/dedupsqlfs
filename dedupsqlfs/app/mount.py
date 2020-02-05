@@ -148,14 +148,14 @@ def main(): # {{{1
 
     grp_cache = parser.add_argument_group('Cache')
 
-    grp_cache.add_argument('--no-cache', dest='use_cache', action='store_false', help="Don't use cache in memory and delayed write to storage.")
+    grp_cache.add_argument('--no-cache', dest='use_cache', action='store_false', help="Don't use cache in memory and delayed writes to storage.")
     grp_cache.add_argument('--no-cache-flusher', dest='use_cache_flusher', action='store_false', help="Don't use separate cache flusher process. It touches file in mount_point directory. This may prevent FS to umount cleanly.")
-    grp_cache.add_argument('--cache-meta-timeout', dest='cache_meta_timeout', metavar='SECONDS', type=int, default=20, help="Delay flush expired metadata for NUMBER of seconds. Defaults to 20 seconds.")
-    grp_cache.add_argument('--cache-block-write-timeout', dest='cache_block_write_timeout', metavar='SECONDS', type=int, default=10, help="Expire writed data and flush from memory after NUMBER of seconds. Defaults to 10 seconds.")
+    grp_cache.add_argument('--cache-meta-timeout', dest='cache_meta_timeout', metavar='SECONDS', type=int, default=30, help="Delay flush expired metadata from memory for NUMBER of seconds. Defaults to 30 seconds.")
+    grp_cache.add_argument('--cache-block-write-timeout', dest='cache_block_write_timeout', metavar='SECONDS', type=int, default=30, help="Expire writed data and flush from memory after NUMBER of seconds. Defaults to 30 seconds.")
     grp_cache.add_argument('--cache-block-write-size', dest='cache_block_write_size', metavar='BYTES', type=int,
                         default=1024*1024*1024,
                         help="Write cache for blocks: potential size in BYTES. Set to -1 for infinite. Defaults to 1024 MB.")
-    grp_cache.add_argument('--cache-block-read-timeout', dest='cache_block_read_timeout', metavar='SECONDS', type=int, default=10, help="Expire readed data and flush from memory after NUMBER of seconds. Defaults to 10 seconds.")
+    grp_cache.add_argument('--cache-block-read-timeout', dest='cache_block_read_timeout', metavar='SECONDS', type=int, default=30, help="Expire readed data and flush from memory after NUMBER of seconds. Defaults to 30 seconds.")
     grp_cache.add_argument('--cache-block-read-size', dest='cache_block_read_size', metavar='BYTES', type=int,
                         default=1024*1024*1024,
                         help="Readed cache for blocks: potential size in BYTES. Set to -1 for infinite. Defaults to 1024 MB.")

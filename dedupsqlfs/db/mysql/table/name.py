@@ -49,23 +49,6 @@ class TableName( Table ):
         self.stopTimer('insert')
         return item
 
-    def insertRaw(self, rowId, value):
-        """
-        :param value: bytes
-        :return: int
-        """
-        self.startTimer()
-        cur = self.getCursor()
-
-        digest = hashlib.new('md5', value).digest()
-
-        cur.execute(
-            "INSERT INTO `%s` " % self.getName()+
-            " (`id`,`hash`,`value`) VALUES (%s,%s,%s)", (rowId, digest, value,))
-        item = cur.lastrowid
-        self.stopTimer('insertRaw')
-        return item
-
     def find(self, value):
         """
         :param value: bytes

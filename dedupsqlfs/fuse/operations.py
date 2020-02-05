@@ -982,9 +982,9 @@ class DedupOperations(llfuse.Operations):  # {{{1
             treeTable = self.getTable("tree")
             treeTable.rename_inode(node_old["id"], node_parent_new["id"], string_id)
 
-            self.cached_nodes.unset((inode_parent_old, name_old))
+            self.cached_nodes.unset("%i-%s" % (inode_parent_old, hashlib.md5(name_old).hexdigest()))
             if name_old != name_new:
-                self.cached_names.unset(name_old)
+                self.cached_names.unset(hashlib.md5(name_old).hexdigest())
                 self.cached_name_ids.unset(node_old['name_id'])
 
             self.__cache_meta_hook()
@@ -1309,12 +1309,12 @@ class DedupOperations(llfuse.Operations):  # {{{1
     def __get_id_by_name(self, name):
         self.getLogger().logCall('__get_id_by_name', '->(name=%r)', name)
 
-        name_id = self.cached_names.get(name)
+        name_id = self.cached_names.get(hashlib.md5(name).hexdigest())
         if not name_id:
             start_time = time()
             name_id = self.getTable("name").find(name)
             if name_id:
-                self.cached_names.set(name, name_id)
+                self.cached_names.set(hashlib.md5(name).hexdigest(), name_id)
                 self.cached_name_ids.set(name_id, name)
             self.time_spent_caching_items += time() - start_time
         if not name_id:
@@ -1330,7 +1330,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
             start_time = time()
             name = self.getTable("name").get(name_id)
             if name:
-                self.cached_names.set(name, name_id)
+                self.cached_names.set(hashlib.md5(name).hexdigest(), name_id)
                 self.cached_name_ids.set(name_id, name)
             self.time_spent_caching_items += time() - start_time
         if not name:
@@ -1341,7 +1341,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
     def __get_tree_node_by_parent_inode_and_name(self, parent_inode, name):
         self.getLogger().logCall('__get_tree_node_by_parent_inode_and_name', '->(parent_inode=%i, name=%r)', parent_inode, name)
 
-        node = self.cached_nodes.get((parent_inode, name))
+        node = self.cached_nodes.get("%i-%s" % (parent_inode, hashlib.md5(name).hexdigest()))
 
         if not node:
 
@@ -1359,7 +1359,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 self.getLogger().debug("! No node %i and name %i found, cant get tree node", par_node["id"], name_id)
                 raise FUSEError(errno.ENOENT)
 
-            self.cached_nodes.set((parent_inode, name), node)
+            self.cached_nodes.set("%i-%s" % (parent_inode, hashlib.md5(name).hexdigest()), node)
 
             self.time_spent_caching_items += time() - start_time
 
@@ -1870,12 +1870,12 @@ class DedupOperations(llfuse.Operations):  # {{{1
     def __insert(self, parent_inode, name, mode, size, ctx, rdev=0):  # {{{3
         """
 
-        @param parent_inode:
-        @param name:
-        @param mode:
-        @param size:
+        @param parent_inode: int
+        @param name: bytes
+        @param mode: int
+        @param size: int
         @param ctx: llfuse.RequestContext
-        @param rdev:
+        @param rdev: int
         @return:
         """
         self.getLogger().debug("__insert->(parent_inode=%i,name=%r,mode=%o,size=%i,ctx.uid=%i,ctx.gid=%i)",
@@ -1903,20 +1903,24 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
         return inode_id, par_node["inode_id"]
 
-    def __intern(self, string): # {{{3
-        result = self.cached_names.get(string)
-        if not result:
+    def __intern(self, name): # {{{3
+        """
+        @param name: bytes
+        @return: int
+        """
+        name_id = self.cached_names.get(hashlib.md5(name).hexdigest())
+        if not name_id:
             start_time = time()
 
             nameTable = self.getTable("name")
-            result = nameTable.find(string)
-            if not result:
-                result = nameTable.insert(string)
-            self.cached_names.set(string, result)
-            self.cached_name_ids.set(result, string)
+            name_id = nameTable.find(name)
+            if not name_id:
+                name_id = nameTable.insert(name)
+            self.cached_names.set(hashlib.md5(name).hexdigest(), name_id)
+            self.cached_name_ids.set(name_id, name)
 
             self.time_spent_interning += time() - start_time
-        return int(result)
+        return int(name_id)
 
     def __remove(self, parent_inode, name, check_empty=False):  # {{{3
         """
@@ -1957,9 +1961,9 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
         self.cached_attrs.expire(cur_node["inode_id"])
         self.cached_xattrs.unset(cur_node["inode_id"])
-        self.cached_nodes.unset((parent_inode, name))
+        self.cached_nodes.unset("%i-%s" % (parent_inode, hashlib.md5(name).hexdigest()))
         self.cached_nodes.unset(cur_node["inode_id"])
-        self.cached_names.unset(name)
+        self.cached_names.unset(hashlib.md5(name).hexdigest())
         self.cached_name_ids.unset(cur_node["name_id"])
         self.cached_indexes.expire(cur_node["inode_id"])
 

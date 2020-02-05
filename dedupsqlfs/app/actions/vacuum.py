@@ -33,7 +33,7 @@ def forced_vacuum(app):
     @return: None
     """
     start_time = time()
-    app.getLogger().debug("Performing data vacuum (this might take a while) ..")
+    app.getLogger().info("Performing data vacuum (this might take a while) ..")
     sz = 0
     dbsz = 0
 

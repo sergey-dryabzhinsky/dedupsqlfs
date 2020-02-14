@@ -370,6 +370,7 @@ class Subvolume(object):
         """
         @param name: Subvolume name
         @type  name: bytes
+        @return: int - freed space in bytes
         """
 
         if not name:
@@ -383,25 +384,35 @@ class Subvolume(object):
             self.getLogger().error("Subvolume with name %r not found!", name)
             return False
 
+        self.print_msg("Remove %r snapshot ... " % name)
+
+        freedSpace = 0
         try:
-            self.getTable('tree_%d' % subvolItem["id"]).drop()
-            self.getTable('inode_%d' % subvolItem["id"]).drop()
-            self.getTable('inode_hash_block_%d' % subvolItem["id"]).drop()
-            self.getTable('inode_option_%d' % subvolItem["id"]).drop()
-            self.getTable('link_%d' % subvolItem["id"]).drop()
-            self.getTable('xattr_%d' % subvolItem["id"]).drop()
+            for tname in (
+                'tree_%d' % subvolItem["id"],
+                'inode_%d' % subvolItem["id"],
+                'inode_hash_block_%d' % subvolItem["id"],
+                'inode_option_%d' % subvolItem["id"],
+                'link_%d' % subvolItem["id"],
+                'xattr_%d' % subvolItem["id"],
+            ):
+                space = self.getTable(tname).getFileSize()
+                self.getTable(tname).drop()
+                freedSpace += space
+
             tableSubvol.delete(subvolItem["id"])
         except Exception as e:
-            self.getLogger().warn("Can't remove subvolume!")
+            self.getLogger().warn("Can't remove subvolume and related tables!")
             self.getLogger().error("E: %s", e)
             import traceback
             self.getLogger().error(traceback.format_exc())
-            return
+
+        self.print_msg("freed space: %s\n" % format_size(freedSpace))
 
         self.getManager().getManager().commit()
         self.getManager().getManager().close()
 
-        return
+        return freedSpace
 
     def readonly(self, name, flag=True):
         """
@@ -450,9 +461,11 @@ class Subvolume(object):
 
         return apparentSize
 
-    def get_apparent_size_fast(self, name):
+    def get_apparent_size_fast(self, subvolItem):
 
         tableSubvol = self.getTable('subvolume')
+
+        name = subvolItem["name"]
 
         subvolItem = tableSubvol.find(name)
         if not subvolItem:

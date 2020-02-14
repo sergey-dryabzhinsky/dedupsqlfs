@@ -8,6 +8,7 @@ from datetime import datetime
 from dedupsqlfs.fuse.subvolume import Subvolume
 from dedupsqlfs.lib import constants
 from dedupsqlfs.dt import CleanUpPlan
+from dedupsqlfs.my_formats import format_size
 
 class Snapshot(Subvolume):
 
@@ -77,6 +78,8 @@ class Snapshot(Subvolume):
 
         tableSubvol = self.getTable('subvolume')
 
+        totalSpace = 0
+
         for subvol_id in tableSubvol.get_ids():
 
             subvol = tableSubvol.get(subvol_id)
@@ -90,9 +93,10 @@ class Snapshot(Subvolume):
                 subvolDate = datetime.fromtimestamp(subvol["updated_at"])
 
             if subvolDate < oldDate:
-                self.print_msg("Remove %r snapshot\n" % subvol["name"])
-                self.remove(subvol["name"])
+                freedSpace = self.remove(subvol["name"])
+                totalSpace += freedSpace
 
+        self.print_msg("Total freed space: %s\n" % format_size(totalSpace))
         return
 
     def _parseCleanUpPlan(self, cleanUpPlanStr):
@@ -164,6 +168,8 @@ class Snapshot(Subvolume):
         datesCleanUp.setDates(dates)
         removeDates = datesCleanUp.getRemovedList()
 
+        totalSpace = 0
+
         for subvol_id in tableSubvol.get_ids():
 
             subvol = tableSubvol.get(subvol_id)
@@ -177,9 +183,10 @@ class Snapshot(Subvolume):
                 subvolDate = datetime.fromtimestamp(subvol["updated_at"])
 
             if subvolDate in removeDates:
-                self.print_msg("Remove %r snapshot\n" % subvol["name"])
-                self.remove(subvol["name"])
+                freedSpace = self.remove(subvol["name"])
+                totalSpace += freedSpace
 
+        self.print_msg("Total freed space: %s\n" % format_size(totalSpace))
         return
 
     def count_older_than(self, dateStr, use_last_update_time=False):

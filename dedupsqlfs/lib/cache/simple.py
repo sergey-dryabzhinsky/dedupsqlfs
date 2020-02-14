@@ -58,7 +58,7 @@ class CacheTTLseconds(object):
     
     """
 
-    _max_ttl = 300
+    _max_ttl = 30
 
     _storage = None
 

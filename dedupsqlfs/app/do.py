@@ -645,7 +645,7 @@ def main(): # {{{1
     data.add_argument('--maximum-block-size', dest='maximum_block_size', metavar='BYTES', default=constants.BLOCK_SIZE_MAX, type=int,
                       help="R|Specify the maximum block size in bytes for defragmentation.\n Defaults to %dMB. (@todo)" % (constants.BLOCK_SIZE_MAX/1024/1024,))
 
-    data.add_argument('--verify', dest='verify', action='store_true', help="Verify all stored data hashes. (@todo)")
+    data.add_argument('--verify', dest='verify', action='store_true', help="Verify all stored data hashes.")
 
     # Dynamically check for supported hashing algorithms.
     msg = "Specify the hashing algorithm that will be used to recognize duplicate data blocks: one of %s. Choose wisely - it can't be changed on the fly."

@@ -154,7 +154,7 @@ class Subvolume(object):
                 if checkTree:
                     apparent_size = self.get_apparent_size(subvol)
                 else:
-                    apparent_size = self.get_apparent_size_fast(subvol)
+                    apparent_size = self.get_apparent_size_fast(subvol["name"])
             else:
                 usage = self.get_usage(subvol["name"])
 
@@ -461,11 +461,9 @@ class Subvolume(object):
 
         return apparentSize
 
-    def get_apparent_size_fast(self, subvolItem):
+    def get_apparent_size_fast(self, name):
 
         tableSubvol = self.getTable('subvolume')
-
-        name = subvolItem["name"]
 
         subvolItem = tableSubvol.find(name)
         if not subvolItem:

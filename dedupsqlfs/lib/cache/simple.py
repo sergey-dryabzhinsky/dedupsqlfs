@@ -4,6 +4,7 @@
 """
 
 from time import time
+from dedupsqlfs.lib.cache import TimedCache
 
 """
 @2020-01-17 New cache item interface
@@ -48,7 +49,7 @@ try:
 except:
     pass
 
-class CacheTTLseconds(object):
+class CacheTTLseconds(TimedCache):
     """
     Simple cache storage
     
@@ -64,7 +65,7 @@ class CacheTTLseconds(object):
 
     def __init__(self):
         self._storage = {}
-        pass
+        super().__init__()
 
     def __len__(self):
         return len(self._storage)
@@ -74,10 +75,13 @@ class CacheTTLseconds(object):
         return self
 
     def set(self, key, value):
+        self.startTimer()
         self._storage[ key ] = CacheItem(time(), value)
+        self.stopTimer("set")
         return self
 
     def get(self, key, default=None):
+        self.startTimer()
         # not setted
         now = time()
 
@@ -94,14 +98,18 @@ class CacheTTLseconds(object):
         if key in self._storage:
             self._storage[ key ].c_time = now
 
+        self.stopTimer("get")
         return val
 
     def unset(self, key):
+        self.startTimer()
         if key in self._storage:
             del self._storage[ key ]
+        self.stopTimer("unset")
         return self
 
     def clear(self):
+        self.startTimer()
         now = time()
         count = 0
         for key in set(self._storage.keys()):
@@ -109,4 +117,5 @@ class CacheTTLseconds(object):
             if now - item.c_time > self._max_ttl:
                 del self._storage[key]
                 count += 1
+        self.stopTimer("clear")
         return count

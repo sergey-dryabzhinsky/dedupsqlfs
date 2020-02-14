@@ -7,6 +7,8 @@ from time import time
 import heapq
 import copy
 
+from dedupsqlfs.lib.cache import TimedCache
+
 """
 @2020-01-17 New cache item interface
 
@@ -39,7 +41,7 @@ try:
 except:
     pass
 
-class StorageTimeSize(object):
+class StorageTimeSize(TimedCache):
     """
     Cache storage for inode-block index
 
@@ -72,9 +74,10 @@ class StorageTimeSize(object):
     _inodes = None
     _block_size = 128*1024
 
+
     def __init__(self):
         self._inodes = {}
-        pass
+        super().__init__()
 
     def __len__(self):
         s = 0
@@ -109,6 +112,7 @@ class StorageTimeSize(object):
         @type   block: BytesIO
         @type   writed: bool
         """
+        self.startTimer()
 
         new = False
         if inode not in self._inodes:
@@ -156,9 +160,11 @@ class StorageTimeSize(object):
             block_data.c_written = True
 #            block_data.c_toflush = True
 
+        self.stopTimer("set")
         return self
 
     def get(self, inode, block_number, default=None):
+        self.startTimer()
 
         now = time()
 
@@ -181,9 +187,11 @@ class StorageTimeSize(object):
         # update last request time
         block_data.c_time = now
 
+        self.stopTimer("get")
         return val
 
     def getCachedSize(self, writed=False):
+        self.startTimer()
         size = 0
         for inode in self._inodes.keys():
             for block_data in self._inodes[inode].values():
@@ -191,6 +199,7 @@ class StorageTimeSize(object):
                     continue
 
                 size += len(block_data.c_block.getbuffer())
+        self.stopTimer("getCachedSize")
         return size
 
 
@@ -218,6 +227,7 @@ class StorageTimeSize(object):
         
         @return: bool 
         """
+        self.startTimer()
         canDel = True
         if inode in self._inodes:
             inode_data = self._inodes[inode]
@@ -230,6 +240,7 @@ class StorageTimeSize(object):
                     canDel = False
             if canDel:
                 del self._inodes[inode]
+        self.stopTimer("forget")
         return canDel
 
     def expire(self, inode):
@@ -240,10 +251,12 @@ class StorageTimeSize(object):
         @param inode: 
         @return: 
         """
+        self.startTimer()
         if inode in self._inodes:
             inode_data = self._inodes[inode]
             for bn in inode_data.keys():
                 inode_data[bn].c_time = 0
+        self.stopTimer("expire")
         return
 
     def flush(self, inode):
@@ -253,13 +266,16 @@ class StorageTimeSize(object):
         @param inode: 
         @return: 
         """
+        self.startTimer()
         if inode in self._inodes:
             inode_data = self._inodes[inode]
             for bn in inode_data.keys():
                 inode_data[bn].c_toflush = True
+        self.stopTimer("flush")
         return
 
     def expired(self):
+        self.startTimer()
         now = time()
 
         write_inodes = {}
@@ -301,6 +317,7 @@ class StorageTimeSize(object):
             if not inode_data and inode in self._inodes:
                 del self._inodes[inode]
 
+        self.stopTimer("expired")
         return (read_inodes, write_inodes,)
 
 
@@ -311,6 +328,7 @@ class StorageTimeSize(object):
         @param writed: 
         @return: dict or int 
         """
+        self.startTimer()
 
         now = time()
 
@@ -409,6 +427,7 @@ class StorageTimeSize(object):
             if not inode_data and inode in self._inodes:
                 del self._inodes[inode]
 
+        self.stopTimer("expireByCount")
         return oversize_inodes
 
 
@@ -419,6 +438,7 @@ class StorageTimeSize(object):
         
         @return: dict 
         """
+        self.startTimer()
 
         old_inodes = {}
 
@@ -448,4 +468,5 @@ class StorageTimeSize(object):
                 old_inodes[inode][bn] = copy.copy(block_data)
 
         self._inodes = {}
+        self.stopTimer("clear")
         return old_inodes

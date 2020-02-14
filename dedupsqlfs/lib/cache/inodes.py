@@ -4,6 +4,7 @@
 """
 
 from time import time
+from dedupsqlfs.lib.cache import TimedCache
 
 """
 @2020-01-17 New cache item interface
@@ -35,7 +36,7 @@ try:
 except:
     pass
 
-class InodesTime(object):
+class InodesTime(TimedCache):
     """
     Cache storage for inode raw attributes
 
@@ -54,7 +55,7 @@ class InodesTime(object):
 
     def __init__(self):
         self._inodes = {}
-        pass
+        super().__init__()
 
     def __len__(self):
         s = 0
@@ -72,6 +73,7 @@ class InodesTime(object):
         @type   data: dict
         @type   writed: bool
         """
+        self.startTimer()
 
         new = False
         if inode not in self._inodes:
@@ -92,9 +94,11 @@ class InodesTime(object):
             inode_data.c_written = True
             inode_data.c_toflush = True
 
+        self.stopTimer("set")
         return self
 
     def get(self, inode, default=None):
+        self.startTimer()
 
         now = time()
 
@@ -106,6 +110,7 @@ class InodesTime(object):
             # update last request time
             inode_data.c_time = now
 
+        self.stopTimer("get")
         return inode_data.c_data
 
 
@@ -119,6 +124,8 @@ class InodesTime(object):
 
         @return: tuple(int, dict{ inode: data})
         """
+        self.startTimer()
+
         now = time()
 
         write_inodes = {}
@@ -142,6 +149,7 @@ class InodesTime(object):
 
                 del self._inodes[inode]
 
+        self.stopTimer("expired")
         return (readed_inodes, write_inodes,)
 
 
@@ -149,8 +157,10 @@ class InodesTime(object):
         """
         Do not remove but set flush flag
         """
+        self.startTimer()
         if inode in self._inodes:
             self._inodes[ inode ].c_toflush = True
+        self.stopTimer("flush")
         return self
 
 
@@ -158,12 +168,15 @@ class InodesTime(object):
         """
         Do not remove but expire
         """
+        self.startTimer()
         if inode in self._inodes:
             self._inodes[ inode ].c_time = 0
+        self.stopTimer("expire")
         return self
 
 
     def clear(self):
+        self.startTimer()
         write_inodes = {}
 
         for inode in set(self._inodes.keys()):
@@ -178,4 +191,5 @@ class InodesTime(object):
             write_inodes[inode] = inode_data.c_data.copy()
 
         self._inodes = {}
+        self.stopTimer("clear")
         return write_inodes

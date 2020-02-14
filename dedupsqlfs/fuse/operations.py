@@ -1297,13 +1297,11 @@ class DedupOperations(llfuse.Operations):  # {{{1
     def __get_cached_xattrs(self, inode):
         xattrs = self.cached_xattrs.get(inode)
         if xattrs is None:
-            start_time = time()
             xattrs = self.getTable("xattr").find(inode)
             if xattrs:
                 self.cached_xattrs.set(inode, xattrs)
             else:
                 self.cached_xattrs.set(inode, False)
-            self.time_spent_caching_items += time() - start_time
         return xattrs
 
     def __get_id_by_name(self, name):
@@ -1311,12 +1309,10 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
         name_id = self.cached_names.get(hashlib.md5(name).hexdigest())
         if not name_id:
-            start_time = time()
             name_id = self.getTable("name").find(name)
             if name_id:
                 self.cached_names.set(hashlib.md5(name).hexdigest(), name_id)
                 self.cached_name_ids.set(name_id, name)
-            self.time_spent_caching_items += time() - start_time
         if not name_id:
             self.getLogger().debug("! No name %r found, cant find name.id" % name)
             raise FUSEError(errno.ENOENT)
@@ -1327,12 +1323,10 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
         name = self.cached_name_ids.get(name_id)
         if not name:
-            start_time = time()
             name = self.getTable("name").get(name_id)
             if name:
                 self.cached_names.set(hashlib.md5(name).hexdigest(), name_id)
                 self.cached_name_ids.set(name_id, name)
-            self.time_spent_caching_items += time() - start_time
         if not name:
             self.getLogger().debug("! No name for %r found, cant find name" % name_id)
             raise FUSEError(errno.ENOENT)
@@ -1344,8 +1338,6 @@ class DedupOperations(llfuse.Operations):  # {{{1
         node = self.cached_nodes.get("%i-%s" % (parent_inode, hashlib.md5(name).hexdigest()))
 
         if not node:
-
-            start_time = time()
 
             name_id = self.__get_id_by_name(name)
 
@@ -1361,8 +1353,6 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
             self.cached_nodes.set("%i-%s" % (parent_inode, hashlib.md5(name).hexdigest()), node)
 
-            self.time_spent_caching_items += time() - start_time
-
         return node
 
     def __get_tree_node_by_inode(self, inode):
@@ -1372,16 +1362,12 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
         if not node:
 
-            start_time = time()
-
             node = self.getTable("tree").find_by_inode(inode)
             if not node:
                 self.getLogger().debug("! No inode %i found, cant get tree node", inode)
                 raise FUSEError(errno.ENOENT)
 
             self.cached_nodes.set(inode, node)
-
-            self.time_spent_caching_items += time() - start_time
 
         return node
 
@@ -1399,16 +1385,12 @@ class DedupOperations(llfuse.Operations):  # {{{1
         self.getLogger().logCall('__get_inode_row', '->(inode=%i)', inode_id)
         row = self.cached_attrs.get(inode_id)
         if not row:
-            start_time = time()
-
             row = self.getTable("inode").get(inode_id)
             if not row:
                 self.getLogger().debug("! No inode %i found, cant get row", inode_id)
                 raise FUSEError(errno.ENOENT)
 
             self.cached_attrs.set(inode_id, row)
-
-            self.time_spent_caching_items += time() - start_time
 
         self.getLogger().logCall('__get_inode_row', '<-(row=%r)', row)
         return row
@@ -2047,13 +2029,19 @@ class DedupOperations(llfuse.Operations):  # {{{1
             self.__report_timings()
             self.__report_database_timings()
             self.__report_database_operations()
+            self.__report_cache_timings()
+            self.__report_cache_operations()
             self.getLogger().info(' ' * 79)
 
     def __report_timings(self):  # {{{3
         self.time_spent_logging = self.getLogger().getTimeIn()
+        self.time_spent_caching_items = self.cached_attrs.getAllTimeSpent() + self.cached_xattrs.getAllTimeSpent() + \
+            self.cached_nodes.getAllTimeSpent() + self.cached_names.getAllTimeSpent() + self.cached_name_ids.getAllTimeSpent() + \
+            self.cached_indexes.getAllTimeSpent() + self.cached_blocks.getAllTimeSpent() + self.cached_hash_sizes.getAllTimeSpent() + \
+            self.cached_hash_compress.getAllTimeSpent()
         timings = [
             (self.time_spent_logging, 'Logging debug info'),
-            (self.time_spent_caching_items, 'Caching all items - inodes, tree-nodes, names, xattrs'),
+            (self.time_spent_caching_items, 'Caching all items - inodes, tree-nodes, names, xattrs, indexes, blocks ...'),
             (self.time_spent_interning, 'Interning path components'),
             (self.time_spent_reading, 'Reading data stream'),
             (self.time_spent_writing, 'Writing data stream (cumulative: meta + blocks)'),
@@ -2134,6 +2122,61 @@ class DedupOperations(llfuse.Operations):  # {{{1
             counts.sort(reverse=True)
 
             self.getLogger().info("Database all operations: %s", allcount)
+
+            printed_heading = False
+            for count, description in counts:
+                percentage = 100.0 * count / allcount
+                if percentage >= 0.1:
+                    if not printed_heading:
+                        self.getLogger().info("Cumulative count of operations:")
+                        printed_heading = True
+                    self.getLogger().info(
+                        " - %-*s%s (%.1f%%)", maxdescwidth, description + ':', count, percentage)
+
+    def __report_cache_timings(self):  # {{{3
+        if self.getLogger().isEnabledFor(logging.INFO):
+            timings = []
+            for cn in "cached_attrs", "cached_xattrs", "cached_nodes", "cached_names", "cached_name_ids", \
+                "cached_indexes", "cached_blocks", "cached_hash_sizes", "cached_hash_compress":
+                c = getattr(self, cn)
+
+                opTimes = c.getTimeSpent()
+                for op, timespan in opTimes.items():
+                    timings.append((timespan, 'Cache %r - operation %r timings' % (cn, op,),))
+
+            maxdescwidth = max([len(l) for t, l in timings]) + 3
+            timings.sort(reverse=True)
+
+            alltime = self.time_spent_caching_items
+            self.getLogger().info("Cache all operations timings: %s", format_timespan(alltime))
+
+            printed_heading = False
+            for timespan, description in timings:
+                percentage = 100.0 * timespan / alltime
+                if percentage >= 0.1:
+                    if not printed_heading:
+                        self.getLogger().info("Cumulative timings of slowest caches:")
+                        printed_heading = True
+                    self.getLogger().info(
+                        " - %-*s%s (%.1f%%)", maxdescwidth, description + ':', format_timespan(timespan), percentage)
+
+    def __report_cache_operations(self):  # {{{3
+        if self.getLogger().isEnabledFor(logging.INFO):
+            counts = []
+            allcount = 0
+            for cn in "cached_attrs", "cached_xattrs", "cached_nodes", "cached_names", "cached_name_ids", \
+                "cached_indexes", "cached_blocks", "cached_hash_sizes", "cached_hash_compress":
+                c = getattr(self, cn)
+
+                opCount = c.getOperationsCount()
+                for op, count in opCount.items():
+                    counts.append((count, 'Cache %r - operation %r count' % (cn, op,),))
+                    allcount += count
+
+            maxdescwidth = max([len(l) for t, l in counts]) + 3
+            counts.sort(reverse=True)
+
+            self.getLogger().info("Cache all operations: %s", allcount)
 
             printed_heading = False
             for count, description in counts:

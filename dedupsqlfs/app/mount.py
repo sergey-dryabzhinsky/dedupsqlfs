@@ -51,8 +51,9 @@ def fuse_mount(options, compression_methods=None):
     except Exception:
         import traceback
         err_str = traceback.format_exc()
-        logger = ops.getApplication().getLogger()
-        logger.error(err_str)
+        if ops:
+            logger = ops.getApplication().getLogger()
+            logger.error(err_str)
         print(err_str)
     if ops:
         ops.getManager().close()

@@ -4,6 +4,7 @@
 """
 
 from time import time
+from dedupsqlfs.lib.cache import TimedCache
 
 """
 @2020-01-17 New cache item interface
@@ -31,7 +32,7 @@ try:
 except:
     pass
 
-class IndexTime(object):
+class IndexTime(TimedCache):
     """
     Cache storage for inode-block index
     
@@ -51,16 +52,18 @@ class IndexTime(object):
 
     def __init__(self):
         self._inodes = {}
-        pass
+        super().__init__()
 
     def __len__(self):
         """
         For clear() count
         @return: int
         """
+        self.startTimer()
         s = 0
         for inode in self._inodes:
             s += len(self._inodes[inode])
+        self.stopTimer("__len__")
         return s
 
     def setMaxTtl(self, seconds):
@@ -73,6 +76,7 @@ class IndexTime(object):
         @type   block_number: int
         @type   item: object
         """
+        self.startTimer()
 
         new = False
         if inode not in self._inodes:
@@ -95,9 +99,11 @@ class IndexTime(object):
             hash_data.c_time = time()
         hash_data.c_item = item
 
+        self.stopTimer("set")
         return self
 
     def get(self, inode, block_number, default=None):
+        self.startTimer()
 
         now = time()
 
@@ -111,9 +117,11 @@ class IndexTime(object):
             # update last request time
             hash_data.c_time = now
 
+        self.stopTimer("get")
         return hash_data.c_item
 
     def expireBlock(self, inode, block_number):
+        self.startTimer()
 
         removed = False
 
@@ -128,16 +136,20 @@ class IndexTime(object):
             if not inode_data:
                 removed = True
 
+        self.stopTimer("expireBlock")
         return removed
 
     def expire(self, inode):
+        self.startTimer()
         if inode in self._inodes:
             inode_data = self._inodes[inode]
             for bn in inode_data.keys():
                 inode_data[bn].c_time = 0
+        self.stopTimer("expire")
         return
 
     def expired(self):
+        self.startTimer()
         now = time()
 
         old_inodes = 0
@@ -157,9 +169,12 @@ class IndexTime(object):
             if not inode_data and inode in self._inodes:
                 del self._inodes[inode]
 
+        self.stopTimer("expired")
         return old_inodes
 
     def clear(self):
         count = len(self)
+        self.startTimer()
         self._inodes = {}
+        self.stopTimer("clear")
         return count

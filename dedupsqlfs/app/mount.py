@@ -150,12 +150,12 @@ def main(): # {{{1
 
     grp_cache.add_argument('--no-cache', dest='use_cache', action='store_false', help="Don't use cache in memory and delayed writes to storage.")
     grp_cache.add_argument('--no-cache-flusher', dest='use_cache_flusher', action='store_false', help="Don't use separate cache flusher process. It touches file in mount_point directory. This may prevent FS to umount cleanly.")
-    grp_cache.add_argument('--cache-meta-timeout', dest='cache_meta_timeout', metavar='SECONDS', type=int, default=30, help="Delay flush expired metadata from memory for NUMBER of seconds. Defaults to 30 seconds.")
-    grp_cache.add_argument('--cache-block-write-timeout', dest='cache_block_write_timeout', metavar='SECONDS', type=int, default=30, help="Expire writed data and flush from memory after NUMBER of seconds. Defaults to 30 seconds.")
+    grp_cache.add_argument('--cache-meta-timeout', dest='cache_meta_timeout', metavar='SECONDS', type=int, default=10, help="Delay flush expired metadata from memory for NUMBER of seconds. Defaults to 10 seconds.")
+    grp_cache.add_argument('--cache-block-write-timeout', dest='cache_block_write_timeout', metavar='SECONDS', type=int, default=10, help="Expire writed data and flush from memory after NUMBER of seconds. Defaults to 10 seconds.")
     grp_cache.add_argument('--cache-block-write-size', dest='cache_block_write_size', metavar='BYTES', type=int,
                         default=1024*1024*1024,
                         help="Write cache for blocks: potential size in BYTES. Set to -1 for infinite. Defaults to 1024 MB.")
-    grp_cache.add_argument('--cache-block-read-timeout', dest='cache_block_read_timeout', metavar='SECONDS', type=int, default=30, help="Expire readed data and flush from memory after NUMBER of seconds. Defaults to 30 seconds.")
+    grp_cache.add_argument('--cache-block-read-timeout', dest='cache_block_read_timeout', metavar='SECONDS', type=int, default=10, help="Expire readed data and flush from memory after NUMBER of seconds. Defaults to 10 seconds.")
     grp_cache.add_argument('--cache-block-read-size', dest='cache_block_read_size', metavar='BYTES', type=int,
                         default=1024*1024*1024,
                         help="Readed cache for blocks: potential size in BYTES. Set to -1 for infinite. Defaults to 1024 MB.")
@@ -195,8 +195,8 @@ def main(): # {{{1
                               default=[constants.COMPRESSION_TYPE_NONE], help=msg)
 
     grp_compress.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")
-    grp_compress.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=1024, help="Minimal block data size for compression. Defaults to 1024 bytes. Value -1 means auto - per method absolute minimum. Do not compress if data size is less than BYTES long. If not forced to.")
-    grp_compress.add_argument('--minimal-compress-ratio', dest='compression_minimal_ratio', metavar='RATIO', type=float, default=0.05, help="Minimal data compression ratio. Defaults to 0.05 (5%%). Do not compress if ratio is less than RATIO. If not forced to.")
+    grp_compress.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=512, help="Minimal block data size for compression. Defaults to 512 bytes. Value -1 means auto - per method absolute minimum. Do not compress if data size is less than BYTES long. If not forced to.")
+    grp_compress.add_argument('--minimal-compress-ratio', dest='compression_minimal_ratio', metavar='RATIO', type=float, default=0.01, help="Minimal data compression ratio. Defaults to 0.01 (1%%). Do not store block compressed if ratio is less than RATIO. If not forced to.")
 
     levels = (constants.COMPRESSION_LEVEL_DEFAULT, constants.COMPRESSION_LEVEL_FAST, constants.COMPRESSION_LEVEL_NORM, constants.COMPRESSION_LEVEL_BEST)
 

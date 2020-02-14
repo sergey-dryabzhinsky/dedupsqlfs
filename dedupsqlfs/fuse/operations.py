@@ -67,7 +67,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
         self.cache_gc_block_writeSize_last_run = time()
         self.cache_gc_block_read_last_run = time()
         self.cache_gc_block_readSize_last_run = time()
-        self.cache_meta_timeout = 20
+        self.cache_meta_timeout = 10
         self.cache_block_write_timeout = 10
         self.cache_block_read_timeout = 10
         self.cache_block_write_size = -1

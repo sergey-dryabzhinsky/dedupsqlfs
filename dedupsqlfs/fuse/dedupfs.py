@@ -230,7 +230,7 @@ class DedupFS(object): # {{{1
             # Real signal, try to umount FS
             self.getLogger().warning("Catch signal %r! Try to umount FS!", signum)
             try:
-                ret = subprocess.Popen(["umount", self.mountpoint]).wait()
+                ret = subprocess.Popen(["umount", self.mountpoint], stdout=open(os.devnull, "w+"), stderr=open(os.devnull, "w+")).wait()
                 if ret == 0:
                     return
             except:
@@ -247,7 +247,7 @@ class DedupFS(object): # {{{1
             pass
 
         try:
-            subprocess.Popen(["umount", "-l", self.mountpoint]).wait()
+            subprocess.Popen(["umount", "-l", self.mountpoint], stdout=open(os.devnull, "w+"), stderr=open(os.devnull, "w+")).wait()
         except:
             pass
 

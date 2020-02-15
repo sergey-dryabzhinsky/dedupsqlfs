@@ -195,7 +195,12 @@ class DedupOperations(llfuse.Operations):  # {{{1
     def getTable(self, table_name):
         if self.mounted_subvolume and table_name in ("tree", "inode", "link", "xattr", "inode_hash_block", "inode_option"):
             table_name += "_%d" % self.mounted_subvolume["id"]
-        return self.getManager().getTable(table_name)
+        t = self.getManager().getTable(table_name)
+        if self.getOption("verbosity") < 2:
+            t.setEnableTimers(False)
+        else:
+            t.setEnableTimers()
+        return t
 
     def getApplication(self):
         return self.application
@@ -531,6 +536,27 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 self.cache_meta_timeout = self.getOption("cache_meta_timeout")
             if self.getOption("flush_interval") is not None:
                 self.flush_interval = self.getOption("flush_interval")
+
+            if self.getOption("verbosity") < 2:
+                self.cached_blocks.setEnableTimers(False)
+                self.cached_indexes.setEnableTimers(False)
+                self.cached_nodes.setEnableTimers(False)
+                self.cached_names.setEnableTimers(False)
+                self.cached_name_ids.setEnableTimers(False)
+                self.cached_attrs.setEnableTimers(False)
+                self.cached_xattrs.setEnableTimers(False)
+                self.cached_hash_sizes.setEnableTimers(False)
+                self.cached_hash_compress.setEnableTimers(False)
+            else:
+                self.cached_blocks.setEnableTimers()
+                self.cached_indexes.setEnableTimers()
+                self.cached_nodes.setEnableTimers()
+                self.cached_names.setEnableTimers()
+                self.cached_name_ids.setEnableTimers()
+                self.cached_attrs.setEnableTimers()
+                self.cached_xattrs.setEnableTimers()
+                self.cached_hash_sizes.setEnableTimers()
+                self.cached_hash_compress.setEnableTimers()
 
             if not self.cache_enabled:
                 self.cached_blocks.setMaxReadTtl(0)

@@ -7,6 +7,7 @@ Special action to vacuum all databases
 __author__ = 'sergey'
 
 from time import time
+from datetime import datetime
 
 from dedupsqlfs.my_formats import format_timespan, format_size
 
@@ -37,6 +38,8 @@ def forced_vacuum(app):
     sz = 0
     dbsz = 0
 
+    opts = app.operations.getTable('option')
+
     hsz = app.operations.getTable('hash_sizes')
     pagesz = hsz.get_mean_compressed_size()
     bt = app.operations.getTable('block')
@@ -46,6 +49,15 @@ def forced_vacuum(app):
         dbsz += app.operations.getTable(table_name).getFileSize()
     for table_name in app.operations.getManager().tables:
         sz += __vacuum_datatable(app, table_name)
+
+    curDT = datetime.now().isoformat()
+    lastV = opts.get("last_vacuum")
+    if not lastV:
+        opts.insert("last_vacuum", curDT)
+    else:
+        opts.update("last_vacuum", curDT)
+    opts.commit()
+
     elapsed_time = time() - start_time
 
     diffSign = ''
@@ -64,6 +76,7 @@ def forced_vacuum(app):
         app.getLogger().info("Total DB size change after vacuum: %s%.2f%% (%s%s)",
                          diffSign, abs(sz) * 100.0 / dbsz, diffSign, prsz)
         app.getLogger().info("Finished data vacuum in %s.", format_timespan(elapsed_time))
+
     return
 
 def do_vacuum(options, _fuse):

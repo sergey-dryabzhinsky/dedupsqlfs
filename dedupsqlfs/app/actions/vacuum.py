@@ -45,8 +45,8 @@ def forced_vacuum(app, options):
     if lastV:
         lastDT = datetime.strptime(lastV, "%Y-%m-%dT%H:%M:%S.%f")
         dt = curDT - lastDT
-        if options["vacuum_older_than"] > 0:
-            if dt.days < options["vacuum_older_than"]:
+        if options.vacuum_older_than > 0:
+            if dt.days < options.vacuum_older_than:
                 app.getLogger().info("Last vacuum was only %s days ago. Skip action..." % dt.days)
                 return
 

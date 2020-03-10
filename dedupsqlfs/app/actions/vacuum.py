@@ -27,7 +27,7 @@ def __vacuum_datatable(app, tableName):  # {{{4
     app.getLogger().debug(msg, format_timespan(elapsed_time))
     return sz
 
-def forced_vacuum(app):
+def forced_vacuum(app, options):
     """
     @param app:
     @type app: dedupsqlfs.fuse.dedupfs.DedupFS
@@ -39,6 +39,16 @@ def forced_vacuum(app):
     dbsz = 0
 
     opts = app.operations.getTable('option')
+    lastV = opts.get("last_vacuum")
+    curDT = datetime.now()
+    curDTiso = curDT.isoformat()
+    if lastV:
+        lastDT = datetime.strptime(lastV, "%Y-%m-%dT%H:%M:%S.%f")
+        dt = curDT - lastDT
+        if options["vacuum_older_than"] > 0:
+            if dt.days < options["vacuum_older_than"]:
+                app.getLogger().info("Last vacuum was only %s days ago. Skip action..." % dt.days)
+                return
 
     hsz = app.operations.getTable('hash_sizes')
     pagesz = hsz.get_mean_compressed_size()
@@ -50,12 +60,10 @@ def forced_vacuum(app):
     for table_name in app.operations.getManager().tables:
         sz += __vacuum_datatable(app, table_name)
 
-    curDT = datetime.now().isoformat()
-    lastV = opts.get("last_vacuum")
     if not lastV:
-        opts.insert("last_vacuum", curDT)
+        opts.insert("last_vacuum", curDTiso)
     else:
-        opts.update("last_vacuum", curDT)
+        opts.update("last_vacuum", curDTiso)
     opts.commit()
 
     elapsed_time = time() - start_time
@@ -89,5 +97,5 @@ def do_vacuum(options, _fuse):
     @param _fuse: FUSE wrapper
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
-    forced_vacuum(_fuse)
+    forced_vacuum(_fuse, options)
     return 0

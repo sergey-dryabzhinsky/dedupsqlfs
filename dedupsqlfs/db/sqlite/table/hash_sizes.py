@@ -94,6 +94,7 @@ class TableHashSizes( Table ):
 
         isum = item["s"]
         if not isum:
+            self.stopTimer('get_median_compressed_size')
             return 0
 
         cur.execute("SELECT COUNT(1) AS `c` FROM `%s`" % self.getName())
@@ -101,6 +102,7 @@ class TableHashSizes( Table ):
 
         icount = item["c"]
         if not icount:
+            self.stopTimer('get_median_compressed_size')
             return 0
 
         need_sum = isum / 2
@@ -116,5 +118,31 @@ class TableHashSizes( Table ):
 
         self.stopTimer('get_median_compressed_size')
         return comp_size
+
+    def get_mean_compressed_size(self):
+        self.startTimer()
+
+        cur = self.getCursor()
+
+        cur.execute("SELECT SUM(`compressed_size`) AS `s` FROM `%s`" % self.getName())
+        item = cur.fetchone()
+
+        isum = item["s"]
+        if not isum:
+            self.stopTimer('get_mean_compressed_size')
+            return 0
+
+        cur.execute("SELECT COUNT(1) AS `c` FROM `%s`" % self.getName())
+        item = cur.fetchone()
+
+        icount = item["c"]
+        if not icount:
+            self.stopTimer('get_mean_compressed_size')
+            return 0
+
+        result = isum / icount
+
+        self.stopTimer('get_mean_compressed_size')
+        return result
 
     pass

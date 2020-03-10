@@ -110,4 +110,9 @@ class TableHashSizes( Table ):
         self.stopTimer('get_median_compressed_size')
         return 0
 
+    def get_mean_compressed_size(self):
+        self.startTimer()
+        self.stopTimer('get_mean_compressed_size')
+        return 0
+
     pass

@@ -421,7 +421,7 @@ class Table( object ):
         p2 = subprocess.Popen([
             "sqlite3",
             "-cmd",
-            "PRAGMA page_size=%i; PRAGMA synchronous=OFF; PRAGMA max_page_count=2147483646;" % pageSize,
+            "PRAGMA page_size=%i; PRAGMA synchronous=OFF; PRAGMA journal_mode=OFF; PRAGMA locking_mode=EXCLUSIVE; PRAGMA count_changes=OFF; PRAGMA max_page_count=2147483646;" % pageSize,
             fn
         ], stdin=p1.stdout, stdout=open(os.devnull,"w"))
 

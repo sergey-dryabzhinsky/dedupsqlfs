@@ -73,7 +73,7 @@ In the current implementation a file's content DON'T needs to fit in a [cStringI
  drop caches more friquently, on massive reads.
 
 There is limit of SQLite database size: about 4 TB with default settings of `pages_count` (2**30) * `page_size` (4096).
- And `page_size` can be set up to 64kB, so database file theoreticaly limited by 64 TB.
+ And `page_size` can be set up to 64kB, so database file theoreticaly limited by 140 TB.
  Size of `page_size` would be adjusted automaticaly depends on database file size, or median of written block size.
 
 Note: dynamic subvolume and snapshot creation available only with MySQL storage engine.

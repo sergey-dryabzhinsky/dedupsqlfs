@@ -51,7 +51,7 @@ def forced_vacuum(app, options):
                 return
 
     hsz = app.operations.getTable('hash_sizes')
-    pagesz = hsz.get_mean_compressed_size()
+    pagesz = hsz.get_median_compressed_size()
     bt = app.operations.getTable('block')
     bt.setPageSize(pagesz)
 

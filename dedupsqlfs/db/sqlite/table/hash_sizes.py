@@ -89,35 +89,17 @@ class TableHashSizes( Table ):
 
         cur = self.getCursor()
 
-        cur.execute("SELECT SUM(`compressed_size`) AS `s` FROM `%s`" % self.getName())
-        item = cur.fetchone()
-
-        isum = item["s"]
-        if not isum:
-            self.stopTimer('get_median_compressed_size')
-            return 0
-
-        cur.execute("SELECT COUNT(1) AS `c` FROM `%s`" % self.getName())
-        item = cur.fetchone()
-
-        icount = item["c"]
-        if not icount:
-            self.stopTimer('get_median_compressed_size')
-            return 0
-
-        need_sum = isum / 2
-
-        cur_sum = 0
-        comp_size = 0
-        cur.execute("SELECT `compressed_size` FROM `%s` ORDER BY `compressed_size`" % self.getName())
+        csizes = []
+        cur.execute("SELECT `compressed_size` AS `s` FROM `%s`" % self.getName())
         for _i in iter(cur.fetchone, None):
-            cur_sum += _i["compressed_size"]
-            if cur_sum > need_sum:
-                break
-            comp_size = _i["compressed_size"]
+            csizes.append(_i["s"])
+
+        from dedupsqlfs.my_math import quickselect_median
+
+        median = quickselect_median(csizes)
 
         self.stopTimer('get_median_compressed_size')
-        return comp_size
+        return median
 
     def get_mean_compressed_size(self):
         self.startTimer()

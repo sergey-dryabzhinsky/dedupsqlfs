@@ -51,9 +51,11 @@ def forced_vacuum(app, options):
                 return
 
     hsz = app.operations.getTable('hash_sizes')
-    pagesz = hsz.get_mean_compressed_size()
+    pagesz = hsz.get_median_compressed_size()
     bt = app.operations.getTable('block')
     bt.setPageSize(pagesz)
+
+    app.getLogger().info("Selected block table page size is: %s" % format_size(bt.getPageSize()))
 
     for table_name in app.operations.getManager().tables:
         dbsz += app.operations.getTable(table_name).getFileSize()

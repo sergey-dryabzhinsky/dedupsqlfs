@@ -55,6 +55,8 @@ def forced_vacuum(app, options):
     bt = app.operations.getTable('block')
     bt.setPageSize(pagesz)
 
+    app.getLogger().info("Selected block table page size is: %s" % format_size(bt.getPageSize()))
+
     for table_name in app.operations.getManager().tables:
         dbsz += app.operations.getTable(table_name).getFileSize()
     for table_name in app.operations.getManager().tables:

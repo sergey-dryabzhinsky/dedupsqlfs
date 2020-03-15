@@ -10,17 +10,8 @@ def nlogn_median(l):
     half = ll // 2
     l.sort()
     if not ll % 2:
-        return (l[half - 1] + l[half]) / 2.0
+        return (l[half - 1] + l[half]) * 0.5
     return l[half]
-
-# pivot_fn may be random.choice
-def quickselect_median(l, pivot_fn=pick_pivot):
-    ll = len(l)
-    if ll % 2 == 1:
-        return quickselect(l, ll / 2, pivot_fn)
-    else:
-        return 0.5 * (quickselect(l, ll / 2 - 1, pivot_fn) +
-                      quickselect(l, ll / 2, pivot_fn))
 
 def quickselect(l, k, pivot_fn):
     """
@@ -88,6 +79,16 @@ def pick_pivot(l):
     # quickselect. O(n)
     median_of_medians = quickselect_median(medians, pick_pivot)
     return median_of_medians
+
+# pivot_fn may be random.choice
+def quickselect_median(l, pivot_fn=pick_pivot):
+    ll = len(l)
+    half = ll // 2
+    if ll % 2 == 1:
+        return quickselect(l, half, pivot_fn)
+    else:
+        return 0.5 * (quickselect(l, half - 1, pivot_fn) +
+                      quickselect(l, half, pivot_fn))
 
 def chunked(l, chunk_size):
     """Разделяем список `l` на фрагменты размером `chunk_size`."""

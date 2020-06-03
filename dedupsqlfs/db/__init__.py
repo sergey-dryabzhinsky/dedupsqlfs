@@ -11,6 +11,7 @@ def check_engines():
         engines += ('sqlite',)
     except:
         pass
+
     try:
         import pymysql
 
@@ -18,6 +19,12 @@ def check_engines():
 
         if len(get_table_engines()):
             engines += ('mysql',)
+    except:
+        pass
+
+    try:
+        import psycopg2
+        engines += ('pgsql',)
     except:
         pass
 

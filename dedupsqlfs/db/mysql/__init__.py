@@ -15,10 +15,12 @@ def get_table_engines():
     try:
         output = subprocess.check_output([mysqld_bin, "--verbose", "--help"], stderr=subprocess.DEVNULL)
         table_engines = ['MyISAM', 'InnoDB',]
-        if output.find(b'aria'):
+        if output.find(b'--aria[='):
             table_engines.append('Aria')
-        if output.find(b'tokudb'):
+        if output.find(b'--tokudb[='):
             table_engines.append('TokuDB')
+        if output.find(b'--rocksdb[='):
+            table_engines.append('RocksDB')
     except:
         # No MySQL?
         table_engines = ()

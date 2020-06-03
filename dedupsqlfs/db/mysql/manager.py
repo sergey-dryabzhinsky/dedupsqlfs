@@ -287,13 +287,16 @@ class DbManager( object ):
 
             self._is_mariadb = False
             has_tokudb = False
+            has_rocksdb = False
 
             output = subprocess.check_output(["mysqld", "--verbose", "--help"], stderr=subprocess.DEVNULL)
 
             if output.find(b'MariaDB'):
                 self._is_mariadb = True
-            if output.find(b'tokudb'):
+            if output.find(b'--tokudb'):
                 has_tokudb = True
+            if output.find(b'--rocksdb'):
+                has_rocksdb = True
 
             cmd_opts = [
                 "--basedir=/usr",
@@ -390,6 +393,7 @@ class DbManager( object ):
 
                 if self._table_engine == "TokuDB":
                     cmd_opts.extend([
+                        "--plugin-load-add=ha_tokudb",
                         "--tokudb-block-size=16k",
                         "--tokudb-loader-memory-size=%dM" % (self._buffer_size/1024/1024),
                         "--tokudb-directio=1"
@@ -397,6 +401,17 @@ class DbManager( object ):
                 elif has_tokudb:
                     cmd_opts.extend([
                         "--tokudb=OFF",
+                    ])
+
+                if self._table_engine == "RocksDB":
+                    cmd_opts.extend([
+                        "--plugin-load-add=ha_rocksdb",
+                        "--rocksdb-use-direct-io-for-flush-and-compaction=1",
+                        "--rocksdb-use-direct-reads=1"
+                    ])
+                elif has_rocksdb:
+                    cmd_opts.extend([
+                        "--rocksdb=OFF",
                     ])
 
                 if self._table_engine == "Aria":

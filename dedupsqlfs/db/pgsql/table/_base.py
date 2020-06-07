@@ -4,8 +4,6 @@ __author__ = 'sergey'
 
 from time import time
 import sys
-import pymysql
-import pymysql.cursors
 from dedupsqlfs.log import logging
 from dedupsqlfs.my_formats import format_size
 
@@ -13,15 +11,6 @@ class Table( object ):
 
     _conn = None
     _curr = None
-
-    # InnoDB, MyISAM, Aria, TokuDB
-    _engine = "MyISAM"
-    # Only InnoDB, TokuDB
-    _compressed = True
-    # Only for TokuDB: default, zlib, fast, quicklz, small, lzma, uncompressed
-    _toku_compression = "small"
-    # Only InnoDB
-    _key_block_size = 8
 
     _table_name = None
     _manager = None
@@ -54,27 +43,6 @@ class Table( object ):
     def setEnableTimers(self, flag=True):
         self._enable_timers = flag is True
         return self
-
-    def _getCreationAppendString(self):
-        _cs = " Engine=" + self._engine
-        if self._engine == "InnoDB":
-            _cs += " KEY_BLOCK_SIZE=%d" % self._key_block_size
-            if self._compressed:
-                if self._manager.getIsMariaDB():
-                    _cs += " ROW_FORMAT=DYNAMIC ROW_COMPRESSED=1"
-                else:
-                    _cs += " ROW_FORMAT=COMPRESSED"
-            _cs += ";"
-        if self._engine == "TokuDB":
-            if not self._compressed:
-                _cs += " COMPRESSION=tokudb_uncompressed;"
-            elif self._toku_compression:
-                _cs += " COMPRESSION=tokudb_%s;" % self._toku_compression
-        if self._engine == "Aria":
-            _cs += " TRANSACTIONAL=0 PAGE_CHECKSUM=0 TABLE_CHECKSUM=0;"
-        if self._engine == "MyISAM":
-            _cs += " CHECKSUM=0;"
-        return _cs
 
     def getOperationsCount(self):
         return self._op_count
@@ -143,7 +111,7 @@ class Table( object ):
 
     def getManager(self):
         """
-        @rtype L{dedupsqlfs.db.mysql.manager.DbManager}
+        @rtype L{dedupsqlfs.db.pgsql.manager.DbManager}
         """
         return self._manager
 
@@ -175,13 +143,10 @@ class Table( object ):
         return self
 
     def getSize(self):
-        cursor_type = pymysql.cursors.DictCursor
-        conn = self.getManager().getConnection(True)
-        cur = conn.cursor(cursor_type)
-        cur.execute("SELECT SUM( `data_length` + `index_length` ) AS `size` FROM `information_schema`.`TABLES` WHERE `table_schema`=%s AND `table_name`=%s GROUP BY `table_name`", (self.getManager().getDbName(), self.getName()))
+        cur = self.getCursor()
+        cur.execute("SELECT pg_total_relation_size('%s')", (self.getName(),))
         row = cur.fetchone()
         cur.close()
-        conn.close()
         if row:
             return int(row["size"])
         return 0
@@ -191,7 +156,7 @@ class Table( object ):
 
         cur.execute(
             "SELECT COUNT(1) AS `TableIsThere` "+
-            "FROM `INFORMATION_SCHEMA`.`STATISTICS` "+
+            "FROM `information_schema`.`tables` "+
             "WHERE `table_schema` = %s "+
             "AND   `table_name`   = %s;",
             (self.getManager().getDbName(), self.getName())
@@ -207,10 +172,10 @@ class Table( object ):
 
         cur.execute(
             "SELECT COUNT(1) AS `FieldIsThere` " +
-            "FROM `INFORMATION_SCHEMA`.`COLUMNS` " +
-            "WHERE `TABLE_SCHEMA` = %s " +
-            "AND   `TABLE_NAME`   = %s " +
-            "AND   `COLUMN_NAME`  = %s;",
+            "FROM `information_schema`.`columns` " +
+            "WHERE `table_schema` = %s " +
+            "AND   `table_name`   = %s " +
+            "AND   `column_name`  = %s;",
             (self.getManager().getDbName(), self.getName(), fname,)
         )
         row = cur.fetchone()

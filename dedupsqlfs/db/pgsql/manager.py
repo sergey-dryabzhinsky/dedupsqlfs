@@ -8,6 +8,7 @@ from datetime import datetime
 import subprocess
 
 import psycopg2
+from psycopg2.extras import NamedTupleCursor
 
 class DbManager( object ):
 
@@ -26,14 +27,12 @@ class DbManager( object ):
     _pass = ""
 
     _conn = None
+    """
+    @ivar _conn: Connection
+    @type _conn: psycopg2.connection
+    """
 
     _log = None
-
-    _pgsqld_proc = None
-    """
-    @ivar _pgsqld_proc:
-    @type _pgsqld_proc: L{subprocess.Popen}
-    """
 
     _buffer_size = 512*1024*1024
     """
@@ -83,15 +82,13 @@ class DbManager( object ):
         Change startup defaults
         """
         self._synchronous = flag == True
-        if self._mysqld_proc:
+        if self.statusPgSqld():
             conn = self.getConnection(True)
             cur = conn.cursor()
             if flag:
-                cur.execute("SET GLOBAL innodb_flush_log_at_trx_commit=1")
-                cur.execute("SET GLOBAL flush=1")
+                cur.execute("SET synchronous_commit TO ON")
             else:
-                cur.execute("SET GLOBAL innodb_flush_log_at_trx_commit=2")
-                cur.execute("SET GLOBAL flush=0")
+                cur.execute("SET synchronous_commit TO OFF")
             cur.close()
         return self
 
@@ -103,13 +100,13 @@ class DbManager( object ):
         Change startup defaults
         """
         self._autocommit = flag == True
-        if self._mysqld_proc:
+        if self.statusPgSqld():
             conn = self.getConnection(True)
             cur = conn.cursor()
             if flag:
-                cur.execute("SET GLOBAL autocommit=1")
+                cur.execute("SET autocommit TO ON")
             else:
-                cur.execute("SET GLOBAL autocommit=0")
+                cur.execute("SET autocommit TO OFF")
             cur.close()
         return self
 
@@ -138,10 +135,6 @@ class DbManager( object ):
 
     def getPassword(self):
         return self._pass
-
-
-    def getIsMariaDB(self):
-        return self._is_mariadb
 
 
     def getTable(self, name, nocreate=False):
@@ -247,251 +240,248 @@ class DbManager( object ):
         return s
 
 
+    def statusPgSqld(self):
+
+        outputfile = self.getBasePath() + "/console.log"
+
+        datadir = self.getBasePath() + "/pgsql-db-data"
+        if not os.path.isdir(datadir):
+            return False
+
+        cmd = [
+            "/usr/lib/postgresql/12/bin/pg_ctl",
+            "-D",
+            datadir,
+            "-l",
+            "pgsql.log",
+            "status"
+        ]
+
+        self.getLogger().info("Check up PgSQLd status...")
+
+        self.getLogger().debug("CMD: %r" % (cmd,))
+
+        of = open(outputfile, 'a')
+        of.write("\n---=== %s ===---\n" % datetime.now())
+        retcode = subprocess.Popen(
+            cmd,
+            cwd=self.getBasePath(),
+            stdout=of,
+            stderr=subprocess.STDOUT
+        ).wait()
+
+        return retcode == 0
+
+
     def startPgSqld(self):
-        if self._pgsqld_proc is None:
+        if self.statusPgSqld():
+            return True
 
-            setupfile = self.getBasePath() + "/setup.log"
-            outputfile = self.getBasePath() + "/console.log"
-            errorfile = self.getBasePath() + "/error.log"
-            slowlogfile = self.getBasePath() + "/slow.log"
-            pidfile = self.getBasePath() + "/pgsql.pid"
-            self._socket = self.getBasePath() + "/pgsql.sock"
+        setupfile = self.getBasePath() + "/setup.log"
+        outputfile = self.getBasePath() + "/console.log"
 
-            if os.path.exists(self._socket):
-                self._notmeStarted = True
-                return True
+        if os.path.exists(self._socket):
+            self._notmeStarted = True
+            return True
 
-            tmpdir = self.getBasePath() + "/tmp"
-            if not os.path.isdir(tmpdir):
-                os.makedirs(tmpdir, 0o0750)
+        tmpdir = self.getBasePath() + "/tmp"
+        if not os.path.isdir(tmpdir):
+            os.makedirs(tmpdir, 0o0750)
 
-            is_new = False
-            datadir = self.getBasePath() + "/pgsql-db-data"
-            if not os.path.isdir(datadir):
-                is_new = True
-                os.makedirs(datadir, 0o0750)
+        is_new = False
+        datadir = self.getBasePath() + "/pgsql-db-data"
+        if not os.path.isdir(datadir):
+            is_new = True
+            os.makedirs(datadir, 0o0750)
 
-            output = subprocess.check_output(["mysqld", "--verbose", "--help"], stderr=subprocess.DEVNULL)
+        if is_new:
 
-            cmd_opts = [
-                "--basedir=/usr",
-                "--datadir=%s" % datadir,
-                "--tmpdir=%s" % tmpdir,
-                "--plugin-dir=/usr/lib/mysql/plugin",       # Linux / Debian specific?
-                "--log-error=%s" % errorfile,
-                "--slow-query-log",
-                "--slow-query-log-file=%s" % slowlogfile,
-                "--pid-file=%s" % pidfile,
-                "--skip-grant-tables",                      # Grant root-access
-                "--skip-bind-address",
-                "--skip-networking",
-                "--skip-name-resolve",
-                "--socket=%s" % self.getSocket(),
-                # TODO: options
-                "--connect-timeout=10",
-                "--interactive-timeout=3600",
-                "--wait-timeout=3600",
-                "--tmp-table-size=64M",
-                "--max-heap-table-size=64M",
+            self.getLogger().info("Setup new PgSQL system databases")
+
+            cmd = [
+                "/usr/lib/postgresql/12/bin/initdb",
+                "--pgdata='%s'" % datadir,
+                "--locale=en_US.UTF-8",
+                "--username=postgres"
             ]
-
-            if os.geteuid() == 0:
-                cmd_opts.append("--user=mysql")
-                for f in (self.getBasePath(), tmpdir, datadir, setupfile, errorfile, outputfile, slowlogfile, pidfile, self.getSocket(),):
-                    if os.path.exists(f):
-                        subprocess.Popen([
-                            "chown",
-                            "mysql:mysql",
-                            f
-                        ]).wait()
-
-            if self.getAutocommit():
-                cmd_opts.append("--autocommit")
-            else:
-                cmd_opts.append("--skip-autocommit")
-
-            if self.getSynchronous():
-                cmd_opts.append("--flush")
-                cmd_opts.append("--innodb-flush-log-at-trx-commit=1")
-            else:
-                cmd_opts.append("--innodb-flush-log-at-trx-commit=2")
-
-            cmd_opts.extend([
-                "--big-tables",
-                # TODO: warn about hugetlbfs mount and sysctl setup
-                #"--large-pages",
-
-                "--query-cache-min-res-unit=1k",
-                "--query-cache-limit=4M",
-                "--query-cache-size=64M",
-                "--max-allowed-packet=32M",
-            ])
-
-            if is_new:
-
-                self.getLogger().info("Setup new PgSQL system databases")
-
-                cmd = ["mysql_install_db"]
-                cmd.extend(cmd_opts)
-
-                self.getLogger().debug("CMD: %r" % (cmd,))
-
-                sf = open(setupfile, 'a')
-                sf.write("\n---=== %s ===---\n" % datetime.now())
-                retcode = subprocess.Popen(
-                    cmd,
-                    cwd=self.getBasePath(),
-                    stdout=sf,
-                    stderr=subprocess.STDOUT
-                ).wait()
-                sf.close()
-                if retcode:
-                    self.getLogger().error("Something wrong! Return code: %s" % retcode)
-                    return False
-
-            cmd = ["mysqld"]
-            cmd.extend(cmd_opts)
-
-            self.getLogger().info("Starting up PgSQLd...")
 
             self.getLogger().debug("CMD: %r" % (cmd,))
 
-            of = open(outputfile, 'a')
-            of.write("\n---=== %s ===---\n" % datetime.now())
-            self._mysqld_proc = subprocess.Popen(
+            sf = open(setupfile, 'a')
+            sf.write("\n---=== %s ===---\n" % datetime.now())
+            retcode = subprocess.Popen(
                 cmd,
                 cwd=self.getBasePath(),
-                stdout=of,
+                stdout=sf,
                 stderr=subprocess.STDOUT
-            )
-
-            t = 30
-            self.getLogger().info("Wait up %s sec for server to start, or til ping is pong..." % t)
-            while (t>0):
-                sleep(0.1)
-
-                if os.path.exists(self.getSocket()):
-                    if self.pingServer():
-                        break
-                if self._mysqld_proc.poll() is not None:
-                    break
-
-                t -= 0.1
-
-
-            if self._mysqld_proc.poll() is not None:
-                self.getLogger().error("Something wrong? mysqld exited with: %s" % self._mysqld_proc.poll() )
-                self._mysqld_proc = None
-                of.close()
+            ).wait()
+            sf.close()
+            if retcode:
+                self.getLogger().error("Something wrong! Return code: %s" % retcode)
                 return False
 
-            self.getLogger().info("Done in %s seconds." % t)
+            # Update postgresql.conf
+            cf = open(datadir + '/postgresql.conf', 'r')
+            lines = cf.readlines()
+            cf.close()
+            newlines = []
+            for line in lines:
+                if line.startswith("#listen_addresses"):
+                    line = line.replace("#listen_addresses", "listen_addresses")
+                    line = line.replace("localhost", "")
+                if line.startswith("#unix_socket_directories"):
+                    line = line.replace("#unix_socket_directories", "unix_socket_directories")
+                    line = line.replace("/var/run/postgresql", "./")
+                if line.startswith("#unix_socket_permissions"):
+                    line = line.replace("#unix_socket_permissions", "unix_socket_permissions")
+                    line = line.replace("0777", "0700")
+                if line.startswith("#wal_compression"):
+                    line = line.replace("#wal_compression", "wal_compression")
+                    line = line.replace("off", "on")
+                if line.startswith("shared_buffers"):
+                    line = line.replace("128MB", "%dMB" % (self._buffer_size/1024/1024))
+                newlines.append(line)
+            cf = open(datadir + '/postgresql.conf', 'w+')
+            cf.writelines(newlines)
+            cf.close()
 
-            self.createDb()
+        self._socket = datadir + "/.s.PGSQL.5432"
+
+        cmd = [
+            "/usr/lib/postgresql/12/bin/pg_ctl",
+            "-D",
+            datadir,
+            "-l",
+            "pgsql.log",
+            "start"
+        ]
+
+        self.getLogger().info("Starting up PgSQLd...")
+
+        self.getLogger().debug("CMD: %r" % (cmd,))
+
+        of = open(outputfile, 'a')
+        of.write("\n---=== %s ===---\n" % datetime.now())
+        subprocess.Popen(
+            cmd,
+            cwd=self.getBasePath(),
+            stdout=of,
+            stderr=subprocess.STDOUT
+        )
+
+        t = 30
+        self.getLogger().info("Wait up %s sec for server to start, or til ping is pong..." % t)
+        while (t>0):
+            sleep(1)
+
+            if os.path.exists(self.getSocket()):
+                if self.pingServer():
+                    break
+
+            if self.statusPgSqld():
+                break
+
+            t -= 1
+
+
+        if not self.statusPgSqld():
+            self.getLogger().error("Something wrong? postgresql not started in 30 seconds!" )
+            of.close()
+            return False
+
+        self.getLogger().info("Done in %s seconds." % t)
+
+        self.createDb()
+
+
+    def stopPgSqld(self):
+
+        if self._notmeStarted:
+            self._notmeStarted = False
+            return True
+
+        if not self.statusPgSqld():
+            return True
+
+
+        datadir = self.getBasePath() + "/pgsql-db-data"
+        outputfile = self.getBasePath() + "/console.log"
+
+        cmd = [
+            "/usr/lib/postgresql/12/bin/pg_ctl",
+            "-D",
+            datadir,
+            "-l",
+            "pgsql.log",
+            "stop"
+        ]
+
+        self.getLogger().info("Call PgSQLd shutdown")
+
+        of = open(outputfile, "a")
+        of.write("\n---=== %s ===---\n" % datetime.now())
+        ret = subprocess.Popen(
+            cmd,
+            cwd=self.getBasePath(),
+            stdout=of, stderr=subprocess.STDOUT
+        ).wait()
+        of.close()
+
+        if ret:
+            self.getLogger().warning("Call PgCtl returned code=%r! Something wrong!" % ret)
+            return False
+
+        t = 30
+        self.getLogger().info("Wait up %s sec for it to stop..." % t)
+        while (t>0):
+            sleep(1)
+            if not self.statusPgSqld():
+                break
+            t -= 1
+
+        if self.statusPgSqld():
+            self.getLogger().error("Can't stop postgresql!")
+            return False
+
+        self.getLogger().info("Done in %s seconds" % t)
+
+        self._socket = None
 
         return True
 
 
-    def stopPgSqld(self):
-        if self._mysqld_proc is not None:
-
-            if self._notmeStarted:
-                self._notmeStarted = False
-                return True
-
-            outputfile = self.getBasePath() + "/mysqladmin.log"
-
-            cmd = [
-                "mysqladmin",
-                "--user=root",
-                "--socket=%s" % self.getSocket(),
-                "shutdown"
-            ]
-
-            self.getLogger().info("Call MySQLd shutdown")
-
-            of = open(outputfile, "a")
-            of.write("\n---=== %s ===---\n" % datetime.now())
-            ret = subprocess.Popen(
-                cmd,
-                cwd=self.getBasePath(),
-                stdout=of, stderr=subprocess.STDOUT
-            ).wait()
-            of.close()
-
-            if ret:
-                self.getLogger().warning("Call MySQLadmin returned code=%r! Something wrong!" % ret)
-                return False
-
-            t = 30
-            self.getLogger().info("Wait up %s sec for it to stop..." % t)
-            while (t>0):
-                sleep(0.1)
-                if self._mysqld_proc.poll() is not None:
-                    break
-                t -= 0.1
-
-            if self._mysqld_proc.poll() is None:
-                self.getLogger().warning("Terminate MySQLd")
-                self._mysqld_proc.terminate()
-
-                t2 = 5
-                while (t2>0):
-                    sleep(0.1)
-                    if self._mysqld_proc.poll() is not None:
-                        break
-                    t2 -= 0.1
-
-            if self._mysqld_proc.poll() is None:
-                self.getLogger().error("Can't stop mysqld!")
-                return False
-
-            self.getLogger().info("Done in %s seconds" % t)
-
-            self._mysqld_proc = None
-            self._socket = None
-
-            return True
-
-        return False
-
-
-    def getConnection(self, nodb=False):
+    def getConnection(self, nodb=False, new=False):
         """
-        @rtype L{pymysqlConnection}
+        @rtype L{psycopg2.connection}
         """
         if not self.startPgSqld():
             raise RuntimeError("Can't start PostgreSQL server!")
 
         if nodb:
-            conn = psycopg2.connect().connect(unix_socket=self.getSocket(), user=self.getUser(), passwd=self.getPassword())
+            conn = psycopg2.connect(
+                cursor_factory=NamedTupleCursor,
+                user=self.getUser(),
+                password=self.getPassword(),
+            )
         else:
 
-            if self._conn:
+            if self._conn and not new:
                 return self._conn
 
-            conv = pymysql.converters.conversions.copy()
-            conv[246]=float     # convert decimals to floats
-            conv[10]=str        # convert dates to strings
-
-            conn = self._conn = pymysql.connect(
-                unix_socket=self.getSocket(),
+            conn = psycopg2.connect(
+                cursor_factory=NamedTupleCursor,
+                dbname=self.getDbName(),
                 user=self.getUser(),
-                passwd=self.getPassword(),
-                db=self.getDbName(),
-                conv=conv
+                password=self.getPassword(),
             )
-            self._conn.autocommit(self.getAutocommit())
+            if not new and not self._conn:
+                self._conn = conn
 
-        cur = conn.cursor()
-        if not self.getAutocommit():
-            cur.execute("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED")
-        cur.close()
-
+        conn.set_session(autocommit = self.getAutocommit())
         return conn
 
     def getCursor(self, new=False):
-        cur = self.getConnection().cursor(cursor_type)
+        cur = self.getConnection().cursor()
         cur = self.pingDb(cur)
         return cur
 
@@ -503,25 +493,25 @@ class DbManager( object ):
             cursor.execute('SELECT 1')
             cursor.close()
             conn.close()
-        except pymysql.err.OperationalError:
+        except psycopg2.Error:
             result = False
         return result
 
     def pingDb(self, cursor):
         try:
             cursor.execute('SELECT 1')
-        except BrokenPipeError:
+        except psycopg2.Error:
             self.closeConn()
-            cursor = self.getConnection().cursor(cursor_type)
+            cursor = self.getConnection().cursor()
             pass
         return cursor
 
     def hasDb(self, conn):
-        cur = conn.cursor(cursor_type)
+        cur = conn.cursor()
 
         cur.execute(
             "SELECT COUNT(1) AS `DbIsThere` "+
-            "FROM `INFORMATION_SCHEMA`.`STATISTICS` "+
+            "FROM `information_schema`.`tables` "+
             "WHERE `table_schema` = %s;",
             (self.getDbName(),)
         )
@@ -537,8 +527,8 @@ class DbManager( object ):
 
         if not self.hasDb(conn):
 
-            cur = conn.cursor(cursor_type)
-            cur.execute("CREATE DATABASE IF NOT EXISTS `%s` COLLATE utf8_bin;" % self.getDbName())
+            cur = conn.cursor()
+            cur.execute("CREATE DATABASE IF NOT EXISTS `%s`;" % self.getDbName())
             cur.close()
 
         conn.close()
@@ -573,7 +563,7 @@ class DbManager( object ):
 
     def close(self):
         self.closeConn()
-        if self._pgsqld_proc is not None:
+        if self.statusPgSqld():
             self.stopPgSqld()
         return self
 

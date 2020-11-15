@@ -61,7 +61,7 @@ It's used about 3+ years to store large amount of backups of VMs. Survived sever
  * Use "stream"-like writes and read of data blocks, don't store complete files in memory.
  * Cached filesystem tree nodes, inodes and data blocks.
  * Many hashing methods: md5, sha1, and other that supported by `hashlib` module.
- * Many compression methods: zlib, bzip2, lzma, lzo, lz4, quicklz, zstd, snappy.
+ * Many compression methods: zlib, bzip2, lzma, lzo, lz4, quicklz, zstd, snappy, brotli.
  * Support for data storage in localy started MySQL server.
  * Hashes can be rehashed by `do` command.
  * Data block can be recompressed by `do` command.
@@ -69,8 +69,8 @@ It's used about 3+ years to store large amount of backups of VMs. Survived sever
 ### Limitations
 
 In the current implementation a file's content DON'T needs to fit in a [cStringIO](http://docs.python.org/library/stringio.html#module-cStringIO)
- instance, which limits the maximum file size to your free RAM. But sometimes you need to tune caching timeouts to
- drop caches more friquently, on massive reads.
+ instance, which limited the maximum file size to your free RAM. But sometimes you need to tune caching timeouts to
+ drop caches more friquently, on massive reads for example.
 
 There is limit of SQLite database size: about 4 TB with default settings of `pages_count` (2**30) * `page_size` (4096).
  And `page_size` can be set up to 64kB, so database file theoreticaly limited by 140 TB.
@@ -78,7 +78,7 @@ There is limit of SQLite database size: about 4 TB with default settings of `pag
 
 Note: dynamic subvolume and snapshot creation available only with MySQL storage engine.
  SQLite is keeping database locked.
- Though dynamic working subvolume switching not available.
+ Though dynamic subvolume switching not available.
  For now MySQL table engine is MyISAM by default - it's fast and not bloated.
  InnoDB working strange:
  - I get about twice sized database: 2.8Gb data + ~1.6Gb something with indexes,
@@ -86,7 +86,8 @@ Note: dynamic subvolume and snapshot creation available only with MySQL storage 
 
  MariaDB's Aria working slowly than MyISAM - doing too much logging...
 
- MariaDB's TokuDB looks interesting and promising. Compression over data and indexes.
+ MariaDB's TokuDB plugin looks interesting and promising. Compression over data and indexes.
+ Same for RocksDB plugin.
 
 #### Engines Tests:
 
@@ -120,13 +121,13 @@ And Sqlite wins!
 ## Dependencies
 
 DedupSQLfs was developed using Python 3.2, it also work with newer versions.
- It definitely doesn't work with Python 2.
- It requires the [Python llFUSE binding](http://www.rath.org/llfuse-docs/example.html) in addition
- to several Python standard libraries like [sqlite3](http://docs.python.org/library/sqlite3.html), [hashlib](http://docs.python.org/library/hashlib.html).
+- It definitely doesn't work with Python 2.
+- It requires the [Python llFUSE binding](http://www.rath.org/llfuse-docs/example.html)
+- in addition to several Python standard libraries like [sqlite3](http://docs.python.org/library/sqlite3.html), [hashlib](http://docs.python.org/library/hashlib.html).
 
 Additional compression modules can be builded with commands:
 
-    $ sudo apt-get install build-essential python3-dev liblzo2-dev libsnappy-dev liblz4-dev liblzma-dev libzstd-dev
+    $ sudo apt-get install build-essential python3-dev liblzo2-dev libsnappy-dev liblz4-dev liblzma-dev libzstd-dev libbrtoli-dev
     $ cd lib-dynload/lzo
     $ python3 setup.py clean -a
     $ python3 setup.py build_ext clean
@@ -149,7 +150,7 @@ Additional performance gain about 1-5% via Cython:
     ## Warning! This deletes all .py files
     $ python3 setup.py cleanpy
 
-Lesser memory usage via RecordCalss
+Lesser memory usage via RecordClass
 
     $ sudo pip3 install recordclass
 

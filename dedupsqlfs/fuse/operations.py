@@ -19,14 +19,24 @@ except ImportError as e:
     sys.stderr.write(msg % str(e))
     sys.exit(1)
 
-# Try to load the Python FUSE binding.
+# Try to load bundled Python FUSE binding.
 try:
-    import llfuse
+    import _llfuse as _m
+    from _m import module as llfuse
     from llfuse import FUSEError
 except ImportError:
-    sys.stderr.write("Error: The Python FUSE binding isn't installed!\n" +
-                     "If you're on Ubuntu try running `sudo apt-get install python-fuse'.\n")
-    sys.exit(1)
+    sys.stderr.write("Error: Bundled The Python FUSE binding isn't compiled!\n" + \
+        "If you're on Ubuntu try running `apt-get install libfuse-dev'\n"+
+        " and `cd lid-dynload && python3 setup.py build_ext clean`.\n")
+    # Try to load the Python FUSE binding.
+    try:
+        import llfuse as fuse
+        from llfuse import FUSEError
+    except ImportError:
+        sys.stderr.write("Error: The Python FUSE binding isn't installed!\n" + \
+            "If you're on Ubuntu try running `sudo -i apt-get install python3-pip'\n"+
+            " and `sudo pip3 install llfuse`.\n")
+        sys.exit(1)
 
 # Local modules that are mostly useful for debugging.
 from dedupsqlfs.log import logging

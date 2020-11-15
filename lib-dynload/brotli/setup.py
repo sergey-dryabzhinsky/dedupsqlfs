@@ -161,7 +161,7 @@ DESCRIPTION = 'Python bindings for the Brotli compression library'
 
 AUTHOR = 'The Brotli Authors'
 
-LICENSE = 'Apache 2.0'
+LICENSE = 'MIT'
 
 PLATFORMS = ['Posix', 'MacOS X', 'Windows']
 
@@ -169,7 +169,7 @@ CLASSIFIERS = [
     'Development Status :: 4 - Beta',
     'Environment :: Console',
     'Intended Audience :: Developers',
-    'License :: OSI Approved :: Apache Software License',
+    'License :: OSI Approved :: MIT License',
     'Operating System :: MacOS :: MacOS X',
     'Operating System :: Microsoft :: Windows',
     'Operating System :: POSIX :: Linux',
@@ -182,6 +182,9 @@ CLASSIFIERS = [
     'Programming Language :: Python :: 3.3',
     'Programming Language :: Python :: 3.4',
     'Programming Language :: Python :: 3.5',
+    'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
     'Programming Language :: Unix Shell',
     'Topic :: Software Development :: Libraries',
     'Topic :: Software Development :: Libraries :: Python Modules',
@@ -200,7 +203,10 @@ EXT_MODULES = [
         '_brotli',
         sources=[
             'python/_brotli.cc',
+            'c/common/constants.c',
+            'c/common/context.c',
             'c/common/dictionary.c',
+            'c/common/platform.c',
             'c/common/transform.c',
             'c/dec/bit_reader.c',
             'c/dec/decode.c',
@@ -212,12 +218,14 @@ EXT_MODULES = [
             'c/enc/block_splitter.c',
             'c/enc/brotli_bit_stream.c',
             'c/enc/cluster.c',
+            'c/enc/command.c',
             'c/enc/compress_fragment.c',
             'c/enc/compress_fragment_two_pass.c',
             'c/enc/dictionary_hash.c',
             'c/enc/encode.c',
             'c/enc/encoder_dict.c',
             'c/enc/entropy_encode.c',
+            'c/enc/fast_log.c',
             'c/enc/histogram.c',
             'c/enc/literal_cost.c',
             'c/enc/memory.c',

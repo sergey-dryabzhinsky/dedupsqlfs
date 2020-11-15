@@ -459,7 +459,7 @@ def do(options, compression_methods=None):
             use_ino=True, default_permissions=True, fsname="dedupsqlfs")
 
         logger = ops.getApplication().getLogger()
-        logger.info("Do: DeDupSQLfs %s/%s, LLfuse %s" % (dedupsqlfs.__version__, dedupsqlfs.__fsversion__, dedupsqlfs.fuse.dedupfs.fuse.__version__))
+        logger.info("Do: DeDupSQLfs %s/%s, llFuse %s" % (dedupsqlfs.__version__, dedupsqlfs.__fsversion__, dedupsqlfs.fuse.dedupfs.fuse.__version__))
 
         if _fuse.checkIfLocked():
             raise OSError("FS is locked by other process!")

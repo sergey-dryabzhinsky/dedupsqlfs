@@ -31,7 +31,3 @@ Here are some things on to-do list, in no particular order:
 
  * Implement `--verify-reads` option that recalculates hashes when reading to
    check for data block corruption?
-
- * Support directory hard links without upsetting FUSE and add a command-line
-   option that search for identical subdirectories and replace them with
-   directory hard links.

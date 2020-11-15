@@ -22,6 +22,7 @@ for d in dirs:
         import importlib
         module = importlib.import_module("_lzo")
 
+        module.set_block_size(16*1024*1024)
         compress = module.compress
         decompress = module.decompress
 

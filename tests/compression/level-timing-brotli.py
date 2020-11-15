@@ -221,6 +221,48 @@ def do_level_ctest_lzma(method, name, level):
     return dt / nROUNDS, ldata / nROUNDS, 100.0 * lcdata / ldata
 
 
+def do_level_ctest_brotli(method, name, level):
+    global compressedData
+
+    key = name + "_" + str(level)
+    dt = 0.0
+    lcdata = 0.0
+
+    nblk = len(processData)
+
+    ldata = processDataLength * nROUNDS
+
+    for n in range(nROUNDS):
+        sys.stdout.write(".")
+        sys.stdout.flush()
+
+        last_p = 0
+        iblk = 0
+        for data in processData:
+            t1 = time.time()
+            cdata = method(data, 0, level)
+            t2 = time.time()
+            dt += t2 - t1
+
+            if n == 0:
+                if not compressedData.get(key):
+                    compressedData[ key ] = ()
+                compressedData[ key ] += (cdata,)
+
+            lcdata += len(cdata)
+
+            p = int(20.0 * iblk / nblk)
+            if p > last_p:
+                last_p = p
+                sys.stdout.write("*")
+                sys.stdout.flush()
+
+            iblk += 1
+
+    print("")
+    return dt / nROUNDS, ldata / nROUNDS, 100.0 * lcdata / ldata
+
+
 def do_simple_dtest(method, name):
     global compressedData
 
@@ -310,12 +352,12 @@ def do_level_dtest(method, name, level):
 
 
 COMPRESSION_SUPPORTED=[
-    ('zstd'    , list(range(-5, 0)) + list(range(1,21)), do_level_ctest,),
+    ('brotli'  , range(0,12), do_level_ctest_brotli,),
     ('zlib'    , range(1,10), do_level_ctest,),
     ]
 
 DECOMPRESSION_SUPPORTED=[
-    ('zstd'    , list(range(-5, 0)) + list(range(1,21)), do_level_dtest,),
+    ('brotli'  , range(0,12), do_level_dtest,),
     ('zlib'    , range(1,10), do_level_dtest,),
     ]
 
@@ -420,7 +462,7 @@ print("\nTable of ratio in %:")
 
 print("\t".join("%-9s" % c for c in _cmps))
 
-for level in range(-5,21):
+for level in range(0,21):
     row = ["%8s" % level]
     for c in cmps:
         results = CTIMING[c]
@@ -443,7 +485,7 @@ print("\nTable of speed in Mb/s:")
 
 print("\t".join("%-9s" % c for c in _cmps))
 
-for level in range(-5,21):
+for level in range(0,21):
     row = ["%8s" % level]
     for c in cmps:
         results = CTIMING[c]
@@ -537,7 +579,7 @@ _cmps.extend(cmps)
 
 print("\t".join("%-9s" % c for c in _cmps))
 
-for level in range(-5,21):
+for level in range(0,21):
     row = ["%8s" % level]
     for c in cmps:
         results = DTIMING[c]
@@ -558,7 +600,7 @@ print("\nTable of speed in Mb/s:")
 
 print("\t".join("%-9s" % c for c in _cmps))
 
-for level in range(-5,21):
+for level in range(0,21):
     row = ["%8s" % level]
     for c in cmps:
         results = DTIMING[c]

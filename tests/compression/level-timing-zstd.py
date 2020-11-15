@@ -310,20 +310,12 @@ def do_level_dtest(method, name, level):
 
 
 COMPRESSION_SUPPORTED=[
-    ('zstd'    , range(1,12), do_level_ctest,),
-    ('zstd061' , range(1,10), do_level_ctest,),
-    ('zstd047' , range(1,10), do_level_ctest,),
-    ('zstd036' , range(1,10), do_level_ctest,),
-    ('zstd001' , False      , do_simple_ctest,),
+    ('zstd'    , list(range(-5, 0)) + list(range(1,21)), do_level_ctest,),
     ('zlib'    , range(1,10), do_level_ctest,),
     ]
 
 DECOMPRESSION_SUPPORTED=[
-    ('zstd'    , range(1,12), do_level_dtest,),
-    ('zstd061' , range(1,10), do_level_dtest,),
-    ('zstd047' , range(1,10), do_level_dtest,),
-    ('zstd036' , range(1,10), do_level_dtest,),
-    ('zstd001' , False      , do_simple_dtest,),
+    ('zstd'    , list(range(-5, 0)) + list(range(1,21)), do_level_dtest,),
     ('zlib'    , range(1,10), do_level_dtest,),
     ]
 
@@ -428,7 +420,7 @@ print("\nTable of ratio in %:")
 
 print("\t".join("%-9s" % c for c in _cmps))
 
-for level in range(0,21):
+for level in range(-5,21):
     row = ["%8s" % level]
     for c in cmps:
         results = CTIMING[c]
@@ -451,7 +443,7 @@ print("\nTable of speed in Mb/s:")
 
 print("\t".join("%-9s" % c for c in _cmps))
 
-for level in range(0,21):
+for level in range(-5,21):
     row = ["%8s" % level]
     for c in cmps:
         results = CTIMING[c]
@@ -545,7 +537,7 @@ _cmps.extend(cmps)
 
 print("\t".join("%-9s" % c for c in _cmps))
 
-for level in range(0,21):
+for level in range(-5,21):
     row = ["%8s" % level]
     for c in cmps:
         results = DTIMING[c]
@@ -566,7 +558,7 @@ print("\nTable of speed in Mb/s:")
 
 print("\t".join("%-9s" % c for c in _cmps))
 
-for level in range(0,21):
+for level in range(-5,21):
     row = ["%8s" % level]
     for c in cmps:
         results = DTIMING[c]

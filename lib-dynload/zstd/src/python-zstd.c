@@ -378,7 +378,7 @@ static int myextension_clear(PyObject *m) {
 
 static struct PyModuleDef moduledef = {
         PyModuleDef_HEAD_INIT,
-        "zstd",
+        "_zstd",
         NULL,
         sizeof(struct module_state),
         ZstdMethods,

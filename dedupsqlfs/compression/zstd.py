@@ -5,6 +5,8 @@ __author__ = 'sergey'
 """
 Class for Zstd compression helper
 New version 1.0+
+
+Since libzstd-1.3.4 - support ultra-fast levels: -100..-1
 """
 
 from dedupsqlfs.compression import BaseCompression
@@ -32,8 +34,8 @@ class ZstdCompression(BaseCompression):
     def getCustomCompressionOptions(self):
         try:
             level = int(self._custom_comp_level)
-            if level < 1:
-                level = 1
+            if level < -100:
+                level = -100
             elif level > 22:
                 level = 22
             opts = (level, )

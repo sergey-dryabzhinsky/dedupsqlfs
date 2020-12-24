@@ -28,8 +28,7 @@ do
     if [ -d ${mdir} ]; then
         cd ${mdir}
         $PY setup.py clean -a
-        $PY setup.py build_ext ${EXTRA_OPT}
-        $PY setup.py build_ext clean
+        $PY setup.py build_ext ${EXTRA_OPT} clean
         cd ..
     fi
 done

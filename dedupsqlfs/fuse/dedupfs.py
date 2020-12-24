@@ -18,23 +18,29 @@ except ImportError as e:
     sys.exit(1)
 
 # Try to load bundled Python FUSE binding.
+loaded = False
 try:
-    import _llfuse as _m
-    from _m import module as llfuse
-    from llfuse import FUSEError
+    from _llfuse import loaded
+    if loaded:
+        from _llfuse import module as fuse
+        from _llfuse import module as llfuse
 except ImportError:
     sys.stderr.write("Error: Bundled The Python FUSE binding isn't compiled!\n" + \
         "If you're on Ubuntu try running `apt-get install libfuse-dev'\n"+
         " and `cd lid-dynload && python3 setup.py build_ext clean`.\n")
+    loaded = False
+
+if not loaded:
     # Try to load the Python FUSE binding.
     try:
         import llfuse as fuse
-        from llfuse import FUSEError
     except ImportError:
         sys.stderr.write("Error: The Python FUSE binding isn't installed!\n" + \
             "If you're on Ubuntu try running `sudo -i apt-get install python3-pip'\n"+
             " and `sudo pip3 install llfuse`.\n")
         sys.exit(1)
+
+FUSEError = fuse.FUSEError
 
 fv = fuse.__version__.split('.')
 if int(fv[0]) < 1 and int(fv[1]) < 42:

@@ -8,11 +8,14 @@ if os.path.islink(curpath):
     curpath = os.readlink(curpath)
 currentdir = os.path.dirname( curpath )
 
-build_dir = os.path.abspath( os.path.join(currentdir, "lib-dynload", "brotli", "build") )
+build_dir = os.path.abspath( os.path.join(currentdir, "lib-dynload", "_recordclass", "build") )
 if not os.path.isdir(build_dir):
-    build_dir = os.path.abspath( os.path.join(currentdir, "..", "lib-dynload", "brotli", "build") )
+    build_dir = os.path.abspath( os.path.join(currentdir, "..", "lib-dynload", "_recordclass", "build") )
 if not os.path.isdir(build_dir):
-    build_dir = os.path.abspath( os.path.join(currentdir, "..", "..", "lib-dynload", "brotli", "build") )
+    build_dir = os.path.abspath( os.path.join(currentdir, "..", "..", "lib-dynload", "_recordclass", "build") )
+
+module = None
+loaded = False
 
 dirs = os.listdir(build_dir)
 for d in dirs:
@@ -20,14 +23,13 @@ for d in dirs:
         sys.path.insert(0, os.path.join(build_dir, d) )
 
         import importlib
-        _brotli = importlib.import_module("_brotli")
+        module = importlib.import_module("recordclass")
 
-        from .expose import *
+        loaded = True
 
         sys.path.pop(0)
 
         del p1, p2
-        del curpath, currentdir
-        del build_dir, dirs
+        del currentdir, build_dir, dirs
 
         break

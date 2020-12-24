@@ -26,15 +26,27 @@ class CacheItem:
         self.c_written = c_written
         self.c_toflush = c_toflush
 
+make_dataclass = None
+
+try:
+    # Our lib-dynload module
+    from _recordclass import loaded
+    if loaded:
+        from _recordclass import module as recordclass
+except:
+    pass
+
 try:
     from recordclass import make_dataclass
+except:
+    pass
+
+if make_dataclass is not None:
     CacheItem = make_dataclass(
         "CacheItem",
         [("c_time", float,), ("c_data", object,), ("c_written", bool,), ("c_toflush", bool,)],
         defaults=(0.0, None, False, False)
     )
-except:
-    pass
 
 class InodesTime(TimedCache):
     """

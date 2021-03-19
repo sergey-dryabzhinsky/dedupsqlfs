@@ -195,6 +195,8 @@ class DedupOperations(llfuse.Operations):  # {{{1
             self.manager.setBasepath(os.path.expanduser(self.getOption("data")))
             self.manager.begin()
 
+            self.getLogger().info("Databases engine version: %s" % self.manager.getVersion())
+
             from dedupsqlfs.db.migration import DbMigration
             migr = DbMigration(self.manager, self.getLogger())
             if migr.isMigrationNeeded():

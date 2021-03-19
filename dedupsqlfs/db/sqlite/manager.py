@@ -87,6 +87,12 @@ class DbManager( object ):
     def getDbName(self):
         return self._db_name
 
+
+    def getVersion(self):
+        import sqlite3
+        return sqlite3.sqlite_version
+
+
     def getTable(self, name, nocreate=False):
         """
 

@@ -703,6 +703,18 @@ class DbManager( object ):
         return self
 
 
+    def getVersion(self):
+        conn = self.getConnection(True)
+
+        cur = conn.cursor(cursor_type)
+        cur.execute("SELECT VERSION();")
+        row = cur.fetchone()
+        cur.close()
+
+        conn.close()
+        return row[0]
+
+
     # Dummy functions
     def setCompressionProg(self, prog):
         return self

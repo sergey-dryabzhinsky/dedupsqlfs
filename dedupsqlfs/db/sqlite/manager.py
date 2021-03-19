@@ -88,7 +88,11 @@ class DbManager( object ):
         return self._db_name
 
 
-    def getVersion(self):
+    def getModuleVersion(self):
+        import sqlite3
+        return sqlite3.version
+
+    def getEngineVersion(self):
         import sqlite3
         return sqlite3.sqlite_version
 

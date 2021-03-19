@@ -703,7 +703,10 @@ class DbManager( object ):
         return self
 
 
-    def getVersion(self):
+    def getModuleVersion(self):
+        return pymysql.VERSION_STRING
+
+    def getEngineVersion(self):
         conn = self.getConnection(True)
 
         cur = conn.cursor(cursor_type)

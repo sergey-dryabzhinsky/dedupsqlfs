@@ -3,12 +3,18 @@
 __author__ = 'sergey'
 
 import os
-from time import sleep
+from time import sleep, time
 from datetime import datetime
 import subprocess
-import pymysql
-import pymysql.err
-import pymysql.cursors
+
+try:
+	import pymysql
+	import pymysql.err
+	import pymysql.cursors
+except:
+	import _pymysql as pymysql
+	import _pymysql.err
+	import _pymysql.cursors
 
 cursor_type = pymysql.cursors.DictCursor
 
@@ -62,6 +68,9 @@ class DbManager( object ):
         "inode_hash_block",
         "subvolume",
     )
+
+    _last_ping = 0
+
 
     def __init__( self, dbname = None, base_path=None, autocommit=None, synchronous=None ):
         if not (dbname is None):
@@ -266,6 +275,7 @@ class DbManager( object ):
 
             setupfile = self.getBasePath() + "/setup.log"
             outputfile = self.getBasePath() + "/console.log"
+            generalfile = self.getBasePath() + "/general.log"
             errorfile = self.getBasePath() + "/error.log"
             slowlogfile = self.getBasePath() + "/slow.log"
             pidfile = self.getBasePath() + "/mysql.pid"
@@ -306,6 +316,8 @@ class DbManager( object ):
                 "--log-error=%s" % errorfile,
                 "--slow-query-log",
                 "--slow-query-log-file=%s" % slowlogfile,
+                "--general-log",
+                "--general-log-file=%s" % generalfile,
                 "--pid-file=%s" % pidfile,
                 "--skip-grant-tables",                      # Grant root-access
                 "--skip-bind-address",
@@ -437,6 +449,7 @@ class DbManager( object ):
 
                 cmd = ["mysql_install_db"]
                 cmd.extend(cmd_opts)
+                cmd.extend(["--skip-test-db"])
 
                 self.getLogger().debug("CMD: %r" % (cmd,))
 
@@ -612,6 +625,10 @@ class DbManager( object ):
         return result
 
     def pingDb(self, cursor):
+        # Do not spam server
+        if time() - self._last_ping < 1:
+            return cursor
+        self._last_ping = time()
         try:
             cursor.execute('SELECT 1')
         except BrokenPipeError:
@@ -710,12 +727,12 @@ class DbManager( object ):
         conn = self.getConnection(True)
 
         cur = conn.cursor(cursor_type)
-        cur.execute("SELECT VERSION();")
+        cur.execute("SELECT VERSION() as v;")
         row = cur.fetchone()
         cur.close()
 
         conn.close()
-        return row[0]
+        return row['v']
 
 
     # Dummy functions

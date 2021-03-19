@@ -6,6 +6,11 @@ import hashlib
 from time import time
 from dedupsqlfs.db.mysql.table import Table
 
+try:
+	from pymysql import Binary
+except:
+	from _pymysql import Binary
+
 class TableSubvolume( Table ):
 
     _table_name = "subvolume"
@@ -51,8 +56,8 @@ class TableSubvolume( Table ):
             " (`hash`,`name`,`created_at`, `mounted_at`, `updated_at`, `stats_at`, `stats`, `root_diff_at`, `root_diff`) "+
             "VALUES (%(hash)s, %(name)s, %(created)s, %(mounted)s, %(updated)s, %(statsed)s, %(stats)s, %(diffed)s, %(root_diff)s)",
             {
-                "hash": digest,
-                "name": name,
+                "hash": Binary(digest),
+                "name": Binary(name),
                 "created": int(created_at),
                 "mounted": mounted_at,
                 "updated": updated_at,
@@ -209,7 +214,7 @@ class TableSubvolume( Table ):
             "SELECT * FROM `%s` " % self.getName()+
             " WHERE `id`=%(id)s",
             {
-                "id": subvol_id
+                "id": int(subvol_id)
             }
         )
         item = cur.fetchone()
@@ -224,9 +229,9 @@ class TableSubvolume( Table ):
 
         cur.execute(
             "SELECT * FROM `%s` " % self.getName()+
-            " WHERE `id`=%(hash)s",
+            " WHERE `hash`=%(hash)s",
             {
-                "hash": digest
+                "hash": Binary(digest)
             }
         )
         item = cur.fetchone()

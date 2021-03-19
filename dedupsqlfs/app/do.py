@@ -459,7 +459,7 @@ def do(options, compression_methods=None):
             use_ino=True, default_permissions=True, fsname="dedupsqlfs")
 
         logger = ops.getApplication().getLogger()
-        logger.info("Do: DeDupSQLfs %s/%s, llFuse %s" % (dedupsqlfs.__version__, dedupsqlfs.__fsversion__, dedupsqlfs.fuse.dedupfs.fuse.__version__))
+        logger.info("Do: DeDupSQLfs %s/%s, llFuse %s, Python %s" % (dedupsqlfs.__version__, dedupsqlfs.__fsversion__, dedupsqlfs.fuse.dedupfs.fuse.__version__, sys.version.split()[0]))
 
         if _fuse.checkIfLocked():
             raise OSError("FS is locked by other process!")
@@ -581,8 +581,8 @@ def do(options, compression_methods=None):
 
 def main(): # {{{1
     """
-    This function enables using dedupsqlfs.py as a shell script that creates FUSE
-    mount points. Execute "dedupsqlfs -h" for a list of valid command line options.
+    This function enables using do.dedupsqlfs.py as a shell script that creates FUSE
+    mount points. Execute "do.dedupsqlfs -h" for a list of valid command line options.
     """
 
     logger = logging.getLogger("do.dedupsqlfs/main")
@@ -590,7 +590,7 @@ def main(): # {{{1
     logger.addHandler(logging.StreamHandler(sys.stderr))
 
     parser = argparse.ArgumentParser(
-        prog="%s/%s do/%s" % (dedupsqlfs.__name__, dedupsqlfs.__version__, dedupsqlfs.__fsversion__),
+        prog="%s/%s do/%s python/%s" % (dedupsqlfs.__name__, dedupsqlfs.__version__, dedupsqlfs.__fsversion__, sys.version.split()[0]),
         formatter_class = SmartFormatter,
         conflict_handler="resolve")
 

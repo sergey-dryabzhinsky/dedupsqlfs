@@ -39,7 +39,7 @@ def fuse_mount(options, compression_methods=None):
             fsname="dedupsqlfs", allow_root=True)
 
         logger = ops.getApplication().getLogger()
-        logger.info("Mount: DeDupSQLfs %s/%s, llFuse %s" % (dedupsqlfs.__version__, dedupsqlfs.__fsversion__, dedupsqlfs.fuse.dedupfs.fuse.__version__))
+        logger.info("Mount: DeDupSQLfs %s/%s, llFuse %s, Python %s" % (dedupsqlfs.__version__, dedupsqlfs.__fsversion__, dedupsqlfs.fuse.dedupfs.fuse.__version__, sys.version.split()[0]))
 
         if not _fuse.checkIfLocked():
             _fuse.saveCompressionMethods(compression_methods)
@@ -71,8 +71,8 @@ def fuse_mount(options, compression_methods=None):
 
 def main(): # {{{1
     """
-    This function enables using dedupsqlfs.py as a shell script that creates FUSE
-    mount points. Execute "dedupsqlfs -h" for a list of valid command line options.
+    This function enables using mount.dedupsqlfs.py as a shell script that creates FUSE
+    mount points. Execute "mount.dedupsqlfs -h" for a list of valid command line options.
     """
 
     logger = logging.getLogger("mount.dedupsqlfs/main")
@@ -80,7 +80,7 @@ def main(): # {{{1
     logger.addHandler(logging.StreamHandler(sys.stderr))
 
     parser = argparse.ArgumentParser(
-        prog="%s/%s mount/%s" % (dedupsqlfs.__name__, dedupsqlfs.__version__, dedupsqlfs.__fsversion__),
+        prog="%s/%s mount/%s python/%s" % (dedupsqlfs.__name__, dedupsqlfs.__version__, dedupsqlfs.__fsversion__, sys.version.split()[0]),
         formatter_class = SmartFormatter,
         conflict_handler="resolve")
 

@@ -1,4 +1,9 @@
+# -*- coding: utf-8 -*-
+from __future__ import print_function, absolute_import
+from functools import partial
 import re
+
+from ._compat import range_type, text_type, PY2
 from . import err
 
 
@@ -6,14 +11,13 @@ from . import err
 #: executemany only supports simple bulk insert.
 #: You can use it to load large dataset.
 RE_INSERT_VALUES = re.compile(
-    r"\s*((?:INSERT|REPLACE)\b.+\bVALUES?\s*)"
-    + r"(\(\s*(?:%s|%\(.+\)s)\s*(?:,\s*(?:%s|%\(.+\)s)\s*)*\))"
-    + r"(\s*(?:ON DUPLICATE.*)?);?\s*\Z",
-    re.IGNORECASE | re.DOTALL,
-)
+    r"\s*((?:INSERT|REPLACE)\b.+\bVALUES?\s*)" +
+    r"(\(\s*(?:%s|%\(.+\)s)\s*(?:,\s*(?:%s|%\(.+\)s)\s*)*\))" +
+    r"(\s*(?:ON DUPLICATE.*)?);?\s*\Z",
+    re.IGNORECASE | re.DOTALL)
 
 
-class Cursor:
+class Cursor(object):
     """
     This is the object you use to interact with the database.
 
@@ -96,20 +100,29 @@ class Cursor:
         return self._nextset(False)
 
     def _ensure_bytes(self, x, encoding=None):
-        if isinstance(x, str):
+        if isinstance(x, text_type):
             x = x.encode(encoding)
         elif isinstance(x, (tuple, list)):
             x = type(x)(self._ensure_bytes(v, encoding=encoding) for v in x)
         return x
 
     def _escape_args(self, args, conn):
+        ensure_bytes = partial(self._ensure_bytes, encoding=conn.encoding)
+
         if isinstance(args, (tuple, list)):
+            if PY2:
+                args = tuple(map(ensure_bytes, args))
             return tuple(conn.literal(arg) for arg in args)
         elif isinstance(args, dict):
+            if PY2:
+                args = {ensure_bytes(key): ensure_bytes(val) for
+                        (key, val) in args.items()}
             return {key: conn.literal(val) for (key, val) in args.items()}
         else:
             # If it's not a dictionary let's try escaping it anyways.
             # Worst case it will throw a Value error
+            if PY2:
+                args = ensure_bytes(args)
             return conn.escape(args)
 
     def mogrify(self, query, args=None):
@@ -120,6 +133,8 @@ class Cursor:
         This method follows the extension to the DB API 2.0 followed by Psycopg.
         """
         conn = self._get_db()
+        if PY2:  # Use bytes on Python 2 always
+            query = self._ensure_bytes(query, encoding=conn.encoding)
 
         if args is not None:
             query = query % self._escape_args(args, conn)
@@ -168,45 +183,46 @@ class Cursor:
         if m:
             q_prefix = m.group(1) % ()
             q_values = m.group(2).rstrip()
-            q_postfix = m.group(3) or ""
-            assert q_values[0] == "(" and q_values[-1] == ")"
-            return self._do_execute_many(
-                q_prefix,
-                q_values,
-                q_postfix,
-                args,
-                self.max_stmt_length,
-                self._get_db().encoding,
-            )
+            q_postfix = m.group(3) or ''
+            assert q_values[0] == '(' and q_values[-1] == ')'
+            return self._do_execute_many(q_prefix, q_values, q_postfix, args,
+                                         self.max_stmt_length,
+                                         self._get_db().encoding)
 
         self.rowcount = sum(self.execute(query, arg) for arg in args)
         return self.rowcount
 
-    def _do_execute_many(
-        self, prefix, values, postfix, args, max_stmt_length, encoding
-    ):
+    def _do_execute_many(self, prefix, values, postfix, args, max_stmt_length, encoding):
         conn = self._get_db()
         escape = self._escape_args
-        if isinstance(prefix, str):
+        if isinstance(prefix, text_type):
             prefix = prefix.encode(encoding)
-        if isinstance(postfix, str):
+        if PY2 and isinstance(values, text_type):
+            values = values.encode(encoding)
+        if isinstance(postfix, text_type):
             postfix = postfix.encode(encoding)
         sql = bytearray(prefix)
         args = iter(args)
         v = values % escape(next(args), conn)
-        if isinstance(v, str):
-            v = v.encode(encoding, "surrogateescape")
+        if isinstance(v, text_type):
+            if PY2:
+                v = v.encode(encoding)
+            else:
+                v = v.encode(encoding, 'surrogateescape')
         sql += v
         rows = 0
         for arg in args:
             v = values % escape(arg, conn)
-            if isinstance(v, str):
-                v = v.encode(encoding, "surrogateescape")
+            if isinstance(v, text_type):
+                if PY2:
+                    v = v.encode(encoding)
+                else:
+                    v = v.encode(encoding, 'surrogateescape')
             if len(sql) + len(v) + len(postfix) + 1 > max_stmt_length:
                 rows += self.execute(sql + postfix)
                 sql = bytearray(prefix)
             else:
-                sql += b","
+                sql += b','
             sql += v
         rows += self.execute(sql + postfix)
         self.rowcount = rows
@@ -242,19 +258,14 @@ class Cursor:
         """
         conn = self._get_db()
         if args:
-            fmt = f"@_{procname}_%d=%s"
-            self._query(
-                "SET %s"
-                % ",".join(
-                    fmt % (index, conn.escape(arg)) for index, arg in enumerate(args)
-                )
-            )
+            fmt = '@_{0}_%d=%s'.format(procname)
+            self._query('SET %s' % ','.join(fmt % (index, conn.escape(arg))
+                                            for index, arg in enumerate(args)))
             self.nextset()
 
-        q = "CALL %s(%s)" % (
-            procname,
-            ",".join(["@_%s_%d" % (procname, i) for i in range(len(args))]),
-        )
+        q = "CALL %s(%s)" % (procname,
+                             ','.join(['@_%s_%d' % (procname, i)
+                                       for i in range_type(len(args))]))
         self._query(q)
         self._executed = q
         return args
@@ -274,7 +285,7 @@ class Cursor:
         if self._rows is None:
             return ()
         end = self.rownumber + (size or self.arraysize)
-        result = self._rows[self.rownumber : end]
+        result = self._rows[self.rownumber:end]
         self.rownumber = min(end, len(self._rows))
         return result
 
@@ -284,17 +295,17 @@ class Cursor:
         if self._rows is None:
             return ()
         if self.rownumber:
-            result = self._rows[self.rownumber :]
+            result = self._rows[self.rownumber:]
         else:
             result = self._rows
         self.rownumber = len(self._rows)
         return result
 
-    def scroll(self, value, mode="relative"):
+    def scroll(self, value, mode='relative'):
         self._check_executed()
-        if mode == "relative":
+        if mode == 'relative':
             r = self.rownumber + value
-        elif mode == "absolute":
+        elif mode == 'absolute':
             r = value
         else:
             raise err.ProgrammingError("unknown scroll mode %s" % mode)
@@ -345,7 +356,7 @@ class Cursor:
     NotSupportedError = err.NotSupportedError
 
 
-class DictCursorMixin:
+class DictCursorMixin(object):
     # You can override this to use OrderedDict or other dict-like types.
     dict_type = dict
 
@@ -356,7 +367,7 @@ class DictCursorMixin:
             for f in self._result.fields:
                 name = f.name
                 if name in fields:
-                    name = f.table_name + "." + name
+                    name = f.table_name + '.' + name
                 fields.append(name)
             self._fields = fields
 
@@ -458,7 +469,7 @@ class SSCursor(Cursor):
             size = self.arraysize
 
         rows = []
-        for i in range(size):
+        for i in range_type(size):
             row = self.read_next()
             if row is None:
                 break
@@ -466,26 +477,24 @@ class SSCursor(Cursor):
             self.rownumber += 1
         return rows
 
-    def scroll(self, value, mode="relative"):
+    def scroll(self, value, mode='relative'):
         self._check_executed()
 
-        if mode == "relative":
+        if mode == 'relative':
             if value < 0:
                 raise err.NotSupportedError(
-                    "Backwards scrolling not supported by this cursor"
-                )
+                        "Backwards scrolling not supported by this cursor")
 
-            for _ in range(value):
+            for _ in range_type(value):
                 self.read_next()
             self.rownumber += value
-        elif mode == "absolute":
+        elif mode == 'absolute':
             if value < self.rownumber:
                 raise err.NotSupportedError(
-                    "Backwards scrolling not supported by this cursor"
-                )
+                    "Backwards scrolling not supported by this cursor")
 
             end = value - self.rownumber
-            for _ in range(end):
+            for _ in range_type(end):
                 self.read_next()
             self.rownumber = value
         else:

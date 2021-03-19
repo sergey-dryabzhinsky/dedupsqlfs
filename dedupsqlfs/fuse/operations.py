@@ -167,6 +167,8 @@ class DedupOperations(llfuse.Operations):  # {{{1
             if not engine:
                 engine = 'sqlite'
 
+            self.getLogger().info("Selected storage engine: %s" % engine)
+
             if engine == 'mysql':
                 from dedupsqlfs.db.mysql.manager import DbManager
                 self.manager = DbManager(dbname=self.getOption("name"))
@@ -178,10 +180,12 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 from dedupsqlfs.db.sqlite.manager import DbManager
                 self.manager = DbManager(dbname=self.getOption("name"))
                 self.manager.setBasepath(os.path.expanduser(self.getOption("data")))
+                engine = "sqlite"
                 if not self.manager.isSupportedStorage():
                     from dedupsqlfs.db.mysql.manager import DbManager
                     self.manager = DbManager(dbname=self.getOption("name"))
                     self.manager.setBasepath(os.path.expanduser(self.getOption("data")))
+                    engine = "mysql"
                     if not self.manager.isSupportedStorage():
                         raise RuntimeError("Unsupported storage on %r" % self.getOption("data"))
 
@@ -195,6 +199,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
             self.manager.setBasepath(os.path.expanduser(self.getOption("data")))
             self.manager.begin()
 
+            self.getLogger().info("Databases engine: %s" % engine)
             self.getLogger().info("Databases module version: %s" % self.manager.getModuleVersion())
             self.getLogger().info("Databases engine version: %s" % self.manager.getEngineVersion())
 

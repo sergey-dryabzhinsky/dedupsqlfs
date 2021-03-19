@@ -23,7 +23,7 @@ def check_engines():
 
     msg = ""
     if engines:
-        msg = "Use selected storage engine. One of "+", ".join(engines)+". Default is "+engines[0]+"."
+        msg = "Use selected storage engine. One of: "+", ".join(engines)+". Default is "+engines[0]+"."
         if 'sqlite' in engines:
             msg += " Note: 'sqlite' use less disk space, and may work slowly on large data."
 

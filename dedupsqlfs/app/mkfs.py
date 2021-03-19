@@ -60,8 +60,8 @@ def mkfs(options, compression_methods=None, hash_functions=None):
 
 def main(): # {{{1
     """
-    This function enables using dedupsqlfs.py as a shell script that creates FUSE
-    mount points. Execute "dedupsqlfs -h" for a list of valid command line options.
+    This function enables using mkfs.dedupsqlfs.py as a shell script that creates FUSE
+    mount points. Execute "mkfs.dedupsqlfs -h" for a list of valid command line options.
     """
 
     logger = logging.getLogger("mkfs.dedupsqlfs/main")
@@ -69,7 +69,7 @@ def main(): # {{{1
     logger.addHandler(logging.StreamHandler(sys.stderr))
 
     parser = argparse.ArgumentParser(
-        prog="%s/%s mkfs/%s" % (dedupsqlfs.__name__, dedupsqlfs.__version__, dedupsqlfs.__fsversion__),
+        prog="%s/%s mkfs/%s python/%s" % (dedupsqlfs.__name__, dedupsqlfs.__version__, dedupsqlfs.__fsversion__, sys.version.split()[0]),
         conflict_handler="resolve")
 
     # Register some custom command line options with the option parser.

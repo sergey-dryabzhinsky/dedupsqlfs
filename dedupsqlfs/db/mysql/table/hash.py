@@ -4,11 +4,6 @@ __author__ = 'sergey'
 
 from dedupsqlfs.db.mysql.table import Table
 
-try:
-    from pymysql import Binary
-except:
-    from _pymysql import Binary
-
 class TableHash( Table ):
 
     _table_name = "hash"
@@ -19,7 +14,7 @@ class TableHash( Table ):
         cur.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "`id` BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, "+
-                "`hash` BINARY(64) NOT NULL "+
+                "`hash` VARBINARY(64) NOT NULL "+
             ")"+
             self._getCreationAppendString()
         )
@@ -31,9 +26,9 @@ class TableHash( Table ):
         cur = self.getCursor()
         cur.execute(
             "INSERT INTO `%s` " %self.getName()+
-            " (`hash`) VALUES (%(value)s)",
+            " (`hash`) VALUES (X%(value)s)",
             {
-                'value': Binary(value)
+                'value': value.hex()
             }
         )
         item = cur.lastrowid
@@ -45,10 +40,10 @@ class TableHash( Table ):
         cur = self.getCursor()
         cur.execute(
             "INSERT INTO `%s` " %self.getName()+
-            " (`id`,`hash`) VALUES (%(id)s,%(value)s)",
+            " (`id`,`hash`) VALUES (%(id)s, X%(value)s)",
             {
                 'id': rowId,
-                'value': Binary(value)
+                'value': value.hex()
             }
         )
         item = cur.lastrowid
@@ -64,9 +59,9 @@ class TableHash( Table ):
         cur = self.getCursor()
         cur.execute(
             "UPDATE `%s` " %self.getName()+
-            " SET `hash`=%(value)s WHERE `id`=%(id)s",
+            " SET `hash`=X%(value)s WHERE `id`=%(id)s",
             {
-                'value': Binary(value),
+                'value': value.hex(),
                 'id': item_id
             }
         )
@@ -94,10 +89,10 @@ class TableHash( Table ):
         self.startTimer()
         cur = self.getCursor()
         cur.execute(
-            "SELECT `id` FROM `%s` " %self.getName()+
-            " WHERE `hash`=%(value)s",
+            "SELECT `id` FROM `%s` " % self.getName()+
+            " WHERE `hash`=X%(value)s",
             {
-                'value': Binary(value)
+                'value': value.hex()
             }
         )
         item = cur.fetchone()

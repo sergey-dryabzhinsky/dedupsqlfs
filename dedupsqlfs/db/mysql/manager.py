@@ -334,7 +334,7 @@ class DbManager( object ):
             ]
 
             if os.geteuid() == 0:
-                cmd_opts.append("--user=mysql")
+                cmd_opts.insert(0, "--user=mysql")
                 for f in (self.getBasePath(), tmpdir, datadir, setupfile, errorfile, outputfile, slowlogfile, pidfile, self.getSocket(),):
                     if os.path.exists(f):
                         subprocess.Popen([
@@ -342,6 +342,9 @@ class DbManager( object ):
                             "mysql:mysql",
                             f
                         ]).wait()
+            else:
+                uname = subprocess.check_output("id -nu", shell=True).decode("utf-8").strip()
+                cmd_opts.insert(0, "--user=%s" % uname)
 
             if self.getAutocommit():
                 cmd_opts.append("--autocommit")
@@ -400,7 +403,6 @@ class DbManager( object ):
                     cmd_opts.extend([
                         "--innodb-flush-neighbors=0",
                         "--innodb-default-row-format=dynamic",
-                        ""
                     ])
 
                 if self._table_engine == "TokuDB":
@@ -464,7 +466,7 @@ class DbManager( object ):
                 sf.close()
                 if retcode:
                     self.getLogger().error("Something wrong! Return code: %s" % retcode)
-                    return False
+                    # return False
 
             cmd = ["mysqld"]
             cmd.extend(cmd_opts)
@@ -609,6 +611,7 @@ class DbManager( object ):
 
     def getCursor(self, new=False):
         cur = self.getConnection().cursor(cursor_type)
+        cur.max_stmt_length = 20*1024*1024
         cur = self.pingDb(cur)
         return cur
 

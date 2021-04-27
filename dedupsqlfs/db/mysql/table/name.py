@@ -44,7 +44,7 @@ class TableName( Table ):
 
         cur.execute(
             "INSERT INTO `%s` " % self.getName()+
-            " (`hash`,`value`) VALUES (%s,%s)", (digest,value,))
+            " (`hash`,`value`) VALUES (X%s,X%s)", (digest.hex(), value.hex(),))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
@@ -61,7 +61,7 @@ class TableName( Table ):
 
         cur.execute(
             "SELECT `id` FROM `%s` " % self.getName()+
-            " WHERE `hash`=%s", (digest,))
+            " WHERE `hash`=X%s", (digest.hex(),))
         item = cur.fetchone()
         if item:
             item = item["id"]

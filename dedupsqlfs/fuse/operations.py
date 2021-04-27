@@ -1612,7 +1612,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
                 compression = self.getCompressionTypeName(compTypeId)
 
-                self.getLogger().debug("READ: Hash = %r, method = %r", (indexItem["hash_id"], compression,))
+                self.getLogger().debug("READ: Hash = %r, method = %r", indexItem["hash_id"], compression)
 
                 tryAll = self.getOption('decompress_try_all')
 
@@ -2366,7 +2366,9 @@ class DedupOperations(llfuse.Operations):  # {{{1
         tableHash = self.getTable("hash")
 
         hash_value = self.do_hash(data_block)
+        self.getLogger().debug("-- hash_value: %r", hash_value)
         hash_id = tableHash.find(hash_value)
+        self.getLogger().debug("-- hash_id: %r", hash_id)
 
         result["hash"] = hash_id
 
@@ -2378,6 +2380,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
             self.getLogger().debug("-- insert new block data")
             hash_id = tableHash.insert(hash_value)
+            self.getLogger().debug("-- hash_id: %r", hash_id)
             result["hash"] = hash_id
 
             self.bytes_written += block_length

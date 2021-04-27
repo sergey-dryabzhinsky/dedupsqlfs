@@ -58,16 +58,16 @@ def fuse_mount(options, compression_methods=None):
 
 def main(): # {{{1
     """
-    This function enables using dedupsqlfs.py as a shell script that creates FUSE
-    mount points. Execute "dedupsqlfs -h" for a list of valid command line options.
+    This function enables using fsck.dedupsqlfs.py as a shell script that creates FUSE
+    mount points. Execute "fsck.dedupsqlfs -h" for a list of valid command line options.
     """
 
-    logger = logging.getLogger("dedupsqlfs.main")
+    logger = logging.getLogger("fsck.dedupsqlfs.main")
     logger.setLevel(logging.INFO)
     logger.addHandler(logging.StreamHandler(sys.stderr))
 
     parser = argparse.ArgumentParser(
-        prog="%s/%s fsck/%s" % (dedupsqlfs.__name__, dedupsqlfs.__version__, dedupsqlfs.__fsversion__),
+        prog="%s/%s fsck/%s python/%s" % (dedupsqlfs.__name__, dedupsqlfs.__version__, dedupsqlfs.__fsversion__, sys.version.split()[0]),
         conflict_handler="resolve")
 
     # Register some custom command line options with the option parser.

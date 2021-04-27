@@ -4,6 +4,11 @@ __author__ = 'sergey'
 
 from dedupsqlfs.db.mysql.table import Table
 
+try:
+    from pymysql import Binary
+except:
+    from _pymysql import Binary
+
 class TableHash( Table ):
 
     _table_name = "hash"
@@ -28,7 +33,7 @@ class TableHash( Table ):
             "INSERT INTO `%s` " %self.getName()+
             " (`hash`) VALUES (%(value)s)",
             {
-                'value': value
+                'value': Binary(value)
             }
         )
         item = cur.lastrowid
@@ -43,7 +48,7 @@ class TableHash( Table ):
             " (`id`,`hash`) VALUES (%(id)s,%(value)s)",
             {
                 'id': rowId,
-                'value': value
+                'value': Binary(value)
             }
         )
         item = cur.lastrowid
@@ -61,7 +66,7 @@ class TableHash( Table ):
             "UPDATE `%s` " %self.getName()+
             " SET `hash`=%(value)s WHERE `id`=%(id)s",
             {
-                'value': value,
+                'value': Binary(value),
                 'id': item_id
             }
         )
@@ -92,7 +97,7 @@ class TableHash( Table ):
             "SELECT `id` FROM `%s` " %self.getName()+
             " WHERE `hash`=%(value)s",
             {
-                'value': value
+                'value': Binary(value)
             }
         )
         item = cur.fetchone()

@@ -5,6 +5,11 @@ __author__ = 'sergey'
 import pickle
 from dedupsqlfs.db.mysql.table import Table
 
+try:
+    from pymysql import Binary
+except:
+    from _pymysql import Binary
+
 class TableInodeXattr( Table ):
 
     _table_name = "xattr"
@@ -40,7 +45,7 @@ class TableInodeXattr( Table ):
             " (`inode_id`, `data`) VALUES (%(inode)s, %(data)s)",
             {
                 "inode": inode,
-                "data": bvalues
+                "data": Binary(bvalues)
             }
         )
 
@@ -65,7 +70,7 @@ class TableInodeXattr( Table ):
             "UPDATE `%s` " % self.getName()+
             " SET `data`=%(data)s WHERE `inode_id`=%(inode)s",
             {
-                "date": bvalues,
+                "date": Binary(bvalues),
                 "inode": inode
             }
         )

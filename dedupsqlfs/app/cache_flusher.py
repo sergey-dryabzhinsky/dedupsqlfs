@@ -5,6 +5,7 @@ Separate process for cache flushing
 @author: Sergey Dryabzhinsky
 """
 
+import sys
 import os
 from time import time, sleep
 import argparse
@@ -82,7 +83,7 @@ def main():
     global flusher
 
     parser = argparse.ArgumentParser(
-        prog="%s/%s cache_flusher" % (dedupsqlfs.__name__, dedupsqlfs.__version__,),
+        prog="%s/%s cache_flusher python/%s" % (dedupsqlfs.__name__, dedupsqlfs.__version__, sys.version.split()[0]),
         conflict_handler="resolve")
 
     # Register some custom command line options with the option parser.

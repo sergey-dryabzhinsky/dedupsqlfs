@@ -4,8 +4,14 @@ __author__ = 'sergey'
 
 from time import time
 import sys
-import pymysql
-import pymysql.cursors
+
+try:
+	import pymysql
+	import pymysql.cursors
+except:
+	import _pymysql as pymysql
+	import _pymysql.cursors
+
 from dedupsqlfs.log import logging
 from dedupsqlfs.my_formats import format_size
 

@@ -5,7 +5,7 @@ Deduplicating filesystem via FUSE and SQLite written in Python
 
 Based on code written by Peter Odding: http://github.com/xolox/dedupfs/
 
-Rewriten to use Python3 (3.2+), new compression methods, snapshots / subvolumes.
+Rewriten to use Python3 (3.4+), new compression methods, snapshots / subvolumes.
 
 I know about ZFS and Btrfs. But they are still complicated to use under linux and has disadvantages
  like need in block device, weak block hash algorithms, very little variants of compression methods.
@@ -17,9 +17,9 @@ The following shell commands show how to install and use the DedupFS file system
 
     $ sudo apt-get install python3-pip libfuse-dev
     #
-    $ sudo pip3 install llfuse==1.3.6
+    $ sudo pip3 install llfuse==1.3.8
     #
-    # llfuse must be version 1.3.6
+    # llfuse must be version 1.3.8
     #
     $ git clone https://github.com/sergey-dryabzhinsky/dedupsqlfs.git
     #
@@ -170,6 +170,6 @@ The latest version of DedupSqlFS is available at <https://github.com/sergey-drya
 
 This software is licensed under the MIT license.
 
-© 2013-2020 Sergey Dryabzhinsky &lt;sergey.dryabzhinsky@gmail.com&gt;.
+© 2013-2021 Sergey Dryabzhinsky &lt;sergey.dryabzhinsky@gmail.com&gt;.
 
 © 2010 Peter Odding &lt;peter@peterodding.com&gt;.

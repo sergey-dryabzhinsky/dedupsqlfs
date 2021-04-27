@@ -4,6 +4,11 @@ __author__ = 'sergey'
 
 from dedupsqlfs.db.mysql.table import Table
 
+try:
+    from pymysql import Binary
+except:
+    from _pymysql import Binary
+
 class TableBlock( Table ):
 
     _table_name = "block"
@@ -38,7 +43,7 @@ class TableBlock( Table ):
             " (`hash_id`, `data`) VALUES (%(hash_id)s, %(data)s)",
             {
                 'hash_id': hash_id,
-                'data': data,
+                'data': Binary(data),
             }
         )
         item = cur.lastrowid
@@ -57,7 +62,7 @@ class TableBlock( Table ):
             "UPDATE `%s` " % self.getName()+
             " SET `data`=%(data)s WHERE `hash_id`=%(hash_id)s",
             {
-                'data': data,
+                'data': Binary(data),
                 'hash_id': hash_id,
             }
         )

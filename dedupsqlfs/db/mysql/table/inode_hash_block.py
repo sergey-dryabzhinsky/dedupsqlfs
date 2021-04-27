@@ -36,7 +36,7 @@ class TableInodeHashBlock(Table):
         cur.execute(
             "INSERT INTO `%s` " % self.getName() +
             " (`inode_id`,`block_number`,`hash_id`,`real_size`) " +
-            " VALUES (%(inode)s, %(block)s, %(hash)s), %(size)s",
+            " VALUES (%(inode)s, %(block)s, %(hash)s, %(size)s)",
             {
                 "inode": inode,
                 "block": block_number,

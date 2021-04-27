@@ -8,7 +8,7 @@ from setuptools import setup, find_packages, Extension
 from setuptools.command.build_ext import build_ext
 
 # ZSTD version
-VERSION = (1, 4, 8,)
+VERSION = (1, 4, 9,)
 VERSION_STR = ".".join([str(x) for x in VERSION])
 
 # Package version
@@ -26,6 +26,12 @@ if "--legacy" in sys.argv:
     # Support legacy output format functions
     SUP_LEGACY=1
     sys.argv.remove("--legacy")
+
+SUP_TRACE=0
+if "--debug-trace" in sys.argv:
+    # Support tracing for debug
+    SUP_TRACE=1
+    sys.argv.remove("--debug-trace")
 
 SUP_PYZSTD_LEGACY=0
 if "--pyzstd-legacy" in sys.argv:
@@ -65,6 +71,7 @@ if "--extra-optimization" in sys.argv:
     # Support legacy output format functions
     EXTRA_OPT=1
     sys.argv.remove("--extra-optimization")
+
 
 COPT = {
     'msvc':     [ '/DVERSION=\"\\\"%s\\\"\"' % PKG_VERSION_STR, ],
@@ -114,6 +121,20 @@ if SUP_PYZSTD_LEGACY:
         else:
             COPT[comp].extend(['-DPYZSTD_LEGACY=1'])
 
+# Force traceing support or disable
+if SUP_TRACE:
+    for comp in COPT:
+        if comp == 'msvc':
+            COPT[comp].extend(['/DZSTD_TRACE=1'])
+        else:
+            COPT[comp].extend(['-DZSTD_TRACE=1'])
+else:
+    for comp in COPT:
+        if comp == 'msvc':
+            COPT[comp].extend(['/DZSTD_TRACE=0'])
+        else:
+            COPT[comp].extend(['-DZSTD_TRACE=0'])
+
 
 class ZstdBuildExt( build_ext ):
 
@@ -144,7 +165,10 @@ if not SUP_EXTERNAL:
             'decompress/zstd_ddict.c',
             'decompress/huf_decompress.c',
 
-            'common/entropy_common.c', 'common/zstd_common.c', 'common/xxhash.c', 'common/error_private.c',
+            'common/entropy_common.c',
+            'common/zstd_common.c',
+            'common/zstd_trace.c',
+            'common/xxhash.c', 'common/error_private.c',
             'common/pool.c',
             'common/threading.c',
         ]:
@@ -159,20 +183,26 @@ if not SUP_EXTERNAL:
 zstdFiles.append('src/util.c')
 zstdFiles.append('src/python-zstd.c')
 
-# Python 2.6 compat
-os.environ["VERSION"] = VERSION_STR
-os.environ["PKG_VERSION"] = PKG_VERSION_STR
-if SUP_LEGACY:
-    os.environ["LEGACY"] = "1"
-if SUP_EXTERNAL:
-    os.environ["ZSTD_EXTERNAL"] = "1"
-if SUP_PYZSTD_LEGACY:
-    os.environ["PYZSTD_LEGACY"] = "1"
+
+def setup_env():
+    # Python 2.6 compat
+    os.environ["VERSION"] = VERSION_STR
+    os.environ["PKG_VERSION"] = PKG_VERSION_STR
+    os.environ["LEGACY"] = "0"
+    os.environ["ZSTD_EXTERNAL"] = "0"
+    os.environ["PYZSTD_LEGACY"] = "0"
+    if SUP_LEGACY:
+        os.environ["LEGACY"] = "1"
+    if SUP_EXTERNAL:
+        os.environ["ZSTD_EXTERNAL"] = "1"
+    if SUP_PYZSTD_LEGACY:
+        os.environ["PYZSTD_LEGACY"] = "1"
 
 # Another dirty hack
 def my_test_suite():
     import unittest
 
+    setup_env()
     test_suite = unittest.TestSuite()
     for test in os.listdir('tests'):
         if test.startswith("test_") and test.endswith(".py"):
@@ -205,14 +235,12 @@ setup(
         'Operating System :: POSIX',
         'Programming Language :: C',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.2',
-        'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
     ]
 )

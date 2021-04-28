@@ -133,7 +133,7 @@ class TableInode( Table ):
         if id_str:
             cur = self.getCursor()
             cur.execute(
-                "SELECT COUNT(1) as `cnt` FROM `%s` WHERE `id` IN (%s) AND `nlinks`>0" % (
+                "SELECT COUNT(1) as `cnt` FROM `%s` WHERE `id` IN (%s) AND `nlinks`!=0" % (
                 self.getName(), id_str,)
             )
             result = cur.fetchone()["cnt"]

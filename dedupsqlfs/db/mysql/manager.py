@@ -298,15 +298,20 @@ class DbManager( object ):
             self._is_mariadb = False
             has_tokudb = False
             has_rocksdb = False
+            has_aria = False
+
+            cmd_env = os.environ.copy()
 
             output = subprocess.check_output(["mysqld", "--verbose", "--help"], stderr=subprocess.DEVNULL)
 
-            if output.find(b'MariaDB'):
+            if output.find(b'MariaDB') != -1:
                 self._is_mariadb = True
-            if output.find(b'--tokudb'):
+            if output.find(b'--tokudb') != -1:
                 has_tokudb = True
-            if output.find(b'--rocksdb'):
+            if output.find(b'--rocksdb') != -1:
                 has_rocksdb = True
+            if output.find(b'--aria') != -1:
+                has_aria = True
 
             cmd_opts = [
                 "--basedir=/usr",
@@ -367,19 +372,52 @@ class DbManager( object ):
                 "--query-cache-size=64M",
                 "--max-allowed-packet=32M",
             ])
+
+            if output.find(b"--concurrent-insert") != -1:
+                cmd_opts.extend([
+                    "--concurrent-insert=2",
+                ])
+
+            if output.find(b"--column-compression-zlib-level") != -1:
+                cmd_opts.extend([
+                    "--column-compression-zlib-level=1",
+                ])
+
             if self._table_engine == "InnoDB":
                 cmd_opts.extend([
                     "--innodb-file-per-table",
                     "--innodb-flush-method=O_DIRECT",
                     "--innodb-file-format=Barracuda",
-                    # drop is MySQL >= 5.7 or MariaDB >= 10.3
-                    "--innodb-file-format-max=Barracuda",
                     "--skip-innodb-doublewrite",
                     "--innodb-buffer-pool-size=%dM" % (self._buffer_size/1024/1024),
                     "--innodb-log-file-size=32M",
                     "--innodb-log-buffer-size=8M",
                     "--innodb-autoextend-increment=1",
                 ])
+                if output.find(b"--innodb-file-format-max") != -1:
+                    cmd_opts.extend([
+                        "--innodb-file-format-max=Barracuda",
+                    ])
+                if output.find(b"--innodb-use-fallocate") != -1:
+                    cmd_opts.extend([
+                        "--innodb-use-fallocate=1",
+                    ])
+                if output.find(b"--innodb-use-trim") != -1:
+                    cmd_opts.extend([
+                        "--innodb-use-trim=1",
+                    ])
+                if output.find(b"--innodb-compression-default") != -1:
+                    cmd_opts.extend([
+                        "--innodb-compression-default=1",
+                    ])
+                if output.find(b"--innodb-compression-level") != -1:
+                    cmd_opts.extend([
+                        "--innodb-compression-level=1",
+                    ])
+                if output.find(b"--innodb-compression-algorithm") != -1:
+                    cmd_opts.extend([
+                        "--innodb-compression-algorithm=zlib",
+                    ])
 
             else:
                 cmd_opts.extend([
@@ -394,18 +432,28 @@ class DbManager( object ):
                 ])
             else:
                 cmd_opts.extend([
-                    "--key-buffer-size=8k",
+                    "--key-buffer-size=8M",
                 ])
 
             if self._is_mariadb:
 
                 if self._table_engine == "InnoDB":
-                    cmd_opts.extend([
-                        "--innodb-flush-neighbors=0",
-                        "--innodb-default-row-format=dynamic",
-                    ])
+
+                    if output.find(b"--innodb-flush-neighbor-pages") != -1:
+                        cmd_opts.extend([
+                            "--innodb-flush-neighbor-pages=0",
+                        ])
+                    if output.find(b"--innodb-flush-neighbors") != -1:
+                        cmd_opts.extend([
+                            "--innodb-flush-neighbors=0",
+                        ])
+                    if output.find(b"--innodb-default-row-format") != -1:
+                        cmd_opts.extend([
+                            "--innodb-default-row-format=dynamic",
+                        ])
 
                 if self._table_engine == "TokuDB":
+                    cmd_env["LD_PRELOAD"] = "/usr/lib/x86_64-linux-gnu/libjemalloc.so.1"
                     cmd_opts.extend([
                         "--plugin-load-add=ha_tokudb",
                         "--tokudb-block-size=16k",
@@ -421,14 +469,15 @@ class DbManager( object ):
                     cmd_opts.extend([
                         "--plugin-load-add=ha_rocksdb",
                         "--rocksdb-use-direct-io-for-flush-and-compaction=1",
-                        "--rocksdb-use-direct-reads=1"
+                        "--rocksdb-use-direct-reads=1",
+                        "--rocksdb-max-row-locks=%d" % (256*1024*1024,),
                     ])
                 elif has_rocksdb:
                     cmd_opts.extend([
                         "--rocksdb=OFF",
                     ])
 
-                if self._table_engine == "Aria":
+                if self._table_engine == "Aria" and has_aria:
                     cmd_opts.extend([
                         # Only MariaDB
                         "--aria-block-size=16k",
@@ -436,9 +485,8 @@ class DbManager( object ):
                         "--aria-sort-buffer-size=32M",
                         "--aria-pagecache-buffer-size=%dM" % (self._buffer_size/1024/1024),
                     ])
-                else:
+                elif has_aria:
                     cmd_opts.extend([
-                        # "--aria=OFF",         # Can't do this - TMP tables gone
                         "--aria-block-size=4k",
                         "--aria-log-file-size=8M",
                         "--aria-sort-buffer-size=4k",
@@ -461,7 +509,8 @@ class DbManager( object ):
                     cmd,
                     cwd=self.getBasePath(),
                     stdout=sf,
-                    stderr=subprocess.STDOUT
+                    stderr=subprocess.STDOUT,
+                    env=cmd_env
                 ).wait()
                 sf.close()
                 if retcode:
@@ -481,7 +530,8 @@ class DbManager( object ):
                 cmd,
                 cwd=self.getBasePath(),
                 stdout=of,
-                stderr=subprocess.STDOUT
+                stderr=subprocess.STDOUT,
+                env=cmd_env
             )
 
             t = 30

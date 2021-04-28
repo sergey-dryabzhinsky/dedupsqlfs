@@ -64,10 +64,10 @@ class Table( object ):
     def _getCreationAppendString(self):
         _cs = " Engine=" + self._engine
         if self._engine == "InnoDB":
-            _cs += " KEY_BLOCK_SIZE=%d" % self._key_block_size
+#            _cs += " KEY_BLOCK_SIZE=%d" % self._key_block_size
             if self._compressed:
                 if self._manager.getIsMariaDB():
-                    _cs += " ROW_FORMAT=DYNAMIC ROW_COMPRESSED=1"
+                    _cs += " ROW_FORMAT=DYNAMIC PAGE_COMPRESSED=1"
                 else:
                     _cs += " ROW_FORMAT=COMPRESSED"
             _cs += ";"

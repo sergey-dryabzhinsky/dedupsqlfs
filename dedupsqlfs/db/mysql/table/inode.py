@@ -215,7 +215,7 @@ class TableInode( Table ):
         if id_str:
             cur = self.getCursor()
             cur.execute("SELECT SUM(`size`) as `s` FROM `%s` " % self.getName()+
-                        " WHERE `id` IN (%s) AND `nlinks`>0" % id_str)
+                        " WHERE `id` IN (%s) AND `nlinks`!=0" % id_str)
             item = cur.fetchone()
             if item and item["s"]:
                 item = item["s"]

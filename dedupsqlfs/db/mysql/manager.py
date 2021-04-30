@@ -468,9 +468,12 @@ class DbManager( object ):
                 if self._table_engine == "RocksDB":
                     cmd_opts.extend([
                         "--plugin-load-add=ha_rocksdb",
+                        "--rocksdb-block-size=16k",
+                        "--rocksdb-max-background-jobs=8",
                         "--rocksdb-use-direct-io-for-flush-and-compaction=1",
                         "--rocksdb-use-direct-reads=1",
                         "--rocksdb-max-row-locks=%d" % (256*1024*1024,),
+                        "--rocksdb-db-write-buffer-size=%dM" % (self._buffer_size/1024/1024),
                     ])
                 elif has_rocksdb:
                     cmd_opts.extend([

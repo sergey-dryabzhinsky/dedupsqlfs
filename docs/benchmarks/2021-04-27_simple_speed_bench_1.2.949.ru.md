@@ -10,9 +10,9 @@
 
 * sqlite 3.34.1
 * mariadb 10.5 + myisam
-* mariadb 10.5 + innodb
-* mariadb 10.5 + tokudb
-* mariadb 10.5 + rocksdb
+* mariadb 10.5 + innodb + сжатие страниц zlib:1
+* mariadb 10.5 + tokudb + сжатие small
+* mariadb 10.5 + rocksdb - сжатие по-умолчанию
 
 Размер LibreOffice в tar:
 

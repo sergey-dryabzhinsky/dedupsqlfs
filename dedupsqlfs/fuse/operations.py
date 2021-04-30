@@ -211,8 +211,6 @@ class DedupOperations(llfuse.Operations):  # {{{1
             if migr.isMigrationNeeded():
                 self.getLogger().error("FS databases need to process migrations! They not (all) applyed!")
                 raise OSError("FS DB not migrated!")
-            migration = self.getTable("option").get("migration")
-            self.getLogger().info("FS databases last migration: %s" % migration)
 
             self.flushCompressionType()
 
@@ -1817,6 +1815,9 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
             optTable.insert("mounted", 1)
             optTable.insert("inited", 1)
+
+        migration = self.getTable("option").get("migration")
+        self.getLogger().info("FS databases last migration: %s" % migration)
 
         for name in ("compression_method", "compression_level",):
             opt = optTable.get(name)

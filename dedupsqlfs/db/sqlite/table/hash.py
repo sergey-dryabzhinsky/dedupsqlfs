@@ -16,17 +16,17 @@ class TableHash( Table ):
         c.execute(
             "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
-                "hash BINARY(64) NOT NULL"+
+                "value VARBINARY(64) NOT NULL"+
             ")"
         )
-        self.createIndexIfNotExists('hash', ('hash',), True)
+        self.createIndexIfNotExists('value', ('value',), True)
         return
 
     def insert( self, value):
         self.startTimer()
         cur = self.getCursor()
         bvalue = Binary(value)
-        cur.execute("INSERT INTO `%s`(hash) VALUES (?)" % self.getName(),
+        cur.execute("INSERT INTO `%s`(value) VALUES (?)" % self.getName(),
                     (bvalue,))
         item = cur.lastrowid
         self.stopTimer('insert')
@@ -36,7 +36,7 @@ class TableHash( Table ):
         self.startTimer()
         cur = self.getCursor()
         bvalue = Binary(value)
-        cur.execute("INSERT INTO `%s`(id,hash) VALUES (?,?)" % self.getName(),
+        cur.execute("INSERT INTO `%s`(id,value) VALUES (?,?)" % self.getName(),
                     (rowId,bvalue,))
         item = cur.lastrowid
         self.stopTimer('insertRaw')
@@ -50,7 +50,7 @@ class TableHash( Table ):
         self.startTimer()
         cur = self.getCursor()
         bvalue = Binary(value)
-        cur.execute("UPDATE `%s` SET hash=? WHERE id=?" % self.getName(),
+        cur.execute("UPDATE `%s` SET value=? WHERE id=?" % self.getName(),
                     (bvalue, item_id))
         count = cur.rowcount
         self.stopTimer('update')
@@ -59,10 +59,10 @@ class TableHash( Table ):
     def get( self, item_id ):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT hash FROM `%s` WHERE id=?" % self.getName(), (item_id,))
+        cur.execute("SELECT value FROM `%s` WHERE id=?" % self.getName(), (item_id,))
         item = cur.fetchone()
         if item:
-            item = item["hash"]
+            item = item["value"]
         self.stopTimer('get')
         return item
 
@@ -70,7 +70,7 @@ class TableHash( Table ):
         self.startTimer()
         cur = self.getCursor()
         bvalue = Binary(value)
-        cur.execute("SELECT id FROM `%s` WHERE hash=?" % self.getName(), (bvalue,))
+        cur.execute("SELECT id FROM `%s` WHERE value=?" % self.getName(), (bvalue,))
         item = cur.fetchone()
         if item:
             item = item["id"]

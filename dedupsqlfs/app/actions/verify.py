@@ -48,7 +48,7 @@ def do_verify(options, _fuse):
 
         newHash = _fuse.operations.do_hash(blockData)
 
-        if newHash == hashItem["hash"]:
+        if newHash == hashItem["value"]:
             equal += 1
 
         prc = "%6.2f%%" % (cnt*100.0/hashCount)

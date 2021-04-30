@@ -211,6 +211,9 @@ class DedupOperations(llfuse.Operations):  # {{{1
             if migr.isMigrationNeeded():
                 self.getLogger().error("FS databases need to process migrations! They not (all) applyed!")
                 raise OSError("FS DB not migrated!")
+            migration = self.getTable("option").get("migration")
+            self.getLogger().info("FS databases last migration: %s" % migration)
+
             self.flushCompressionType()
 
         return self.manager

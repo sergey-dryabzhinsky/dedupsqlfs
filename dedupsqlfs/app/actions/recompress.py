@@ -25,7 +25,7 @@ def do_recompress(options, _fuse):
 
     hashCount = tableHash.get_count()
     if _fuse.getOption("verbosity") > 0:
-        print("Ready to rehash %s blocks." % hashCount)
+        print("Ready to recompress %s blocks." % hashCount)
 
     cur = tableHash.getCursor(True)
     cur.execute("SELECT `id` FROM `%s`" % tableHash.getName())

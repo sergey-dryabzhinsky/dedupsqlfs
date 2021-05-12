@@ -39,6 +39,8 @@ def do_recompress(options, _fuse):
     tableHashCT.begin()
     _fuse.operations.getManager().setAutocommit(True)
 
+    cntNth = int(hashCount/10000.0)
+
     try:
         toCompress = {}
         toCompressM = {}
@@ -73,10 +75,9 @@ def do_recompress(options, _fuse):
                 toCompress = {}
                 toCompressM = {}
 
-            prc = "%6.2f%%" % (cnt*100.0/hashCount)
-            if prc != lastPrc:
-                lastPrc = prc
+            if cnt % cntNth == 0:
                 if _fuse.getOption("verbosity") > 0:
+                    prc = "%6.2f%%" % (cnt*100.0/hashCount)
                     sys.stdout.write("\r%s " % prc)
                     sys.stdout.flush()
 
@@ -111,6 +112,7 @@ def do_recompress(options, _fuse):
         print("Something went wrong? Changes are rolled back!")
         return 1
 
+    # TODO: probably use alot of memory, commit every 5000-th block. Or rollback and quit.
     _fuse.operations.getManager().setAutocommit(False)
     tableBlock.commit()
     tableHashCT.commit()

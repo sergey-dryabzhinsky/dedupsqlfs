@@ -44,16 +44,15 @@ if not loaded:
 FUSEError = fuse.FUSEError
 
 # Local modules that are mostly useful for debugging.
-from dedupsqlfs.log import logging
 from dedupsqlfs.lib import constants
-from dedupsqlfs.my_formats import format_size, format_timespan
-from dedupsqlfs.get_memory_usage import get_real_memory_usage, get_memory_usage
+from dedupsqlfs.my_formats import format_timespan
 from dedupsqlfs.lib.cache.simple import CacheTTLseconds, CompressionSizesValue
 from dedupsqlfs.lib.cache.storage import StorageTimeSize
 from dedupsqlfs.lib.cache.index import IndexTime
 from dedupsqlfs.lib.cache.inodes import InodesTime
 from dedupsqlfs.fuse.subvolume import Subvolume
 from dedupsqlfs.fuse.helpers.repr import entry_attributes_to_dict, setattr_fields_to_dict
+from dedupsqlfs.fuse.helpers.report import ReportHelper
 from dedupsqlfs import __fsversion__
 
 
@@ -67,14 +66,6 @@ class DedupOperations(llfuse.Operations):  # {{{1
         self.block_size = constants.BLOCK_SIZE_DEFAULT
         self.hash_function = constants.HAS_FUNCTION_DEFAULT
         self.compression_method = constants.COMPRESSION_TYPE_NONE
-
-        self.bytes_read = 0
-        self.bytes_written = 0
-        self.bytes_written_compressed = 0
-        self.compressed_ratio = 0.0
-
-        self.bytes_deduped = 0
-        self.bytes_deduped_last = 0
 
         self.cache_enabled = True
         self.cache_gc_meta_last_run = time()
@@ -110,37 +101,11 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
         self.link_mode = stat.S_IFLNK | 0o777
 
-        self.memory_usage = 0
-        self.memory_usage_real = 0
-        self.opcount = 0
-
         self.root_mode = stat.S_IFDIR | 0o755
 
-        self.timing_report_last_run = time()
-        self.report_interval = 60
 
-        self.time_spent_logging = 0
-        self.time_spent_caching_items = 0
-        self.time_spent_hashing = 0
-        self.time_spent_interning = 0
-        self.time_spent_querying_tree = 0
-        self.time_spent_reading = 0
-        self.time_spent_traversing_tree = 0
-        self.time_spent_writing = 0
-        self.time_spent_writing_meta = 0
-        self.time_spent_writing_blocks = 0
-        self.time_spent_commiting = 0
+        self.reportHelper = ReportHelper(self)
 
-        self.time_spent_flushing_block_cache = 0
-        self.time_spent_flushing_writed_block_cache = 0
-        self.time_spent_flushing_readed_block_cache = 0
-        self.time_spent_flushing_writedByTime_block_cache = 0
-        self.time_spent_flushing_readedByTime_block_cache = 0
-        self.time_spent_flushing_writedBySize_block_cache = 0
-        self.time_spent_flushing_readedBySize_block_cache = 0
-
-        self.time_spent_compressing = 0
-        self.time_spent_decompressing = 0
 
         self._compression_types = {}
         self._compression_types_revert = {}
@@ -904,7 +869,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
                     self.getLogger().logCall('read', '-- oversized! inode(size)=%i, corrected read size: %i', row["size"], size )
                 data = self.__get_block_data_by_offset(fh, offset, size)
             lr = len(data)
-            self.bytes_read += lr
+            self.reportHelper.bytes_read += lr
 
             # Too much output
             # self.__log_call('read', 'readed: size=%s, data=%r', len(data), data, )
@@ -912,7 +877,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
             self.__cache_block_hook()
 
-            self.time_spent_reading += time() - start_time
+            self.reportHelper.time_spent_reading += time() - start_time
             return data
         except Exception as e:
             return self.__except_to_status('read', e, code=errno.EIO)
@@ -1324,7 +1289,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
             self.__cache_meta_hook()
             self.__cache_block_hook()
 
-            self.time_spent_writing += time() - start_time
+            self.reportHelper.time_spent_writing += time() - start_time
             return length
         except Exception as e:
             self.__rollback_changes()
@@ -1357,11 +1322,12 @@ class DedupOperations(llfuse.Operations):  # {{{1
     def __get_id_by_name(self, name):
         self.getLogger().logCall('__get_id_by_name', '->(name=%r)', name)
 
-        name_id = self.cached_names.get(hashlib.md5(name).hexdigest())
+        xname = hashlib.md5(name).hexdigest()
+        name_id = self.cached_names.get(xname)
         if not name_id:
             name_id = self.getTable("name").find(name)
             if name_id:
-                self.cached_names.set(hashlib.md5(name).hexdigest(), name_id)
+                self.cached_names.set(xname, name_id)
                 self.cached_name_ids.set(name_id, name)
         if not name_id:
             self.getLogger().debug("! No name %r found, cant find name.id" % name)
@@ -1385,7 +1351,9 @@ class DedupOperations(llfuse.Operations):  # {{{1
     def __get_tree_node_by_parent_inode_and_name(self, parent_inode, name):
         self.getLogger().logCall('__get_tree_node_by_parent_inode_and_name', '->(parent_inode=%i, name=%r)', parent_inode, name)
 
-        node = self.cached_nodes.get("%i-%s" % (parent_inode, hashlib.md5(name).hexdigest()))
+        xname = hashlib.md5(name).hexdigest()
+        xkey = "%i-%s" % (parent_inode, xname)
+        node = self.cached_nodes.get(xkey)
 
         if not node:
 
@@ -1401,7 +1369,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 self.getLogger().debug("! No node %i and name %i found, cant get tree node", par_node["id"], name_id)
                 raise FUSEError(errno.ENOENT)
 
-            self.cached_nodes.set("%i-%s" % (parent_inode, hashlib.md5(name).hexdigest()), node)
+            self.cached_nodes.set(xkey, node)
 
         return node
 
@@ -1713,7 +1681,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
             raw_data.write(block.read(read_size))
             readed_size += read_size
 
-        self.bytes_read += readed_size
+        self.reportHelper.bytes_read += readed_size
 
         raw_value = raw_data.getvalue()
 
@@ -1939,6 +1907,8 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
     def __intern(self, name): # {{{3
         """
+        Search stored names
+
         @param name: bytes
         @return: int
         """
@@ -1953,7 +1923,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
             self.cached_names.set(hashlib.md5(name).hexdigest(), name_id)
             self.cached_name_ids.set(name_id, name)
 
-            self.time_spent_interning += time() - start_time
+            self.reportHelper.time_spent_interning += time() - start_time
         return int(name_id)
 
     def __remove(self, parent_inode, name, check_empty=False):  # {{{3
@@ -2055,7 +2025,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
     def do_hash(self, data):  # {{{3
         start_time = time()
         digest = hashlib.new(self.hash_function, data).digest()
-        self.time_spent_hashing += time() - start_time
+        self.reportHelper.time_spent_hashing += time() - start_time
         return digest
 
     def __decompress(self, block_data, compression_type_id):
@@ -2068,243 +2038,9 @@ class DedupOperations(llfuse.Operations):  # {{{1
         compression = self.getCompressionTypeName( compression_type_id )
         self.getLogger().debug("-- decompress block: type = %s", compression)
         result = self.application.decompressData(compression, block_data)
-        self.time_spent_decompressing += time() - start_time
+        self.reportHelper.time_spent_decompressing += time() - start_time
         return result
 
-    def __print_stats(self):  # {{{3
-        if self.getLogger().isEnabledFor(logging.INFO) and self.getOption("verbose_stats"):
-            self.getLogger().info('-' * 79)
-            self.__report_memory_usage()
-            self.__report_memory_usage_real()
-            self.__report_deduped_usage()
-            self.__report_compressed_usage()
-            self.__report_throughput()
-            self.__report_timings()
-            self.__report_database_timings()
-            self.__report_database_operations()
-            self.__report_cache_timings()
-            self.__report_cache_operations()
-            self.getLogger().info(' ' * 79)
-
-    def __report_timings(self):  # {{{3
-        self.time_spent_logging = self.getLogger().getTimeIn()
-        self.time_spent_caching_items = self.cached_attrs.getAllTimeSpent() + self.cached_xattrs.getAllTimeSpent() + \
-            self.cached_nodes.getAllTimeSpent() + self.cached_names.getAllTimeSpent() + self.cached_name_ids.getAllTimeSpent() + \
-            self.cached_indexes.getAllTimeSpent() + self.cached_blocks.getAllTimeSpent() + self.cached_hash_sizes.getAllTimeSpent() + \
-            self.cached_hash_compress.getAllTimeSpent()
-        timings = [
-            (self.time_spent_logging, 'Logging debug info'),
-            (self.time_spent_caching_items, 'Caching all items - inodes, tree-nodes, names, xattrs, indexes, blocks ...'),
-            (self.time_spent_interning, 'Interning path components'),
-            (self.time_spent_reading, 'Reading data stream'),
-            (self.time_spent_writing, 'Writing data stream (cumulative: meta + blocks)'),
-            (self.time_spent_writing_meta, 'Writing inode metadata'),
-            (self.time_spent_writing_blocks, 'Writing data blocks (cumulative)'),
-            (self.time_spent_writing_blocks - self.time_spent_compressing - self.time_spent_hashing,
-                'Writing blocks to database'),
-            (self.getManager().getTimeSpent(), 'Database operations'),
-            (self.time_spent_commiting, 'Commiting all changes to database'),
-            (self.time_spent_flushing_writed_block_cache - self.time_spent_writing_blocks, 'Flushing writed block cache'),
-            (self.time_spent_flushing_readed_block_cache, 'Flushing readed block cache (cumulative)'),
-            (self.time_spent_flushing_writed_block_cache, 'Flushing writed block cache (cumulative)'),
-            (self.time_spent_flushing_writedByTime_block_cache, 'Flushing writed block cache (by Time)'),
-            (self.time_spent_flushing_writedBySize_block_cache, 'Flushing writed block cache (by Size)'),
-            (self.time_spent_flushing_readedByTime_block_cache, 'Flushing readed block cache (by Time)'),
-            (self.time_spent_flushing_readedBySize_block_cache, 'Flushing readed block cache (by Size)'),
-            (self.time_spent_flushing_block_cache, 'Flushing block cache (cumulative)'),
-            (self.time_spent_hashing, 'Hashing data blocks'),
-            (self.time_spent_compressing, 'Compressing data blocks'),
-            (self.time_spent_decompressing, 'Decompressing data blocks'),
-            (self.time_spent_querying_tree, 'Querying the tree')
-        ]
-        maxdescwidth = max([len(l) for t, l in timings]) + 3
-        timings.sort(reverse=True)
-
-        uptime = time() - self.fs_mounted_at
-        self.getLogger().info("Filesystem mounted: %s", format_timespan(uptime))
-
-        printed_heading = False
-        for timespan, description in timings:
-            percentage = 100.0 * timespan / uptime
-            if percentage >= 0.1:
-                if not printed_heading:
-                    self.getLogger().info("Cumulative timings of slowest operations:")
-                    printed_heading = True
-                self.getLogger().info(
-                    " - %-*s%s (%.1f%%)", maxdescwidth, description + ':', format_timespan(timespan), percentage)
-
-    def __report_database_timings(self):  # {{{3
-        if self.getLogger().isEnabledFor(logging.INFO):
-            timings = []
-            for tn in self.getManager().tables:
-                t = self.getTable(tn)
-
-                opTimes = t.getTimeSpent()
-                for op, timespan in opTimes.items():
-                    timings.append((timespan, 'Table %r - operation %r timings' % (tn, op,),))
-
-            maxdescwidth = max([len(l) for t, l in timings]) + 3
-            timings.sort(reverse=True)
-
-            alltime = self.getManager().getTimeSpent()
-            self.getLogger().info("Database all operations timings: %s", format_timespan(alltime))
-
-            printed_heading = False
-            for timespan, description in timings:
-                percentage = 100.0 * timespan / alltime
-                if percentage >= 0.1:
-                    if not printed_heading:
-                        self.getLogger().info("Cumulative timings of slowest tables:")
-                        printed_heading = True
-                    self.getLogger().info(
-                        " - %-*s%s (%.1f%%)", maxdescwidth, description + ':', format_timespan(timespan), percentage)
-
-    def __report_database_operations(self):  # {{{3
-        if self.getLogger().isEnabledFor(logging.INFO):
-            counts = []
-            allcount = 0
-            for tn in self.getManager().tables:
-                t = self.getTable(tn)
-
-                opCount = t.getOperationsCount()
-                for op, count in opCount.items():
-                    counts.append((count, 'Table %r - operation %r count' % (tn, op,),))
-                    allcount += count
-
-            maxdescwidth = max([len(l) for t, l in counts]) + 3
-            counts.sort(reverse=True)
-
-            self.getLogger().info("Database all operations: %s", allcount)
-
-            printed_heading = False
-            for count, description in counts:
-                percentage = 100.0 * count / allcount
-                if percentage >= 0.1:
-                    if not printed_heading:
-                        self.getLogger().info("Cumulative count of operations:")
-                        printed_heading = True
-                    self.getLogger().info(
-                        " - %-*s%s (%.1f%%)", maxdescwidth, description + ':', count, percentage)
-
-    def __report_cache_timings(self):  # {{{3
-        if self.getLogger().isEnabledFor(logging.INFO):
-            timings = []
-            for cn in "cached_attrs", "cached_xattrs", "cached_nodes", "cached_names", "cached_name_ids", \
-                "cached_indexes", "cached_blocks", "cached_hash_sizes", "cached_hash_compress":
-                c = getattr(self, cn)
-
-                opTimes = c.getTimeSpent()
-                for op, timespan in opTimes.items():
-                    timings.append((timespan, 'Cache %r - operation %r timings' % (cn, op,),))
-
-            maxdescwidth = max([len(l) for t, l in timings]) + 3
-            timings.sort(reverse=True)
-
-            alltime = self.time_spent_caching_items
-            self.getLogger().info("Cache all operations timings: %s", format_timespan(alltime))
-
-            printed_heading = False
-            for timespan, description in timings:
-                percentage = 100.0 * timespan / alltime
-                if percentage >= 0.1:
-                    if not printed_heading:
-                        self.getLogger().info("Cumulative timings of slowest caches:")
-                        printed_heading = True
-                    self.getLogger().info(
-                        " - %-*s%s (%.1f%%)", maxdescwidth, description + ':', format_timespan(timespan), percentage)
-
-    def __report_cache_operations(self):  # {{{3
-        if self.getLogger().isEnabledFor(logging.INFO):
-            counts = []
-            allcount = 0
-            for cn in "cached_attrs", "cached_xattrs", "cached_nodes", "cached_names", "cached_name_ids", \
-                "cached_indexes", "cached_blocks", "cached_hash_sizes", "cached_hash_compress":
-                c = getattr(self, cn)
-
-                opCount = c.getOperationsCount()
-                for op, count in opCount.items():
-                    counts.append((count, 'Cache %r - operation %r count' % (cn, op,),))
-                    allcount += count
-
-            maxdescwidth = max([len(l) for t, l in counts]) + 3
-            counts.sort(reverse=True)
-
-            self.getLogger().info("Cache all operations: %s", allcount)
-
-            printed_heading = False
-            for count, description in counts:
-                percentage = 100.0 * count / allcount
-                if percentage >= 0.1:
-                    if not printed_heading:
-                        self.getLogger().info("Cumulative count of operations:")
-                        printed_heading = True
-                    self.getLogger().info(
-                        " - %-*s%s (%.1f%%)", maxdescwidth, description + ':', count, percentage)
-
-    def __report_memory_usage(self):  # {{{3
-        memory_usage = get_memory_usage()
-        msg = "Current virtual memory usage is " + format_size(memory_usage)
-        difference = abs(memory_usage - self.memory_usage)
-        if self.memory_usage != 0 and difference:
-            direction = self.memory_usage < memory_usage and 'up' or 'down'
-            msg += " (%s by %s)" % (direction, format_size(difference))
-        self.getLogger().info(msg + '.')
-        self.memory_usage = memory_usage
-
-    def __report_memory_usage_real(self):  # {{{3
-        memory_usage = get_real_memory_usage()
-        msg = "Current real memory usage is " + format_size(memory_usage)
-        difference = abs(memory_usage - self.memory_usage_real)
-        if self.memory_usage_real != 0 and difference:
-            direction = self.memory_usage_real < memory_usage and 'up' or 'down'
-            msg += " (%s by %s)" % (direction, format_size(difference))
-        self.getLogger().info(msg + '.')
-        self.memory_usage_real = memory_usage
-
-    def __report_deduped_usage(self):  # {{{3
-        msg = "Current deduped stream bytes is " + format_size(self.bytes_deduped)
-        difference = abs(self.bytes_deduped - self.bytes_deduped_last)
-        if self.bytes_deduped_last != 0 and difference:
-            direction = self.bytes_deduped_last < self.bytes_deduped and 'up' or 'down'
-            msg += " (%s by %s)" % (direction, format_size(difference))
-        self.getLogger().info(msg + '.')
-        self.bytes_deduped_last = self.bytes_deduped
-
-    def __report_compressed_usage(self):  # {{{3
-        if self.bytes_written:
-            ratio = (self.bytes_written - self.bytes_written_compressed) * 100.0 / self.bytes_written
-        else:
-            ratio = 0
-        msg = "Current stream bytes compression ratio is %.2f%%" % ratio
-        difference = abs(ratio - self.compressed_ratio)
-        if self.compressed_ratio != 0 and difference:
-            direction = self.compressed_ratio < ratio and 'up' or 'down'
-            msg += " (%s by %.2f%%)" % (direction, difference)
-        msg += " (%s to %s)" % (format_size(self.bytes_written), format_size(self.bytes_written_compressed))
-        self.getLogger().info(msg + '.')
-        self.compressed_ratio = ratio
-
-    def __report_throughput(self, nbytes=None, nseconds=None, label=None):  # {{{3
-        if nbytes == None:
-            #self.bytes_read, self.time_spent_reading = \
-            self.__report_throughput(self.bytes_read, self.time_spent_reading, "read")
-            # self.bytes_written, self.time_spent_writing = \
-            self.__report_throughput((self.bytes_written + self.bytes_deduped), self.time_spent_writing, "write")
-        else:
-            if nbytes > 0:
-                average = format_size(nbytes / max(1, nseconds))
-                self.getLogger().info("Average %s stream speed is %s/s.", label, average)
-                # Decrease the influence of previous measurements over time?
-                # if nseconds > 60 and nbytes > 1024 ** 2:
-                #    return nbytes / 2, nseconds / 2
-            return nbytes, nseconds
-
-    def __timing_report_hook(self):  # {{{3
-        t_now = time()
-        if t_now - self.timing_report_last_run >= self.report_interval:
-            self.timing_report_last_run = t_now
-            self.__print_stats()
-        return
 
     def __write_block_data(self, inode, block_number, block, blocks_from_cache={}):
         """
@@ -2443,7 +2179,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
                         raise RuntimeError("Data corruption!")
 
             # Old hash found
-            self.bytes_deduped += block_length
+            self.reportHelper.bytes_deduped += block_length
 
         if not indexItem:
             tableIndex.insert(
@@ -2465,7 +2201,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
             self.cached_indexes.set(inode, block_number, indexItem)
             result["update"] = True
 
-        self.time_spent_writing_blocks += time() - start_time
+        self.reportHelper.time_spent_writing_blocks += time() - start_time
         return result
 
     def __flush_old_cached_blocks(self, cached_blocks, writed=False):
@@ -2537,9 +2273,9 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 hash_SZ.size_w = writed_size
                 self.cached_hash_sizes.set(hash_id, hash_SZ)
 
-            self.bytes_written_compressed += comp_size
+            self.reportHelper.bytes_written_compressed += comp_size
 
-        self.time_spent_compressing += self.application.getCompressTool().time_spent_compressing
+        self.reportHelper.time_spent_compressing += self.application.getCompressTool().time_spent_compressing
 
         return count
 
@@ -2570,8 +2306,9 @@ class DedupOperations(llfuse.Operations):  # {{{1
             self.cache_gc_block_write_last_run = time()
 
             elapsed_time1 = self.cache_gc_block_write_last_run - start_time1
-            self.time_spent_flushing_writed_block_cache += elapsed_time1
-            self.time_spent_flushing_writedByTime_block_cache += elapsed_time1
+
+            self.reportHelper.time_spent_flushing_writed_block_cache += elapsed_time1
+            self.reportHelper.time_spent_flushing_writedByTime_block_cache += elapsed_time1
 
         start_time1 = time()
         if start_time1 - self.cache_gc_block_writeSize_last_run >= self.flushBlockSize_interval:
@@ -2583,8 +2320,9 @@ class DedupOperations(llfuse.Operations):  # {{{1
             self.cache_gc_block_writeSize_last_run = time()
 
             elapsed_time1 = self.cache_gc_block_writeSize_last_run - start_time1
-            self.time_spent_flushing_writed_block_cache += elapsed_time1
-            self.time_spent_flushing_writedBySize_block_cache += elapsed_time1
+
+            self.reportHelper.time_spent_flushing_writed_block_cache += elapsed_time1
+            self.reportHelper.time_spent_flushing_writedBySize_block_cache += elapsed_time1
 
         start_time1 = time()
         if start_time1 - self.cache_gc_block_readSize_last_run >= self.flushBlockSize_interval:
@@ -2596,8 +2334,8 @@ class DedupOperations(llfuse.Operations):  # {{{1
             self.cache_gc_block_readSize_last_run = time()
 
             elapsed_time1 = self.cache_gc_block_readSize_last_run - start_time1
-            self.time_spent_flushing_readed_block_cache += elapsed_time1
-            self.time_spent_flushing_readedBySize_block_cache += elapsed_time1
+            self.reportHelper.time_spent_flushing_readed_block_cache += elapsed_time1
+            self.reportHelper.time_spent_flushing_readedBySize_block_cache += elapsed_time1
 
         if flushed_writed_blocks + flushed_readed_blocks > 0:
 
@@ -2605,14 +2343,14 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
             elapsed_time = time() - start_time
 
-            self.time_spent_flushing_block_cache += elapsed_time
+            self.reportHelper.time_spent_flushing_block_cache += elapsed_time
 
             self.getLogger().debug("Block cache cleanup: flushed %i writed (%i/t, %i/sz), %i readed (%i/t, %i/sz) blocks in %s",
                                   flushed_writed_blocks, flushed_writed_expiredByTime_blocks, flushed_writed_expiredBySize_blocks,
                                   flushed_readed_blocks, flushed_readed_expiredByTime_blocks, flushed_readed_expiredBySize_blocks,
                                   format_timespan(elapsed_time))
 
-        self.__timing_report_hook()
+        self.reportHelper.do_print_stats_ontime()
 
         return flushed_readed_blocks + flushed_writed_blocks
 
@@ -2689,7 +2427,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
             elapsed_time = time() - start_time
 
-            self.time_spent_writing_meta += elapsed_time
+            self.reportHelper.time_spent_writing_meta += elapsed_time
 
             elapsed_time = self.cache_gc_meta_last_run - start_time
             self.getLogger().debug("Meta cache cleanup: flushed %i nodes, %i attrs,  %i xattrs, %i names, %i indexes, %i compressTypes, %i hashSizes in %s.",
@@ -2697,7 +2435,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
                                     flushed_hash_compress, flushed_hash_sizes,
                                     format_timespan(elapsed_time))
 
-        self.__timing_report_hook()
+        self.reportHelper.do_print_stats_ontime()
 
         return flushed_attrs + flushed_names + flushed_nodes
 
@@ -2707,7 +2445,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
             start_time = time()
             self.getManager().commit()
             self.getManager().begin()
-            self.time_spent_commiting += time() - start_time
+            self.reportHelper.time_spent_commiting += time() - start_time
 
     def __rollback_changes(self):  # {{{3
         if not self.use_transactions:

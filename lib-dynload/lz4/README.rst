@@ -9,37 +9,61 @@ Status
    :target: https://travis-ci.org/python-lz4/python-lz4
    :alt: Build Status
 
-.. image:: https://ci.appveyor.com/api/projects/status/github/python-lz4/python-lz4?branch=master
+.. image:: https://ci.appveyor.com/api/projects/status/r2qvw9mlfo63lklo/branch/master?svg=true
    :target: https://ci.appveyor.com/project/jonathanunderwood/python-lz4
    :alt: Build Status Windows
 
-.. image:: https://readthedocs.org/projects/python-lz4/badge/?version=latest
+.. image:: https://readthedocs.org/projects/python-lz4/badge/?version=stable
    :target: https://readthedocs.org/projects/python-lz4/
    :alt: Documentation
 
+.. image:: https://codecov.io/gh/python-lz4/python-lz4/branch/codecov/graph/badge.svg
+   :target: https://codecov.io/gh/python-lz4/python-lz4
+   :alt: CodeCov
+
+
 Introduction
 ============
-This package provides python bindings for the `lz4 compression library
-<https://cyan4973.github.io/lz4//>`_ by Yann Collet.
+This package provides python bindings for the `LZ4 compression library
+<https://lz4.github.io/lz4/>`_.
 
-At this time the project contains bindings for the LZ4 block format, which are
-considered stable.
+The bindings provided in this package cover the `frame format
+<https://github.com/lz4/lz4/blob/master/doc/lz4_Frame_format.md>`_, the `block
+format <https://github.com/lz4/lz4/blob/dev/doc/lz4_Block_format.md>`_, and the
+`streaming format
+<https://github.com/lz4/lz4/blob/master/examples/streaming_api_basics.md>`_
+specifications. The frame format bindings are the recommended ones to use, as
+this guarantees interoperability with other implementations and language
+bindings.
 
-Support for the LZ4 frame format is a work-in-progress and available as a
-technology preview. A future relase will implement support for the LZ4 stream
-format.
+The API provided by the frame format bindings follows that of the LZMA, zlib,
+gzip and bzip2 compression libraries which are provided with the Python standard
+library. As such, these LZ4 bindings should provide a drop-in alternative to the
+compression libraries shipped with Python. The package provides context managers
+and file handler support.
 
-Documenation
-============
+The bindings drop the GIL when calling in to the underlying LZ4 library, and is
+thread safe. An extensive test suite is included.
 
-.. image:: https://readthedocs.org/projects/python-lz4/badge/?version=latest
+Documentation
+=============
+
+.. image:: https://readthedocs.org/projects/python-lz4/badge/?version=stable
    :target: https://readthedocs.org/projects/python-lz4/
    :alt: Documentation
 
 Full documentation is included with the project. The documentation is
 generated using Sphinx. Documentation is also hosted on readthedocs.
 
-:master: http://python-lz4.readthedocs.io/en/latest/
+:master: http://python-lz4.readthedocs.io/en/stable/
+:development: http://python-lz4.readthedocs.io/en/latest/
+
+Homepage
+========
+
+The `project homepage <https://www.github.com/python-lz4/python-lz4>`_ is hosted
+on Github. Please report any issues you find using the `issue tracker
+<https://github.com/python-lz4/python-lz4/issues>`_.
 
 Licensing
 =========

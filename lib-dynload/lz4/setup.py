@@ -1,63 +1,46 @@
 #!/usr/bin/env python
-
 from setuptools import setup, find_packages, Extension
-import subprocess
-import os
 import sys
 from distutils import ccompiler
 
-# This is the version of the bundled LZ4 library files. This variable was
-# historically set by this library, so we set it for backwards compatibility
-# for now. This neds removing before 1.0 release.
-LZ4_VERSION = "1.9.1"
+# Note: if updating LZ4_REQUIRED_VERSION you need to update docs/install.rst as
+# well.
+LZ4_REQUIRED_VERSION = '>= 1.7.5'
 
-def pkgconfig_cmd(cmd, libname):
-    try:
-        pkg_config_exe = os.environ.get('PKG_CONFIG', None) or 'pkg-config'
-        # poor-man's check_output (for Python 2.6 compat)
-        p = subprocess.Popen([pkg_config_exe, cmd, libname], stdout=subprocess.PIPE)
-        stdout, _ = p.communicate()
-        res = p.wait() # communicate already waits for us so this shouldn't block
-        if res != 0:
-            # pkg-config failed
-            return None
-        return stdout.decode('utf-8')
-    except OSError:
-        # pkg-config not present
-        return None
+# Check to see if we have a suitable lz4 library installed on the system and
+# use if so. If not, we'll use the bundled libraries.
+liblz4_found = False
 
-def library_is_installed(libname):
-    ''' Check to see if we have a library called 'libname' installed.
-    
-    This uses pkg-config to check for existence of the library, and
-    returns True if it's found, False otherwise. If pkg-config isn't found,
-    False is returned. '''
-    return pkgconfig_cmd('--exists', libname) is not None
+try:
+    from pkgconfig import installed as pkgconfig_installed
+    from pkgconfig import parse as pkgconfig_parse
+except ImportError:
+    # pkgconfig is not installed. It will be installed by setup_requires.
+    pass
+else:
+    def pkgconfig_installed_check(lib, required_version, default):
+        installed = default
+        try:
+            installed = pkgconfig_installed(lib, required_version)
+        except EnvironmentError:
+            # Windows, no pkg-config present
+            pass
+        except ValueError:
+            # pkgconfig was unable to determine if
+            # required version of liblz4 is available
+            # Bundled version of liblz4 will be used
+            pass
+        return installed
+    liblz4_found = pkgconfig_installed_check('liblz4', LZ4_REQUIRED_VERSION, default=False)
 
-def get_cflags(libname):
-    return pkgconfig_cmd('--cflags', libname).split()
+# Set up the extension modules. If a system wide lz4 library is found, and is
+# recent enough, we'll use that. Otherwise we'll build with the bundled one. If
+# we're building against the system lz4 library we don't set the compiler
+# flags, so they'll be picked up from the environment. If we're building
+# against the bundled lz4 files, we'll set the compiler flags to be consistent
+# with what upstream lz4 recommends.
 
-def get_ldflags(libname):
-    return pkgconfig_cmd('--libs', libname).split()
-
-# Check to see if we have a lz4 library installed on the system and
-# use it if so. If not, we'll use the bundled library.
-liblz4_found = library_is_installed('liblz4')
-
-# Check to see if we have the py3c headers installed on the system and
-# use it if so. If not, we'll use the bundled library.
-py3c_found = library_is_installed('py3c')
-
-# Set up the extension modules. If a system wide lz4 library is found, we'll
-# use that. Otherwise we'll build with the bundled one. If we're building
-# against the system lz4 library we don't set the compiler flags, so they'll be
-# picked up from the environment. If we're building against the bundled lz4
-# files, we'll set the compiler flags to be consistent with what upstream lz4
-# recommends. In addition, if we're building against the bundled library files,
-# we'll set LZ4_VERSION for legacy compatibility.
-
-include_dirs = []
-libraries = []
+extension_kwargs = {}
 
 lz4version_sources = [
     '_lz4/_version.c'
@@ -71,11 +54,14 @@ lz4frame_sources = [
     '_lz4/frame/_frame.c'
 ]
 
+lz4stream_sources = [
+    '_lz4/stream/_stream.c'
+]
+
 if liblz4_found is True:
-    extra_link_args = get_ldflags('liblz4')
+    extension_kwargs['libraries'] = ['_lz4']
 else:
-    include_dirs.append('lz4libs')
-    extra_link_args = []
+    extension_kwargs['include_dirs'] = ['lz4libs']
     lz4version_sources.extend(
         [
             'lz4libs/lz4.c',
@@ -95,25 +81,27 @@ else:
             'lz4libs/xxhash.c',
         ]
     )
-
-if py3c_found is False:
-    include_dirs.append('py3c')
+    lz4stream_sources.extend(
+        [
+            'lz4libs/lz4.c',
+            'lz4libs/lz4hc.c',
+        ]
+    )
 
 compiler = ccompiler.get_default_compiler()
 
-EXTRA_OPT=0
-if "--extra-optimization" in sys.argv:
-    # Support legacy output format functions
-    EXTRA_OPT=1
-    sys.argv.remove("--extra-optimization")
-
 if compiler == 'msvc':
-    extra_compile_args = ['/Ot', '/Wall']
+    extension_kwargs['extra_compile_args'] = [
+        '/Ot',
+        '/Wall',
+        '/wd4711',
+        '/wd4820',
+    ]
 elif compiler in ('unix', 'mingw32'):
     if liblz4_found:
-        extra_compile_args = get_cflags('liblz4')
+        extension_kwargs = pkgconfig_parse('liblz4')
     else:
-        extra_compile_args = [
+        extension_kwargs['extra_compile_args'] = [
             '-O3',
             '-Wall',
             '-Wundef'
@@ -122,46 +110,58 @@ else:
     print('Unrecognized compiler: {0}'.format(compiler))
     sys.exit(1)
 
-if ccompiler.get_default_compiler() == "msvc":
-    if EXTRA_OPT:
-        extra_compile_args[0] = "/O2"
-else:
-    extra_compile_args.append("-std=c99")
-    if EXTRA_OPT:
-        extra_compile_args.insert(0, "-march=native")
-    else:
-        extra_compile_args[0] = "-O2"
-
-
 lz4version = Extension('_lz4._version',
                        lz4version_sources,
-                       extra_compile_args=extra_compile_args,
-                       extra_link_args=extra_link_args,
-                       libraries=libraries,
-                       include_dirs=include_dirs,
-)
+                       **extension_kwargs)
 
 lz4block = Extension('_lz4.block._block',
                      lz4block_sources,
-                     extra_compile_args=extra_compile_args,
-                     extra_link_args=extra_link_args,
-                     libraries=libraries,
-                     include_dirs=include_dirs,
-)
+                     **extension_kwargs)
 
 lz4frame = Extension('_lz4.frame._frame',
                      lz4frame_sources,
-                     extra_compile_args=extra_compile_args,
-                     extra_link_args=extra_link_args,
-                     libraries=libraries,
-                     include_dirs=include_dirs,
-)
+                     **extension_kwargs)
 
+lz4stream = Extension('_lz4.stream._stream',
+                      lz4stream_sources,
+                      **extension_kwargs)
+
+install_requires = []
+
+# On Python earlier than 3.0 the builtins package isn't included, but it is
+# provided by the future package
+if sys.version_info < (3, 0):
+    install_requires.append('future')
+
+
+# Dependencies for testing. We define a list here, so that we can
+# refer to it for the tests_require and the extras_require arguments
+# to setup below. The latter enables us to use pip install .[tests] to
+# install testing dependencies.
+# Note: pytest 3.3.0 contains a bug with null bytes in parameter IDs:
+# https://github.com/pytest-dev/pytest/issues/2957
+tests_require = [
+    'pytest!=3.3.0',
+    'psutil',
+    'pytest-cov',
+],
+
+# Only require pytest-runner if actually running the tests
+needs_pytest = {'pytest', 'test', 'ptr'}.intersection(sys.argv)
+pytest_runner = ['pytest-runner'] if needs_pytest else []
 
 # Finally call setup with the extension modules as defined above.
 setup(
     name='_lz4',
-    version=LZ4_VERSION,
+    use_scm_version={
+        'write_to': "_lz4/version.py",
+    },
+    python_requires=">=3.5",
+    setup_requires=[
+        'setuptools',
+        'pkgconfig',
+    ] + pytest_runner,
+    install_requires=install_requires,
     description="LZ4 Bindings for Python",
     long_description=open('README.rst', 'r').read(),
     author='Jonathan Underwood',
@@ -171,21 +171,29 @@ setup(
     ext_modules=[
         lz4version,
         lz4block,
-        lz4frame
+        lz4frame,
+        lz4stream
     ],
-    tests_require=["nose>=1.0"],
-    test_suite = "nose.collector",
+    tests_require=tests_require,
+    extras_require={
+        'tests': tests_require,
+        'docs': [
+            'sphinx >= 1.6.0',
+            'sphinx_bootstrap_theme',
+        ],
+        'flake8': [
+            'flake8',
+        ]
+    },
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: BSD License',
         'Intended Audience :: Developers',
         'Programming Language :: C',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ],
 )

@@ -31,3 +31,5 @@ for d in dirs:
         sys.path.pop(0)
 
         break
+
+del p1, p2, curpath, build_dir, dirs, d, currentdir, module, importlib

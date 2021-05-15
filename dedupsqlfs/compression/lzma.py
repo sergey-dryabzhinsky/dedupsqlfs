@@ -18,7 +18,7 @@ class LzmaCompression(BaseCompression):
 
     def getFastCompressionOptions(self):
         return {
-            "preset": 1,
+            "preset": 0,
         }
 
     def getNormCompressionOptions(self):

@@ -36,8 +36,8 @@ class ZstdCompression(BaseCompression):
             level = int(self._custom_comp_level)
             if level < -100:
                 level = -100
-            elif level > 22:
-                level = 22
+            elif level > 20:
+                level = 20
             opts = (level, )
         except:
             opts = False

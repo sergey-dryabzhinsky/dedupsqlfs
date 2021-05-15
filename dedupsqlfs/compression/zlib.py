@@ -26,7 +26,7 @@ class ZlibCompression(BaseCompression):
         return ( 9, )
 
     def getDefaultCompressionOptions(self):
-        return ( 3, )
+        return ( 2, )
 
     def getCustomCompressionOptions(self):
         try:

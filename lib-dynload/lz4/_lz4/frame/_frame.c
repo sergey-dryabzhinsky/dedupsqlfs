@@ -35,20 +35,11 @@
 #define inline
 #endif
 
-#include <py3c.h>
-#include <py3c/capsulethunk.h>
+#include <Python.h>
 
 #include <stdlib.h>
 #include <lz4.h> /* Needed for LZ4_VERSION_NUMBER only. */
 #include <lz4frame.h>
-
-#ifndef Py_UNUSED		/* This is already defined for Python 3.4 onwards */
-#ifdef __GNUC__
-#define Py_UNUSED(name) _unused_ ## name __attribute__((unused))
-#else
-#define Py_UNUSED(name) _unused_ ## name
-#endif
-#endif
 
 static const char * compression_context_capsule_name = "_frame.LZ4F_cctx";
 static const char * decompression_context_capsule_name = "_frame.LZ4F_dctx";
@@ -149,7 +140,6 @@ compress (PyObject * Py_UNUSED (self), PyObject * args,
 
   memset (&preferences, 0, sizeof preferences);
 
-#if IS_PY3
   if (!PyArg_ParseTupleAndKeywords (args, keywds, "y*|iippppp", kwlist,
                                     &source,
                                     &preferences.compressionLevel,
@@ -162,20 +152,6 @@ compress (PyObject * Py_UNUSED (self), PyObject * args,
     {
       return NULL;
     }
-#else
-  if (!PyArg_ParseTupleAndKeywords (args, keywds, "s*|iiiiiii", kwlist,
-                                    &source,
-                                    &preferences.compressionLevel,
-                                    &preferences.frameInfo.blockSizeID,
-                                    &content_checksum,
-                                    &block_checksum,
-                                    &block_linked,
-                                    &store_size,
-                                    &return_bytearray))
-    {
-      return NULL;
-    }
-#endif
 
   if (content_checksum)
     {
@@ -318,7 +294,6 @@ compress_begin (PyObject * Py_UNUSED (self), PyObject * args,
 
   memset (&preferences, 0, sizeof preferences);
 
-#if IS_PY3
   if (!PyArg_ParseTupleAndKeywords (args, keywds, "O|kiippppp", kwlist,
                                     &py_context,
                                     &source_size,
@@ -333,22 +308,7 @@ compress_begin (PyObject * Py_UNUSED (self), PyObject * args,
     {
       return NULL;
     }
-#else
-  if (!PyArg_ParseTupleAndKeywords (args, keywds, "O|kiiiiiii", kwlist,
-                                    &py_context,
-                                    &source_size,
-                                    &preferences.compressionLevel,
-                                    &preferences.frameInfo.blockSizeID,
-                                    &content_checksum,
-                                    &block_checksum,
-                                    &block_linked,
-                                    &preferences.autoFlush,
-                                    &return_bytearray
-                                    ))
-    {
-      return NULL;
-    }
-#endif
+
   if (content_checksum)
     {
       preferences.frameInfo.contentChecksumFlag = LZ4F_contentChecksumEnabled;
@@ -473,7 +433,6 @@ compress_chunk (PyObject * Py_UNUSED (self), PyObject * args,
 
   memset (&compress_options, 0, sizeof compress_options);
 
-#if IS_PY3
   if (!PyArg_ParseTupleAndKeywords (args, keywds, "Oy*|p", kwlist,
                                     &py_context,
                                     &source,
@@ -481,15 +440,6 @@ compress_chunk (PyObject * Py_UNUSED (self), PyObject * args,
     {
       return NULL;
     }
-#else
-  if (!PyArg_ParseTupleAndKeywords (args, keywds, "Os*|i", kwlist,
-                                    &py_context,
-                                    &source,
-                                    &return_bytearray))
-    {
-      return NULL;
-    }
-#endif
 
   source_size = source.len;
 
@@ -599,7 +549,6 @@ compress_flush (PyObject * Py_UNUSED (self), PyObject * args, PyObject * keywds)
 
   memset (&compress_options, 0, sizeof compress_options);
 
-#if IS_PY3
   if (!PyArg_ParseTupleAndKeywords (args, keywds, "O|pp", kwlist,
                                     &py_context,
                                     &end_frame,
@@ -607,15 +556,7 @@ compress_flush (PyObject * Py_UNUSED (self), PyObject * args, PyObject * keywds)
     {
       return NULL;
     }
-#else
-  if (!PyArg_ParseTupleAndKeywords (args, keywds, "O|ii", kwlist,
-                                    &py_context,
-                                    &end_frame,
-                                    &return_bytearray))
-    {
-      return NULL;
-    }
-#endif
+
   if (!end_frame && LZ4_versionNumber() < 10800)
     {
       PyErr_SetString (PyExc_RuntimeError,
@@ -717,19 +658,11 @@ get_frame_info (PyObject * Py_UNUSED (self), PyObject * args,
                             NULL
   };
 
-#if IS_PY3
   if (!PyArg_ParseTupleAndKeywords (args, keywds, "y*", kwlist,
                                     &py_source))
     {
       return NULL;
     }
-#else
-  if (!PyArg_ParseTupleAndKeywords (args, keywds, "s*", kwlist,
-                                    &py_source))
-    {
-      return NULL;
-    }
-#endif
 
   Py_BEGIN_ALLOW_THREADS
 
@@ -1021,6 +954,7 @@ __decompress(LZ4F_dctx * context, char * source, size_t source_size,
   LZ4F_frameInfo_t frame_info;
   LZ4F_decompressOptions_t options;
   int end_of_frame = 0;
+  int resize_factor = 1;
 
   memset(&options, 0, sizeof options);
 
@@ -1163,11 +1097,18 @@ __decompress(LZ4F_dctx * context, char * source, size_t source_size,
             }
           else
             {
-              /* Expand destination buffer. result is an indication of number of
-                 source bytes remaining, so we'll use this to estimate the new
-                 size of the destination buffer. */
+              /* Expand the destination buffer. We've tried various strategies
+                 here to estimate the compression ratio so far and adjust the
+                 buffer size accordingly. However, that grows the buffer too
+                 slowly. The best choices found were to either double the buffer
+                 size each time, or to grow faster by multiplying the buffer
+                 size by 2^N, where N is the number of resizes. We take the
+                 latter approach, though the former approach may actually be
+                 good enough in practice. */
               char * buff;
-              destination_size += 3 * result;
+
+              resize_factor *= 2;
+              destination_size *= resize_factor;
 
               Py_BLOCK_THREADS
               buff = PyMem_Realloc (destination, destination_size);
@@ -1271,7 +1212,6 @@ decompress (PyObject * Py_UNUSED (self), PyObject * args,
                             NULL
                           };
 
-#if IS_PY3
   if (!PyArg_ParseTupleAndKeywords (args, keywds, "y*|pp", kwlist,
                                     &py_source,
                                     &return_bytearray,
@@ -1280,16 +1220,6 @@ decompress (PyObject * Py_UNUSED (self), PyObject * args,
     {
       return NULL;
     }
-#else
-  if (!PyArg_ParseTupleAndKeywords (args, keywds, "s*|ii", kwlist,
-                                    &py_source,
-                                    &return_bytearray,
-                                    &return_bytes_read
-                                    ))
-    {
-      return NULL;
-    }
-#endif
 
   Py_BEGIN_ALLOW_THREADS
   result = LZ4F_createDecompressionContext (&context, LZ4F_VERSION);
@@ -1348,7 +1278,6 @@ decompress_chunk (PyObject * Py_UNUSED (self), PyObject * args,
                             NULL
                           };
 
-#if IS_PY3
   if (!PyArg_ParseTupleAndKeywords (args, keywds, "Oy*|np", kwlist,
                                     &py_context,
                                     &py_source,
@@ -1358,17 +1287,6 @@ decompress_chunk (PyObject * Py_UNUSED (self), PyObject * args,
     {
       return NULL;
     }
-#else
-  if (!PyArg_ParseTupleAndKeywords (args, keywds, "Os*|ni", kwlist,
-                                    &py_context,
-                                    &py_source,
-                                    &max_length,
-                                    &return_bytearray
-                                    ))
-    {
-      return NULL;
-    }
-#endif
 
   context = (LZ4F_dctx *)
     PyCapsule_GetPointer (py_context, decompression_context_capsule_name);
@@ -1478,7 +1396,7 @@ PyDoc_STRVAR
 (
  compress_begin__doc,
  "compress_begin(context, source_size=0, compression_level=0, block_size=0,\n" \
- "content_checksum=0, content_size=1, block_mode=0, frame_type=0,\n"    \
+ "content_checksum=0, content_size=1, block_linked=0, frame_type=0,\n"    \
  "auto_flush=1)\n"                                                      \
  "\n"                                                                   \
  "Creates a frame header from a compression context.\n\n"               \
@@ -1744,7 +1662,8 @@ static struct PyModuleDef moduledef =
   module_methods
 };
 
-MODULE_INIT_FUNC (_frame)
+PyMODINIT_FUNC
+PyInit__frame(void)
 {
   PyObject *module = PyModule_Create (&moduledef);
 

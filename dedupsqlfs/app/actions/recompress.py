@@ -42,7 +42,9 @@ def do_recompress(options, _fuse):
     if cntNth < 1:
         cntNth = 1
 
-    cnt = cntNext = upd = 0
+    # Process Nth blocks and then - commit
+    maxCmmt = 5000
+    cnt = cntNext = upd = cmmt = 0
     cpu_n = cpu_count()
 
     try:
@@ -51,6 +53,7 @@ def do_recompress(options, _fuse):
         for hashItem in iter(cur.fetchone, None):
 
             cnt += 1
+            cmmt += 1
 
             hashId = hashItem["id"]
 
@@ -78,6 +81,14 @@ def do_recompress(options, _fuse):
 
                 toCompress = {}
                 toCompressM = {}
+                if cmmt >= maxCmmt:
+                    cmmt = 0
+                    _fuse.operations.getManager().setAutocommit(False)
+                    tableBlock.commit()
+                    tableHashCT.commit()
+                    tableBlock.begin()
+                    tableHashCT.begin()
+                    _fuse.operations.getManager().setAutocommit(True)
 
             if cnt >= cntNext:
                 cntNext += cntNth
@@ -117,7 +128,6 @@ def do_recompress(options, _fuse):
         print("Something went wrong? Changes are rolled back!")
         return 1
 
-    # TODO: probably use alot of memory, commit every 5000-th block. Or rollback and quit.
     _fuse.operations.getManager().setAutocommit(False)
     tableBlock.commit()
     tableHashCT.commit()

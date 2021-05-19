@@ -81,14 +81,15 @@ def do_recompress(options, _fuse):
 
                 toCompress = {}
                 toCompressM = {}
-                if cmmt >= maxCmmt:
-                    cmmt = 0
-                    _fuse.operations.getManager().setAutocommit(False)
-                    tableBlock.commit()
-                    tableHashCT.commit()
-                    tableBlock.begin()
-                    tableHashCT.begin()
-                    _fuse.operations.getManager().setAutocommit(True)
+
+            if cmmt >= maxCmmt:
+                cmmt = 0
+                _fuse.operations.getManager().setAutocommit(False)
+                tableBlock.commit()
+                tableHashCT.commit()
+                tableBlock.begin()
+                tableHashCT.begin()
+                _fuse.operations.getManager().setAutocommit(True)
 
             if cnt >= cntNext:
                 cntNext += cntNth

@@ -76,6 +76,7 @@ def do_rehash(options, _fuse):
                 sys.stdout.flush()
 
         if cmmt >= maxCmmt:
+            cmmt = 0
             _fuse.operations.getManager().setAutocommit(False)
             tableHash.commit()
             tableHash.begin()

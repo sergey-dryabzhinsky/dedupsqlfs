@@ -18,30 +18,32 @@ def do_recompress(options, _fuse):
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
 
+    isVerbosity = _fuse.getOption("verbosity") > 0
+
     tableHash = _fuse.operations.getTable("hash")
     tableHashCT = _fuse.operations.getTable("hash_compression_type")
     tableBlock = _fuse.operations.getTable("block")
     tableSubvol = _fuse.operations.getTable("subvolume")
 
     hashCount = tableHash.get_count()
-    if _fuse.getOption("verbosity") > 0:
+    if isVerbosity:
         print("Ready to recompress %s blocks." % hashCount)
 
     cur = tableHash.getCursor(True)
     cur.execute("SELECT `id` FROM `%s`" % tableHash.getName())
-
-    cnt = upd = 0
-    cpu_n = cpu_count()
-    lastPrc = ""
 
     _fuse.operations.getManager().setAutocommit(False)
     tableBlock.begin()
     tableHashCT.begin()
     _fuse.operations.getManager().setAutocommit(True)
 
+    # Every 100*100 (4x symbols)
     cntNth = int(hashCount/10000.0)
     if cntNth < 1:
         cntNth = 1
+
+    cnt = cntNext = upd = 0
+    cpu_n = cpu_count()
 
     try:
         toCompress = {}
@@ -77,8 +79,9 @@ def do_recompress(options, _fuse):
                 toCompress = {}
                 toCompressM = {}
 
-            if cnt % cntNth == 0:
-                if _fuse.getOption("verbosity") > 0:
+            if cnt >= cntNext:
+                cntNext += cntNth
+                if isVerbosity > 0:
                     prc = "%6.2f%%" % (cnt*100.0/hashCount)
                     sys.stdout.write("\r%s " % prc)
                     sys.stdout.flush()
@@ -99,11 +102,11 @@ def do_recompress(options, _fuse):
     except:
         pass
 
-    if _fuse.getOption("verbosity") > 0:
+    if isVerbosity:
         sys.stdout.write("\n")
         sys.stdout.flush()
 
-    if _fuse.getOption("verbosity") > 0:
+    if isVerbosity:
         print("Processed %s blocks, recompressed %s blocks." % (cnt, upd,))
 
     if hashCount != cnt:
@@ -122,7 +125,7 @@ def do_recompress(options, _fuse):
 
     subvCount = tableSubvol.get_count()
 
-    if _fuse.getOption("verbosity") > 0:
+    if isVerbosity:
         print("Recalculate filesystem and %s subvolumes statistics." % subvCount)
 
     cur = tableSubvol.getCursor(True)
@@ -136,42 +139,44 @@ def do_recompress(options, _fuse):
 
     sv = Subvolume(_fuse.operations)
 
-    cnt = 0
-    lastPrc = ""
+    cnt = cntNext = 0
+    cntNth = subvCount / 10000.0 / 3
+    if cntNth < 1:
+        cntNth = 1
 
     for subvItem in iter(cur.fetchone, None):
 
         sv.clean_stats(subvItem["name"])
 
         cnt += 1
-        prc = "%6.2f%%" % (cnt * 100.0 / subvCount / 3)
-        if prc != lastPrc:
-            lastPrc = prc
-            if _fuse.getOption("verbosity") > 0:
+        if cnt >= cntNext:
+            cntNext += cntNth
+            if isVerbosity:
+                prc = "%6.2f%%" % (cnt * 100.0 / subvCount / 3)
                 sys.stdout.write("\r%s " % prc)
                 sys.stdout.flush()
 
         sv.get_usage(subvItem["name"], True)
 
         cnt += 1
-        prc = "%6.2f%%" % (cnt * 100.0 / subvCount / 3)
-        if prc != lastPrc:
-            lastPrc = prc
-            if _fuse.getOption("verbosity") > 0:
+        if cnt >= cntNext:
+            cntNext += cntNth
+            if isVerbosity:
+                prc = "%6.2f%%" % (cnt * 100.0 / subvCount / 3)
                 sys.stdout.write("\r%s " % prc)
                 sys.stdout.flush()
 
         sv.get_root_diff(subvItem["name"])
 
         cnt += 1
-        prc = "%6.2f%%" % (cnt * 100.0 / subvCount / 3)
-        if prc != lastPrc:
-            lastPrc = prc
-            if _fuse.getOption("verbosity") > 0:
+        if cnt >= cntNext:
+            cntNext += cntNth
+            if isVerbosity:
+                prc = "%6.2f%%" % (cnt * 100.0 / subvCount / 3)
                 sys.stdout.write("\r%s " % prc)
                 sys.stdout.flush()
 
-    if _fuse.getOption("verbosity") > 0:
+    if isVerbosity:
         sys.stdout.write("\n")
         sys.stdout.flush()
 

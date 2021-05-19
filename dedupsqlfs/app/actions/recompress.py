@@ -40,6 +40,8 @@ def do_recompress(options, _fuse):
     _fuse.operations.getManager().setAutocommit(True)
 
     cntNth = int(hashCount/10000.0)
+    if cntNth < 1:
+        cntNth = 1
 
     try:
         toCompress = {}

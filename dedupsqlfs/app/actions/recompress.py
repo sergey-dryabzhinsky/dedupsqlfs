@@ -91,9 +91,9 @@ def do_recompress(options, _fuse):
                 tableHashCT.begin()
                 _fuse.operations.getManager().setAutocommit(True)
 
-            if cnt >= cntNext:
-                cntNext += cntNth
-                if isVerbosity > 0:
+            if isVerbosity > 0:
+                if cnt >= cntNext:
+                    cntNext += cntNth
                     prc = "%6.2f%%" % (cnt*100.0/hashCount)
                     sys.stdout.write("\r%s " % prc)
                     sys.stdout.flush()

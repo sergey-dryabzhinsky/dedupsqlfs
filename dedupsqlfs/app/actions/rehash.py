@@ -68,9 +68,9 @@ def do_rehash(options, _fuse):
         if res:
             upd += 1
 
-        if cnt >= cntNext:
-            cntNext += cntNth
-            if isVerbosity:
+        if isVerbosity:
+            if cnt >= cntNext:
+                cntNext += cntNth
                 prc = "%6.2f%%" % (cnt * 100.0 / hashCount)
                 sys.stdout.write("\r%s " % prc)
                 sys.stdout.flush()

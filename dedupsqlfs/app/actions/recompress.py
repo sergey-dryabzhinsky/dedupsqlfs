@@ -45,7 +45,7 @@ def do_recompress(options, _fuse):
     # Process Nth blocks and then - commit
     maxCmmt = 5000
     cnt = cntNext = upd = cmmt = 0
-    cpu_n = cpu_count()
+    cpu_n = cpu_count() * 4
 
     try:
         toCompress = {}

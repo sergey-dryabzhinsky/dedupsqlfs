@@ -160,9 +160,9 @@ def do_recompress(options, _fuse):
         sv.clean_stats(subvItem["name"])
 
         cnt += 1
-        if cnt >= cntNext:
-            cntNext += cntNth
-            if isVerbosity:
+        if isVerbosity:
+            if cnt >= cntNext:
+                cntNext += cntNth
                 prc = "%6.2f%%" % (cnt * 100.0 / subvCount / 3)
                 sys.stdout.write("\r%s " % prc)
                 sys.stdout.flush()
@@ -170,9 +170,9 @@ def do_recompress(options, _fuse):
         sv.get_usage(subvItem["name"], True)
 
         cnt += 1
-        if cnt >= cntNext:
-            cntNext += cntNth
-            if isVerbosity:
+        if isVerbosity:
+            if cnt >= cntNext:
+                cntNext += cntNth
                 prc = "%6.2f%%" % (cnt * 100.0 / subvCount / 3)
                 sys.stdout.write("\r%s " % prc)
                 sys.stdout.flush()
@@ -180,9 +180,9 @@ def do_recompress(options, _fuse):
         sv.get_root_diff(subvItem["name"])
 
         cnt += 1
-        if cnt >= cntNext:
-            cntNext += cntNth
-            if isVerbosity:
+        if isVerbosity:
+            if cnt >= cntNext:
+                cntNext += cntNth
                 prc = "%6.2f%%" % (cnt * 100.0 / subvCount / 3)
                 sys.stdout.write("\r%s " % prc)
                 sys.stdout.flush()

@@ -18,7 +18,7 @@ def do_recompress(options, _fuse):
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
 
-    isVerbosity = _fuse.getOption("verbosity") > 0
+    isVerbose = _fuse.getOption("verbosity") > 0
 
     tableHash = _fuse.operations.getTable("hash")
     tableHashCT = _fuse.operations.getTable("hash_compression_type")
@@ -26,11 +26,10 @@ def do_recompress(options, _fuse):
     tableSubvol = _fuse.operations.getTable("subvolume")
 
     hashCount = tableHash.get_count()
-    if isVerbosity:
+    if isVerbose:
         print("Ready to recompress %s blocks." % hashCount)
 
     cur = tableHash.getCursor(True)
-    cur.execute("SELECT `id` FROM `%s`" % tableHash.getName())
 
     _fuse.operations.getManager().setAutocommit(False)
     tableBlock.begin()
@@ -43,60 +42,58 @@ def do_recompress(options, _fuse):
         cntNth = 1
 
     # Process Nth blocks and then - commit
-    maxCmmt = 5000
-    cnt = cntNext = upd = cmmt = 0
+    maxBatch = 1000
+    offBatch = 0
+    cnt = cntNext = upd = 0
     cpu_n = cpu_count() * 4
 
     try:
+
         toCompress = {}
         toCompressM = {}
-        for hashItem in iter(cur.fetchone, None):
 
-            cnt += 1
-            cmmt += 1
+        while cnt < hashCount:
 
-            hashId = hashItem["id"]
+            cur.execute("SELECT `id` FROM `%s` LIMIT %s OFFSET %s" % (tableHash.getName(), maxBatch, offBatch,))
+            offBatch += maxBatch
 
-            blockItem = tableBlock.get(hashId)
-            hashCT = tableHashCT.get(hashId)
-            curMethod = _fuse.operations.getCompressionTypeName(hashCT["type_id"])
-            blockData = _fuse.decompressData(curMethod, blockItem["data"])
+            for hashItem in iter(cur.fetchone, None):
 
-            toCompress[ hashId ] = blockData
-            toCompressM[ hashId ] = curMethod
+                cnt += 1
 
-            if cnt % cpu_n == 0:
+                hashId = hashItem["id"]
 
-                for hashId, item in _fuse.compressData(toCompress):
+                blockItem = tableBlock.get(hashId)
+                hashCT = tableHashCT.get(hashId)
+                curMethod = _fuse.operations.getCompressionTypeName(hashCT["type_id"])
+                blockData = _fuse.decompressData(curMethod, blockItem["data"])
 
-                    cData, cMethod = item
-                    curMethod = toCompressM[ hashId ]
+                toCompress[ hashId ] = blockData
+                toCompressM[ hashId ] = curMethod
 
-                    if cMethod != curMethod:
-                        cMethodId = _fuse.operations.getCompressionTypeId(cMethod)
-                        res = tableBlock.update(hashId, cData)
-                        res2 = tableHashCT.update(hashId, cMethodId)
-                        if res and res2:
-                            upd += 1
+                if cnt % cpu_n == 0:
 
-                toCompress = {}
-                toCompressM = {}
+                    for hashId, item in _fuse.compressData(toCompress):
 
-            if cmmt >= maxCmmt:
-                cmmt = 0
-                _fuse.operations.getManager().setAutocommit(False)
-                tableBlock.commit()
-                tableHashCT.commit()
-                tableBlock.begin()
-                tableHashCT.begin()
-                _fuse.operations.getManager().setAutocommit(True)
+                        cData, cMethod = item
+                        curMethod = toCompressM[ hashId ]
 
-            if isVerbosity > 0:
-                if cnt >= cntNext:
-                    cntNext += cntNth
-                    prc = "%6.2f%%" % (cnt*100.0/hashCount)
-                    sys.stdout.write("\r%s " % prc)
-                    sys.stdout.flush()
+                        if cMethod != curMethod:
+                            cMethodId = _fuse.operations.getCompressionTypeId(cMethod)
+                            res = tableBlock.update(hashId, cData)
+                            res2 = tableHashCT.update(hashId, cMethodId)
+                            if res and res2:
+                                upd += 1
+
+                    toCompress = {}
+                    toCompressM = {}
+
+                if isVerbose:
+                    if cnt >= cntNext:
+                        cntNext += cntNth
+                        prc = "%6.2f%%" % (cnt*100.0/hashCount)
+                        sys.stdout.write("\r%s " % prc)
+                        sys.stdout.flush()
 
         if len(toCompress.keys()):
             for hashId, item in _fuse.compressData(toCompress):
@@ -114,11 +111,11 @@ def do_recompress(options, _fuse):
     except:
         pass
 
-    if isVerbosity:
+    if isVerbose:
         sys.stdout.write("\n")
         sys.stdout.flush()
 
-    if isVerbosity:
+    if isVerbose:
         print("Processed %s blocks, recompressed %s blocks." % (cnt, upd,))
 
     if hashCount != cnt:
@@ -136,7 +133,7 @@ def do_recompress(options, _fuse):
 
     subvCount = tableSubvol.get_count()
 
-    if isVerbosity:
+    if isVerbose:
         print("Recalculate filesystem and %s subvolumes statistics." % subvCount)
 
     cur = tableSubvol.getCursor(True)
@@ -160,7 +157,7 @@ def do_recompress(options, _fuse):
         sv.clean_stats(subvItem["name"])
 
         cnt += 1
-        if isVerbosity:
+        if isVerbose:
             if cnt >= cntNext:
                 cntNext += cntNth
                 prc = "%6.2f%%" % (cnt * 100.0 / subvCount / 3)
@@ -170,7 +167,7 @@ def do_recompress(options, _fuse):
         sv.get_usage(subvItem["name"], True)
 
         cnt += 1
-        if isVerbosity:
+        if isVerbose:
             if cnt >= cntNext:
                 cntNext += cntNth
                 prc = "%6.2f%%" % (cnt * 100.0 / subvCount / 3)
@@ -180,14 +177,14 @@ def do_recompress(options, _fuse):
         sv.get_root_diff(subvItem["name"])
 
         cnt += 1
-        if isVerbosity:
+        if isVerbose:
             if cnt >= cntNext:
                 cntNext += cntNth
                 prc = "%6.2f%%" % (cnt * 100.0 / subvCount / 3)
                 sys.stdout.write("\r%s " % prc)
                 sys.stdout.flush()
 
-    if isVerbosity:
+    if isVerbose:
         sys.stdout.write("\n")
         sys.stdout.flush()
 

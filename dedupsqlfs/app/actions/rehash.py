@@ -18,13 +18,13 @@ def do_rehash(options, _fuse):
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
 
-    isVerbosity = _fuse.getOption("verbosity") > 0
+    isVerbose = _fuse.getOption("verbosity") > 0
 
     tableOption = _fuse.operations.getTable("option")
 
     curHashFunc = tableOption.get("hash_function")
     if curHashFunc == options.rehash_function:
-        if isVerbosity:
+        if isVerbose:
             print("Already using %s hash function for filesystem! Do not rehashing." % curHashFunc)
         return True
 
@@ -35,11 +35,10 @@ def do_rehash(options, _fuse):
     _fuse.operations.hash_function = options.rehash_function
 
     hashCount = tableHash.get_count()
-    if isVerbosity:
+    if isVerbose:
         print("Ready to rehash %s blocks." % hashCount)
 
     cur = tableHash.getCursor(True)
-    cur.execute("SELECT `id` FROM `%s`" % tableHash.getName())
 
     # Every 100*100 (4x symbols)
     cntNth = int(hashCount/10000.0)
@@ -47,46 +46,44 @@ def do_rehash(options, _fuse):
         cntNth = 1
 
     # Process Nth blocks and then - commit
-    maxCmmt = 5000
-    cnt = cntNext = upd = cmmt = 0
+    maxBatch = 1000
+    offBatch = 0
+    cnt = cntNext = upd = 0
 
     _fuse.operations.getManager().setAutocommit(False)
     tableHash.begin()
     _fuse.operations.getManager().setAutocommit(True)
 
-    for hashItem in iter(cur.fetchone, None):
+    while cnt < hashCount:
 
-        cnt += 1
-        cmmt += 1
+        cur.execute("SELECT `id` FROM `%s` LIMIT %s OFFSET %s" % (tableHash.getName(), maxBatch, offBatch ))
+        offBatch += maxBatch
 
-        blockItem = tableBlock.get(hashItem["id"])
-        hashCT = tableHashCT.get(hashItem["id"])
-        blockData = _fuse.decompressData(_fuse.operations.getCompressionTypeName(hashCT["type_id"]), blockItem["data"])
-        newHash = _fuse.operations.do_hash(blockData)
-        res = tableHash.update(hashItem["id"], newHash)
+        for hashItem in iter(cur.fetchone, None):
 
-        if res:
-            upd += 1
+            cnt += 1
 
-        if isVerbosity:
-            if cnt >= cntNext:
-                cntNext += cntNth
-                prc = "%6.2f%%" % (cnt * 100.0 / hashCount)
-                sys.stdout.write("\r%s " % prc)
-                sys.stdout.flush()
+            blockItem = tableBlock.get(hashItem["id"])
+            hashCT = tableHashCT.get(hashItem["id"])
+            blockData = _fuse.decompressData(_fuse.operations.getCompressionTypeName(hashCT["type_id"]), blockItem["data"])
+            newHash = _fuse.operations.do_hash(blockData)
+            res = tableHash.update(hashItem["id"], newHash)
 
-        if cmmt >= maxCmmt:
-            cmmt = 0
-            _fuse.operations.getManager().setAutocommit(False)
-            tableHash.commit()
-            tableHash.begin()
-            _fuse.operations.getManager().setAutocommit(True)
+            if res:
+                upd += 1
 
-    if isVerbosity:
+            if isVerbose:
+                if cnt >= cntNext:
+                    cntNext += cntNth
+                    prc = "%6.2f%%" % (cnt * 100.0 / hashCount)
+                    sys.stdout.write("\r%s " % prc)
+                    sys.stdout.flush()
+
+    if isVerbose:
         sys.stdout.write("\n")
         sys.stdout.flush()
 
-    if isVerbosity:
+    if isVerbose:
         print("Processed %s hashes, rehashed %s blocks." % (cnt, upd,))
 
     if hashCount == cnt:

@@ -334,7 +334,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 self.getManager().commit()
 
             if self.getOption("verbosity") > 1:
-                self.__print_stats()
+                self.reportHelper.do_print_stats_ontime(True)
 
             self.getManager().getTable('option').update('mounted', 0)
             self.getManager().commit()

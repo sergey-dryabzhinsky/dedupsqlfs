@@ -69,9 +69,9 @@ class ReportHelper:
     def get_option(self, key):
         return self.application.getOption(key)
 
-    def do_print_stats_ontime(self):
+    def do_print_stats_ontime(self, force=False):
         t_now = time()
-        if t_now - self.timing_report_last_run >= self.report_interval:
+        if t_now - self.timing_report_last_run >= self.report_interval or force:
             self.timing_report_last_run = t_now
             self.__print_stats()
         return

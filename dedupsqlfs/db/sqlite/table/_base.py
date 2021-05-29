@@ -312,7 +312,7 @@ class Table( object ):
             cur = self._curr = self.getConnection().cursor()
         return cur
 
-    def getPageSize(self):
+    def getDbPageSize(self):
         result = self.getConnection().execute('PRAGMA page_size').fetchone()
         # print("%s::getPageSize()=%r" % (self.getName(), result,))
         return result["page_size"]
@@ -321,6 +321,10 @@ class Table( object ):
         result = self.getConnection().execute('PRAGMA page_count').fetchone()
         # print("%s::getPageCount()=%r" % (self.getName(), result,))
         return result["page_count"]
+
+    def shrinkMemory(self):
+        self.getConnection().execute('PRAGMA shrink_memory')
+        return self
 
     def hasTable(self):
         result = self.getConnection().execute("SELECT name FROM sqlite_master WHERE type = 'table';").fetchall()

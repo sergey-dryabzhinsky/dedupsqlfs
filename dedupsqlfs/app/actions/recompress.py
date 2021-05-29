@@ -95,6 +95,17 @@ def do_recompress(options, _fuse):
                         sys.stdout.write("\r%s " % prc)
                         sys.stdout.flush()
 
+            # For ends - blocks commit
+            _fuse.operations.getManager().setAutocommit(False)
+            tableBlock.commit()
+            tableHashCT.commit()
+            tableBlock.shrinkMemory()
+            tableHash.shrinkMemory()
+            tableHashCT.shrinkMemory()
+            tableBlock.begin()
+            tableHashCT.begin()
+            _fuse.operations.getManager().setAutocommit(True)
+
         if len(toCompress.keys()):
             for hashId, item in _fuse.compressData(toCompress):
 
@@ -130,6 +141,10 @@ def do_recompress(options, _fuse):
     tableBlock.commit()
     tableHashCT.commit()
     _fuse.operations.getManager().setAutocommit(True)
+
+    tableBlock.shrinkMemory()
+    tableHash.shrinkMemory()
+    tableHashCT.shrinkMemory()
 
     subvCount = tableSubvol.get_count()
 

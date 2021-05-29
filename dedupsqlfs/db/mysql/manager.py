@@ -760,6 +760,11 @@ class DbManager( object ):
             s += t.getSize()
         return s
 
+    def shrinkMemory(self):
+        for name, t in self._table.items():
+            t.shrinkMemory()
+        return self
+
     def getOperationsCount(self):
         s = 0
         for name, t in self._table.items():

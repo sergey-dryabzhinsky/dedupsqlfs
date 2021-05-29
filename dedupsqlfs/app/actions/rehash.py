@@ -79,6 +79,15 @@ def do_rehash(options, _fuse):
                     sys.stdout.write("\r%s " % prc)
                     sys.stdout.flush()
 
+        # For ends - hash commits
+        _fuse.operations.getManager().setAutocommit(False)
+        tableHash.commit()
+        tableHash.shrinkMemory()
+        tableHashCT.shrinkMemory()
+        tableBlock.shrinkMemory()
+        tableHash.begin()
+        _fuse.operations.getManager().setAutocommit(True)
+
     if isVerbose:
         sys.stdout.write("\n")
         sys.stdout.flush()

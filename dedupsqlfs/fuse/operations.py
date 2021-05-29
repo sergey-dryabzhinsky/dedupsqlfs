@@ -2419,11 +2419,11 @@ class DedupOperations(llfuse.Operations):  # {{{1
             # Just writed/updated...
             flushed_attrs += self.__flush_expired_inodes(expired[1])
 
-            self.__commit_changes()
-
             self.cache_gc_meta_last_run = time()
 
         if flushed_attrs + flushed_nodes + flushed_names + flushed_indexes + flushed_xattrs + flushed_hash_compress + flushed_hash_sizes > 0:
+
+            self.__commit_changes()
 
             elapsed_time = time() - start_time
 
@@ -2446,6 +2446,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
             self.getManager().commit()
             self.getManager().begin()
             self.reportHelper.time_spent_commiting += time() - start_time
+        self.getManager().shrinkMemory()
 
     def __rollback_changes(self):  # {{{3
         if not self.use_transactions:

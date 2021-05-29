@@ -234,6 +234,11 @@ class DbManager( object ):
             s += t.getSize()
         return s
 
+    def shrinkMemory(self):
+        for name, t in self._table.items():
+            t.shrinkMemory()
+        return self
+
     def isSupportedStorage(self):
         s = False
         for name in self.tables:

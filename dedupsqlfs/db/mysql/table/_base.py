@@ -168,6 +168,9 @@ class Table( object ):
     def getPageCount(self):
         return 0
 
+    def shrinkMemory(self):
+        return self
+
     def getFileSize(self):
         return self.getSize()
 

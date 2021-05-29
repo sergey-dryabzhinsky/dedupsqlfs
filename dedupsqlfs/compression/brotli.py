@@ -26,7 +26,7 @@ class BrotliCompression(BaseCompression):
         return ( self._module.MODE_GENERIC, 11, )
 
     def getDefaultCompressionOptions(self):
-        return ( self._module.MODE_GENERIC, 1, )
+        return ( self._module.MODE_GENERIC, 2, )
 
     def getCustomCompressionOptions(self):
         try:

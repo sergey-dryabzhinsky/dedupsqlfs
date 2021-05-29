@@ -28,12 +28,12 @@ class LzmaCompression(BaseCompression):
 
     def getBestCompressionOptions(self):
         return {
-            "preset": 7,
+            "preset": 9,
         }
 
     def getDefaultCompressionOptions(self):
         return {
-            "preset": 1,
+            "preset": 2,
         }
 
     def getCustomCompressionOptions(self):

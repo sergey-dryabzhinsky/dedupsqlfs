@@ -8,13 +8,13 @@ from setuptools import setup, find_packages, Extension
 from setuptools.command.build_ext import build_ext
 
 # ZSTD version
-VERSION = (1, 4, 9,)
+VERSION = (1, 5, 0,)
 VERSION_STR = ".".join([str(x) for x in VERSION])
 
 # Package version
 PKG_VERSION = VERSION
 # Minor versions
-PKG_VERSION += ("1",)
+PKG_VERSION += ("2",)
 PKG_VERSION_STR = ".".join([str(x) for x in PKG_VERSION])
 
 ###
@@ -32,12 +32,6 @@ if "--debug-trace" in sys.argv:
     # Support tracing for debug
     SUP_TRACE=1
     sys.argv.remove("--debug-trace")
-
-SUP_PYZSTD_LEGACY=0
-if "--pyzstd-legacy" in sys.argv:
-    # Support ZSTD legacy format
-    SUP_PYZSTD_LEGACY=1
-    sys.argv.remove("--pyzstd-legacy")
 
 SUP_EXTERNAL=0
 ext_libraries=[]
@@ -65,7 +59,6 @@ if "--external" in sys.argv:
         # Add something default
         ext_libraries=["zstd"]
 
-
 EXTRA_OPT=0
 if "--extra-optimization" in sys.argv:
     # Support legacy output format functions
@@ -74,27 +67,21 @@ if "--extra-optimization" in sys.argv:
 
 
 COPT = {
-    'msvc':     [ '/DVERSION=\"\\\"%s\\\"\"' % PKG_VERSION_STR, ],
-    'mingw32':  [ '-DVERSION="%s"' % PKG_VERSION_STR, ],
-    'unix':     [ '-DVERSION="%s"' % PKG_VERSION_STR, ],
-    'clang':    [ '-DVERSION="%s"' % PKG_VERSION_STR, ],
-    'gcc':      [ '-DVERSION="%s"' % PKG_VERSION_STR, ]
+    'msvc':     [ '/Ot', '/DVERSION=\"\\\"%s\\\"\"' % PKG_VERSION_STR, ],
+    'mingw32':  [ '-O2', '-DVERSION="%s"' % PKG_VERSION_STR, ],
+    'unix':     [ '-O2', '-DVERSION="%s"' % PKG_VERSION_STR, ],
+    'clang':    [ '-O2', '-DVERSION="%s"' % PKG_VERSION_STR, ],
+    'gcc':      [ '-O2', '-DVERSION="%s"' % PKG_VERSION_STR, ]
 }
 
-for comp in COPT:
-    if comp == 'msvc':
-        COPT[comp].extend(['/Wall'])
-        if EXTRA_OPT:
-            COPT[comp].insert(0, '/O2')
+
+if EXTRA_OPT:
+    for comp in COPT:
+        if comp == 'msvc':
+            COPT[comp].extend([ '/O2'])
         else:
-            COPT[comp].insert(0, '/Ot')
-    else:
-        COPT[comp].extend(["-std=c99", "-Wall", "-DFORTIFY_SOURCE=2", "-fstack-protector"])
-        if EXTRA_OPT:
-            COPT[comp].insert(0, '-march=native')
-            COPT[comp].insert(0, '-O3')
-        else:
-            COPT[comp].insert(0, '-O2')
+            COPT[comp].extend([ '-O3', '-march=native'])
+
 
 if not SUP_EXTERNAL:
     for comp in COPT:
@@ -106,6 +93,14 @@ if not SUP_EXTERNAL:
             COPT[comp].extend([ '-DZSTD_MULTITHREAD=1',
                 '-Izstd/lib', '-Izstd/lib/common', '-Izstd/lib/compress', '-Izstd/lib/decompress',
             ])
+else:
+    for comp in COPT:
+        if comp == 'msvc':
+            COPT[comp].extend([ '/DLIBZSTD_EXTERNAL=1'
+            ])
+        else:
+            COPT[comp].extend([ '-DLIBZSTD_EXTERNAL=1',
+            ])
 
 if SUP_LEGACY:
     for comp in COPT:
@@ -113,13 +108,6 @@ if SUP_LEGACY:
             COPT[comp].extend(['/Izstd\\lib\\legacy', '/DZSTD_LEGACY_SUPPORT=1'])
         else:
             COPT[comp].extend(['-Izstd/lib/legacy', '-DZSTD_LEGACY_SUPPORT=1'])
-
-if SUP_PYZSTD_LEGACY:
-    for comp in COPT:
-        if comp == 'msvc':
-            COPT[comp].extend(['/DPYZSTD_LEGACY=1'])
-        else:
-            COPT[comp].extend(['-DPYZSTD_LEGACY=1'])
 
 # Force traceing support or disable
 if SUP_TRACE:
@@ -167,7 +155,6 @@ if not SUP_EXTERNAL:
 
             'common/entropy_common.c',
             'common/zstd_common.c',
-            'common/zstd_trace.c',
             'common/xxhash.c', 'common/error_private.c',
             'common/pool.c',
             'common/threading.c',
@@ -184,30 +171,19 @@ zstdFiles.append('src/util.c')
 zstdFiles.append('src/python-zstd.c')
 
 
-def setup_env():
-    # Python 2.6 compat
-    os.environ["VERSION"] = VERSION_STR
-    os.environ["PKG_VERSION"] = PKG_VERSION_STR
-    os.environ["LEGACY"] = "0"
-    os.environ["ZSTD_EXTERNAL"] = "0"
-    os.environ["PYZSTD_LEGACY"] = "0"
-    if SUP_LEGACY:
-        os.environ["LEGACY"] = "1"
-    if SUP_EXTERNAL:
-        os.environ["ZSTD_EXTERNAL"] = "1"
-    if SUP_PYZSTD_LEGACY:
-        os.environ["PYZSTD_LEGACY"] = "1"
-
 # Another dirty hack
 def my_test_suite():
     import unittest
 
-    setup_env()
+    os.environ["VERSION"] = VERSION_STR
+    os.environ["PKG_VERSION"] = PKG_VERSION_STR
+
     test_suite = unittest.TestSuite()
-    for test in os.listdir('tests'):
-        if test.startswith("test_") and test.endswith(".py"):
-            test_suite.addTest(unittest.defaultTestLoader.loadTestsFromName("tests."+test.replace(".py","")))
+    test_suite.addTest(unittest.defaultTestLoader.loadTestsFromName("tests.test_compress"))
+    test_suite.addTest(unittest.defaultTestLoader.loadTestsFromName("tests.test_version"))
     return test_suite
+
+test_func_name = "setup.my_test_suite"
 
 setup(
     name='zstd',
@@ -227,7 +203,7 @@ setup(
         Extension('_zstd', zstdFiles, libraries=ext_libraries)
     ],
     cmdclass = {'build_ext': ZstdBuildExt },
-    test_suite='setup.my_test_suite',
+    test_suite=test_func_name,
     classifiers=[
         'License :: OSI Approved :: BSD License',
         'Intended Audience :: Developers',

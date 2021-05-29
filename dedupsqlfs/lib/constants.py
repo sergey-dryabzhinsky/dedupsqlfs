@@ -25,7 +25,12 @@ COMPRESSION_LEVEL_NORM="normal"
 COMPRESSION_LEVEL_BEST="best"
 
 # Subset of hashlib simple funcs
-WANTED_HASH_FUCTIONS = {'md4', 'md5', 'sha1', 'sha224', 'sha256', 'sha384', 'sha512', 'whirlpool', 'ripemd160'}
+WANTED_HASH_FUCTIONS = {'md4', 'md5', 'sha1',
+                        'sha224', 'sha256', 'sha384', 'sha512',
+                        'sha3_224', 'sha3_256', 'sha3_384', 'sha3_512',
+                        'blase2s', 'blake2b',
+                        'shake_128', 'shake_256'
+                        'whirlpool', 'ripemd160'}
 HAS_FUNCTION_DEFAULT = 'md5'
 
 # For .sqlite3 files

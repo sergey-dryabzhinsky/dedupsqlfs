@@ -1285,7 +1285,6 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
             self.cached_attrs.set(fh, attrs, writed=True)
 
-            # self.bytes_written is incremented from release().
             self.__cache_meta_hook()
             self.__cache_block_hook()
 
@@ -2123,7 +2122,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
             self.getLogger().debug("-- hash_id: %r", hash_id)
             result["hash"] = hash_id
 
-            self.bytes_written += block_length
+            self.reportHelper.bytes_written += block_length
         else:
             hash_CompressType_id = self.__get_compression_type_by_hash_from_cache(hash_id)
 

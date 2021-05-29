@@ -11,6 +11,12 @@ LZ4_REQUIRED_VERSION = '>= 1.7.5'
 # use if so. If not, we'll use the bundled libraries.
 liblz4_found = False
 
+EXTRA_OPT=0
+if "--extra-optimization" in sys.argv:
+    # Support legacy output format functions
+    EXTRA_OPT=1
+    sys.argv.remove("--extra-optimization")
+
 try:
     from pkgconfig import installed as pkgconfig_installed
     from pkgconfig import parse as pkgconfig_parse
@@ -92,7 +98,7 @@ compiler = ccompiler.get_default_compiler()
 
 if compiler == 'msvc':
     extension_kwargs['extra_compile_args'] = [
-        '/Ot',
+        EXTRA_OPT and '/O2' or '/Ot',
         '/Wall',
         '/wd4711',
         '/wd4820',
@@ -102,10 +108,12 @@ elif compiler in ('unix', 'mingw32'):
         extension_kwargs = pkgconfig_parse('liblz4')
     else:
         extension_kwargs['extra_compile_args'] = [
-            '-O3',
+            '-O2',
             '-Wall',
             '-Wundef'
         ]
+        if EXTRA_OPT:
+            extension_kwargs['extra_compile_args'].extend(['-O3', '-march=native'])
 else:
     print('Unrecognized compiler: {0}'.format(compiler))
     sys.exit(1)
@@ -134,33 +142,15 @@ if sys.version_info < (3, 0):
     install_requires.append('future')
 
 
-# Dependencies for testing. We define a list here, so that we can
-# refer to it for the tests_require and the extras_require arguments
-# to setup below. The latter enables us to use pip install .[tests] to
-# install testing dependencies.
-# Note: pytest 3.3.0 contains a bug with null bytes in parameter IDs:
-# https://github.com/pytest-dev/pytest/issues/2957
-tests_require = [
-    'pytest!=3.3.0',
-    'psutil',
-    'pytest-cov',
-],
-
-# Only require pytest-runner if actually running the tests
-needs_pytest = {'pytest', 'test', 'ptr'}.intersection(sys.argv)
-pytest_runner = ['pytest-runner'] if needs_pytest else []
-
 # Finally call setup with the extension modules as defined above.
 setup(
     name='_lz4',
-    use_scm_version={
-        'write_to': "_lz4/version.py",
-    },
+    version='3.1.3',
     python_requires=">=3.5",
     setup_requires=[
         'setuptools',
         'pkgconfig',
-    ] + pytest_runner,
+    ],
     install_requires=install_requires,
     description="LZ4 Bindings for Python",
     long_description=open('README.rst', 'r').read(),
@@ -174,16 +164,7 @@ setup(
         lz4frame,
         lz4stream
     ],
-    tests_require=tests_require,
     extras_require={
-        'tests': tests_require,
-        'docs': [
-            'sphinx >= 1.6.0',
-            'sphinx_bootstrap_theme',
-        ],
-        'flake8': [
-            'flake8',
-        ]
     },
     classifiers=[
         'Development Status :: 5 - Production/Stable',

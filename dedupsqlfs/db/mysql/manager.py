@@ -8,17 +8,18 @@ from datetime import datetime
 import subprocess
 
 try:
-	import pymysql
-	import pymysql.err
-	import pymysql.cursors
+    import pymysql
+    import pymysql.err
+    import pymysql.cursors
 except:
-	import _pymysql as pymysql
-	import _pymysql.err
-	import _pymysql.cursors
+    import _pymysql as pymysql
+    import _pymysql.err
+    import _pymysql.cursors
 
 cursor_type = pymysql.cursors.DictCursor
 
-class DbManager( object ):
+
+class DbManager(object):
 
     TYPE = "mysql"
 

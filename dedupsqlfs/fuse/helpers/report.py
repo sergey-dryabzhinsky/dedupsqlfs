@@ -14,7 +14,7 @@ class ReportHelper:
 
     # Public properties
 
-    report_interval = 60
+    report_interval = 60        # in seconds
 
     def __init__(self, app):
         """
@@ -29,6 +29,8 @@ class ReportHelper:
         self.bytes_deduped_last = 0
         self.bytes_written = 0
         self.bytes_written_compressed = 0
+
+        self.compressed_ratio = 0
 
         self.timing_report_last_run = time()
         self.time_spent_logging = 0

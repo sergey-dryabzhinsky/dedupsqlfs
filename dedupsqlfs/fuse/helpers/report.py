@@ -89,14 +89,15 @@ class ReportHelper:
             self.get_logger().info('-' * 79)
             self.__report_memory_usage()
             self.__report_memory_usage_real()
-            self.__report_deduped_usage()
             self.__report_compressed_usage()
+            self.__report_deduped_usage()
             self.__report_throughput()
-            self.__report_timings()
-            self.__report_database_timings()
-            self.__report_database_operations()
-            self.__report_cache_timings()
-            self.__report_cache_operations()
+            if self.get_option("verbose_stats_detailed"):
+                self.__report_timings()
+                self.__report_database_timings()
+                self.__report_database_operations()
+                self.__report_cache_timings()
+                self.__report_cache_operations()
             self.get_logger().info(' ' * 79)
         return
 

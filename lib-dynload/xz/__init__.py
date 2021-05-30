@@ -36,12 +36,8 @@ if not imported:
         if d.find("-%s.%s" % (p1, p2)) != -1 and d.find("lib.") != -1:
             sys.path.insert(0, os.path.join(build_dir, d) )
 
-            try:
-                from .module import compress, decompress
-
-                imported = True
-            except:
-                pass
+            from .module import compress, decompress
+            imported = True
 
             sys.path.pop(0)
 
@@ -61,3 +57,6 @@ if not imported:
         pass
 
     sys.path.insert(0, path)
+    del path, importlib, module
+
+del search_paths, p1, p2, dirs, build_dir, curpath, currentdir

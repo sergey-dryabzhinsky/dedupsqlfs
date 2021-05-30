@@ -93,10 +93,10 @@ class BuildExt(build_ext):
                 extra_args.insert(0, "/Ot")
         else:
             if EXTRA_OPT:
-                extra_args.insert(0, "-march=native")
-                extra_args.insert(0, "-O3")
+                extra_args.append("-march=native")
+                extra_args.append("-O3")
             else:
-                extra_args.insert(0, "-O2")
+                extra_args.append("-O2")
 
         objects = []
         for lang, sources in (('c', c_sources), ('c++', cxx_sources)):

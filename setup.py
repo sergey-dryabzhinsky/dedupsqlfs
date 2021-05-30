@@ -45,44 +45,96 @@ def makeExtension(extName):
     extPath = extName.replace(".", os.path.sep)+".py"
     return Extension(extName, [extPath])
 
+def makeExtensionLib(extName):
+    extPath = extName.replace(".", os.path.sep)+".py"
+    extName = extName.replace('lib-dynload.', '')
+    return Extension(extName, [extPath])
+
 def cleanAllExtension(extName):
-    extDir = os.path.dirname(extName)
+
+    if os.path.isfile(extName):
+        extDir = os.path.dirname(extName)
+    else:
+        extName = 'lib-dynload/' + extName
+    if os.path.isfile(extName):
+        extDir = os.path.dirname(extName)
+    else:
+        return
 
     oldPath = os.getcwd()
     os.chdir(extDir)
 
     # Just in case the build directory was created by accident,
     # note that shell=True should be OK here because the command is constant.
-    subprocess.Popen("rm -rf __pycache__", shell=True, executable="/bin/sh")
-    subprocess.Popen("rm -rf build", shell=True, executable="/bin/sh")
-    subprocess.Popen("rm -rf *.c", shell=True, executable="/bin/sh")
-    subprocess.Popen("rm -rf *.so", shell=True, executable="/bin/sh")
+    subprocess.Popen("rm -rvf __pycache__", shell=True, executable="/bin/sh")
+    subprocess.Popen("rm -rvf build", shell=True, executable="/bin/sh")
+    subprocess.Popen("rm -rvf *.c", shell=True, executable="/bin/sh")
+    subprocess.Popen("rm -rvf *.so", shell=True, executable="/bin/sh")
+
+    os.chdir(oldPath)
+
+def cleanBuildExtension(extName):
+    if os.path.isfile(extName):
+        extDir = os.path.dirname(extName)
+    else:
+        extName = 'lib-dynload/' + extName
+    if os.path.isfile(extName):
+        extDir = os.path.dirname(extName)
+    else:
+        return
+
+    oldPath = os.getcwd()
+    os.chdir(extDir)
+
+    # Just in case the build directory was created by accident,
+    # note that shell=True should be OK here because the command is constant.
+    subprocess.Popen("rm -rvf __pycache__", shell=True, executable="/bin/sh")
+    subprocess.Popen("rm -rvf build", shell=True, executable="/bin/sh")
+    subprocess.Popen("rm -rvf *.c", shell=True, executable="/bin/sh")
 
     os.chdir(oldPath)
 
 def cleanPyExtension(extName):
-    extDir = os.path.dirname(extName)
+    if os.path.isfile(extName):
+        extDir = os.path.dirname(extName)
+    else:
+        extName = 'lib-dynload/' + extName
+    if os.path.isfile(extName):
+        extDir = os.path.dirname(extName)
+    else:
+        return
 
     oldPath = os.getcwd()
     os.chdir(extDir)
 
     # Just in case the build directory was created by accident,
     # note that shell=True should be OK here because the command is constant.
-    subprocess.Popen("rm -rf __pycache__", shell=True, executable="/bin/sh")
-    subprocess.Popen("rm -rf build", shell=True, executable="/bin/sh")
-    subprocess.Popen("rm -rf *.c", shell=True, executable="/bin/sh")
+    subprocess.Popen("rm -rvf __pycache__", shell=True, executable="/bin/sh")
+    subprocess.Popen("rm -rvf build", shell=True, executable="/bin/sh")
+    subprocess.Popen("rm -rvf *.c", shell=True, executable="/bin/sh")
     os.chdir(oldPath)
 
     if os.path.isfile(extName):
-        os.unlink(extName)
+        subprocess.Popen("rm -rvf '%s'" % extName, shell=True, executable="/bin/sh")
 
 
 def stripExtension(extName):
-    subprocess.Popen("strip -s " + extName, shell=True, executable="/bin/sh")
+    if not os.path.isfile(extName):
+        extName = 'lib-dynload/' + extName
+    if not os.path.isfile(extName):
+        return
+    subprocess.Popen("strip -sv " + extName, shell=True, executable="/bin/sh")
 
 
 # get the list of extensions
-extNames = scandir("dedupsqlfs")
+extNamesD = []
+scandir("dedupsqlfs", extNamesD)
+extNamesL = []
+scandir("lib-dynload/_pymysql", extNamesL)
+
+extNames = []
+extNames.extend(extNamesD)
+extNames.extend(extNamesL)
 
 # Make a `cleanall` rule to get rid of intermediate and library files
 if "cleanall" in args:
@@ -90,7 +142,10 @@ if "cleanall" in args:
 
     for n in extNames:
         cleanAllExtension(n.replace(".", os.path.sep) + ".py")
-    subprocess.Popen("rm -rf build", shell=True, executable="/bin/sh")
+    subprocess.Popen("rm -rvf build _pymysql", shell=True, executable="/bin/sh")
+
+    subprocess.Popen("find lib-dynload/_pymysql -type f -iname '*.c' -exec rm -vf '{}' \;", shell=True, executable="/bin/sh")
+    subprocess.Popen("find lib-dynload/_pymysql -type f -iname '*.so' -exec rm -vf '{}' \;", shell=True, executable="/bin/sh")
 
     sys.exit(0)
 
@@ -100,7 +155,22 @@ if "cleanpy" in args:
 
     for n in extNames:
         cleanPyExtension(n.replace(".", os.path.sep) + ".py")
-    subprocess.Popen("rm -rf build", shell=True, executable="/bin/sh")
+    subprocess.Popen("rm -rvf build _pymysql", shell=True, executable="/bin/sh")
+
+    subprocess.Popen("find lib-dynload/_pymysql -type f -iname '*.c' -exec rm -vf '{}' \;", shell=True, executable="/bin/sh")
+    subprocess.Popen("find lib-dynload/_pymysql -type f -iname '*.py' -exec rm -vf '{}' \;", shell=True, executable="/bin/sh")
+
+    sys.exit(0)
+
+# Make a `cleanbuild` rule to get rid of cython build artefacts
+if "cleanbuild" in args:
+    print("Deleting cython build files...")
+
+    for n in extNames:
+        cleanBuildExtension(n.replace(".", os.path.sep) + ".py")
+    subprocess.Popen("rm -rvf build _pymysql", shell=True, executable="/bin/sh")
+
+    subprocess.Popen("find lib-dynload/_pymysql -type f -iname '*.c' -exec rm -vf '{}' \;", shell=True, executable="/bin/sh")
 
     sys.exit(0)
 
@@ -111,6 +181,8 @@ if "stripall" in args:
     for n in extNames:
         stripExtension(n.replace(".", os.path.sep) + "*.so")
 
+    subprocess.Popen("find lib-dynload/_pymysql -type f -iname '*.so' -exec strip -vs '{}' \;", shell=True, executable="/bin/sh")
+
     sys.exit(0)
 
 
@@ -120,16 +192,23 @@ if args.count("build_ext") > 0 and args.count("--inplace") == 0:
 
 
 # and build up the set of Extension objects
-extensions = [makeExtension(name) for name in extNames]
-
 if CYTHON_BUILD:
+    dynloaddir = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "lib-dynload"))
+    sys.path.insert(0, dynloaddir)
+
+    extensions = []
+    extensions.extend([makeExtension(name) for name in extNamesD])
+    extensions.extend([makeExtensionLib(name) for name in extNamesL])
     setup(
-        ext_modules = cythonize(extensions),
+        ext_modules = cythonize(extensions, language_level=3),
         name="dedupsqlfs",
         packages=["dedupsqlfs",],
         cmdclass = {'build_ext': build_ext}, requires=['llfuse']
     )
+    subprocess.Popen("cp -vfr _pymysql lib-dynload/", shell=True, executable="/bin/sh")
+    subprocess.Popen("rm -vfr _pymysql", shell=True, executable="/bin/sh")
 else:
+    extensions = [makeExtension(name) for name in extNamesD]
     setup(
         ext_modules = extensions,
         name="dedupsqlfs",

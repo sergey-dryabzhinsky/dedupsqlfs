@@ -26,6 +26,7 @@ class ReportHelper:
 
         self.bytes_read = 0
         self.bytes_deduped = 0
+        self.bytes_deduped_last = 0
         self.bytes_written = 0
         self.bytes_written_compressed = 0
 

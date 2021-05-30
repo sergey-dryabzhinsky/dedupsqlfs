@@ -88,7 +88,7 @@ Note: dynamic subvolume and snapshot creation available only with MySQL storage 
 
 ## Dependencies
 
-DedupSQLfs was developed using Python 3.2, it also work with newer versions.
+DedupSQLfs was developed using Python 3.4, it also work with newer versions. Python 3.8 or 3.9 is recommended.
 - It definitely doesn't work with Python 2.
 - It requires the [Python llFUSE binding](http://www.rath.org/llfuse-docs/example.html)
 - in addition to several Python standard libraries like [sqlite3](http://docs.python.org/library/sqlite3.html), [hashlib](http://docs.python.org/library/hashlib.html).
@@ -108,7 +108,10 @@ Additional storage engine via MySQL can be accessed with commands:
 
     $ sudo pip3 install pymysql
 
-Additional performance gain about 1-5% via Cython:
+or use bundled one.
+
+
+Additional performance gain about 1-5% (depends on python verson) via Cython:
 
     ## Setup tools If not installed
     $ sudo pip3 install setuptools
@@ -118,15 +121,20 @@ Additional performance gain about 1-5% via Cython:
     ## Warning! This deletes all .py files
     $ python3 setup.py cleanpy
 
-Lesser memory usage via RecordClass
+
+Lesser memory usage via RecordClass:
 
     $ sudo pip3 install recordclass
+
+or use bundled one.
+
 
 ### Notes about Cython
 
 1. Profiling via cProfile not working for compiled code.
 2. Always keep copy of dedupsqlfs directory if you will run `cleanpy` command.
 3. RecordClass not compatible with Cython - install only one of them
+4. Python 3.9 seems like working faster by it self, no need in cython.
 
 ## Contact
 

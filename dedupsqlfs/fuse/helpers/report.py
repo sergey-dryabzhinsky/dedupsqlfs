@@ -212,7 +212,7 @@ class ReportHelper:
             timings = []
             for cn in "cached_attrs", "cached_xattrs", "cached_nodes", "cached_names", "cached_name_ids", \
                 "cached_indexes", "cached_blocks", "cached_hash_sizes", "cached_hash_compress":
-                c = getattr(self, cn)
+                c = getattr(self.application, cn)
 
                 opTimes = c.getTimeSpent()
                 for op, timespan in opTimes.items():
@@ -240,7 +240,7 @@ class ReportHelper:
             allcount = 0
             for cn in "cached_attrs", "cached_xattrs", "cached_nodes", "cached_names", "cached_name_ids", \
                 "cached_indexes", "cached_blocks", "cached_hash_sizes", "cached_hash_compress":
-                c = getattr(self, cn)
+                c = getattr(self.application, cn)
 
                 opCount = c.getOperationsCount()
                 for op, count in opCount.items():

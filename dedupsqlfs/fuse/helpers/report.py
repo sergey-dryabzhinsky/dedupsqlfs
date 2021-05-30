@@ -53,6 +53,9 @@ class ReportHelper:
         self.time_spent_compressing = 0
         self.time_spent_decompressing = 0
 
+        self.memory_usage = get_memory_usage()
+        self.memory_usage_real = get_real_memory_usage()
+
         pass
 
     # Public methods

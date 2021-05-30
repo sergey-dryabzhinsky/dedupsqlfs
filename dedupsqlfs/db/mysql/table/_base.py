@@ -6,11 +6,11 @@ from time import time
 import sys
 
 try:
-	import pymysql
-	import pymysql.cursors
+    import pymysql
+    import pymysql.cursors
 except:
-	import _pymysql as pymysql
-	import _pymysql.cursors
+    import _pymysql as pymysql
+    import _pymysql.cursors
 
 from dedupsqlfs.log import logging
 from dedupsqlfs.my_formats import format_size

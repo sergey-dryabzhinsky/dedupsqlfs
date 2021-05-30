@@ -6,6 +6,7 @@ from dedupsqlfs.db.mysql.table import Table
 
 
 class TableInodeHashBlock(Table):
+
     _table_name = "inode_hash_block"
 
     _selected_subvol = None
@@ -26,8 +27,6 @@ class TableInodeHashBlock(Table):
 
         self.createIndexIfNotExists("inode_block", ('inode_id', 'block_number',), unique=True)
         self.createIndexIfNotExists("hash", ('hash_id',))
-        self.createIndexIfNotExists("inode", ('inode_id',))
-        self.createIndexIfNotExists("hash_inode", ('hash_id', 'inode_id',))
         return
 
     def insert(self, inode, block_number, hash_id, real_size=0):

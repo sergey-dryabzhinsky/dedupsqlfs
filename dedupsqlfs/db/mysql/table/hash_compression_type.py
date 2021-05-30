@@ -19,8 +19,6 @@ class TableHashCompressionType( Table ):
             ")"+
             self._getCreationAppendString()
         )
-
-        self.createIndexIfNotExists("type", ("type_id",))
         return
 
     def insert( self, hash_id, type_id):
@@ -79,16 +77,6 @@ class TableHashCompressionType( Table ):
         item = cur.fetchone()
         self.stopTimer('get')
         return item
-
-    def count_compression_type( self ):
-        self.startTimer()
-        cur = self.getCursor()
-        cur.execute(
-            "SELECT COUNT(1) AS `cnt`, `type_id` FROM `%s` GROUP BY `type_id`" % self.getName()
-        )
-        items = cur.fetchall()
-        self.stopTimer('count_compression_type')
-        return items
 
     def remove_by_ids(self, id_str):
         self.startTimer()

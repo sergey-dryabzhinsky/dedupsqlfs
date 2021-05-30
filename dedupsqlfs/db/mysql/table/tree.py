@@ -25,7 +25,6 @@ class TableTree( Table ):
         self.createIndexIfNotExists("pn", ('parent_id', 'name_id',), unique=True)
         self.createIndexIfNotExists("inode", ('inode_id',))
         self.createIndexIfNotExists("parent_id", ('parent_id', 'id'))
-        self.createIndexIfNotExists("name", ('name_id',))
 
         return
 

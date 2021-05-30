@@ -26,11 +26,7 @@ class TableInode( Table ):
                 "ctime INTEGER NOT NULL"+
             ");"
         )
-        c.execute(
-            "CREATE INDEX IF NOT EXISTS inode_id_nlinks ON `%s` (" % self.getName()+
-                "id,nlinks"+
-            ");"
-        )
+        self.createIndexIfNotExists('id_nlinks', ('id', 'nlinks',))
         return
 
     def getRowSize(self):

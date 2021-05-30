@@ -4,7 +4,8 @@ __author__ = 'sergey'
 
 from dedupsqlfs.db.sqlite.table import Table
 
-class TableTree( Table ):
+
+class TableTree(Table):
 
     _table_name = "tree"
 
@@ -13,35 +14,22 @@ class TableTree( Table ):
 
         # Create table
         c.execute(
-            "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName()+
-                "id INTEGER PRIMARY KEY AUTOINCREMENT, "+
-                "parent_id INTEGER, "+
-                "name_id INTEGER NOT NULL, "+
-                "inode_id INTEGER NOT NULL, "+
-                "UNIQUE (parent_id, name_id)"+
+            "CREATE TABLE IF NOT EXISTS `%s` (" % self.getName() +
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+            "parent_id INTEGER, " +
+            "name_id INTEGER NOT NULL, " +
+            "inode_id INTEGER NOT NULL, " +
+            "UNIQUE (parent_id, name_id)" +
             ");"
         )
-        c.execute(
-            "CREATE INDEX IF NOT EXISTS tree_inode ON `%s` (" % self.getName()+
-                "inode_id"+
-            ");"
-        )
-        c.execute(
-            "CREATE INDEX IF NOT EXISTS tree_parent_id ON `%s` (" % self.getName()+
-                "parent_id,id"+
-            ");"
-        )
-        c.execute(
-            "CREATE INDEX IF NOT EXISTS tree_name ON `%s` (" % self.getName()+
-                "name_id"+
-            ");"
-        )
+        self.createIndexIfNotExists('inode', ('inode_id',))
+        self.createIndexIfNotExists('parent_id', ('parent_id', 'id',))
         return
 
     def getRowSize(self):
         return 4 * 8
 
-    def insert( self, parent_id, name_id, inode_id ):
+    def insert(self, parent_id, name_id, inode_id):
         """
         :param parent_id: int|None
         :param name_id: int
@@ -50,22 +38,22 @@ class TableTree( Table ):
         """
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("INSERT INTO `%s`(parent_id, name_id, inode_id) " % self.getName()+
+        cur.execute("INSERT INTO `%s`(parent_id, name_id, inode_id) " % self.getName() +
                     "VALUES (?, ?, ?)", (parent_id, name_id, inode_id))
         item = cur.lastrowid
         self.stopTimer('insert')
         return item
 
-    def rename_inode( self, node_id, new_parent_id, new_name_id):
+    def rename_inode(self, node_id, new_parent_id, new_name_id):
         """
-        :param parent_id: int|None
-        :param name_id: int
-        :param inode_id: int
+        :param node_id: int
+        :param new_parent_id: int
+        :param new_name_id: int
         :return: int
         """
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("UPDATE `%s` " % self.getName()+
+        cur.execute("UPDATE `%s` " % self.getName() +
                     "SET parent_id=?, name_id=? WHERE id=?", (new_parent_id, new_name_id, node_id))
         item = cur.lastrowid
         self.stopTimer('rename_inode')
@@ -82,7 +70,8 @@ class TableTree( Table ):
     def find_by_parent_name(self, parent_id, name_id):
         self.startTimer()
         cur = self.getCursor()
-        cur.execute("SELECT id, inode_id, name_id FROM `%s` WHERE parent_id=? AND name_id=?" % self.getName(), (parent_id, name_id,))
+        cur.execute("SELECT id, inode_id, name_id FROM `%s` WHERE parent_id=? AND name_id=?" % self.getName(),
+                    (parent_id, name_id,))
         item = cur.fetchone()
         self.stopTimer('find_by_parent_name')
         return item
@@ -127,9 +116,9 @@ class TableTree( Table ):
         id_str = ",".join(inode_ids)
         if id_str:
             cur = self.getCursor()
-            cur.execute("SELECT `inode_id` FROM `%s` " % self.getName()+
-                            " WHERE `inode_id` IN (%s)" % (id_str,))
-            iids = set(str(item["inode_id"]) for item in iter(cur.fetchone,None))
+            cur.execute("SELECT `inode_id` FROM `%s` " % self.getName() +
+                        " WHERE `inode_id` IN (%s)" % (id_str,))
+            iids = set(str(item["inode_id"]) for item in iter(cur.fetchone, None))
 
         self.stopTimer('get_inodes_by_inodes')
         return iids
@@ -140,9 +129,9 @@ class TableTree( Table ):
         iids = ()
         if id_str:
             cur = self.getCursor()
-            cur.execute("SELECT `inode_id` FROM `%s` " % self.getName()+
-                            " WHERE `inode_id` IN (%s)" % (id_str,))
-            iids = (item["inode_id"] for item in iter(cur.fetchone,None))
+            cur.execute("SELECT `inode_id` FROM `%s` " % self.getName() +
+                        " WHERE `inode_id` IN (%s)" % (id_str,))
+            iids = (item["inode_id"] for item in iter(cur.fetchone, None))
 
         self.stopTimer('get_inodes_by_inodes_intgen')
         return iids
@@ -152,7 +141,7 @@ class TableTree( Table ):
 
         cur = self.getCursor()
         cur.execute("SELECT `inode_id` FROM `%s` " % self.getName())
-        iids = set(item["inode_id"] for item in iter(cur.fetchone,None))
+        iids = set(item["inode_id"] for item in iter(cur.fetchone, None))
 
         self.stopTimer('get_all_inodes_set')
         return iids

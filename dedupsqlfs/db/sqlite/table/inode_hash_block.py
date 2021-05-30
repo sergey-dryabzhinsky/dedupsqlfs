@@ -23,8 +23,6 @@ class TableInodeHashBlock( Table ):
         )
 
         self.createIndexIfNotExists('hash', ("hash_id",))
-        self.createIndexIfNotExists('inode', ("inode_id",))
-        self.createIndexIfNotExists('hash_inode', ("hash_id", "inode_id",))
         return
 
     def insert( self, inode, block_number, hash_id, real_size=0):

@@ -14,6 +14,14 @@
 * mariadb 10.5 + tokudb + сжатие small
 * mariadb 10.5 + rocksdb - сжатие по-умолчанию
 
+CPU: i5-6600K @ 3.50GHz
+
+System: Ubuntu 16.04 amd64
+
+Kernel: 4.15.0-142-lowlatency
+
+Python: 3.5.10
+
 Размер LibreOffice в tar:
 
 * 6.4.7 - 1133M

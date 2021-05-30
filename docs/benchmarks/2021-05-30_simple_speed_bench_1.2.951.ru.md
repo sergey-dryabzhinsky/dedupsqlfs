@@ -1,0 +1,59 @@
+# Простые тесты скорости работы DedupSQLfs v1.2.951 с разными методами сжатия
+
+Распаковка LibreOffice 6.4.7 + 7.1.3
+
+Проверка работы на движке: sqlite 3.34.1
+
+CPU: i5-6600K @ 3.50GHz
+
+System: Ubuntu 16.04 amd64
+
+Kernel: 4.15.0-142-lowlatency
+
+Python: 3.9.5
+
+Размер LibreOffice в tar:
+
+* 6.4.7 - 1133M
+* 7.1.3 - 1183M
+
+Другое: включен autocommit, выключен sync, hash=md5
+
+Команда: python3.9 ./mount.dedupsqlfs -vv --verbose-stats --data ~/Temp/sqlfs/data/ --compress {method} --no-sync --no-cache-flusher --minimal-compress-size -1 ~/Temp/sqlfs/mount
+
+Извлечение: tar xf {libre-tar} -C ~/Temp/sqlfs/mount
+
+## Тесты
+
+| method | untar 6.4.7: time, size, speed | untar 7.1.3: time, size, speed |
+| ------ |:------------------------------:|:------------------------------:|
+| none | 1:37.95, 1101M, 26.94 MiB/s | 1:34.15, 1653M, 37.08 MiB/s |
+| zlib:1 | 1:49.54, 429M, 23.16 MiB/s | 1:38.86, 628M, 33.40 MiB/s |
+| zlib(:2) | 2:05.44, 423M, 22.29 MiB/s | 1:49.20, 618M, 28.24 MiB/s |
+| zlib:6 | 1:58.63, 402M, 18.32 MiB/s | 1:43.06, 583M, 27.33 MiB/s |
+| zlib:9 | 2:20.29, 400M, 15.77 MiB/s | 1:54.15, 580M, 21.89 MiB/s |
+| bz2:1 | 3:27.05, 402M, 8.31 MiB/s | 2:29.57, 581M, 15.15 MiB/s |
+| bz2(:2) | 3:35.34, 399M, 7.73 MiB/s | 2:29.77, 576M, 13.92 MiB/s |
+| bz2:6 | 3:36.06, 399M, 9.93 MiB/s | 2:23.45, 576M, 18.48 MiB/s |
+| bz2:9 | 3:29.78, 399M, 8.19 MiB/s | 2:37.23, 576M, 12.96 MiB/s |
+| xz:0 | 2:44.27, 408M, 11.00 MiB/s | 2:05.76, 595M, 19.28 MiB/s |
+| xz(:2) | 3:13.85, 402M, 8.50 MiB/s | 2:22.37, 584M, 14.56 MiB/s |
+| xz:4 | 4:44.17, 396M, 4.91 MiB/s | 3:02.94, 573M, 10.74 MiB/s |
+| xz:9 | 18:21.68, 390M, 1.08 MiB/s | 10:17.44, 565M, 2.00 MiB/s |
+| zstd:-5 | 1:40.25, 512M, 31.71 MiB/s | 1:35.28, 764M, 35.47 MiB/s |
+| zstd:1 | 1:42.89, 416M, 26.26 MiB/s | 1:42.39, 606M, 40.28 MiB/s |
+| zstd(:3) | 1:49.58, 410M, 25.13 MiB/s | 1:42.24, 597M, 30.80 MiB/s |
+| zstd:9 | 2:03.18, 396M, 18.95 MiB/s | 1:48.79, 574M, 26.39 MiB/s |
+| zstd:18 | 5:42.42, 388M, 4.22 MiB/s | 3:38.51, 572M, 9.90 MiB/s |
+| brotli:0 | 1:45.63, 444M, 26.87 MiB/s | 1:41.04, 650M, 32.67 MiB/s |
+| brotli(:2) | 1:48.06, 413M, 23.40 MiB/s | 1:41.85, 601M, 31.40 MiB/s |
+| brotli:4 | 1:59.06, 399M, 22.90 MiB/s | 1:46.98, 579M, 27.36 MiB/s |
+| brotli:11 | 30:20.02, 366M, 0.762 MiB/s | 15:18.32, 527M, 1.27 MiB/s |
+| lz4 | 1:39.68, 511M, 34.35 MiB/s | 1:34.96, 758M, 33.29 MiB/s |
+| lzo | 1:47.23, 511M, 24.84 MiB/s | 1:44.58, 759M, 40.88 MiB/s |
+| snappy | 1:46.70, 514M, 25.72 MiB/s | 1:44.39, 759M, 33.94 MiB/s |
+| quicklzf | 1:48.08, 499M, 29.40 MiB/s | 1:38.79, 736M, 31.24 MiB/s |
+| quicklzm | 1:46.79, 479M, 25.97 MiB/s | 1:40.74, 701M, 30.23 MiB/s |
+| quicklzb | 1:54.41, 468M, 21.65 MiB/s | 1:46.64, 683M, 27.82 MiB/s |
+| all_fast | 5:43.83, 392M, 4.04 MiB/s | 3:21.38, 585M, 9.66 MiB/s |
+| all_best | 47:51.08, 367M, 0.545 MiB/s | 30:44.99, 529M, 1.013 MiB/s |

@@ -353,12 +353,12 @@ def do_level_dtest(method, name, level):
 
 COMPRESSION_SUPPORTED=[
     ('brotli'  , range(0,12), do_level_ctest_brotli,),
-    ('zlib'    , range(1,10), do_level_ctest,),
+    ('zlib'    , range(0,10), do_level_ctest,),
     ]
 
 DECOMPRESSION_SUPPORTED=[
     ('brotli'  , range(0,12), do_level_dtest,),
-    ('zlib'    , range(1,10), do_level_dtest,),
+    ('zlib'    , range(0,10), do_level_dtest,),
     ]
 
 CTIMING={}

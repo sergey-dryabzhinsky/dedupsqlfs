@@ -9,6 +9,7 @@
 THIS_DIR=`dirname $0`
 
 if [ -z "$PY" ]; then
+	# generic
 	PY=python3
 fi
 
@@ -21,7 +22,19 @@ else
 	EXTRA_OPT=""
 fi
 
-ONLY_METHOD=$2
+ONLY_MODULE=$2
+
+if [ "${EXTRA_OPT}" = "-h" ]; then
+	echo "Usage: [env PY=python3.x] $0 [extra-optimizations=/y only-module=/zstd/..]"
+	exit 0
+fi
+
+if [ -z "$CC" ]; then
+	export CC=gcc
+fi
+if [ -z "$CXX" ]; then
+	export CXX=g++
+fi
 
 cd "${THIS_DIR}/../lib-dynload"
 
@@ -29,9 +42,16 @@ for mdir in `ls .`
 do
 	if [ -d ${mdir} ]; then
 
-		if [ -n "$ONLY_METHOD" ] && [ "$ONLY_METHOD" != "$mdir" ]; then
+		if [ -n "$ONLY_MODULE" ] && [ "$ONLY_MODULE" != "$mdir" ]; then
 			continue
 		fi
+
+		if [ ! -r ${mdir}/setup.py ]; then
+			continue
+		fi
+
+		echo ""
+		echo "MODULE rebuild: ${mdir}"
 
 		cd ${mdir}
 		$PY setup.py clean -a

@@ -8,41 +8,43 @@ from setuptools import setup, find_packages, Extension
 from setuptools.command.build_ext import build_ext
 
 # ZSTD version
-VERSION = (1, 5, 0,)
+VERSION = (1, 5, 2,)
 VERSION_STR = ".".join([str(x) for x in VERSION])
 
 # Package version
 PKG_VERSION = VERSION
 # Minor versions
-PKG_VERSION += ("2",)
+PKG_VERSION += ("4",)
 PKG_VERSION_STR = ".".join([str(x) for x in PKG_VERSION])
 
 ###
 # Ugly hacks, I know
 #
 
-SUP_LEGACY=0
+SUP_LEGACY="ZSTD_LEGACY" in os.environ
 if "--legacy" in sys.argv:
     # Support legacy output format functions
-    SUP_LEGACY=1
+    SUP_LEGACY=True
     sys.argv.remove("--legacy")
 
-SUP_TRACE=0
+SUP_TRACE="ZSTD_TRACE" in os.environ
 if "--debug-trace" in sys.argv:
     # Support tracing for debug
-    SUP_TRACE=1
+    SUP_TRACE=True
     sys.argv.remove("--debug-trace")
 
-SUP_EXTERNAL=0
+SUP_EXTERNAL="ZSTD_EXTERNAL" in os.environ
 ext_libraries=[]
 if "--external" in sys.argv:
     # You want use external Zstd library?
-    SUP_EXTERNAL=1
+    SUP_EXTERNAL=True
     sys.argv.remove("--external")
+
+if SUP_EXTERNAL:
     # You should add external library by option: --libraries zstd
     # And probably include paths by option: --include-dirs /usr/include/zstd
     # And probably library paths by option: --library-dirs /usr/lib/i386-linux-gnu
-    # Wee need pkg-config here!
+    # We need pkg-config here!
     pkgconf = "/usr/bin/pkg-config"
     if os.path.exists(pkgconf):
         cmd = [pkgconf, "libzstd", "--modversion"]
@@ -59,29 +61,23 @@ if "--external" in sys.argv:
         # Add something default
         ext_libraries=["zstd"]
 
-EXTRA_OPT=0
+EXTRA_OPT="ZSTD_EXTRAOPT" in os.environ
 if "--extra-optimization" in sys.argv:
     # Support legacy output format functions
     EXTRA_OPT=1
     sys.argv.remove("--extra-optimization")
 
-
+###
+# DVERSION - pass module version string
+# DDYNAMIC_BMI2 - disable BMI2 amd64 asembler code - can't build it, use CFLAGS with -march= bdver4, znver1/2/3, native
+#
 COPT = {
-    'msvc':     [ '/Ot', '/DVERSION=\"\\\"%s\\\"\"' % PKG_VERSION_STR, ],
-    'mingw32':  [ '-O2', '-DVERSION="%s"' % PKG_VERSION_STR, ],
-    'unix':     [ '-O2', '-DVERSION="%s"' % PKG_VERSION_STR, ],
-    'clang':    [ '-O2', '-DVERSION="%s"' % PKG_VERSION_STR, ],
-    'gcc':      [ '-O2', '-DVERSION="%s"' % PKG_VERSION_STR, ]
+    'msvc':     [ '/Ox', '/DVERSION=%s' % PKG_VERSION_STR, '/DDYNAMIC_BMI2=0' ],
+    'mingw32':  [ '-O2', '-DVERSION=%s' % PKG_VERSION_STR, '-DDYNAMIC_BMI2=0' ],
+    'unix':     [ '-O2', '-DVERSION=%s' % PKG_VERSION_STR, '-DDYNAMIC_BMI2=0' ],
+    'clang':    [ '-O2', '-DVERSION=%s' % PKG_VERSION_STR, '-DDYNAMIC_BMI2=0' ],
+    'gcc':      [ '-O2', '-DVERSION=%s' % PKG_VERSION_STR, '-DDYNAMIC_BMI2=0' ]
 }
-
-
-if EXTRA_OPT:
-    for comp in COPT:
-        if comp == 'msvc':
-            COPT[comp].extend([ '/O2'])
-        else:
-            COPT[comp].extend([ '-O3', '-march=native'])
-
 
 if not SUP_EXTERNAL:
     for comp in COPT:
@@ -124,6 +120,14 @@ else:
             COPT[comp].extend(['-DZSTD_TRACE=0'])
 
 
+if EXTRA_OPT:
+    for comp in COPT:
+        if comp == 'msvc':
+            COPT[comp].extend([ '/O2'])
+        else:
+            COPT[comp].extend([ '-O3', '-march=native'])
+
+
 class ZstdBuildExt( build_ext ):
 
     def build_extensions(self):
@@ -143,8 +147,13 @@ if not SUP_EXTERNAL:
             'compress/zstd_compress_sequences.c',
             'compress/zstd_compress_superblock.c',
             'compress/zstdmt_compress.c',
-            'compress/zstd_fast.c', 'compress/zstd_double_fast.c', 'compress/zstd_lazy.c', 'compress/zstd_opt.c', 'compress/zstd_ldm.c',
-            'compress/fse_compress.c', 'compress/huf_compress.c',
+            'compress/zstd_fast.c',
+            'compress/zstd_double_fast.c',
+            'compress/zstd_lazy.c',
+            'compress/zstd_opt.c',
+            'compress/zstd_ldm.c',
+            'compress/fse_compress.c',
+            'compress/huf_compress.c',
             'compress/hist.c',
 
             'common/fse_decompress.c',
@@ -155,7 +164,8 @@ if not SUP_EXTERNAL:
 
             'common/entropy_common.c',
             'common/zstd_common.c',
-            'common/xxhash.c', 'common/error_private.c',
+            'common/xxhash.c',
+            'common/error_private.c',
             'common/pool.c',
             'common/threading.c',
         ]:
@@ -218,5 +228,7 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
     ]
 )

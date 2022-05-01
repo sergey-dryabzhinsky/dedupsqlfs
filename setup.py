@@ -191,6 +191,26 @@ if args.count("build_ext") > 0 and args.count("--inplace") == 0:
     sys.argv.insert(sys.argv.index("build_ext")+1, "--inplace")
 
 
+classifiers=[
+    'License :: OSI Approved :: MIT License',
+    'Intended Audience :: Developers',
+    'Intended Audience :: System Administrators',
+    'Development Status :: 4 - Beta',
+    'Operating System :: POSIX',
+    'Programming Language :: C',
+    'Programming Language :: C++',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3.4',
+    'Programming Language :: Python :: 3.5',
+    'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+]
+
+
 # and build up the set of Extension objects
 if CYTHON_BUILD:
     dynloaddir = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "lib-dynload"))
@@ -202,8 +222,10 @@ if CYTHON_BUILD:
     setup(
         ext_modules = cythonize(extensions, language_level=3),
         name="dedupsqlfs",
+        version="1.2.952-dev",
         packages=["dedupsqlfs",],
-        cmdclass = {'build_ext': build_ext}, requires=['llfuse']
+        cmdclass = {'build_ext': build_ext}, requires=['llfuse'],
+        classifiers=classifiers
     )
     subprocess.Popen("cp -vfr _pymysql lib-dynload/", shell=True, executable="/bin/sh")
     subprocess.Popen("rm -vfr _pymysql", shell=True, executable="/bin/sh")
@@ -212,6 +234,8 @@ else:
     setup(
         ext_modules = extensions,
         name="dedupsqlfs",
+        version="1.2.952-dev",
         packages=["dedupsqlfs",],
-        cmdclass = {'build_ext': build_ext}, requires=['llfuse']
+        cmdclass = {'build_ext': build_ext}, requires=['llfuse'],
+        classifiers=classifiers
     )

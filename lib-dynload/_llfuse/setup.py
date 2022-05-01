@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-#-*- coding: us-ascii -*-
+#!/usr/bin/env python3
 '''
 setup.py
 
@@ -11,21 +10,12 @@ This file is part of Python-LLFUSE. This work may be distributed under
 the terms of the GNU LGPL.
 '''
 
-from __future__ import division, print_function, absolute_import
 
 import sys
 import os
 import subprocess
 import warnings
 import re
-
-
-EXTRA_OPT=0
-if "--extra-optimization" in sys.argv:
-    # Support legacy output format functions
-    EXTRA_OPT=1
-    sys.argv.remove("--extra-optimization")
-
 
 # Disable Cython support in setuptools. It fails under some conditions
 # (http://trac.cython.org/ticket/859), and we have our own build_cython command
@@ -68,7 +58,15 @@ if DEVELOPER_MODE:
 # to work properly
 sys.path.insert(0, os.path.join(basedir, 'src'))
 
-LLFUSE_VERSION = '1.3.8'
+LLFUSE_VERSION = '1.4.1'
+
+
+EXTRA_OPT=0
+if "--extra-optimization" in sys.argv:
+    # Support legacy output format functions
+    EXTRA_OPT=1
+    sys.argv.remove("--extra-optimization")
+
 
 def main():
 
@@ -79,7 +77,7 @@ def main():
     else:
         fix_docutils()
 
-    with open(os.path.join(basedir, 'README.rst'), 'r') as fh:
+    with open(os.path.join(basedir, 'README.rst')) as fh:
         long_desc = fh.read()
 
     compile_args = pkg_config('fuse', cflags=True, ldflags=False, min_ver='2.8.0')
@@ -95,6 +93,12 @@ def main():
 
     # Due to platform specific conditions, these are unavoidable
     compile_args.append('-Wno-unused-parameter')
+
+    if EXTRA_OPT:
+        compile_args.insert(0, "-march=native")
+        compile_args.insert(0, "-O3")
+    else:
+        compile_args.insert(0, "-O2")
 
     # Enable all fatal warnings only when compiling from Mercurial tip.
     # (otherwise we break forward compatibility because compilation with newer
@@ -115,20 +119,6 @@ def main():
         # accident.
         compile_args.append('-Werror=sign-compare')
 
-    # http://bugs.python.org/issue7576
-    if sys.version_info[0] == 3 and sys.version_info[1] < 2:
-        compile_args.append('-Wno-error=missing-field-initializers')
-
-    # http://bugs.python.org/issue969718
-    if sys.version_info[0] == 2:
-        compile_args.append('-fno-strict-aliasing')
-
-    if EXTRA_OPT:
-        compile_args.insert(0, "-march=native")
-        compile_args.insert(0, "-O3")
-    else:
-        compile_args.insert(0, "-O2")
-
     link_args = pkg_config('fuse', cflags=False, ldflags=True, min_ver='2.8.0')
     link_args.append('-lpthread')
     c_sources = ['src/llfuse.c', 'src/lock.c']
@@ -137,10 +127,6 @@ def main():
         link_args.append('-lrt')
     elif os.uname()[0] == 'Darwin':
         c_sources.append('src/darwin_compat.c')
-
-    install_requires = []
-    if sys.version_info[0] == 2:
-        install_requires.append('contextlib2')
 
     setuptools.setup(
           name='llfuse',
@@ -172,6 +158,8 @@ def main():
           keywords=['FUSE', 'python' ],
           package_dir={'': 'src'},
           packages=setuptools.find_packages('src'),
+          python_requires='>=3.4',
+          tests_require=['pytest >= 3.4.0'],
           provides=['llfuse'],
           ext_modules=[Extension('llfuse', c_sources,
                                   extra_compile_args=compile_args,
@@ -183,7 +171,6 @@ def main():
                 'version': ('setup.py', LLFUSE_VERSION),
                 'release': ('setup.py', LLFUSE_VERSION),
             }},
-          install_requires=install_requires,
           )
 
 
@@ -198,7 +185,7 @@ def pkg_config(pkg, cflags=True, ldflags=False, min_ver=None):
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
             version = proc.communicate()[0].strip()
             if not version:
-                raise SystemExit() # pkg-config generates error message already
+                raise SystemExit(2) # pkg-config generates error message already
             else:
                 raise SystemExit('%s version too old (found: %s, required: %s)'
                                  % (pkg, version, min_ver))
@@ -213,7 +200,7 @@ def pkg_config(pkg, cflags=True, ldflags=False, min_ver=None):
     cflags = proc.stdout.readline().rstrip()
     proc.stdout.close()
     if proc.wait() != 0:
-        raise SystemExit() # pkg-config generates error message already
+        raise SystemExit(2) # pkg-config generates error message already
 
     return cflags.decode('us-ascii').split()
 

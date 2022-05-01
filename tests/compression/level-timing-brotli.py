@@ -27,7 +27,7 @@ sys.path.insert( 0, basedir )
 nROUNDS = 5
 cROUNDS = range(nROUNDS)
 blockSize = 1024*128
-blockCnt = 16
+blockCnt = 32
 dataMin = ord('A')
 dataMax = ord('Z')
 processData = ()

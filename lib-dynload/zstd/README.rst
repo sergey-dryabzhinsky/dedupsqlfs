@@ -2,10 +2,21 @@
 python-zstd
 =============
 
-.. image:: https://travis-ci.org/sergey-dryabzhinsky/python-zstd.svg?branch=master
-    :target: https://travis-ci.org/sergey-dryabzhinsky/python-zstd
+.. |releaseW| image:: https://github.com/sergey-dryabzhinsky/python-zstd/actions/workflows/build-wheels.yml/badge.svg?branch=v1.5.2.4
+    :target: https://github.com/sergey-dryabzhinsky/python-zstd/actions/workflows/build-wheels.yml
 
-Simple python bindings to Yann Collet ZSTD compression library
+.. |masterW| image:: https://github.com/sergey-dryabzhinsky/python-zstd/actions/workflows/build-wheels.yml/badge.svg
+    :target: https://github.com/sergey-dryabzhinsky/python-zstd/actions/workflows/build-wheels.yml
+
++---------+------------+
+| branch  |  status    |
++=========+============+
+| Release | |releaseW| |
++---------+------------+
+| Master  | |masterW|  |
++---------+------------+
+
+Simple python bindings to Yann Collet ZSTD compression library.
 
 **Zstd**, short for Zstandard, is a new lossless compression algorithm,
  which provides both good compression ratio *and* speed for your standard compression needs.
@@ -62,21 +73,30 @@ Build from source
    >>> $ python setup.py build_ext clean
    >>> $ python3 setup.py build_ext clean
 
-Note: legacy format support disabled by default.
+Note: Zstd legacy format support disabled by default.
 To build with Zstd legacy versions support - pass ``--legacy`` option to setup.py script:
 
    >>> $ python setup.py build_ext --legacy clean
 
-Note: PyZstd legacy format support disabled by default.
+When using a PEP 517 builder you can use ``ZSTD_LEGACY`` environment variable instead:
+
+   >>> $ ZSTD_LEGACY=1 python -m build -w
+
+Note: Python-Zstd legacy format support removed since 1.5.0.
+If you need to convert old data - checkout 1.4.9.1 module version. Support of it disabled by default.
 To build with python-zstd legacy format support (pre 1.1.2) - pass ``--pyzstd-legacy`` option to setup.py script:
 
    >>> $ python setup.py build_ext --pyzstd-legacy clean
 
 If you want to build with existing distribution of libzstd just add ``--external`` option.
-But beware! Legacy formats support is unknown in this case.
+But beware! Legacy formats support state is unknown in this case.
 And if your version not equal with python-zstd - tests may not pass.
 
    >>> $ python setup.py build_ext --external clean
+
+When using a PEP 517 builder you can use ``ZSTD_EXTERNAL`` environment variable instead:
+
+   >>> $ ZSTD_EXTERNAL=1 python -m build -w
 
 If paths to header file ``zstd.h`` and libraries is uncommon - use common ``build`` params:
 --libraries --include-dirs --library-dirs.
@@ -126,6 +146,9 @@ ZSTD_uncompress (data): string|bytes
 version (): string|bytes
   Returns this module doted version string.
 
+  The first three digits are folow libzstd version.
+  Fourth digit - module release number for that version.
+
   Since: 1.3.4.3
 
 ZSTD_version (): string|bytes
@@ -134,14 +157,14 @@ ZSTD_version (): string|bytes
   Since: 1.3.4.3
 
 ZSTD_version_number (): int
-   Returns ZSTD library version in format: MAJOR*100*100 + MINOR*100 + RELEASE.
+  Returns ZSTD library version in format: MAJOR*100*100 + MINOR*100 + RELEASE.
 
-   Since: 1.3.4.3
+  Since: 1.3.4.3
 
 ZSTD_external (): int
-   Returns 0 of 1 if ZSTD library build as external.
+  Returns 0 of 1 if ZSTD library build as external.
 
-   Since: 1.5.0.2
+  Since: 1.5.0.2
 
 
 Removed
@@ -181,13 +204,13 @@ Module has simple API:
 
    >>> import zstd
    >>> dir(zstd)
-   ['Error', 'ZSTD_compress', 'ZSTD_uncompress', 'ZSTD_version', 'ZSTD_version_number', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__spec__', 'compress', 'decompress', 'dumps', 'loads', 'uncompress', 'version']
+   ['Error', 'ZSTD_compress', 'ZSTD_external', 'ZSTD_uncompress', 'ZSTD_version', 'ZSTD_version_number', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__spec__', 'compress', 'decompress', 'dumps', 'loads', 'uncompress', 'version']
    >>> zstd.version()
-   '1.5.0.2'
+   '1.5.1.0'
    >>> zstd.ZSTD_version()
-   '1.5.0'
+   '1.5.1'
    >>> zstd.ZSTD_version_number()
-   10500
+   10501
    >>> zstd.ZSTD_external()
    0
 

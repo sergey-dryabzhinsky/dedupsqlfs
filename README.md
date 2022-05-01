@@ -88,7 +88,7 @@ Note: dynamic subvolume and snapshot creation available only with MySQL storage 
 
 ## Dependencies
 
-DedupSQLfs was developed using Python 3.4, it also work with newer versions. Python 3.7-3.9 is recommended now.
+DedupSQLfs was developed using Python 3.4, it also work with newer versions. Python 3.7-3.10 is recommended now.
 - It definitely doesn't work with Python 2.
 - It requires the [Python llFUSE binding](http://www.rath.org/llfuse-docs/example.html)
 - in addition to several Python standard libraries like [sqlite3](http://docs.python.org/library/sqlite3.html), [hashlib](http://docs.python.org/library/hashlib.html).

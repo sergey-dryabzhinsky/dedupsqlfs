@@ -24,7 +24,7 @@ else:
 
 setup(
     name = "lzo",
-    version = "1.0",
+    version = "1.14",
     packages=[],
     package_dir={'': 'src'},
     ext_modules = [

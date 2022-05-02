@@ -2,7 +2,7 @@
 
 # The MIT License (MIT)
 
-# Copyright (c) «2015-2020» «Shibzukhov Zaur, szport at gmail dot com»
+# Copyright (c) «2017-2022» «Shibzukhov Zaur, szport at gmail dot com»
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software - recordclass library - and associated documentation files
@@ -22,131 +22,61 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from .utils import dataslot_offset
+from .utils import process_fields
 from .utils import check_name, collect_info_from_bases
+from ._dataobject import dataobject
 
-import sys as _sys
-_PY3 = _sys.version_info[0] >= 3
-_PY36 = _PY3 and _sys.version_info[1] >= 6
+__all__ = 'make_dataclass', 'join_dataclasses', 'DataclassStorage', 'DataClass'
 
-from keyword import iskeyword as _iskeyword
+def make_dataclass(typename, fields=None, defaults=None, bases=None, namespace=None, *,
+                   use_dict=False, use_weakref=False, hashable=False,
+                   sequence=False, mapping=False, iterable=False, readonly=False, invalid_names=(),
+                   module=None, fast_new=False, rename=False, gc=False, mapping_only=False):
 
-if _PY3:
-    _intern = _sys.intern
-    def _isidentifier(s):
-        return s.isidentifier()
-    if _PY36:
-        from typing import _type_check
-    else:
-        def _type_check(t, msg):
-            if isinstance(t, (type, str)):
-                return t
-            else:
-                raise TypeError('invalid type annotation', t)
-else:
-    from __builtin__ import intern as _intern
-    import re as _re
-    def _isidentifier(s):
-        return _re.match(r'^[a-z_][a-z0-9_]*$', s, _re.I) is not None
-    def _type_check(t, msg):
-        return t
+    """Returns a new class with named fields and small memory footprint.
 
-def make_dataclass(typename, fields=None, bases=None, namespace=None,
-                   varsize=False,  use_dict=False, use_weakref=False, hashable=True,
-                   sequence=False, mapping=False, iterable=False, readonly=False,
-                   defaults=None, module=None, argsonly=False, fast_new=False, gc=False):
-
-    from ._dataobject import _clsconfig, _enable_gc
-    from ._dataobject import dataobject, datatuple
+    >>> from recordclass import make_dataclass, asdict
+    >>> Point = make_dataclass('Point', 'x y')
+    >>> Point.__doc__                   # docstring for the new class
+    'Point(x, y)'
+    >>> p = Point(1, 2)                 # instantiate with positional args or keywords
+    >>> p[0] + p[1]                     # indexable like a plain tuple
+    3
+    >>> x, y = p                        # unpack like a regular tuple
+    >>> x, y
+    (1, 2)
+    >>> p.x + p.y                       # fields also accessable by name
+    3
+    >>> d = asdict()                    # convert to a dictionary
+    >>> d['y'] = 3                         # assign new value
+    >>> Point(**d)                      # convert from a dictionary
+    Point(x=1, y=-1)
+    """
+    from ._dataobject import dataobject
     from .datatype import datatype
+    import sys as _sys
 
-    annotations = {}
-    if isinstance(fields, str):
-        fields = fields.replace(',', ' ').split()
-        fields = [fn.strip() for fn in fields]
-    else:
-        msg = "make_dataclass('Name', [(f0, t0), (f1, t1), ...]); each t must be a type"
-        field_names = []
-        if isinstance(fields, dict):
-            for fn, tp in fields.items():
-                tp = _type_check(tp, msg)
-                check_name(fn)
-                fn = _intern(fn)
-                annotations[fn] = tp
-                field_names.append(fn)
-        else:
-            for fn in fields:
-                if type(fn) is tuple:
-                    fn, tp = fn
-                    tp = _type_check(tp, msg)
-                    annotations[fn] = tp
-                check_name(fn)
-                fn = _intern(fn)
-                field_names.append(fn)
-        fields = field_names
+    # if api == 'namedtuple':
+    #     invalid_names = ('_make', '_replace', '_asdict')
+    # elif api == 'dict':
+    #     invalid_names = ('keys', 'values', 'items', 'get')
+    # else: 
+    #     invalid_names = ()
+
+    fields, annotations, defaults = process_fields(fields, defaults, rename, invalid_names)
     typename = check_name(typename)
-
-    if defaults is not None:
-        n_fields = len(fields)
-        defaults = tuple(defaults)
-        n_defaults = len(defaults)
-        if n_defaults > n_fields:
-            raise TypeError('Got more default values than fields')
-    else:
-        defaults = None
-
-    if varsize:
-        sequence = True
-
-    options = {
-        'readonly':readonly,
-        'defaults':defaults,
-        'argsonly':argsonly,
-        'sequence':sequence,
-        'mapping':mapping,
-        'iterable':iterable,
-        'use_dict':use_dict,
-        'use_weakref':use_weakref,
-        'readonly':readonly,
-        'hashable':hashable,
-        'fast_new':fast_new,
-        'gc':gc,
-    }
-
+    
     if namespace is None:
         ns = {}
     else:
         ns = namespace.copy()
 
-    if defaults:
-        for i in range(-n_defaults, 0):
-            fname = fields[i]
-            val = defaults[i]
-            ns[fname] = val
+    n_fields = len(fields)
+    n_defaults = len(defaults) if defaults else 0
 
-    if use_dict and '__dict__' not in fields:
-        fields.append('__dict__')
-    if use_weakref and '__weakref__' not in fields:
-        fields.append('__weakref__')
-
-    ns['__options__'] = options
     ns['__fields__'] = fields
-    if annotations:
-        ns['__annotations__'] = annotations
-
-    if bases:
-        base0 = bases[0]
-        if varsize:
-            if not isinstance(base0, datatuple):
-                raise TypeError("First base class should be subclass of datatuple")
-        else:
-            if not isinstance(base0, dataobject):
-                raise TypeError("First base class should be subclass of dataobject")
-    else:
-        if varsize:
-            bases = (datatuple,)
-        else:
-            bases = (dataobject,)
+    ns['__annotations__'] = annotations
+    ns['__defaults__'] = defaults
 
     if module is None:
         try:
@@ -156,18 +86,17 @@ def make_dataclass(typename, fields=None, bases=None, namespace=None,
 
     ns['__module__'] = module
 
-    cls = datatype(typename, bases, ns)
-
-    if gc:
-        _enable_gc(cls)
+    cls = datatype(typename, bases, ns, 
+                   gc=gc, fast_new=fast_new,
+                   readonly=readonly, iterable=iterable,
+                   mapping=mapping, sequence=sequence,
+                   use_dict=use_dict, use_weakref=use_weakref,
+                   hashable=hashable, mapping_only=mapping_only,
+                   )
 
     return cls
 
 make_class = make_dataclass
-
-def asdict(ob):
-    _getattr = getattr
-    return {fn:_getattr(ob, fn) for fn in ob.__class__.__fields__}
 
 class DataclassStorage:
     #
@@ -177,26 +106,27 @@ class DataclassStorage:
     def clear_storage(self):
         self._storage.clear()
     #
-    def make_dataclass(self, name, fields):
-        fields = tuple(fields)
+    def make_dataclass(self, name, fields, defaults=None, **kw):
+        if type(fields) is str:
+            fields = fields.replace(',', ' ').split()
+            fields = ' '.join(fn.strip() for fn in fields)
+        else:
+            fields = ' '.join(fields)
         key = (name, fields)
         cls = self._storage.get(key, None)
         if cls is None:
-            cls = make_dataclass(name, fields)
+            cls = make_dataclass(name, fields, defaults, **kw)
             self._storage[key] = cls
         return cls
     make_class = make_dataclass
 
-def join_dataclasses(name, classes, readonly=False, use_dict=False, gc=False,
-                 use_weakref=False, hashable=True, sequence=False, argsonly=False, iterable=False, module=None):
+def join_dataclasses(name, classes, *, readonly=False, use_dict=False, gc=False,
+                 use_weakref=False, hashable=True, sequence=False, fast_new=False, iterable=True, module=None):
 
-    from ._dataobject import dataobject, datatuple
+    from ._dataobject import dataobject
 
     if not all(issubclass(cls, dataobject) for cls in classes):
-        raise TypeError('All arguments should be child of dataobject')
-    for cls in classes:
-        if isinstance(cls, datatuple):
-            raise TypeError('The class', cls, 'should not be a subclass of datatuple')
+        raise TypeError('All arguments should be children of dataobject')
     if not all(hasattr(cls, '__fields__') for cls in classes):
         raise TypeError('Some of the base classes has not __fields__')
 
@@ -204,7 +134,7 @@ def join_dataclasses(name, classes, readonly=False, use_dict=False, gc=False,
     for cls in classes:
         for a in cls.__fields__:
             if a in _attrs:
-                raise AttributeError('Duplicate attribute in the base classes')
+                raise AttributeError(f'Duplicate attribute %s in the base classes {a}')
             _attrs.append(a)
 
     return make_dataclass(name, _attrs,

@@ -1,5 +1,5 @@
 import unittest
-from recordclass import litelist
+from recordclass import litelist, litelist_fromargs
 
 import gc
 import pickle
@@ -36,7 +36,7 @@ class litelistTest(unittest.TestCase):
         
     def test_gc(self):
         a = litelist([1,2,3])
-        self.assertEqual(sys.getsizeof(a), a.__sizeof__())
+        # self.assertEqual(sys.getsizeof(a), a.__sizeof__())
 
     def test_append(self):
         a = litelist([])
@@ -75,7 +75,7 @@ class litelistTest(unittest.TestCase):
         self.assertEqual(tuple(a), (1,2,3))
 
     def test_iter2(self):
-        from recordclass.litelist import litelistiter
+        from recordclass._litelist import litelistiter
         a = litelist([1,2,3])
         self.assertTrue(isinstance(iter(a), litelistiter))        
 
@@ -157,6 +157,15 @@ class litelistTest(unittest.TestCase):
         ll[0] = None        
         self.assertEqual(sys.getrefcount(a), c)
         
+    def test_litelist_fromargs1(self):
+        a = litelist_fromargs()
+        self.assertEqual(len(a), 0)
+        self.assertEqual(repr(a), "litelist([])")
+
+    def test_litelist_fromargs2(self):
+        a = litelist_fromargs(1,2,3,4,5)
+        self.assertEqual(len(a), 5)
+        self.assertEqual(repr(a), "litelist([1, 2, 3, 4, 5])")
         
 def main():
     suite = unittest.TestSuite()

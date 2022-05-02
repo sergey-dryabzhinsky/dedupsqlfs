@@ -1,16 +1,23 @@
 """Unit tests for recordclass.py."""
 import unittest, doctest, operator
-from recordclass import recordclass, RecordclassStorage
+from recordclass import recordclass
+from recordclass.recordclass import RecordclassStorage
 from collections import OrderedDict
 import pickle, copy
 import keyword
 import re
 import sys
 
-try:
-    from test import support
-except:
-    from test import test_support as support
+# try:
+#     from test import support
+# except:
+#     from test import test_support as support
+
+if 'PyPy' in sys.version:
+    is_pypy = True
+else:
+    is_pypy = False
+    from recordclass.utils import headgc_size, ref_size, pyobject_size, pyvarobject_size, pyssize
 
 
 TestNT = recordclass('TestNT', 'x y z')    # type used for pickle tests
@@ -20,8 +27,7 @@ class RecordClassTest(unittest.TestCase):
     def test_factory(self):
         Point = recordclass('Point', 'x y')
         self.assertEqual(Point.__name__, 'Point')
-        self.assertEqual(Point.__doc__, 'Point(x, y)')
-#         self.assertEqual(Point.__slots__, ())
+        self.assertEqual(Point.__doc__.split('\n')[0], 'Point(x, y)')
         self.assertEqual(Point.__module__, __name__)
         self.assertEqual(Point.__fields__, ('x', 'y'))
 
@@ -32,7 +38,7 @@ class RecordClassTest(unittest.TestCase):
         self.assertRaises(ValueError, recordclass, 'abc', 'efg g%hi')       # field with non-alpha char
         self.assertRaises(ValueError, recordclass, 'abc', 'abc class')      # field has keyword
         self.assertRaises(ValueError, recordclass, 'abc', '8efg 9ghi')      # field starts with digit
-        self.assertRaises(ValueError, recordclass, 'abc', '_efg ghi')       # field with leading underscore
+#         self.assertRaises(ValueError, recordclass, 'abc', '_efg ghi')       # field with leading underscore
         self.assertRaises(ValueError, recordclass, 'abc', 'efg efg ghi')    # duplicate field
 
         recordclass('Point0', 'x1 y2')   # Verify that numbers are allowed in names
@@ -50,18 +56,18 @@ class RecordClassTest(unittest.TestCase):
                      "Docstrings are omitted with -O2 and above")
     def test_factory_doc_attr(self):
         Point = recordclass('Point', 'x y')
-        self.assertEqual(Point.__doc__, 'Point(x, y)')
+        self.assertEqual(Point.__doc__.split('\n')[0], 'Point(x, y)')
 
-    def test_name_fixer(self):
-        for spec, renamed in [
-            [('efg', 'g%hi'),  ('efg', '_1')],                              # field with non-alpha char
-            [('abc', 'class'), ('abc', '_1')],                              # field has keyword
-            [('8efg', '9ghi'), ('_0', '_1')],                               # field starts with digit
-            [('abc', '_efg'), ('abc', '_1')],                               # field with leading underscore
-            [('abc', 'efg', 'efg', 'ghi'), ('abc', 'efg', '_2', 'ghi')],    # duplicate field
-            [('abc', '', 'x'), ('abc', '_1', 'x')],                         # fieldname is a space
-        ]:
-            self.assertEqual(recordclass('NT', spec, rename=True).__fields__, renamed)
+#     def test_name_fixer(self):
+#         for spec, renamed in [
+#             [('efg', 'g%hi'),  ('efg', '_1')],                              # field with non-alpha char
+#             [('abc', 'class'), ('abc', '_1')],                              # field has keyword
+#             [('8efg', '9ghi'), ('_0', '_1')],                               # field starts with digit
+#             [('abc', '_efg'), ('abc', '_1')],                               # field with leading underscore
+#             [('abc', 'efg', 'efg', 'ghi'), ('abc', 'efg', '_2', 'ghi')],    # duplicate field
+#             [('abc', '', 'x'), ('abc', '_1', 'x')],                         # fieldname is a space
+#         ]:
+#             self.assertEqual(recordclass('NT', spec, rename=True).__fields__, renamed)
 
             
     def test_defaults(self):
@@ -101,12 +107,6 @@ class RecordClassTest(unittest.TestCase):
         self.assertEqual(Point(1, 2), Point(1, 2))
         self.assertEqual(Point(1), Point(1, 20))
         self.assertEqual(Point(), Point(10, 20))
-
-        Point = recordclass('Point', 'x y', defaults=iter([10, 20]))         # allow plain iterator
-        self.assertEqual(Point.__new__.__defaults__, (10, 20))
-        self.assertEqual(Point(1, 2), Point(1, 2))
-        self.assertEqual(Point(1), Point(1, 20))
-        self.assertEqual(Point(), Point(10, 20))
             
     def test_instance(self):
         Point = recordclass('Point', 'x y')
@@ -123,8 +123,9 @@ class RecordClassTest(unittest.TestCase):
         self.assertEqual(p, Point._make([11, 22]))                          # test _make classmethod
         self.assertEqual(p.__fields__, ('x', 'y'))                             # test __fields__ attribute
         self.assertEqual(p._replace(x=1), Point(1, 22))                          # test _replace method
+        self.assertRaises(AttributeError, eval, 'p._replace(z=1)', locals())          # inval keyword argument
         self.assertEqual(p._asdict(), dict(x=1, y=22))                     # test _asdict method
-        self.assertEqual(vars(p), p._asdict())                              # verify that vars() works
+#         self.assertEqual(vars(p), p._asdict())                              # verify that vars() works
 
         p.x = 1
         self.assertEqual(p.x, 1)
@@ -139,9 +140,17 @@ class RecordClassTest(unittest.TestCase):
         p = Point(x=11, y=22)
         self.assertEqual(repr(p), 'Point(x=11, y=22)')
         
-#     def test_nogc(self):
-#         Point = recordclass('Point', 'x y')
-#         Point_nogc = recordclass('Point_nogc', 'x y', gc=False)
+    def test_readonly_instance(self):
+        Point = recordclass('Point', ('x', 'y'), readonly=True)
+        p = Point(11, 22)
+        self.assertRaises(AttributeError, eval, 'p._replace(z=1)', locals())          # inval keyword argument
+        
+    def test_gc(self):
+        Point = recordclass('Point', 'x y')
+        Point_gc = recordclass('Point_gc', 'x y', gc=True)
+        a = Point(1,2)
+        b = Point_gc(1,2)
+        self.assertEqual(tuple(a), tuple(b))
 
     def test_tupleness(self):
         Point = recordclass('Point', 'x y')
@@ -154,7 +163,7 @@ class RecordClassTest(unittest.TestCase):
         x, y = p
         self.assertEqual(tuple(p), (x, y))                                         # unpacks like a tuple
         self.assertEqual((p[0], p[1]), (11, 22))                            # indexable like a tuple
-        self.assertRaises(IndexError, p.__getitem__, 3)
+#         self.assertRaises(IndexError, p.__getitem__, 3)
 
         self.assertEqual(p.x, x)
         self.assertEqual(p.y, y)
@@ -225,50 +234,49 @@ class RecordClassTest(unittest.TestCase):
             self.assertEqual(p, q)
             self.assertEqual(p.__fields__, q.__fields__)
 
-    def test_name_conflicts(self):
-        # Some names like "self", "cls", "tuple", "itemgetter", and "property"
-        # failed when used as field names.  Test to make sure these now work.
-        T = recordclass('T', 'itemgetter property self cls tuple')
-        t = T(1, 2, 3, 4, 5)
-        self.assertEqual(t, T(1,2,3,4,5))
-        newt = t._replace(itemgetter=10, property=20, self=30, cls=40, tuple=50)
-        self.assertEqual(newt, T(10,20,30,40,50))
+#     def test_name_conflicts(self):
+#         # Some names like "self", "cls", "tuple", "itemgetter", and "property"
+#         # failed when used as field names.  Test to make sure these now work.
+#         T = recordclass('T', 'itemgetter property self cls tuple')
+#         t = T(1, 2, 3, 4, 5)
+#         self.assertEqual(t, T(1,2,3,4,5))
+#         newt = t._replace(itemgetter=10, property=20, self=30, cls=40, tuple=50)
+#         self.assertEqual(newt, T(10,20,30,40,50))
 
-        # Broader test of all interesting names in a template
-        with support.captured_stdout() as template:
-            T = recordclass('T', 'x')
-        words = set(re.findall('[A-Za-z]+', template.getvalue()))
-        words -= set(keyword.kwlist)
-        words = list(words)
-        if 'None' in words:
-            words.remove('None')
-        T = recordclass('T', words)
-        # test __new__
-        values = tuple(range(len(words)))
-        t = T(*values)
-        self.assertEqual(t, T(*values))
-        t = T(**dict(zip(T.__fields__, values)))
-        self.assertEqual(t, T(*values))
-        # test _make
-        t = T._make(values)
-        self.assertEqual(t, T(*values))
-        # exercise __repr__
-        repr(t)
-        # test _asdict
-        self.assertEqual(t._asdict(), dict(zip(T.__fields__, values)))
-        # test _replace
-        t = T._make(values)
-        newvalues = tuple(v*10 for v in values)
-        newt = t._replace(**dict(zip(T.__fields__, newvalues)))
-        self.assertEqual(newt, T(*newvalues))
-        # test __fields__
-        self.assertEqual(T.__fields__, tuple(words))
-        # test __getnewargs__
-        #self.assertEqual(t.__getnewargs__(), newvalues)
+#         # Broader test of all interesting names in a template
+#         # with support.captured_stdout() as template:
+#         #     T = recordclass('T', 'x')
+#         # words = set(re.findall('[A-Za-z]+', template.getvalue()))
+#         # words -= set(keyword.kwlist)
+#         # words = list(words)
+#         # if 'None' in words:
+#         #     words.remove('None')
+#         T = recordclass('T', words)
+#         # test __new__
+#         values = tuple(range(len(words)))
+#         t = T(*values)
+#         self.assertEqual(t, T(*values))
+#         t = T(**dict(zip(T.__fields__, values)))
+#         self.assertEqual(t, T(*values))
+#         # test _make
+#         t = T._make(values)
+#         self.assertEqual(t, T(*values))
+#         # exercise __repr__
+#         repr(t)
+#         # test _asdict
+#         self.assertEqual(t._asdict(), dict(zip(T.__fields__, values)))
+#         # test _replace
+#         t = T._make(values)
+#         newvalues = tuple(v*10 for v in values)
+#         newt = t._replace(**dict(zip(T.__fields__, newvalues)))
+#         self.assertEqual(newt, T(*newvalues))
+#         # test __fields__
+#         self.assertEqual(T.__fields__, tuple(words))
+#         # test __getnewargs__
+#         #self.assertEqual(t.__getnewargs__(), newvalues)
 
     def test_repr(self):
-        with support.captured_stdout() as template:
-            A = recordclass('A', 'x')
+        A = recordclass('A', 'x')
         self.assertEqual(repr(A(1)), 'A(x=1)')
         # repr should show the name of the subclass
         class B(A):
@@ -287,7 +295,28 @@ class RecordClassTest(unittest.TestCase):
         #self.assertEqual(hash_b, hash(tuple(b)))
         b.x = -1
         self.assertNotEqual(hash(b), hash_b)
-        
+
+    def test_hash2(self):
+        A = recordclass('A', 'x y', hashable=True)
+#         print(dir(A))
+        a = A(1,2)
+        hash(a)
+
+    def test_mapping(self):
+        A = recordclass("A", "x y", mapping=True)
+        a=A(1,2)
+        a['x'] = 100
+        a['y'] = 200
+        self.assertEqual(a.x, 100)
+        self.assertEqual(a.y, 200)
+
+    def test_mapping2(self):
+        A = recordclass("A", "x y")
+        a=A(1,2)
+        with self.assertRaises(TypeError):
+            a['x'] = 100
+            a['y'] = 200
+
     def test_hash_subcls(self):
         A = recordclass('A', 'x y', hashable=True)
         class B(A): pass

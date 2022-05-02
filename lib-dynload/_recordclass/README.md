@@ -2,34 +2,137 @@
 
 **Recordclass** is [MIT Licensed](http://opensource.org/licenses/MIT) python library.
 It was started as a "proof of concept" for the problem of fast "mutable"
-alternative of `namedtuple` (see [question](https://stackoverflow.com/questions/29290359/existence-of-mutable-named-tuple-in-python) on stackoverflow).
-It implements the type `mutabletuple`, which supports assignment operations, and factory function `recordclass` in order to create record-like classes &ndash; subclasses of the `mutabletuple`. The function `recordclass` is a variant of `collection.namedtuple`. It produces classes with the same API. It was evolved further in order to provide more memory saving, fast and flexible types for representation of data objects.
+alternative of `namedtuple` (see [question](https://stackoverflow.com/questions/29290359/existence-of-mutable-named-tuple-in-python) on [stackoverflow](https://stackoverflow.com)).
+It implements a factory function `recordclass` (a variant of `collection.namedtuple`) in order to create record-like classes with the same API as  `collection.namedtuple`.
+It was evolved further in order to provide more memory saving, fast and flexible types.
 
-Later **recordclass** started providing tools for creating data classes that do not participate in cyclic *garbage collection* (GC) mechanism, but support only *reference counting*.
-The instances of such classes have not `PyGC_Head` prefix in the memory, which decrease their size. For CPython 3.8 it saves 16 bytes, for CPython 3.4-3.7 it saves 24-32 bytes.
-This may make sense in cases where it is necessary to limit the size of objects as much as possible, provided that they will never be part of circular references in the application.
-For example, when an object represents a record with fields that represent simple values by convention (`int`, `float`, `str`, `date`/`time`/`datetime`, `timedelta`, etc.).
-Another examples are non-recursive data structures in which all leaf elements represent simple values.
-Of course, in python, nothing prevents you from “shooting yourself in the foot" by creating the reference cycle in the script or application code.
-But in some cases, this can still be avoided provided that the developer understands
-what he is doing and uses such classes in the code with care.
+**Recordclass** library provide record-like classes that by default do not participate in *cyclic garbage collection* (CGC) mechanism, but support only *reference counting* mechanism for garbage collection.
+The instances of such classes havn't `PyGC_Head` prefix in the memory, which decrease their size and have a little faster path for the instance allocation and deallocation.
+This may make sense in cases where it is necessary to limit the size of the objects as much as possible, provided that they will never be part of references cycles in the application.
+For example, when an object represents a record with fields with values of simple types by convention (`int`, `float`, `str`, `date`/`time`/`datetime`, `timedelta`, etc.).
 
-**First** ``` recodeclass` library provide the base class `dataobject`. The type of `dataobject` is special metaclass `datatype`. It control creation of subclasses of `dataobject`, which  doesn't participate in cyclic GC by default (type flag `Py_TPFLAGS_HAVE_GC=0`). As the result the instance of such class need less memory. The difference is equal to the size of `PyGC_Head`. It also tunes `basicsize` of the instances, creates descriptors for the fields and etc. All `dataobject`-based classes doesn't support `namedtuple`-like API, but rather `attrs`/`dataclasses`-like API.
+In order to illustrate this, consider a simple class with type hints:
 
-**Second** it provide another one base class `datatuple` (special subclass of `dataobject`). It creates variable sized instance like subclasses of the `tuple`.
+    class Point:
+        x: int
+        y: int
 
-**Third** it provide factory function `make_dataclass` for creation of subclasses of `dataobject` or ``datatuple` with the specified field names.
+By tacit agreement instances of the class `Point` is supposed to have attributes `x` and `y` with values of `int` type.
+Assigning other types of values, which are not subclass of `int`, should be considered as a violation of the agreement.
 
-**Four** it provide factory function `structclass` for creation of subclasses of `dataobject` with `namedtuple`-like API.
+Other examples are non-recursive data structures in which all leaf elements represent a value of an atomic type.
+Of course, in python, nothing prevent you from “shooting yourself in the foot" by creating the reference cycle in the script or application code.
+But in many cases, this can still be avoided provided that the developer understands what he is doing and uses such classes in the codebase with care.
+Another option is to use static code analyzers along with type annotations to monitor compliance with typehints.
 
-**Six** it provide the class `lightlist`, which considers as list-like *light* container in order to save memory.
+The `recodeclass` library provide the base class `dataobject`. The type of `dataobject` is special metaclass `datatype`. 
+   It control creation  of subclasses of `dataobject`, which  will not participate in CGC by default. 
+   As the result the instance of such class need less memory. 
+   It's memory footprint is similar to memory footprint of instances of the classes with `__slots__`. 
+   The difference is equal to the size of `PyGC_Head`. 
+   It also tunes `basicsize` of the instances, creates descriptors for the fields and etc. 
+   All subclasses of `dataobject` created by `class statement` support `attrs`/`dataclasses`-like API.
+   For example:
 
-Main repository for `recordclass`is on [bitbucket](https://bitbucket.org/intellimath/recordclass). 
+        from recordclass import dataobject, astuple, asdict
+        class Point(dataobject):
+            x:int
+            y:int
 
-> Note that starting from  0.13 it is a git-based repository. The old hg-based repository is [here](https://bitbucket.org/intellimath/recordclass_old).  
+        >>> p = Point(1, 2)
+        >>> astuple(p)
+        (1, 2)
+        >>> asdict(p)
+        {'x':1, 'y':2}
+
+The `recordclass` factory create dataobject-based subclass with specified fields and support `namedtuple`-like API. 
+   By default it will not participate in cyclic GC too.  
+
+        >>> from recordclass import recordclass
+        >>> Point = recordclass('Point', 'x y')
+        >>> p = Point(1, 2)
+        >>> p.y = -1
+        >>> print(p._astuple)
+        (1, -1)
+        >>> x, y = p
+        >>> print(p._asdict)
+        {'x':1, 'y':-1}
+
+It also provide a factory function `make_dataclass` for creation of subclasses of `dataobject` with the specified field names. 
+   These subclasses support `attrs`/`dataclasses`-like API. It's equivalent to creating subclasses of dataobject using `class statement`.
+   For example:
+
+        >>> Point = make_dataclass('Point', 'x y')
+        >>> p = Point(1, 2)
+        >>> p.y = -1
+        >>> print(p.x, p.y)
+        1 -1
+
+It also provide a factory function `make_arrayclass` in order to create subclass of `dataobject` wich can consider as array of simple values.
+   For example:
+
+        >>> Pair = make_arrayclass(2)
+        >>> p = Pair(2, 3)
+        >>> p[1] = -1
+        >>> print(p)
+        Pair(2, -1)
+
+It provide in addition the classes `lightlist` and `litetuple`, which considers as list-like and tuple-like *light* containers in order to save memory. They do not supposed to participate in CGC too.  Mutable variant of litetuple is called by `mutabletuple`. 
+    For example: 
+
+        >>> lt = litetuple(1, 2, 3)
+        >>> mt = mutabletuple(1, 2, 3)
+        >>> lt == mt
+        True
+        >>> mt[-1] = -3
+        >>> lt == mt
+        False
+        >>> print(sys.getsizeof((1,2,3)), sys.getsizeof(litetuple(1,2,3)))
+        64 48
+
+### Memory footprint
+
+The following table explain memory footprints of the  `dataobject`-based objects and litetuples:
+
+| tuple/namedtuple   |  class with \_\_slots\_\_  |  recordclass/dataobject |  litetuple/mutabletuple  |
+|:------------------:|:--------------------------:|:-----------------------:|:------------------------:|
+|     g+b+s+n\*p     |     g+b+n\*p              |         b+n\*p         |     b+s+n\*p            |
+
+where:
+
+ * b = sizeof(PyObject)
+ * s = sizeof(Py_ssize_t)
+ * n = number of items
+ * p = sizeof(PyObject*)
+ * g = sizeof(PyGC_Head)
+
+This is useful in that case when you absolutely sure that reference cycle isn't supposed.
+For example, when all field values are instances of atomic types.
+As a result the size of the instance is decreased by 24-32 bytes for cpython 3.4-3.7 and by 16 bytes for cpython >=3.8.
+
+### Performance counters
+
+Here is the table with performance counters (python 3.9, debian linux, x86-64), which was measured using `tools/perfcounts.py` script:
+
+| id                      |   size |   new | getattr   | setattr   | getitem   | setitem   | getkey   | setkey   | iterate   | copy   |
+|:------------------------|-------:|------:|:----------|:----------|:----------|:----------|:---------|:---------|:----------|:-------|
+| litetuple               |     48 |  0.8  |           |           | 0.69      |           |          |          | 1.14      | 0.60   |
+| mutabletuple            |     48 |  0.78 |           |           | 0.69      | 0.72      |          |          | 1.14      | 0.60   |
+| tuple                   |     64 |  0.51 |           |           | 0.63      |           |          |          | 1.09      | 0.53   |
+| namedtuple              |     64 |  2.4  | 0.69      |           | 0.62      |           |          |          | 1.09      | 0.67   |
+| class+slots             |     56 |  1.95 | 0.72      | 0.81      |           |           |          |          |           |        |
+| dataobject              |     40 |  1.84 | 0.68      | 0.79      | 0.65      | 0.67      |          |          | 1.09      | 0.64   |
+| dataobject+fast_new     |     40 |  0.81 | 0.68      | 0.79      | 0.65      | 0.66      |          |          | 1.09      | 0.64   |
+| dataobject+gc           |     56 |  1.92 | 0.68      | 0.79      | 0.65      | 0.66      |          |          | 1.09      | 0.71   |
+| dataobject+fast_new+gc  |     56 |  0.94 | 0.68      | 0.79      | 0.65      | 0.66      |          |          | 1.09      | 0.72   |
+| dict                    |    232 |  0.99 |           |           |           |           | 0.67     | 0.78     | 1.24      | 0.80   |
+| dataobject+fast_new+map |     40 |  0.81 |           |           |           |           | 0.95     | 0.98     | 1.09      | 0.66   |
+
+Main repository for `recordclass` is on [bitbucket](https://bitbucket.org/intellimath/recordclass). 
 
 Here is also a simple [example](http://nbviewer.ipython.org/urls/bitbucket.org/intellimath/recordclass/raw/master/examples/what_is_recordclass.ipynb).
 
+More examples can be found in the folder [examples](https://bitbucket.org/intellimath/recordclass/examples).
 
 ## Quick start
 
@@ -39,23 +142,25 @@ Here is also a simple [example](http://nbviewer.ipython.org/urls/bitbucket.org/i
 
 Install:
 
-    >>> python setup.py install
+    >>> python3 setup.py install
 
 Run tests:
 
-    >>> python test_all.py
+    >>> python3 test_all.py
 
 #### Installation from PyPI
 
 Install:
 
-    >>> pip install recordclass
+    >>> pip3 install recordclass
 
 Run tests:
 
-    >>> python -c "from recordclass.test import *; test_all()"
+    >>> python3 -c "from recordclass.test import *; test_all()"
 
 ### Quick start with recordclass
+
+The `recordclass` factory function is designed to create classes that support `namedtuple`'s API, can be mutable and immutable, provide fast creation of the instances and have a minimum memory footprint.
 
 First load inventory:
 
@@ -69,13 +174,13 @@ Example with `recordclass`:
     Point(1, 2)
     >>> print(p.x, p.y)
     1 2             
-    >>> p.x, p.y = 10, 20
+    >>> p.x, p.y = 1, 2
     >>> print(p)
-    Point(10, 20)
-    >>> sys.getsizeof(p) # the output below is for 64bit cpython3.7
-    40
+    Point(1, 2)
+    >>> sys.getsizeof(p) # the output below is for 64bit cpython3.8+
+    32
 
-Example with `RecordClass` and typehints::
+Example with class statement and typehints:
 
     >>> from recordclass import RecordClass
 
@@ -90,60 +195,127 @@ Example with `RecordClass` and typehints::
     Point(1, 2)
     >>> print(p.x, p.y)
     1 2
-    >>> p.x, p.y = 10, 20
+    >>> p.x, p.y = 1, 2
     >>> print(p)
-    Point(10, 20)
+    Point(1, 2)
+
+By default `recordclass`-based class instances doesn't participate in CGC and therefore they are smaller than `namedtuple`-based ones. If one want to use it in scenarios with reference cycles then one have to use option `gc=True` (`gc=False` by default):
+
+    >>> Node = recordclass('Node', 'root children', gc=True)
     
+or
 
-Now by default `recordclass`-based class instances doesn't participate in cyclic GC and therefore  they are smaller than `namedtuple`-based ones. If one want to use in it scenarios with reference cycles then one have to use option `gc=``:
-
-    >>> Node = recordclass('Node', 'root, children', gc=1)
-    
-or decorator ``@enable_gc` for `RecordClass`-based classes:
-
-    @recordclass.enable_gc
-    class Node(RecordClass):
+    class Node(RecordClass, gc=True):
          root: 'Node'
          chilren: list
 
+The `recordclass` factory can also specify type of the fields:
+
+    >>> Point = recordclass('Point', [('x',int), ('y',int)])
+    
+or
+
+    >>> Point = recordclass('Point', {'x':int, 'y':int})
+
 ### Quick start with dataobject
 
-First load inventory::
+`Dataobject` is the base class for creation of data classes with fast instance creation and small memory footprint. They don't provide `namedtuple`-like API. The classes created by `recrdclass` factory are subclasses of the `dataobject` too, but in addition provide `nametuple`-like API.
 
-    >>> from recordclass import dataobject, asdict
+First load inventory:
+
+    >>> from recordclass import dataobject, asdict, astuple, as_dataclass
+
+Define class one of three ways:
 
     class Point(dataobject):
         x: int
         y: int
+        
+or        
+
+    @as_dataclass()
+    class Point:
+        x: int
+        y: int
+        
+or
+
+    >>> Point = make_dataclass("Point", [("x",int), ("y",int)])
+
+One can't remove attributes from the class:
+
+    >>> del Point.x
+    . . . . . . . .
+    AttributeError: Attribute x of the class Point can't be deleted
+    
+Annotations of the fields are defined as a dict in `__annotations__`:
 
     >>> print(Point.__annotations__)
     {'x': <class 'int'>, 'y': <class 'int'>}
 
-    >>> p = Point(1,2)
+Default text representation:
+
+    >>> p = Point(1, 2)
     >>> print(p)
     Point(x=1, y=2)
 
-    >>> sys.getsizeof() # the output below is for 64bit python
+One can't remove field's value:
+
+    >>> del p.x
+    . . . . . . . . 
+    AttributeError: The value can't be deleted
+
+The instances has a minimum memory footprint that is possible for CPython objects, which consist only of Python objects:
+
+    >>> sys.getsizeof(p) # the output below for python 3.8+ (64bit)
     32
     >>> p.__sizeof__() == sys.getsizeof(p) # no additional space for cyclic GC support
     True    
 
+The instance is mutable by default:
+
     >>> p.x, p.y = 10, 20
     >>> print(p)
     Point(x=10, y=20)
+    
+Functions `asdict` and `astuple` for converting to `dict` and `tuple`:
+
+    >>> asdict(p)
+    {'x':10, 'y':20}
+    >>> astuple(p)
+    (10, 20)
+
+By default subclasses of dataobject are mutable. If one want make it immutable then there is the option `readonly=True`:
+
+    class Point(dataobject, readonly=True):
+        x: int
+        y: int
+
+    >>> p = Point(1,2)
+    >>> p.x = -1
+    . . . . . . . . . . . . . 
+    TypeError: item is readonly
+
+By default subclasses of dataobject are not iterable by default. If one want make it iterable then there is the option `iterable=True`:
+
+    class Point(dataobject, iterable=True):
+        x: int
+        y: int
+
+    >>> p = Point(1,2)
     >>> for x in p: print(x)
     1
     2
-    >>> asdict(p)
-    {'x':1, 'y':2}
-    >>> tuple(p)
-    (1, 2)
 
-Another way &ndash; factory function `make_dataclass`:
+Another way to create subclasses of dataobject &ndash; factory function `make_dataclass`:
 
     >>> from recordclass import make_dataclass
 
     >>> Point = make_dataclass("Point", [("x",int), ("y",int)])
+    
+or even
+
+    >>> Point = make_dataclass("Point", {"x":int, "y":int})
 
 Default values are also supported::
 
@@ -154,78 +326,171 @@ Default values are also supported::
 
 or
 
-    >>> Point = make_dataclass("Point", [("x",int), ("y",int), ("color",str)], defaults=("white",))
-
+    >>> CPoint = make_dataclass("CPoint", [("x",int), ("y",int), ("color",str)], defaults=("white",))
+    
     >>> p = CPoint(1,2)
     >>> print(p)
     Point(x=1, y=2, color='white')
+    
+But
 
-Recordclasses and dataobject-based classes may be cached in order to reuse them without duplication::
+    class PointInvalidDefaults(dataobject):
+        x:int = 0
+        y:int
 
-    from recordclass import RecordclassStorage
+is not allowed. A fields without default value may not appear after a field with default value.
+    
+There is the options `fast_new=True`. It allows faster creation path of the instances. Here is an example:
 
-    >>> rs = RecordclassStorage()
-    >>> A = rs.recordclass("A", "x y")
-    >>> B = rs.recordclass("A", ["x", "y"])
-    >>> A is B
-    True
+    class FastPoint(dataobject, fast_new=True):
+        x: int
+        y: int
+    
+The followings timings explain (in jupyter notebook) boosting effect of `fast_new` option:
 
-    from recordclass import DataclassStorage
+    %timeit l1 = [Point(i,i) for i in range(100000)]
+    %timeit l2 = [FastPoint(i,i) for i in range(100000)]
+    # output with python 3.9 64bit
+    25.6 ms ± 2.4 ms per loop (mean ± std. dev. of 7 runs, 10 loops each)
+    10.4 ms ± 426 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
+    
+The downside of `fast_new=True` option is less options for inspection of the instance.
+    
+### Using dataobject-based classes for recursive data without reference cycles
 
-    >>> ds = DataclassStorage()
-    >>> A = ds.make_dataclass("A", "x y")
-    >>> B = ds.make_dataclass("A", ["x", "y"])
-    >>> A is B
-    True
+There is the option `deep_dealloc` (default value is `True`) for deallocation of recursive datastructures. 
+Let consider simple example:
 
+    class LinkedItem(dataobject, fast_new=True):
+        val: object
+        next: 'LinkedItem'
 
-## Comparisons
+    class LinkedList(dataobject, deep_dealloc=True):
+        start: LinkedItem = None
+        end: LinkedItem = None
 
-The following table explain memory footprints of `recordclass`-, `recordclass2`-base objects:
+        def append(self, val):
+            link = LinkedItem(val, None)
+            if self.start is None:
+                self.start = link
+            else:
+                self.end.next = link
+            self.end = link
 
-| namedtuple    |  class/\_\_slots\_\_  |  recordclass   | dataclass  |
-| ------------- | ----------------- | -------------- | ------------- |
-|   $b+s+n*p$     |     $b+n*p$         |  $b+s+n*p$       |     $b+n*p-g$     |
+Without `deep_dealloc=True` deallocation of the instance of `LinkedList` will be failed if the length of the linked list is too large.
+But it can be resolved with `__del__` method for clearing the linked list:
 
-where:
+    def __del__(self):
+        curr = self.start
+        while curr is not None:
+            next = curr.next
+            curr.next = None
+            curr = next
 
- * b = sizeof(`PyObject`)
- * s = sizeof(`Py_ssize_t`)
- * n = number of items
- * p = sizeof(`PyObject*`)
- * g = sizeof(PyGC_Head)
+There is builtin more fast deallocation method using finalization mechanizm when `deep_dealloc=True`. In such case one don't need `__del__`  method for clearing the list.
 
-This is useful in that case when you absolutely sure that reference cycle isn't possible.
-For example, when all field values are instances of atomic types.
-As a result the size of the instance is decreased by 24-32 bytes (for cpython 3.4-3.7) and by 16 bytes for cpython 3.8::
+> Note that for classes with `gc=True` (cyclic GC is used) this method is disabled: the python's cyclic GC is used in these cases.
 
-    class S:
-        __slots__ = ('a','b','c')
-        def __init__(self, a, b, c):
-            self.a = a
-            self.b = b
-            self.c = c
-
-    R_gc = recordclass('R_gc', 'a b c', gc=1)
-    R_nogc = recordclass('R_nogc', 'a b c')
-
-    s = S(1,2,3)
-    r_gc = R_gc(1,2,3)
-    r_nogc = R_nogc(1,2,3)
-    for o in (s, r_gc, r_nogc):
-        print(sys.getsizeof(o))
-    64 64 40
-
-Here are also table with some performance counters:
-
-|         | namedtuple    |  class/\_\_slots\_\_  |  recordclass   | dataobject  |
-| ------- | ------------- | ----------------- | -------------- | ------------- |
-|   `new`   |    320±6 ns  |     411±8 ns    |   406±8 ns   |    113±1 ns  |
-| `getattr` |   35.6±0.7 ns |    20.8±0.4 ns   |   26.8±1.8 ns |   27.7±2.3 ns |
-| `setattr` |               |     24.2±0.3 ns  |   30.9±1.1 ns |   31.5±1.8 ns |
-
+For more details see notebook [example_datatypes](examples/example_datatypes.ipynb).
 
 ### Changes:
+
+#### 0.17.2
+
+* Add support for python 3.10.
+* There are no use of "Py_SIZE(op)" and "Py_TYPE(op)" as l-value.
+
+#### 0.17.1
+
+* Fix packaging issue with cython=1 in setup.py
+
+#### 0.17
+
+* Now recordclass library may be compiled for pypy3, but there is still no complete runtime compatibility with pypy3.
+* Slighly imporove performance of `litetuple` / `mutabletuple`.
+* Slighly imporove performance of `dataobject`-based subclasses.
+* Add adapter `as_dataclass`. For example:
+
+        @as_dataclass()
+        class Point:
+            x:int
+            y:int
+
+* Module _litelist is implemented in pure C.
+* Make dataobject.__copy__ faster.
+
+#### 0.16.3
+
+* Add possibility for recordclasses to assighn values by key: 
+
+        A = recordclass("A", "x y", mapping=True)
+        a = A(1,2)
+        a['x'] = 100 
+        a['y'] = 200 
+
+#### 0.16.2
+
+* Fix the packaging bug in 0.16.1.
+
+#### 0.16.1
+
+* Add `dictclass` factory function to generate class with `dict-like` API and without attribute access to the fields.
+  Features: fast instance creation, small memory footprint.
+
+#### 0.16
+
+* `RecordClass` started to be a direct subclass of dataobject with `sequence=True` and support
+  of `namedtuple`-like API. 
+  Insted of `RecordClass(name, fields, **kw)` for class creation 
+  use factory function `recordclass(name, fields, **kw)` 
+  (it allows to specify types).
+* Add option api='dict'  to `make_dataclass` for creating class that support dict-like API.
+* Now one can't remove dataobject's property from it's class using del or builting delattr.
+  For example:
+  
+        >>> Point = make_dataclass("Point", "x y")
+        >>> del Point.x
+        ...........
+        AttributeError: Attribute x of the class Point can't be deleted
+       
+* Now one can't delete field's value using del or builting delattr.
+  For example:
+  
+        >>> p = Point(1, 2)
+        >>> del p.x
+        ...........
+        AttributeError: The value can't be deleted"      
+  Insted one can use assighnment to None:
+
+        >>> p = Point(1, 2)
+        >>> p.x = None
+
+* Slightly improve performance of the access by index of dataobject-based classes with option `sequence=True`. 
+
+
+#### 0.15.1
+
+* Options `readonly` and `iterable` now can be sspecified via keyword arguments in class statement.
+  For example:
+
+        class Point(dataobject, readonly=True, iterable=True):
+             x:int
+             y:int
+             
+* Add `update(cls, **kwargs)` function to update attribute values.`
+             
+
+#### 0.15
+
+* Now library supports only Python >= 3.6
+* 'gc' and 'fast_new' options now can be specified as kwargs in class statement.
+* Add a function `astuple(ob)` for transformation dataobject instance `ob` to a tuple.
+* Drop datatuple based classes.
+* Add function `make(cls, args, **kwargs)` to create instance of the class `cls`.
+* Add function `clone(ob, **kwargs)` to clone dataobject instance `ob`.
+* Make structclass as alias of make_dataclass.
+* Add option 'deep_dealloc' (@clsconfig(deep_dealloc=True)) for deallocation
+  instances of dataobject-based recursive subclasses.
 
 #### 0.14.3:
 
@@ -241,7 +506,7 @@ Here are also table with some performance counters:
 
 #### 0.14:
 
-* Add __doc__ to generated `dataobject`-based class in order to support `inspect.signature`.
+* Add __doc__ to generated  `dataobject`-based class in order to support `inspect.signature`.
 * Add `fast_new` argument/option for fast instance creation.
 * Fix refleak in `litelist`.
 * Fix sequence protocol ability for `dataobject`/`datatuple`.

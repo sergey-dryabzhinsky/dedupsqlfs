@@ -387,6 +387,8 @@ class LZ4FrameDecompressor(object):
             bytes: Uncompressed data
 
         """
+        if not isinstance(data, (bytes, bytearray)):
+            data = memoryview(data).tobytes()
 
         if self._unconsumed_data:
             data = self._unconsumed_data + data
@@ -617,6 +619,17 @@ class LZ4FrameFile(_compression.BaseStream):
         # returns at least one byte (except at EOF)
         return self._buffer.peek(size)
 
+    def readall(self):
+        chunks = bytearray()
+
+        while True:
+            data = self.read(io.DEFAULT_BUFFER_SIZE)
+            chunks += data
+            if not data:
+                break
+
+        return bytes(chunks)
+
     def read(self, size=-1):
         """Read up to ``size`` uncompressed bytes from the file.
 
@@ -632,6 +645,9 @@ class LZ4FrameFile(_compression.BaseStream):
 
         """
         self._check_can_read()
+
+        if size < 0 and sys.version_info >= (3, 10):
+            return self.readall()
         return self._buffer.read(size)
 
     def read1(self, size=-1):
@@ -679,9 +695,10 @@ class LZ4FrameFile(_compression.BaseStream):
     def write(self, data):
         """Write a bytes object to the file.
 
-        Returns the number of uncompressed bytes written, which is always
-        ``len(data)``. Note that due to buffering, the file on disk may not
-        reflect the data written until close() is called.
+        Returns the number of uncompressed bytes written, which is
+        always the length of data in bytes. Note that due to buffering,
+        the file on disk may not reflect the data written until close()
+        is called.
 
         Args:
             data(bytes): uncompressed data to compress and write to the file
@@ -690,11 +707,18 @@ class LZ4FrameFile(_compression.BaseStream):
             int: the number of uncompressed bytes written to the file
 
         """
+        if isinstance(data, (bytes, bytearray)):
+            length = len(data)
+        else:
+            # accept any data that supports the buffer protocol
+            data = memoryview(data)
+            length = data.nbytes
+
         self._check_can_write()
         compressed = self._compressor.compress(data)
         self._fp.write(compressed)
-        self._pos += len(data)
-        return len(data)
+        self._pos += length
+        return length
 
     def seek(self, offset, whence=io.SEEK_SET):
         """Change the file position.
@@ -829,6 +853,7 @@ def open(filename, mode="rb",
         block_checksum=block_checksum,
         auto_flush=auto_flush,
         return_bytearray=return_bytearray,
+        source_size=source_size,
     )
 
     if 't' in mode:

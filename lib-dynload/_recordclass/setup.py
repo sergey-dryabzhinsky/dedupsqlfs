@@ -2,7 +2,7 @@
 
 # The MIT License (MIT)
 # 
-# Copyright (c) <2015-2020> <Shibzukhov Zaur, szport at gmail dot com>
+# Copyright (c) <2015-2021> <Shibzukhov Zaur, szport at gmail dot com>
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,30 +23,28 @@
 # THE SOFTWARE.
 #
 
-import sys as _sys
-_PY36 = _sys.version_info[:2] >= (3, 6)
-_PY3 = _sys.version_info[0] >= 3
-
+import os
+import sys
 from setuptools import setup
 from setuptools.command.build_ext import build_ext
 from setuptools.extension import Extension
 
-# extra_compile_args = ["-O3",]
+# extra_compile_args = ["-O3", "-Wfatal-errors"]
+# extra_compile_args = ["-Wfatal-errors"]
 extra_compile_args = []
+extra_link_args = []
 
-EXTRA_OPT=0
-if "--extra-optimization" in _sys.argv:
+EXTRA_OPT="RC_EXTRAOPT" in os.environ
+if "--extra-optimization" in sys.argv:
     # Support legacy output format functions
-    EXTRA_OPT=1
-    _sys.argv.remove("--extra-optimization")
-
+    EXTRA_OPT=True
+    sys.argv.remove("--extra-optimization")
 
 if EXTRA_OPT:
     extra_compile_args.insert(0, "-march=native")
     extra_compile_args.insert(0, "-O3")
 else:
     extra_compile_args.insert(0, "-O2")
-
 
 use_cython = 0
 
@@ -57,58 +55,55 @@ if use_cython:
 
 ext_modules = [
     Extension(
-        "recordclass.mutabletuple",
-        ["lib/recordclass/mutabletuple.c"],
-        extra_compile_args = extra_compile_args,
-    ),
-    Extension(
         "recordclass._dataobject",
         ["lib/recordclass/_dataobject.c"],
         extra_compile_args = extra_compile_args,
+        extra_link_args = extra_link_args,
+    ),
+    Extension(
+        "recordclass._litetuple",
+        ["lib/recordclass/_litetuple.c"],
+        extra_compile_args = extra_compile_args,
+        extra_link_args = extra_link_args,
+    ),
+    Extension(
+        "recordclass._litelist",
+        ["lib/recordclass/_litelist.c"],
+        extra_compile_args = extra_compile_args,
+        extra_link_args = extra_link_args,
     ),
 ]
 
 if use_cython:
     ext_modules.append(Extension(
-        "recordclass.recordobject",
-        ["lib/recordclass/recordobject.pyx"],
+        "recordclass._linkedlist",
+        ["lib/recordclass/_linkedlist.pyx"],
         extra_compile_args = extra_compile_args,
-    ))
-    ext_modules.append(Extension(
-        "recordclass.litelist",
-        ["lib/recordclass/litelist.pyx"],
-        extra_compile_args = extra_compile_args,
+        extra_link_args = extra_link_args,
     ))
 else:
     ext_modules.append(Extension(
-        "recordclass.recordobject",
-        ["lib/recordclass/recordobject.c"],
+        "recordclass._linkedlist",
+        ["lib/recordclass/_linkedlist.c"],
         extra_compile_args = extra_compile_args,
-    ))
-    ext_modules.append(Extension(
-        "recordclass.litelist",
-        ["lib/recordclass/litelist.c"],
-        extra_compile_args = extra_compile_args,
+        extra_link_args = extra_link_args,
     ))
 
-description = """Mutable variants of tuple (mutabletuple) and collections.namedtuple (recordclass), which support assignments and more memory saving variants (dataobject, structclass, litelist, ...)."""
+description = """Mutable variant of namedtuple -- recordclass, which support assignments, and other memory saving variants."""
 
-if _PY3:
-    with open('README.md', encoding='utf-8') as f:
-        long_description = f.read()
-else:
-    with open('README.md') as f:
-        long_description = f.read()
+with open('README.md', encoding='utf-8') as f:
+    long_description = f.read()
 
-
-packages = ['recordclass', 'recordclass.test']
-if _PY36:
-    packages.append('recordclass.test.typing')
-    packages.append('recordclass.typing')
+packages = [ 'recordclass', 
+             'recordclass.test',
+             'recordclass.test.typing',
+             'recordclass.typing',
+             'recordclass.tools',
+           ]
 
 setup(
     name = 'recordclass',
-    version = '0.14.3',
+    version = '0.17.2',
     description = description,
     author = 'Zaur Shibzukhov',
     author_email = 'szport@gmail.com',
@@ -123,22 +118,22 @@ setup(
     download_url = 'https://pypi.org/project/recordclass/#files',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    description_content_type='text/plain',
+#     description_content_type='text/plain',
     platforms='Linux, Mac OS X, Windows',
-    keywords=['namedtuple', 'recordclass', 'dataobject', 'structclass', 'mutable tuple'],
+    keywords=['namedtuple', 'recordclass', 'dataclass', 'dataobject'],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'Intended Audience :: Information Technology',
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
         'Operating System :: OS Independent',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],

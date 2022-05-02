@@ -20,27 +20,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import sys as _sys
-_PY36 = _sys.version_info[:2] >= (3, 6)
-del _sys
 
-from .mutabletuple import mutabletuple
-from .recordclass import recordclass, RecordclassStorage
-
-from .datatype import datatype, clsconfig, enable_gc
-
-from ._dataobject import dataobject, datatuple
-
+from .datatype import datatype
+from ._dataobject import dataobject, astuple, asdict, make, clone, update
+from ._litelist import litelist, litelist_fromargs
+from ._litetuple import litetuple, mutabletuple
+from .recordclass import recordclass
+from .typing import RecordClass
 from .dataclass import make_dataclass, make_class, join_dataclasses
-from .dataclass import asdict, DataclassStorage
-
+from .dictclass import make_dictclass
 from .arrayclass import make_arrayclass
+from .adapter import as_dataclass
 
-from .structclass import structclass, join_classes
+structclass = make_dataclass
 
-from .litelist import litelist
-
-if _PY36:
-    from .typing import RecordClass, StructClass
-
-__version__ = '0.14.3'
+__version__ = '0.17.2'

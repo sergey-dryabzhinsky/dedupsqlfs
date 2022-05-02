@@ -1,29 +1,20 @@
-#define PyDataTuple_ITEMS(type, op) (PyObject**)((char*)(op) + type->tp_basicsize)
+typedef struct {
+    PyObject ob_head;
+    PyObject *ob_items[1];
+} PyDataStruct;
 
-#define PyDataObject_SLOTS(op) (PyObject**)((char*)(op) + sizeof(PyObject))
-#define PyDataTuple_SLOTS(op) (PyObject**)((char*)(op) + sizeof(PyVarObject))
+#define PyDataObject_ITEMS(op) (((PyDataStruct*)op)->ob_items)
 
-#define PyDataTuple_NUMSLOTS(tp) ((tp->tp_basicsize - sizeof(PyVarObject))/sizeof(PyObject*) - \
-                                 (tp->tp_dictoffset?1:0) - \
-                                 (tp->tp_weaklistoffset?1:0))
+#define PyDataObject_NUMITEMS(tp) (tp->tp_itemsize)
 
-#define PyDataObject_NUMSLOTS(tp) ((tp->tp_basicsize - sizeof(PyObject))/sizeof(PyObject*)) - \
-                                  (tp->tp_dictoffset?1:0) - \
-                                  (tp->tp_weaklistoffset?1:0)
+#define PyDataObject_LEN(o) (Py_TYPE(o)->tp_itemsize)
+#define PyDataObject_GET_ITEM(op, i) (((PyDataStruct*)(op))->ob_items[(i)])
+#define PyDataObject_SET_ITEM(op, i, v) (((PyDataStruct*)(op))->ob_items[(i)]=(v)) 
 
-#define PyDataTuple_NUMITEMS(op) Py_SIZE(op)
-
-#define PyDataObject_DICTPTR(type, op) ((PyObject**)((char*)(op) + type->tp_dictoffset))
+#define PyDataObject_DICTPTR(type, op) ((PyObject**)((char*)(op) + (type)->tp_dictoffset))
 #define PyDataObject_WEAKLISTPTR(type, op) ((PyObject**)((char*)op + type->tp_weaklistoffset))
 #define PyDataObject_HAS_DICT(type) (type->tp_dictoffset != 0)
 #define PyDataObject_HAS_WEAKLIST(type) (type->tp_weaklistoffset != 0)
 
-// typedef struct {
-//     PyObject ob_head;
-//     PyObject *ob_slot[1];
-// } PyDataObject;
-
-// typedef struct {
-//     PyVarObject ob_head;
-//     PyObject *ob_slot[1];
-// } PyDataTuple;
+#define Py_TP_BASE(o) (Py_TYPE(o)->tp_base)
+#define Py_METATYPE(o) Py_TYPE(Py_TYPE(o))

@@ -1,15 +1,9 @@
 """Unit tests for recordclass.py."""
 import unittest, doctest, operator
-from recordclass import recordclass
-
-try:
-    from test import support
-except:
-    from test import test_support as support
+from recordclass.typing import RecordClass
 
 import pickle
 import typing
-from recordclass import RecordClass
 import sys as _sys
 
 class CoolEmployee(RecordClass):
@@ -33,15 +27,13 @@ class XRepr(RecordClass):
     def __add__(self, other):
         return 0
     
-class H(RecordClass):
+class H(RecordClass, hashable=True):
     x: int
     y: int
-    __options__ = {'hashable': True}
 
-class HR(RecordClass):
+class HR(RecordClass, readonly=True):
     x: int
     y: int
-    __options__ = {'readonly': True}
         
 class RecordClassTypingTest(unittest.TestCase):
     def test_typing(self):
@@ -55,12 +47,12 @@ class RecordClassTypingTest(unittest.TestCase):
         self.assertEqual(tmp.__annotations__, {'a': int, 'b': str, 'c': typing.List[int]})
 
     def test_recordclass_basics(self):
-        Emp = RecordClass('Emp', [('name', str), ('id', int)])
-        #self.assertIsSubclass(Emp, memoryslots)
+        class Emp(RecordClass):
+            name:str
+            id:int
         joe = Emp('Joe', 42)
         jim = Emp(name='Jim', id=1)
         self.assertIsInstance(joe, Emp)
-#         self.assertIsInstance(joe, memoryslots)
         self.assertEqual(joe.name, 'Joe')
         self.assertEqual(joe.id, 42)
         self.assertEqual(jim.name, 'Jim')
@@ -69,34 +61,20 @@ class RecordClassTypingTest(unittest.TestCase):
         self.assertEqual(Emp.__fields__, ('name', 'id'))
         self.assertEqual(Emp.__annotations__,
                          dict([('name', str), ('id', int)]))
-        #self.assertIs(Emp._field_types, Emp.__annotations__)
 
-    # def test_namedtuple_pyversion(self):
-    #     if sys.version_info[:2] < (3, 6):
-    #         with self.assertRaises(TypeError):
-    #             RecordClass('Name', one=int, other=str)
-    #         with self.assertRaises(TypeError):
-    #             class NotYet(NamedTuple):
-    #                 whatever = 0
-
-    #@skipUnless(PY36, 'Python 3.6 required')
     def test_annotation_usage(self):
         tim = CoolEmployee('Tim', 9000)
         self.assertIsInstance(tim, CoolEmployee)
-#         self.assertIsInstance(tim, memoryslots)
         self.assertEqual(tim.name, 'Tim')
         self.assertEqual(tim.cool, 9000)
         self.assertEqual(CoolEmployee.__name__, 'CoolEmployee')
         self.assertEqual(CoolEmployee.__fields__, ('name', 'cool'))
         self.assertEqual(CoolEmployee.__annotations__,
                          dict(name=str, cool=int))
-        #self.assertIs(CoolEmployee._field_types, CoolEmployee.__annotations__)
 
-    #@skipUnless(PY36, 'Python 3.6 required')
     def test_annotation_usage_with_default(self):
         jelle = CoolEmployeeWithDefault('Jelle')
         self.assertIsInstance(jelle, CoolEmployeeWithDefault)
-#         self.assertIsInstance(jelle, memoryslots)
         self.assertEqual(jelle.name, 'Jelle')
         self.assertEqual(jelle.cool, 0)
         cooler_employee = CoolEmployeeWithDefault('Sjoerd', 1)
@@ -113,14 +91,13 @@ class NonDefaultAfterDefault(RecordClass):
     y: int
 """)
 
-    #@skipUnless(PY36, 'Python 3.6 required')
     def test_annotation_usage_with_methods(self):
         self.assertEqual(XMeth(1).double(), 2)
         self.assertEqual(XMeth(42).x, XMeth(42)[0])
         self.assertEqual(str(XRepr(42)), '42 -> 1')
         self.assertEqual(XRepr(1, 2) + XRepr(3), 0)
 
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(TypeError):
             exec("""
 class XMethBad(RecordClass):
     x: int
@@ -128,19 +105,12 @@ class XMethBad(RecordClass):
         return 'no chance for this'
 """)
 
-        with self.assertRaises(AttributeError):
-            exec("""
-class XMethBad2(RecordClass):
-    x: int
-    def _source(self):
-        return 'no chance for this as well'
-""")
-
-    #@skipUnless(PY36, 'Python 3.6 required')
     def test_recordclass_keyword_usage(self):
-        LocalEmployee = RecordClass("LocalEmployee", name=str, age=int)
+        class LocalEmployee(RecordClass):
+            name:str
+            age:int
+
         nick = LocalEmployee('Nick', 25)
-#         self.assertIsInstance(nick, memoryslots)
         self.assertEqual(nick.name, 'Nick')
         self.assertEqual(LocalEmployee.__name__, 'LocalEmployee')
         self.assertEqual(LocalEmployee.__fields__, ('name', 'age'))
@@ -162,21 +132,36 @@ class XMethBad2(RecordClass):
 
     def test_hash_subcls(self):
         class B(H): pass
-#         print(dir(B))
         b = B(1,2)
         hash(b)
 
     def test_hash_subcls2(self):
+        class B(H):
+            def __hash__(self):
+                return 0
+        b = B(1,2)
+        hash(b)
+
+    def test_hash_subcls3(self):
         class B(HR):
             def __hash__(self):
                 return 0
-#         print(dir(B))
         b = B(1,2)
         hash(b)
+
+    def test_hash_subcls4(self):
+        class B(HR):
+            pass
+        b = B(1,2)
+        with self.assertRaises(TypeError):
+            b.x = 1
         
     def test_pickle(self):
-        global Emp  # pickle wants to reference the class by name
-        Emp = RecordClass('Emp', [('name', str), ('id', int)])
+        global Emp 
+        class Emp(RecordClass):
+            name:str
+            id:int
+
         jane = Emp('jane', 37)
         for proto in range(pickle.HIGHEST_PROTOCOL + 1):
             z = pickle.dumps(jane, proto)

@@ -93,8 +93,8 @@ class BuildExt(build_ext):
                 extra_args.insert(0, "/Ot")
         else:
             if EXTRA_OPT:
-                extra_args.append("-march=native")
                 extra_args.append("-O3")
+                extra_args.append("-march=native")
             else:
                 extra_args.append("-O2")
 

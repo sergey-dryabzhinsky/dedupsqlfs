@@ -39,7 +39,12 @@ def fuse_mount(options, compression_methods=None):
             fsname="dedupsqlfs", allow_root=True)
 
         logger = ops.getApplication().getLogger()
-        logger.info("Mount: DeDupSQLfs %s/%s, llFuse %s, Python %s" % (dedupsqlfs.__version__, dedupsqlfs.__fsversion__, dedupsqlfs.fuse.dedupfs.fuse.__version__, sys.version.split()[0]))
+        logger.info("Mount: DeDupSQLfs %s/%s, llFuse %s, recordclass %s, Python %s" % (
+            dedupsqlfs.__version__, dedupsqlfs.__fsversion__,
+            dedupsqlfs.fuse.dedupfs.fuse.__version__,
+            dedupsqlfs.lib.cache.index.RC_VERSION,
+            sys.version.split()[0])
+        )
 
         if not _fuse.checkIfLocked():
             _fuse.saveCompressionMethods(compression_methods)
@@ -172,6 +177,7 @@ def main(): # {{{1
     for modname in constants.COMPRESSION_SUPPORTED:
         try:
             module = __import__(modname)
+            # print(modname, dir(module))
             if hasattr(module, 'compress') and hasattr(module, 'decompress'):
                 compression_methods.append(modname)
                 if modname not in constants.COMPRESSION_READONLY:

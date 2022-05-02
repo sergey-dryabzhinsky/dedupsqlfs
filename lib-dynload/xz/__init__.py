@@ -33,15 +33,30 @@ if not imported:
     else:
         dirs = os.listdir(build_dir)
     for d in dirs:
-        if d.find("-%s.%s" % (p1, p2)) != -1 and d.find("lib.") != -1:
-            sys.path.insert(0, os.path.join(build_dir, d) )
+        found = 0
+        if d.find("lib.") == 0:
+            found += 1
+        if d.find("-%s.%s" % (p1, p2)) != -1:
+            found += 1
+        # python 3.10+
+        if d.find("-cpython-%s%s" % (p1, p2)) != -1:
+            found += 1
+        # pypy
+        if d.find("-pypy%s%s" % (p1, p2)) != -1:
+            found += 1
+        if found <= 1:
+            continue
 
-            from .module import compress, decompress
-            imported = True
+        sys.path.insert(0, os.path.join(build_dir, d) )
 
-            sys.path.pop(0)
+        from .module import compress, decompress
+        imported = True
 
-            break
+        sys.path.pop(0)
+
+        break
+
+    del found, d
 
 if not imported:
     path = sys.path.pop(0)

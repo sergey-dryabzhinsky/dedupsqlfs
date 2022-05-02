@@ -64,7 +64,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
         # Initialize instance attributes.
         self.block_size = constants.BLOCK_SIZE_DEFAULT
-        self.hash_function = constants.HAS_FUNCTION_DEFAULT
+        self.hash_function = constants.HASH_FUNCTION_DEFAULT
         self.compression_method = constants.COMPRESSION_TYPE_NONE
 
         self.cache_enabled = True
@@ -334,6 +334,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 self.getManager().commit()
 
             if self.getOption("verbosity") > 1:
+                self.getLogger().info("Umount file system: final statistics")
                 self.reportHelper.do_print_stats_ontime(True)
 
             self.getManager().getTable('option').update('mounted', 0)
@@ -1716,8 +1717,10 @@ class DedupOperations(llfuse.Operations):  # {{{1
         if not write_blocks:
             write_blocks = 1
 
-        self.getLogger().debug("-- first block number = %s, size = %s, write blocks = %s, inblock offset = %s",
-                               first_block_number, size, write_blocks, inblock_offset)
+        self.getLogger().debug(
+            "-- first block number = %s, size = %s, write blocks = %s, inblock offset = %s",
+            first_block_number, size, write_blocks, inblock_offset
+        )
 
         writed_size = 0
 
@@ -1879,8 +1882,10 @@ class DedupOperations(llfuse.Operations):  # {{{1
         @param rdev: int
         @return:
         """
-        self.getLogger().debug("__insert->(parent_inode=%i,name=%r,mode=%o,size=%i,ctx.uid=%i,ctx.gid=%i)",
-                               parent_inode, name, mode, size, ctx.uid, ctx.gid)
+        self.getLogger().debug(
+            "__insert->(parent_inode=%i,name=%r,mode=%o,size=%i,ctx.uid=%i,ctx.gid=%i)",
+            parent_inode, name, mode, size, ctx.uid, ctx.gid
+        )
 
         nlinks = mode & stat.S_IFDIR and 2 or 1
 
@@ -2008,8 +2013,8 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
         # The essence of UNIX file permissions. Did I miss anything?! (Probably...)
         return (not (mode & os.R_OK) or ((o and (m & 0o400)) or (g and (m & 0o040)) or (w and (m & 0o004)))) \
-                   and (not (mode & os.W_OK) or ((o and (m & 0o200)) or (g and (m & 0o020)) or (w and (m & 0o002)))) \
-            and (not (mode & os.X_OK) or ((o and (m & 0o100)) or (g and (m & 0o010)) or (w and (m & 0o001))))
+                and (not (mode & os.W_OK) or ((o and (m & 0o200)) or (g and (m & 0o020)) or (w and (m & 0o002)))) \
+                and (not (mode & os.X_OK) or ((o and (m & 0o100)) or (g and (m & 0o010)) or (w and (m & 0o001))))
 
     def newctime64(self):  # {{{3
         t_ns, t_i = modf(time())
@@ -2344,10 +2349,12 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
             self.reportHelper.time_spent_flushing_block_cache += elapsed_time
 
-            self.getLogger().debug("Block cache cleanup: flushed %i writed (%i/t, %i/sz), %i readed (%i/t, %i/sz) blocks in %s",
-                                  flushed_writed_blocks, flushed_writed_expiredByTime_blocks, flushed_writed_expiredBySize_blocks,
-                                  flushed_readed_blocks, flushed_readed_expiredByTime_blocks, flushed_readed_expiredBySize_blocks,
-                                  format_timespan(elapsed_time))
+            self.getLogger().debug(
+                "Block cache cleanup: flushed %i writed (%i/t, %i/sz), %i readed (%i/t, %i/sz) blocks in %s",
+                flushed_writed_blocks, flushed_writed_expiredByTime_blocks, flushed_writed_expiredBySize_blocks,
+                flushed_readed_blocks, flushed_readed_expiredByTime_blocks, flushed_readed_expiredBySize_blocks,
+                format_timespan(elapsed_time)
+            )
 
         self.reportHelper.do_print_stats_ontime()
 
@@ -2429,10 +2436,12 @@ class DedupOperations(llfuse.Operations):  # {{{1
             self.reportHelper.time_spent_writing_meta += elapsed_time
 
             elapsed_time = self.cache_gc_meta_last_run - start_time
-            self.getLogger().debug("Meta cache cleanup: flushed %i nodes, %i attrs,  %i xattrs, %i names, %i indexes, %i compressTypes, %i hashSizes in %s.",
-                                    flushed_nodes, flushed_attrs, flushed_xattrs, flushed_names, flushed_indexes,
-                                    flushed_hash_compress, flushed_hash_sizes,
-                                    format_timespan(elapsed_time))
+            self.getLogger().debug(
+                "Meta cache cleanup: flushed %i nodes, %i attrs,  %i xattrs, %i names, %i indexes, %i compressTypes, %i hashSizes in %s.",
+                flushed_nodes, flushed_attrs, flushed_xattrs, flushed_names, flushed_indexes,
+                flushed_hash_compress, flushed_hash_sizes,
+                format_timespan(elapsed_time)
+            )
 
         self.reportHelper.do_print_stats_ontime()
 

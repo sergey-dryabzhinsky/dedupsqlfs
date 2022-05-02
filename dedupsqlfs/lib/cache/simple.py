@@ -34,12 +34,14 @@ class CompressionSizesValue:
         self.size_w = size_w
 
 make_dataclass = None
+RC_VERSION = "0.0.0"
 
 try:
     # Our lib-dynload module
     from _recordclass import loaded
     if loaded:
         from _recordclass import module as recordclass
+        from _recordclass import __version__ as RC_VERSION
 except:
     pass
 

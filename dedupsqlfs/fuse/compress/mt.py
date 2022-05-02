@@ -10,7 +10,7 @@ from .base import BaseCompressTool, Task, Result
 from threading import Thread
 from queue import Queue
 from multiprocessing import cpu_count
-
+from dedupsqlfs.lib import constants
 
 class MultiThreadCompressTool(BaseCompressTool):
 
@@ -139,6 +139,12 @@ class MultiThreadCompressTool(BaseCompressTool):
 
         @return dict { hash id: (compressed data (bytes), compresion method (string) ) }
         """
+        isNoneOnly = not self._methods or (len(self._methods) == 1 and constants.COMPRESSION_TYPE_NONE in self._methods)
+        if isNoneOnly:
+            for hash_id, item in super().compressData(dataToCompress):
+                yield hash_id, item
+            return
+
         start_time = time()
 
         nkeys = len(dataToCompress.keys())

@@ -55,7 +55,7 @@ do
 
 		cd ${mdir}
 		$PY setup.py clean -a
-		$PY setup.py build_ext ${EXTRA_OPT} clean
+		$PY setup.py build_ext ${EXTRA_OPT} clean || (echo "---= !ERROR! =---" && $PY setup.py clean -a)
 		cd ..
 	fi
 done

@@ -16,20 +16,39 @@ if not os.path.isdir(build_dir):
 
 module = None
 loaded = False
+__version__ = "0.0.0"
 
 dirs = os.listdir(build_dir)
 for d in dirs:
-    if d.find("-%s.%s" % (p1, p2)) != -1 and d.find("lib.") != -1:
-        sys.path.insert(0, os.path.join(build_dir, d) )
 
-        import importlib
-        module = importlib.import_module("recordclass")
+    found = 0
+    if d.find("lib.") == 0:
+        found += 1
+    if d.find("-%s.%s" % (p1, p2)) != -1:
+        found += 1
+    # python 3.10+
+    if d.find("-cpython-%s%s" % (p1, p2)) != -1:
+        found += 1
+    # pypy
+    if d.find("-pypy%s%s" % (p1, p2)) != -1:
+        found += 1
+    if found <= 1:
+        continue
 
-        loaded = True
+    sys.path.insert(0, os.path.join(build_dir, d) )
 
-        sys.path.pop(0)
+    import importlib
+    module = importlib.import_module("recordclass")
 
-        del p1, p2
-        del currentdir, build_dir, dirs
+    loaded = True
 
-        break
+    __version__ = "0.14.3"
+
+    sys.path.pop(0)
+
+    del importlib
+
+    break
+
+del p1, p2, d, found
+del curpath, currentdir, build_dir, dirs

@@ -16,18 +16,33 @@ if not os.path.isdir(build_dir):
 
 dirs = os.listdir(build_dir)
 for d in dirs:
-    if d.find("-%s.%s" % (p1, p2)) != -1 and d.find("lib.") != -1:
-        sys.path.insert(0, os.path.join(build_dir, d) )
 
-        import importlib
-        _brotli = importlib.import_module("_brotli")
+    found = 0
+    if d.find("lib.") == 0:
+        found += 1
+    if d.find("-%s.%s" % (p1, p2)) != -1:
+        found += 1
+    # python 3.10+
+    if d.find("-cpython-%s%s" % (p1, p2)) != -1:
+        found += 1
+    # pypy
+    if d.find("-pypy%s%s" % (p1, p2)) != -1:
+        found += 1
+    if found <= 1:
+        continue
 
-        from .expose import *
+    sys.path.insert(0, os.path.join(build_dir, d) )
 
-        sys.path.pop(0)
+    import importlib
+    _brotli = importlib.import_module("_brotli")
 
-        del p1, p2
-        del curpath, currentdir
-        del build_dir, dirs
+    from .expose import *
 
-        break
+    sys.path.pop(0)
+
+    del importlib
+
+    break
+
+del p1, p2, d, found
+del curpath, currentdir, build_dir, dirs

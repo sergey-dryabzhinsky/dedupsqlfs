@@ -258,8 +258,14 @@ class BaseCompressTool(object):
 
         start_time = time()
 
+        isNoneOnly = not self._methods or (len(self._methods) == 1 and constants.COMPRESSION_TYPE_NONE in self._methods)
+
         for hash_id, data in dataToCompress.items():
-            yield  hash_id, self._compressData(data)
+            # Clean pass - no compress at all
+            if isNoneOnly:
+                yield hash_id, (data, constants.COMPRESSION_TYPE_NONE,)
+            else:
+                yield hash_id, self._compressData(data)
 
         self.time_spent_compressing = time() - start_time
 
@@ -271,8 +277,10 @@ class BaseCompressTool(object):
 
         @return bytes
         """
-        comp = self._compressors[ method ]
-        return comp.decompressData(data)
+        if method != constants.COMPRESSION_TYPE_NONE:
+            comp = self._compressors[ method ]
+            return comp.decompressData(data)
+        return data
 
     def isDeprecated(self, method):
         """

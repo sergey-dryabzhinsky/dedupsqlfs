@@ -145,8 +145,8 @@ if sys.version_info < (3, 0):
 # Finally call setup with the extension modules as defined above.
 setup(
     name='_lz4',
-    version='3.1.3',
-    python_requires=">=3.5",
+    version='4.0.0',
+    python_requires=">=3.4",
     setup_requires=[
         'setuptools',
         'pkgconfig',
@@ -172,9 +172,12 @@ setup(
         'Intended Audience :: Developers',
         'Programming Language :: C',
         'Programming Language :: Python',
+        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
     ],
 )

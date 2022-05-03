@@ -17,9 +17,9 @@ The following shell commands show how to install and use the DedupFS file system
 
     $ sudo apt-get install python3-pip libfuse-dev
     #
-    $ sudo pip3 install llfuse==1.3.8
+    $ sudo pip3 install llfuse==1.4.1
     #
-    # llfuse must be version 1.3.8
+    # llfuse must be version 1.4.1
     #
     $ git clone https://github.com/sergey-dryabzhinsky/dedupsqlfs.git
     #

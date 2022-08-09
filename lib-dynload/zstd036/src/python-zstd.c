@@ -82,7 +82,7 @@ static PyObject *py_zstd_compress(PyObject* self, PyObject *args) {
         }
         if (ZSTD_isError(cSize))
             PyErr_Format(ZstdError, "Compression error: %s", ZSTD_getErrorName(cSize));
-        Py_SIZE(result) = cSize + sizeof(source_size);
+        Py_SET_SIZE(result, cSize + sizeof(source_size));
     }
     return result;
 }

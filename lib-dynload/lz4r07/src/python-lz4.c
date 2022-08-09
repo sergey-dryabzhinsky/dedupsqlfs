@@ -81,7 +81,7 @@ static PyObject *compress_with(compressor compress, PyObject *self, PyObject *ar
         if (actual_size < (dest_size / 4) * 3) {
             _PyBytes_Resize(&result, actual_size);
         } else {
-            Py_SIZE(result) = actual_size;
+            Py_SET_SIZE(result, actual_size);
         }
     }
     return result;

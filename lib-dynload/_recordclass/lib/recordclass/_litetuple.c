@@ -25,6 +25,7 @@
 #endif
 
 #include "Python.h"
+#include "pythoncapi_compat.h"
 
 static PyTypeObject PyLiteTuple_Type;
 static PyTypeObject PyMLiteTuple_Type;
@@ -35,8 +36,6 @@ static PyTypeObject PyMLiteTuple_Type;
 
 #define PyLiteTuple_CheckExact(op) (Py_TYPE(op) == &PyLiteTuple_Type || Py_TYPE(op) == &PyMLiteTuple_Type)
 #define PyLiteTuple_Check(op) (PyLiteTuple_CheckExact(op) || PyObject_IsInstance(op, (PyObject*)&PyLiteTuple_Type) || PyObject_IsInstance(op, (PyObject*)&PyMLiteTuple_Type))
-
-#define py_set_size(ob, size) ((((PyVarObject*)(ob))->ob_size) = (size))
 
 #define DEFERRED_ADDRESS(addr) 0
 
@@ -78,11 +77,11 @@ PyLiteTuple_New(PyTypeObject *tp, Py_ssize_t nitems)
 
     memset(op, '\0', size);
 
-    Py_TYPE(op) = tp;
+    Py_SET_TYPE(op, tp);
     if (tp->tp_flags & Py_TPFLAGS_HEAPTYPE)
         Py_INCREF(tp);
 
-    py_set_size(op, nitems);
+    Py_SET_SIZE(op, nitems);
     _Py_NewReference(op);
 
     return op;

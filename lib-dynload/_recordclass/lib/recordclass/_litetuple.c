@@ -25,7 +25,6 @@
 #endif
 
 #include "Python.h"
-#include "pythoncapi_compat.h"
 
 static PyTypeObject PyLiteTuple_Type;
 static PyTypeObject PyMLiteTuple_Type;

@@ -25,7 +25,6 @@
 
 #include "Python.h"
 #include "_dataobject.h"
-#include "pythoncapi_compat.h"
 
 #define DEFERRED_ADDRESS(addr) 0
 

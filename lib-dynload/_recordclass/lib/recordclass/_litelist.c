@@ -25,7 +25,6 @@
 #endif
 
 #include "Python.h"
-#include "pythoncapi_compat.h"
 
 static PyTypeObject PyLiteList_Type;
 
@@ -110,15 +109,14 @@ litelist_alloc(PyTypeObject *tp, Py_ssize_t n_items)
         return PyErr_NoMemory();
 
     // memset(op, '\0', size);
-    
+
     PyLiteList_ITEMS(op) = (PyObject**)PyMem_Malloc(n_items*sizeof(PyObject*));
 
     Py_SET_TYPE(op, tp);
     if (tp->tp_flags & Py_TPFLAGS_HEAPTYPE)
         py_incref(tp);
 
-    Py_SET_SIZE(op, n_items);
-    PyLiteList_ALLOCATED(op) = n_items;
+    PyLiteList_ALLOCATED(op) = Py_SIZE(op) = n_items;
     _Py_NewReference(op);
 
     return op;
@@ -203,7 +201,7 @@ litelist_init(PyObject *ob, PyObject *args, PyObject *kwds) {
 //     for (i = Py_SIZE(op); --i >= 0; ) {
 //         Py_CLEAR(op->ob_item[i]);
 //     }
-//     Py_SET_SIZE(op, 0);
+//     Py_SIZE(op) = 0;
 //     return 0;
 // }
 
@@ -809,7 +807,7 @@ static PyMethodDef litelist_methods[] = {
     {"__copy__", (PyCFunction)litelist_copy, METH_NOARGS, litelist_copy_doc},
     {"__len__", (PyCFunction)litelist_len, METH_NOARGS, litelist_len_doc},
     {"__bool__", (PyCFunction)litelist_bool, METH_NOARGS, litelist_bool_doc},
-    {"__sizeof__",      (PyCFunction)litelist_sizeof, METH_NOARGS, litelist_sizeof_doc},     
+    {"__sizeof__",      (PyCFunction)litelist_sizeof, METH_NOARGS, litelist_sizeof_doc},
     {"__reduce__", (PyCFunction)litelist_reduce, METH_NOARGS, litelist_reduce_doc},
     {NULL}
 };

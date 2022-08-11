@@ -310,6 +310,7 @@ class ReportHelper:
         if nbytes == None:
             self.__report_throughput(self.bytes_read, self.time_spent_reading, "read")
             self.__report_throughput((self.bytes_written + self.bytes_deduped), self.time_spent_writing, "write")
+            self.__report_throughput((self.bytes_written_compressed + self.bytes_deduped), self.time_spent_writing, "write compressed")
         else:
             if nbytes > 0:
                 average = format_size(nbytes / max(1, nseconds))

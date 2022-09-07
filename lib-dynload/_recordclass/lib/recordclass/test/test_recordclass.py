@@ -84,7 +84,7 @@ class RecordClassTest(unittest.TestCase):
         self.assertEqual(Point(1, 2), Point(1, 2))
         with self.assertRaises(TypeError):
             Point(1)
-
+            
         with self.assertRaises(TypeError):                                  # catch too few args
             Point()
         with self.assertRaises(TypeError):                                  # catch too many args

@@ -2239,6 +2239,8 @@ class DedupOperations(llfuse.Operations):  # {{{1
         tableHCT = self.getTable("hash_compression_type")
         tableHSZ = self.getTable("hash_sizes")
 
+        self.application.getCompressTool().time_spent_compressing = 0
+
         for hash_id, cItem in self.application.compressData(blocksToCompress):
             cdata, cmethod = cItem
 

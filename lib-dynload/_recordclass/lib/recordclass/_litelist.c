@@ -33,6 +33,7 @@ static PyTypeObject PyLiteList_Type;
 #define PyLiteList_SET_ITEM(op, i, v) (((PyLiteListObject *)(op))->ob_item[i] = v)
 #define PyLiteList_GET_SIZE(seq) Py_SIZE(seq)
 #define PyLiteList_ALLOCATED(op) (((PyLiteListObject *)(op))->allocated)
+#define PyLiteList_SET_ALLOCATED(op, n) (((PyLiteListObject *)(op))->allocated = (n))
 
 #define PyLiteList_CheckExact(op) (Py_TYPE(op) == &PyLiteList_Type)
 #define PyLiteList_Check(op) (PyLiteList_CheckExact(op) || PyObject_IsInstance(op, (PyObject*)&PyLiteList_Type))
@@ -58,6 +59,20 @@ static PyTypeObject PyLiteList_Type;
             py_decref(_py_xdecref_tmp);               \
     } while (0)
 
+#if !defined(Py_SET_TYPE)
+#define Py_SET_TYPE(ob, type) (((PyObject*)(ob))->ob_type) = (type)
+#endif
+
+#if !defined(Py_TYPE)
+#define Py_TYPE(ob) ((PyObject*)(ob))->ob_type
+#endif
+
+#define py_refcnt(ob) (((PyObject*)(ob))->ob_refcnt)
+
+#if !defined(Py_SET_SIZE)
+#define Py_SET_SIZE(ob, size) (((PyVarObject*)(ob))->ob_size = (size))
+#endif
+
 static PyTypeObject PyLiteList_Type;
 typedef PyListObject PyLiteListObject;
 
@@ -71,7 +86,7 @@ litelist_resize(PyObject *op, Py_ssize_t size) {
         newsize =  size + (size / 8) + 6;
 
     PyLiteList_ITEMS(op) = (PyObject**)PyMem_Realloc(PyLiteList_ITEMS(op), newsize*sizeof(PyObject*));
-    PyLiteList_ALLOCATED(op) = newsize;
+    PyLiteList_SET_ALLOCATED(op, newsize);
 }
 
 
@@ -109,14 +124,15 @@ litelist_alloc(PyTypeObject *tp, Py_ssize_t n_items)
         return PyErr_NoMemory();
 
     // memset(op, '\0', size);
-
+    
     PyLiteList_ITEMS(op) = (PyObject**)PyMem_Malloc(n_items*sizeof(PyObject*));
 
     Py_SET_TYPE(op, tp);
     if (tp->tp_flags & Py_TPFLAGS_HEAPTYPE)
         py_incref(tp);
 
-    PyLiteList_ALLOCATED(op) = Py_SIZE(op) = n_items;
+    PyLiteList_SET_ALLOCATED(op, n_items);
+    Py_SET_SIZE(op, n_items);
     _Py_NewReference(op);
 
     return op;
@@ -201,7 +217,7 @@ litelist_init(PyObject *ob, PyObject *args, PyObject *kwds) {
 //     for (i = Py_SIZE(op); --i >= 0; ) {
 //         Py_CLEAR(op->ob_item[i]);
 //     }
-//     Py_SIZE(op) = 0;
+//     Py_SET_SIZE(op, 0);
 //     return 0;
 // }
 
@@ -424,7 +440,7 @@ litelist_ass_item(PyLiteListObject *a, Py_ssize_t i, PyObject *v)
             i++;
         }
         *dst = NULL;
-        Py_SIZE(a) -= 1;
+        Py_SET_SIZE(a, Py_SIZE(a)-1);
         return 0;
     }
     
@@ -807,7 +823,7 @@ static PyMethodDef litelist_methods[] = {
     {"__copy__", (PyCFunction)litelist_copy, METH_NOARGS, litelist_copy_doc},
     {"__len__", (PyCFunction)litelist_len, METH_NOARGS, litelist_len_doc},
     {"__bool__", (PyCFunction)litelist_bool, METH_NOARGS, litelist_bool_doc},
-    {"__sizeof__",      (PyCFunction)litelist_sizeof, METH_NOARGS, litelist_sizeof_doc},
+    {"__sizeof__",      (PyCFunction)litelist_sizeof, METH_NOARGS, litelist_sizeof_doc},     
     {"__reduce__", (PyCFunction)litelist_reduce, METH_NOARGS, litelist_reduce_doc},
     {NULL}
 };

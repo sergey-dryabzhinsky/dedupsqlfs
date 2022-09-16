@@ -647,7 +647,7 @@ def main(): # {{{1
     data.add_argument('--defragment', dest='defragment', action='store_true', help="Defragment all stored data, do garbage collection.")
     data.add_argument('--vacuum', dest='vacuum', action='store_true', help="Like defragment, but force SQLite to 'vacuum' databases, MySQL to run OPTIMIZE on tables.")
     data.add_argument('--vacuum-if-last-time-more-than-days', dest='vacuum_older_than', metavar='DAYS_COUNT', type=int, default=0, help="Do vacuum only if last time was more than DAYS_COUNT ago. To disable check - set value less or equal 0.")
-    data.add_argument('--new-block-size', dest='new_block_size', metavar='BYTES', default=constants.BLOCK_SIZE_DEFAULT, type=int, help="Specify the new block size in bytes. Defaults to 128kB. (@todo)")
+    data.add_argument('--new-block-size', dest='new_block_size', metavar='BYTES', default=constants.BLOCK_SIZE_DEFAULT, type=int, help="Specify the new block size in bytes. Defaults to 64kB. (@todo)")
     data.add_argument('--maximum-block-size', dest='maximum_block_size', metavar='BYTES', default=constants.BLOCK_SIZE_MAX, type=int,
                       help="R|Specify the maximum block size in bytes for defragmentation.\n Defaults to %dMB. (@todo)" % (constants.BLOCK_SIZE_MAX/1024/1024,))
 

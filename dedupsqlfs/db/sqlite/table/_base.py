@@ -148,7 +148,7 @@ class Table( object ):
         # Sqlite support 512-65536 byte pages
         for n in range(9,17):
             ps = 2**n
-            if page_size < ps:
+            if page_size <= ps:
                 page_size = ps
                 break
 
@@ -292,6 +292,8 @@ class Table( object ):
             conn.execute("PRAGMA synchronous=NORMAL")
 
         conn.execute("PRAGMA temp_store=FILE")
+
+        self.getLogger().debug("Table: pageSize=%r" % pageSize)
         conn.execute("PRAGMA page_size=%i" % pageSize)
         conn.execute("PRAGMA cache_size=%i" % cacheSize)
 

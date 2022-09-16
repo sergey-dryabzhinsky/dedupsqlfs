@@ -627,6 +627,20 @@ class DedupOperations(llfuse.Operations):  # {{{1
             if self.getApplication().mountpoint:
                 self.getManager().getTable('option').update('mounted', 1)
 
+            # Recalc page size for sqlite block table, based on block size
+            blockTable = self.getManager().getTable('block')
+            ps = blockTable.getPageSize()
+            self.getLogger().debug("DedupFS: block table page_size=%r" % ps)
+            if ps < self.block_size:
+                self.getLogger().debug("DedupFS: set page_size to block_size %r" % self.block_size)
+                blockTable.setPageSize(self.block_size)
+                blockTable.close()
+                blockTable.connect()
+                ps = blockTable.getPageSize()
+                self.getLogger().debug("DedupFS: result block table page_size=%r" % ps)
+                ps = blockTable.getDbPageSize()
+                self.getLogger().debug("DedupFS: real block table page_size=%r" % ps)
+
             self.getApplication().addLockMessage("inited")
 
             self.getLogger().debug("DedupFS: inited and mounted")

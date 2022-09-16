@@ -5,11 +5,10 @@ Constants for modules
 
 __author__ = 'sergey'
 
-COMPRESSION_SUPPORTED=('lzo', 'zlib', 'bz2', 'xz', 'snappy',
-                       'lz4',
-                       'brotli',
-                       'zstd',
-                       )
+COMPRESSION_SUPPORTED=(
+    'lzo', 'zlib', 'bz2', 'xz', 'snappy',
+    'lz4', 'brotli', 'zstd',
+)
 COMPRESSION_READONLY=()
 COMPRESSION_TYPE_BEST="all_best"
 COMPRESSION_TYPE_DEFAULT="all"
@@ -65,5 +64,5 @@ COMPRESSION_PROGS_DEFAULT = COMPRESSION_PROGS_NONE
 ROOT_SUBVOLUME_NAME=b"@root"
 
 BLOCK_SIZE_MIN=512
-BLOCK_SIZE_DEFAULT=128*1024     # 128kb
+BLOCK_SIZE_DEFAULT=64*1024      # 64kb
 BLOCK_SIZE_MAX=16*1024*1024     # 16Mb

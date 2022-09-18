@@ -86,7 +86,7 @@ class StorageTimeSize(TimedCache):
     _max_size_trsh = 2
 
     _inodes = None
-    _block_size = 128*1024
+    _block_size = 64*1024
 
 
     def __init__(self):

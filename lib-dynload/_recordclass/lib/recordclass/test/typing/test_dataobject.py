@@ -10,6 +10,9 @@ from recordclass import make_dataclass, datatype, as_dataclass
 from recordclass import dataobject
 from recordclass import asdict
 
+# _PY36 = _sys.version_info[:2] >= (3, 6)
+_PY37 = sys.version_info[:2] >= (3, 7)
+
 if 'PyPy' in sys.version:
     is_pypy = True
 else:
@@ -90,7 +93,6 @@ class DataObjectTest3(unittest.TestCase):
         if not is_pypy:
             with self.assertRaises(TypeError):     
                 weakref.ref(a)
-        print('*')
         with self.assertRaises(AttributeError):     
             a.__dict__
         with self.assertRaises(AttributeError):     
@@ -743,12 +745,54 @@ class DataObjectTest3(unittest.TestCase):
             y:int
             
         a = A(1,2)
-        with self.assertRaises(TypeError):        
+        with self.assertRaises(AttributeError):        
             a.x = -1
-        with self.assertRaises(TypeError):        
+        with self.assertRaises(AttributeError):        
             a.y = -2
 
+            
+    def test_default_arg_enum(self):
+        from enum import Enum, auto
+        
+        class Color(Enum):
+            RED = auto()
+            
+        class Point(dataobject):
+            x: float
+            y: float
+            color: Color = Color.RED
+        
+        
+        pt = Point(1,2)
+        self.assertEqual(pt.color, Color.RED)
+    
+    if _PY37:
+        def test_classvar_1(self):
+            from typing import ClassVar
+            class Point(dataobject):
+                color:ClassVar[int]
+                x: float
+                y: float
 
+            print(ClassVar[int])
+            self.assertEqual(Point.__fields__, ('x','y'))
+            self.assertEqual(Point.__annotations__, {'x':float,'y':float})   
+            pt = Point(1,2)
+            self.assertEqual((pt.x, pt.y), (1, 2))
+            
+        def test_classvar_2(self):
+            from typing import ClassVar
+            class Point(dataobject):
+                x: float
+                y: float
+                color:ClassVar[int] = 1
+
+            self.assertEqual(Point.color, 1)
+            self.assertEqual(Point.__fields__, ('x','y'))
+            self.assertEqual(Point.__annotations__, {'x':float,'y':float})            
+            pt = Point(1,2)
+            self.assertEqual((pt.x, pt.y), (1, 2))
+            
                 
 def main():
     suite = unittest.TestSuite()

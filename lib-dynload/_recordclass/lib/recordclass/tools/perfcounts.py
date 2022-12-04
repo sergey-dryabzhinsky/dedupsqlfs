@@ -75,13 +75,15 @@ results = {'id':[], 'size':[], 'new':[],
 
 results['id'].extend(
     ['litetuple', 'mutabletuple', 'tuple', 'namedtuple', 'class+slots', 'dataobject',  
-     'dataobject+fast_new', 'dataobject+gc', 'dataobject+fast_new+gc', 'dict', 'dataobject+fast_new+map'])
+     'dataobject+fast_new', 'dataobject+gc', 'dataobject+fast+gc', 'dict',
+     # 'dataobject+dictlike+fast', 
+     'dataobject+fast+map'])
 
 classes = (litetuple, mutabletuple, tuple, PointNT, PointSlots, 
            Point, FastPoint, PointGC, FastPointGC, 
            dict, PointMap)
 
-N = 1_000_000
+N = 300_000
 
 numbers = 10
 
@@ -160,7 +162,7 @@ def test_getattr():
             
     for cls in classes:
         gc.collect()
-        if cls in (litetuple,mutabletuple,tuple,dict,PointMap):
+        if cls in (litetuple,mutabletuple,tuple,dict):
             res = nan
         else:
             res = timeit("test(cls)", number=numbers, globals={'cls':cls, 'test':test})
@@ -230,7 +232,7 @@ def test_setattr():
 
     for cls in classes:
         gc.collect()
-        if cls in (litetuple, mutabletuple, tuple, PointNT, dict, PointMap):
+        if cls in (litetuple, mutabletuple, tuple, PointNT, dict):
             res = nan
         else:
             res = timeit("test(cls)", number=numbers, globals={'cls':cls, 'test':test, 'tuple':tuple, 'PointNT':PointNT})
@@ -288,7 +290,7 @@ def test_getmethod():
             
     for cls in classes:
         gc.collect()
-        if cls in (litetuple, mutabletuple, dict, tuple, PointNT):
+        if cls in (litetuple, mutabletuple, dict, tuple, PointNT,):
             res = nan
         else:
             res = timeit("test(cls)", number=numbers, globals={'cls':cls, 'test':test})
@@ -375,3 +377,4 @@ def test_all(relative=True):
 
 df = test_all(relative=False)
 print(df.to_markdown(index=False))
+# print(df.to_html(index=False))

@@ -2,7 +2,7 @@
 
 # The MIT License (MIT)
 # 
-# Copyright (c) <2015-2021> <Shibzukhov Zaur, szport at gmail dot com>
+# Copyright (c) <2015-2022> <Shibzukhov Zaur, szport at gmail dot com>
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,11 +23,13 @@
 # THE SOFTWARE.
 #
 
-import os
-import sys
-from setuptools import setup
+from setuptools import setup, find_packages
 from setuptools.command.build_ext import build_ext
 from setuptools.extension import Extension
+import os
+import sys
+
+_PY310 = sys.version_info[:2] >= (3, 10)
 
 # extra_compile_args = ["-O3", "-Wfatal-errors"]
 # extra_compile_args = ["-Wfatal-errors"]
@@ -58,19 +60,19 @@ ext_modules = [
         "recordclass._dataobject",
         ["lib/recordclass/_dataobject.c"],
         extra_compile_args = extra_compile_args,
-        extra_link_args = extra_link_args,
+        # extra_link_args = extra_link_args,
     ),
     Extension(
         "recordclass._litetuple",
         ["lib/recordclass/_litetuple.c"],
         extra_compile_args = extra_compile_args,
-        extra_link_args = extra_link_args,
+        # extra_link_args = extra_link_args,
     ),
     Extension(
         "recordclass._litelist",
         ["lib/recordclass/_litelist.c"],
         extra_compile_args = extra_compile_args,
-        extra_link_args = extra_link_args,
+        # extra_link_args = extra_link_args,
     ),
 ]
 
@@ -79,14 +81,14 @@ if use_cython:
         "recordclass._linkedlist",
         ["lib/recordclass/_linkedlist.pyx"],
         extra_compile_args = extra_compile_args,
-        extra_link_args = extra_link_args,
+        # extra_link_args = extra_link_args,
     ))
 else:
     ext_modules.append(Extension(
         "recordclass._linkedlist",
         ["lib/recordclass/_linkedlist.c"],
         extra_compile_args = extra_compile_args,
-        extra_link_args = extra_link_args,
+        # extra_link_args = extra_link_args,
     ))
 
 description = """Mutable variant of namedtuple -- recordclass, which support assignments, and other memory saving variants."""
@@ -99,11 +101,11 @@ packages = [ 'recordclass',
              'recordclass.test.typing',
              'recordclass.typing',
              'recordclass.tools',
-           ]
+           ] + (['recordclass.test.match'] if _PY310 else [])
 
 setup(
     name = 'recordclass',
-    version = '0.17.5',
+    version = '0.18.0.1',
     description = description,
     author = 'Zaur Shibzukhov',
     author_email = 'szport@gmail.com',
@@ -127,13 +129,12 @@ setup(
         'Intended Audience :: Information Technology',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
         'Operating System :: OS Independent',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],

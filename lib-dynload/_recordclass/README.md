@@ -6,7 +6,7 @@ alternative of `namedtuple` (see [question](https://stackoverflow.com/questions/
 It implements a factory function `recordclass` (a variant of `collection.namedtuple`) in order to create record-like classes with the same API as  `collection.namedtuple`.
 It was evolved further in order to provide more memory saving, fast and flexible types.
 
-**Recordclass** library provide record-like classes that by default do not participate in *cyclic garbage collection* (CGC) mechanism, but support only *reference counting* mechanism for garbage collection.
+**Recordclass** library provide record-like classes that do not by default participate in *cyclic garbage collection* (CGC) mechanism, but support only *reference counting* mechanism for garbage collection.
 The instances of such classes havn't `PyGC_Head` prefix in the memory, which decrease their size and have a little faster path for the instance allocation and deallocation.
 This may make sense in cases where it is necessary to limit the size of the objects as much as possible, provided that they will never be part of references cycles in the application.
 For example, when an object represents a record with fields with values of simple types by convention (`int`, `float`, `str`, `date`/`time`/`datetime`, `timedelta`, etc.).
@@ -28,8 +28,7 @@ Another option is to use static code analyzers along with type annotations to mo
 The `recodeclass` library provide the base class `dataobject`. The type of `dataobject` is special metaclass `datatype`. 
    It control creation  of subclasses of `dataobject`, which  will not participate in CGC by default. 
    As the result the instance of such class need less memory. 
-   It's memory footprint is similar to memory footprint of instances of the classes with `__slots__`. 
-   The difference is equal to the size of `PyGC_Head`. 
+   It's memory footprint is similar to memory footprint of instances of the classes with `__slots__` but without `PyGC_Head`. So the difference in memory size is equal to the size of `PyGC_Head`. 
    It also tunes `basicsize` of the instances, creates descriptors for the fields and etc. 
    All subclasses of `dataobject` created by `class statement` support `attrs`/`dataclasses`-like API.
    For example:
@@ -68,7 +67,8 @@ It also provide a factory function `make_dataclass` for creation of subclasses o
         >>> print(p.x, p.y)
         1 -1
 
-It also provide a factory function `make_arrayclass` in order to create subclass of `dataobject` wich can consider as array of simple values.
+It also provide a factory function `make_arrayclass` in order to create subclass of `dataobject` which can be 
+considered as array of simple values.
    For example:
 
         >>> Pair = make_arrayclass(2)
@@ -77,7 +77,7 @@ It also provide a factory function `make_arrayclass` in order to create subclass
         >>> print(p)
         Pair(2, -1)
 
-It provide in addition the classes `lightlist` and `litetuple`, which considers as list-like and tuple-like *light* containers in order to save memory. They do not supposed to participate in CGC too.  Mutable variant of litetuple is called by `mutabletuple`. 
+It provide in addition the classes `lightlist` (immutable) and `litetuple`, which considers as list-like and tuple-like *light* containers in order to save memory. They do not supposed to participate in CGC too.  Mutable variant of litetuple is called by `mutabletuple`. 
     For example: 
 
         >>> lt = litetuple(1, 2, 3)
@@ -94,9 +94,24 @@ It provide in addition the classes `lightlist` and `litetuple`, which considers 
 
 The following table explain memory footprints of the  `dataobject`-based objects and litetuples:
 
-| tuple/namedtuple   |  class with \_\_slots\_\_  |  recordclass/dataobject |  litetuple/mutabletuple  |
-|:------------------:|:--------------------------:|:-----------------------:|:------------------------:|
-|     g+b+s+n\*p     |     g+b+n\*p              |         b+n\*p         |     b+s+n\*p            |
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>tuple/namedtuple</th>
+      <th>class with __slots__</th>
+      <th>recordclass/dataobject</th>
+      <th>litetuple/mutabletuple</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>g+b+s+n&times;p</td>
+      <td>g+b+n&times;p</td>
+      <td>b+n&times;p</td>
+      <td>b+s+n&times;p</td>
+    </tr>
+  </tbody>
+</table>
 
 where:
 
@@ -112,21 +127,338 @@ As a result the size of the instance is decreased by 24-32 bytes for cpython 3.4
 
 ### Performance counters
 
-Here is the table with performance counters (python 3.9, debian linux, x86-64), which was measured using `tools/perfcounts.py` script:
+Here is the table with performance counters, which was measured using `tools/perfcounts.py` script: 
 
-| id                      |   size |   new | getattr   | setattr   | getitem   | setitem   | getkey   | setkey   | iterate   | copy   |
-|:------------------------|-------:|------:|:----------|:----------|:----------|:----------|:---------|:---------|:----------|:-------|
-| litetuple               |     48 |  0.8  |           |           | 0.69      |           |          |          | 1.14      | 0.60   |
-| mutabletuple            |     48 |  0.78 |           |           | 0.69      | 0.72      |          |          | 1.14      | 0.60   |
-| tuple                   |     64 |  0.51 |           |           | 0.63      |           |          |          | 1.09      | 0.53   |
-| namedtuple              |     64 |  2.4  | 0.69      |           | 0.62      |           |          |          | 1.09      | 0.67   |
-| class+slots             |     56 |  1.95 | 0.72      | 0.81      |           |           |          |          |           |        |
-| dataobject              |     40 |  1.84 | 0.68      | 0.79      | 0.65      | 0.67      |          |          | 1.09      | 0.64   |
-| dataobject+fast_new     |     40 |  0.81 | 0.68      | 0.79      | 0.65      | 0.66      |          |          | 1.09      | 0.64   |
-| dataobject+gc           |     56 |  1.92 | 0.68      | 0.79      | 0.65      | 0.66      |          |          | 1.09      | 0.71   |
-| dataobject+fast_new+gc  |     56 |  0.94 | 0.68      | 0.79      | 0.65      | 0.66      |          |          | 1.09      | 0.72   |
-| dict                    |    232 |  0.99 |           |           |           |           | 0.67     | 0.78     | 1.24      | 0.80   |
-| dataobject+fast_new+map |     40 |  0.81 |           |           |           |           | 0.95     | 0.98     | 1.09      | 0.66   |
+* python 3.10, debian/testing linux, x86-64):
+
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>id</th>
+      <th>size</th>
+      <th>new</th>
+      <th>getattr</th>
+      <th>setattr</th>
+      <th>getitem</th>
+      <th>setitem</th>
+      <th>getkey</th>
+      <th>setkey</th>
+      <th>iterate</th>
+      <th>copy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>litetuple</td>
+      <td>48</td>
+      <td>0.26</td>
+      <td></td>
+      <td></td>
+      <td>0.2</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.36</td>
+      <td>0.19</td>
+    </tr>
+    <tr>
+      <td>mutabletuple</td>
+      <td>48</td>
+      <td>0.26</td>
+      <td></td>
+      <td></td>
+      <td>0.2</td>
+      <td>0.22</td>
+      <td></td>
+      <td></td>
+      <td>0.36</td>
+      <td>0.18</td>
+    </tr>
+    <tr>
+      <td>tuple</td>
+      <td>64</td>
+      <td>0.16</td>
+      <td></td>
+      <td></td>
+      <td>0.19</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.36</td>
+      <td>0.16</td>
+    </tr>
+    <tr>
+      <td>namedtuple</td>
+      <td>64</td>
+      <td>0.74</td>
+      <td>0.23</td>
+      <td></td>
+      <td>0.19</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.35</td>
+      <td>0.21</td>
+    </tr>
+    <tr>
+      <td>class+slots</td>
+      <td>56</td>
+      <td>0.69</td>
+      <td>0.3</td>
+      <td>0.34</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>dataobject</td>
+      <td>40</td>
+      <td>0.56</td>
+      <td>0.22</td>
+      <td>0.3</td>
+      <td>0.2</td>
+      <td>0.22</td>
+      <td></td>
+      <td></td>
+      <td>0.4</td>
+      <td>0.19</td>
+    </tr>
+    <tr>
+      <td>dataobject+fast_new</td>
+      <td>40</td>
+      <td>0.26</td>
+      <td>0.22</td>
+      <td>0.3</td>
+      <td>0.2</td>
+      <td>0.22</td>
+      <td></td>
+      <td></td>
+      <td>0.39</td>
+      <td>0.2</td>
+    </tr>
+    <tr>
+      <td>dataobject+gc</td>
+      <td>56</td>
+      <td>0.60</td>
+      <td>0.22</td>
+      <td>0.32</td>
+      <td>0.2</td>
+      <td>0.21</td>
+      <td></td>
+      <td></td>
+      <td>0.4</td>
+      <td>0.22</td>
+    </tr>
+    <tr>
+      <td>dataobject+fast+gc</td>
+      <td>56</td>
+      <td>0.28</td>
+      <td>0.22</td>
+      <td>0.29</td>
+      <td>0.2</td>
+      <td>0.22</td>
+      <td></td>
+      <td></td>
+      <td>0.4</td>
+      <td>0.21</td>
+    </tr>
+    <tr>
+      <td>dict</td>
+      <td>232</td>
+      <td>0.33</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.21</td>
+      <td>0.26</td>
+      <td>0.38</td>
+      <td>0.24</td>
+    </tr>
+    <tr>
+      <td>dataobject+fast+map</td>
+      <td>40</td>
+      <td>0.26</td>
+      <td>0.22</td>
+      <td>0.29</td>
+      <td></td>
+      <td></td>
+      <td>0.24</td>
+      <td>0.28</td>
+      <td>0.39</td>
+      <td>0.19</td>
+    </tr>
+  </tbody>
+</table>
+
+* python 3.11, debian/testing linux, x86-64):
+
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>id</th>
+      <th>size</th>
+      <th>new</th>
+      <th>getattr</th>
+      <th>setattr</th>
+      <th>getitem</th>
+      <th>setitem</th>
+      <th>getkey</th>
+      <th>setkey</th>
+      <th>iterate</th>
+      <th>copy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>litetuple</td>
+      <td>48</td>
+      <td>0.25</td>
+      <td></td>
+      <td></td>
+      <td>0.17</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.27</td>
+      <td>0.14</td>
+    </tr>
+    <tr>
+      <td>mutabletuple</td>
+      <td>48</td>
+      <td>0.24</td>
+      <td></td>
+      <td></td>
+      <td>0.18</td>
+      <td>0.19</td>
+      <td></td>
+      <td></td>
+      <td>0.27</td>
+      <td>0.14</td>
+    </tr>
+    <tr>
+      <td>tuple</td>
+      <td>64</td>
+      <td>0.13</td>
+      <td></td>
+      <td></td>
+      <td>0.13</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.25</td>
+      <td>0.15</td>
+    </tr>
+    <tr>
+      <td>namedtuple</td>
+      <td>64</td>
+      <td>0.75</td>
+      <td>0.21</td>
+      <td></td>
+      <td>0.16</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.25</td>
+      <td>0.19</td>
+    </tr>
+    <tr>
+      <td>class+slots</td>
+      <td>56</td>
+      <td>0.46</td>
+      <td>0.1</td>
+      <td>0.11</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>dataobject</td>
+      <td>40</td>
+      <td>0.57</td>
+      <td>0.1</td>
+      <td>0.1</td>
+      <td>0.17</td>
+      <td>0.2</td>
+      <td></td>
+      <td></td>
+      <td>0.26</td>
+      <td>0.18</td>
+    </tr>
+    <tr>
+      <td>dataobject+fast_new</td>
+      <td>40</td>
+      <td>0.24</td>
+      <td>0.1</td>
+      <td>0.1</td>
+      <td>0.17</td>
+      <td>0.19</td>
+      <td></td>
+      <td></td>
+      <td>0.26</td>
+      <td>0.17</td>
+    </tr>
+    <tr>
+      <td>dataobject+gc</td>
+      <td>56</td>
+      <td>0.56</td>
+      <td>0.1</td>
+      <td>0.1</td>
+      <td>0.17</td>
+      <td>0.19</td>
+      <td></td>
+      <td></td>
+      <td>0.26</td>
+      <td>0.19</td>
+    </tr>
+    <tr>
+      <td>dataobject+fast+gc</td>
+      <td>56</td>
+      <td>0.27</td>
+      <td>0.1</td>
+      <td>0.1</td>
+      <td>0.16</td>
+      <td>0.19</td>
+      <td></td>
+      <td></td>
+      <td>0.26</td>
+      <td>0.2</td>
+    </tr>
+    <tr>
+      <td>dict</td>
+      <td>184</td>
+      <td>0.27</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.19</td>
+      <td>0.22</td>
+      <td>0.28</td>
+      <td>0.19</td>
+    </tr>
+    <tr>
+      <td>dataobject+fast+map</td>
+      <td>40</td>
+      <td>0.24</td>
+      <td>0.1</td>
+      <td>0.1</td>
+      <td></td>
+      <td></td>
+      <td>0.21</td>
+      <td>0.29</td>
+      <td>0.26</td>
+      <td>0.18</td>
+    </tr>
+  </tbody>
+</table>
+
 
 Main repository for `recordclass` is on [bitbucket](https://bitbucket.org/intellimath/recordclass). 
 
@@ -268,7 +600,7 @@ One can't remove field's value:
 The instances has a minimum memory footprint that is possible for CPython objects, which consist only of Python objects:
 
     >>> sys.getsizeof(p) # the output below for python 3.8+ (64bit)
-    32
+    40
     >>> p.__sizeof__() == sys.getsizeof(p) # no additional space for cyclic GC support
     True    
 
@@ -296,7 +628,8 @@ By default subclasses of dataobject are mutable. If one want make it immutable t
     . . . . . . . . . . . . . 
     TypeError: item is readonly
 
-By default subclasses of dataobject are not iterable by default. If one want make it iterable then there is the option `iterable=True`:
+By default subclasses of dataobject are not iterable by default.
+If one want make it iterable then there is the option `iterable=True`:
 
     class Point(dataobject, iterable=True):
         x: int
@@ -355,7 +688,23 @@ The followings timings explain (in jupyter notebook) boosting effect of `fast_ne
     10.4 ms ± 426 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
     
 The downside of `fast_new=True` option is less options for inspection of the instance.
-    
+
+### Using dataobject-based classes with mapping protocol
+
+    class FastMapingPoint(dataobject, mapping=True, fast_new=True):
+        x: int
+        y: int
+
+or
+
+    FastMapingPoint = make_dataclass("FastMapingPoint", [("x", int), ("y", int)], mapping=True, fast_new=True)
+
+    >>> p = FastMappingPoint(1,2)
+    >>> print(p['x'], p['y'])
+    1 2
+    >>> sys.getsizeof(p) # the output below for python 3.10 (64bit)
+    32
+
 ### Using dataobject-based classes for recursive data without reference cycles
 
 There is the option `deep_dealloc` (default value is `True`) for deallocation of recursive datastructures. 
@@ -394,6 +743,34 @@ There is builtin more fast deallocation method using finalization mechanizm when
 For more details see notebook [example_datatypes](examples/example_datatypes.ipynb).
 
 ### Changes:
+
+#### 0.18.0.1
+
+* Exclude test_dataobject_match.py (for testing `match` statement) for python < 3.10.
+
+#### 0.18
+
+* Python 3.11 support.
+* Adapt data object to take benefit from bytecode specialization in 3.11.
+* Fix issue for argument with default value in `__new__`, which havn't `__repr__`
+  that can be interpreted as valid python expression
+  for creation of the default value.
+* Add support for typing.ClassVar.
+* Add `Py_TPFLAGS_SEQUENCE`  and `Py_TPFLAGS_MAPPING`.
+* Add `__match_args__`  to support match protocol for dataobject-based subclasses.
+
+#### 0.17.5
+
+* Make to compile, to build and to test successfully for python 3.11.
+
+#### 0.17.4
+
+* Fixed error with missing `_PyObject_GC_Malloc` in 3.11.
+
+#### 0.17.3
+
+* Fix compatibility issue: restore gnu98 C-syntax.
+* Fix remained issues with use of "Py_SIZE(op)" and "Py_TYPE(op)" as l-value.
 
 #### 0.17.2
 

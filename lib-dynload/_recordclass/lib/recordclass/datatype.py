@@ -29,17 +29,35 @@ if 'PyPy' in _sys.version:
     is_pypy = True
 else:
     is_pypy = False
-
+    
+import sys as _sys
+_PY36 = _sys.version_info[:2] >= (3, 6)
+_PY37 = _sys.version_info[:2] >= (3, 7)
+_PY310 = _sys.version_info[:2] >= (3, 10)
+_PY311 = _sys.version_info[:2] >= (3, 11)
+    
+    
+import typing
+if _PY37:
+    def _is_classvar(a_type):
+        # P.S.: it moved here from dataclasses for now
+        return (a_type is typing.ClassVar
+                or (type(a_type) is typing._GenericAlias
+                    and a_type.__origin__ is typing.ClassVar))
+else:
+    def _is_classvar(a_type):
+        # P.S.: it moved here from dataclasses for now
+        return a_type is typing._ClassVar #  or issubclass(a_type, typing.ClassVar)
 
 def clsconfig(*, sequence=False, mapping=False, readonly=False,
               use_dict=False, use_weakref=False, iterable=False, 
-              hashable=False, gc=False, deep_dealloc=False, mapping_only=False):
+              hashable=False, gc=False, deep_dealloc=False):
     from ._dataobject import _clsconfig
     def func(cls, *, sequence=sequence, mapping=mapping, readonly=readonly, use_dict=use_dict,
                   use_weakref=use_weakref, iterable=iterable, hashable=hashable, _clsconfig=_clsconfig):
         _clsconfig(cls, sequence=sequence, mapping=mapping, readonly=readonly, use_dict=use_dict,
                         use_weakref=use_weakref, iterable=iterable, hashable=hashable, gc=gc, 
-                        deep_dealloc=deep_dealloc, mapping_only=mapping_only)
+                        deep_dealloc=deep_dealloc)
         return cls
     return func
 
@@ -70,7 +88,6 @@ class datatype(type):
     """
     Metatype for creating classes based on dataobject.
     """
-
     def __new__(metatype, typename, bases, ns, *,
                 gc=False, fast_new=False, readonly=False, iterable=False,
                 deep_dealloc=False, sequence=False, mapping=False,
@@ -82,6 +99,8 @@ class datatype(type):
         from sys import intern as _intern
         if is_pypy:
             from ._dataobject import _hash_func, _iter_func
+        if _PY311:
+            from ._dataobject import member_new
 
         options = ns.get('__options__', None)
         if options is None:
@@ -111,13 +130,20 @@ class datatype(type):
 
         if '__fields__' in ns:
             fields = ns['__fields__']
+            if annotations:
+                for fn in fields:
+                    if _is_classvar(annotations.get(fn, None)):
+                        raise TypeError(f'__fields__ contain  {fn}:ClassVar')
             if not isinstance(fields, int_type):
-                field_dicts = {fn:{} for fn in fields}
+                fields_dict = {fn:{} for fn in fields}
             else:
-                field_dicts = {}
+                fields_dict = {}
+                
         else:
-            fields = tuple(annotations)
-            field_dicts = {fn:{'type':tp} for fn,tp in annotations.items()}
+            fields_dict = {fn:{'type':tp} \
+                           for fn,tp in annotations.items() \
+                           if not _is_classvar(tp)}
+            fields = tuple(fields_dict)
             
         has_fields = True
         if isinstance(fields, int_type):
@@ -154,7 +180,9 @@ class datatype(type):
 
         if has_fields:
             if annotations:
-                annotations = {fn:annotations[fn] for fn in fields if fn in annotations}
+                annotations = {fn:annotations[fn] \
+                               for fn in fields \
+                               if fn in annotations}
 
             if '__dict__' in fields:                
                 fields.remove('__dict__')
@@ -162,8 +190,8 @@ class datatype(type):
                     del annotations['__dict__']
                 use_dict = True
                 options['use_dict'] = True
-                # import warnings
-                # warnings.warn("Use 'use_dict=True' instead")
+                import warnings
+                warnings.warn("Use 'use_dict=True' instead")
 
             if '__weakref__' in fields:
                 fields.remove('__weakref__')
@@ -171,8 +199,8 @@ class datatype(type):
                     del annotations['__weakref__']
                 use_weakref = True
                 options['use_weakref'] = True
-                # import warnings
-                # warnings.warn("Use 'use_weakref=True' instead")
+                import warnings
+                warnings.warn("Use 'use_weakref=True' instead")
 
             if '__defaults__' in ns:
                 defaults = ns['__defaults__']
@@ -194,7 +222,8 @@ class datatype(type):
                         f['readonly'] = True
                 else:
                     for fn in readonly:
-                        fields_dict[fn]['readonly'] = True      
+                        fields_dict[fn]['readonly'] = True
+            fields = [f for f in fields if f in fields_dict]
                                         
             if bases and (len(bases) > 1 or bases[0] is not dataobject):
                 _fields, _fields_dict, _use_dict, _use_weakref = collect_info_from_bases(bases)
@@ -236,23 +265,20 @@ class datatype(type):
 
                 ns['__new__'] = __new__
                 
-        if has_fields:
-            if mapping_only:
-                ns['__fields_dict__'] = {fn:i for i,fn in enumerate(fields)}
-            else:
-                for i, name in enumerate(fields):
-                    fd = fields_dict[name]
-                    fd_readonly = fd.get('readonly', False)
+        if has_fields and not _PY311:
+            for i, name in enumerate(fields):
+                fd = fields_dict[name]
+                fd_readonly = fd.get('readonly', False)
+                if fd_readonly:
+                    ds = _ds_ro_cache.get(i, None)
+                else:
+                    ds = _ds_cache.get(i, None)
+                if ds is None:
                     if fd_readonly:
-                        ds = _ds_ro_cache.get(i, None)
+                        ds = dataobjectproperty(i, True)
                     else:
-                        ds = _ds_cache.get(i, None)
-                    if ds is None:
-                        if fd_readonly:
-                            ds = dataobjectproperty(i, True)
-                        else:
-                            ds = dataobjectproperty(i)
-                    ns[name] = ds
+                        ds = dataobjectproperty(i, False)
+                ns[name] = ds
                     
         if '__repr__' not in ns:
             if mapping_only:
@@ -306,10 +332,23 @@ class datatype(type):
             ns['__defaults__'] = defaults
             ns['__annotations__'] = annotations
             
+            if _PY310:
+                ns['__match_args__'] = fields
+            
             if '__doc__' not in ns:
                 ns['__doc__'] = _make_cls_doc(typename, fields, annotations, defaults, use_dict)
                 
         cls = type.__new__(metatype, typename, bases, ns)
+
+        if has_fields and _PY311:
+            for i, name in enumerate(fields):
+                fd = fields_dict[name]
+                fd_readonly = fd.get('readonly', False)
+                if fd_readonly:
+                    ds = member_new(cls, name, i, 1)
+                else:
+                    ds = member_new(cls, name, i, 0)
+                setattr(cls, name, ds)
         
         _dataobject_type_init(cls)
         
@@ -319,18 +358,18 @@ class datatype(type):
                         gc=gc, deep_dealloc=deep_dealloc, mapping_only=mapping_only)
         return cls
     
-    def __delattr__(cls, name):
-        from ._dataobject import dataobjectproperty
-        if name in cls.__dict__:
-            o = getattr(cls, name)
-            if type(o) is dataobjectproperty or name in ('__fields__', '__defaults__'):
-                raise AttributeError(f"Attribute {name} of the class {cls.__name__} can't be deleted")
-        type.__delattr__(cls, name)
+#     def __delattr__(cls, name):
+#         from ._dataobject import dataobjectproperty
+#         if name in cls.__dict__:
+#             o = getattr(cls, name)
+#             if type(o) is dataobjectproperty or name in ('__fields__', '__defaults__'):
+#                 raise AttributeError(f"Attribute {name} of the class {cls.__name__} can't be deleted")
+#         type.__delattr__(cls, name)
         
-    def __setattr__(cls, name, ob):
-        if name in ('__fields__', '__defaults__'):
-            raise AttributeError(f"Attribute {name} of the class {cls.__name__} can't be modified")
-        type.__setattr__(cls, name, ob)
+#     def __setattr__(cls, name, ob):
+#         if name in ('__fields__', '__defaults__'):
+#             raise AttributeError(f"Attribute {name} of the class {cls.__name__} can't be modified")
+#         type.__setattr__(cls, name, ob)
 
 def _make_new_function(typename, fields, defaults, annotations, use_dict):
 
@@ -338,7 +377,7 @@ def _make_new_function(typename, fields, defaults, annotations, use_dict):
 
     if fields and defaults:
         fields2 = [fn for fn in fields if fn not in defaults] + \
-                  ["%s=%r" % (fn,defaults[fn]) for fn in fields if fn in defaults]
+                  ["%s=%r" % (fn,None) for fn in fields if fn in defaults]
     else:
         fields2 = fields
 
@@ -368,6 +407,9 @@ def __new__(_cls_, {joined_fields2}):
 
     if annotations:
         __new__.__annotations__ = annotations
+        
+    if defaults:
+        __new__.__defaults__ = tuple(defaults.values())
 
     return __new__
 

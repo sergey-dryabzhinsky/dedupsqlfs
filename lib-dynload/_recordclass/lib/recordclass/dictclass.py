@@ -27,7 +27,7 @@ from .utils import check_name, collect_info_from_bases
 
 __all__ = 'make_dictclass', 'DictclassStorage'
 
-def make_dictclass(typename, fields=None, defaults=None, bases=None, namespace=None, *,
+def make_dictclass(typename, fields, defaults=None, *, bases=None, namespace=None,
                    readonly=False, module=None, fast_new=True):
 
     """Returns a new class with named fields and small memory footprint.
@@ -116,9 +116,9 @@ def make_dictclass(typename, fields=None, defaults=None, bases=None, namespace=N
     cls = datatype(typename, bases, ns, 
                    gc=False, fast_new=fast_new,
                    readonly=readonly, iterable=iterable,
-                   mapping=False, sequence=False,
+                   mapping=True, sequence=False,
                    use_dict=False, use_weakref=False,
-                   hashable=False, mapping_only=True,
+                   hashable=False, 
                    )
 
     return cls

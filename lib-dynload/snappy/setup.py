@@ -47,7 +47,7 @@ if ccompiler.get_default_compiler() == "msvc":
     else:
         extra_compile_args.insert(0, "/Ot")
 else:
-    extra_compile_args = ["-Wall", "-DFORTIFY_SOURCE=2", "-fstack-protector"]
+    extra_compile_args = ["-Wall", "-D_FORTIFY_SOURCE=2", "-fstack-protector"]
     if EXTRA_OPT:
         extra_compile_args.insert(0, "-march=native")
         extra_compile_args.insert(0, "-O3")

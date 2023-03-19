@@ -274,24 +274,24 @@ static struct PyModuleDef moduledef = {
 };
 
 #define INITERROR return NULL
-PyObject *PyInit__zstd(void)
+PyObject *PyInit_zstd(void)
 
 #else
 #define INITERROR return
-void init_zstd(void)
+void initzstd(void)
 
 #endif
 {
 #if PY_MAJOR_VERSION >= 3
     PyObject *module = PyModule_Create(&moduledef);
 #else
-    PyObject *module = Py_InitModule("_zstd", ZstdMethods);
+    PyObject *module = Py_InitModule("zstd", ZstdMethods);
 #endif
     if (module == NULL) {
         INITERROR;
     }
 
-    ZstdError = PyErr_NewException("_zstd.Error", NULL, NULL);
+    ZstdError = PyErr_NewException("zstd.Error", NULL, NULL);
     if (ZstdError == NULL) {
         Py_DECREF(module);
         INITERROR;

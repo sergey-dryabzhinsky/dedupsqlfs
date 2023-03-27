@@ -27,6 +27,7 @@ from setuptools import setup, find_packages
 from setuptools.command.build_ext import build_ext
 from setuptools.extension import Extension
 import sys
+import os
 
 _PY310 = sys.version_info[:2] >= (3, 10)
 

@@ -56,6 +56,20 @@ ext_modules = [
     ),
 ]
 
+EXTRA_OPT="RC_EXTRAOPT" in os.environ
+if "--extra-optimization" in sys.argv:
+    # Support legacy output format functions
+    EXTRA_OPT=True
+    sys.argv.remove("--extra-optimization")
+
+if EXTRA_OPT:
+    extra_compile_args.insert(0, "-march=native")
+    extra_compile_args.insert(0, "-O3")
+else:
+    extra_compile_args.insert(0, "-O2")
+
+
+
 description = """Mutable variant of namedtuple -- recordclass, which support assignments, and other memory saving variants."""
 
 with open('README.md', encoding='utf-8') as f:

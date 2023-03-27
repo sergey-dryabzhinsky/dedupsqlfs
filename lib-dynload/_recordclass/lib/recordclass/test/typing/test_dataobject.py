@@ -7,7 +7,7 @@ import gc
 import weakref
 
 from recordclass import make_dataclass, datatype, as_dataclass
-from recordclass import dataobject
+from recordclass import dataobject, datatype
 from recordclass import asdict
 
 # _PY36 = _sys.version_info[:2] >= (3, 6)
@@ -34,12 +34,6 @@ class TestPickle2(dataobject):
 class TestPickle3(dataobject):
     __fields__  = 'x', 'y', 'z', '__dict__'
 
-# class TestPickleVar2(datatuple):
-#     __fields__ = 'x', 'y', 'z'
-
-# class TestPickleVar3(datatuple):
-#     __fields__  = 'x', 'y', 'z', '__dict__'
-    
 class TestPickle22(dataobject):
     x:int
     y:int
@@ -51,7 +45,24 @@ class TestPickle33(dataobject):
     z:int
     __dict__:dict
     
+class extended_dataobject(dataobject):
+    def __init__(self, *args, **kwargs): 
+        super().__init__(*args, **kwargs)
+
+class Param(extended_dataobject):
+    x:dict = {'a':1, 'b':2}
+    y:tuple = (1,2)                
+
 class DataObjectTest3(unittest.TestCase):
+
+    def test_dataobject_lists(self):
+        class A(dataobject):
+            x:object
+            y:object
+
+        print(A.__fields__)
+        a = A([1,2,3],[3,4,5])
+        print(a)
 
     def test_datatype_tp(self):
         class A(dataobject):
@@ -100,7 +111,7 @@ class DataObjectTest3(unittest.TestCase):
         with self.assertRaises(AttributeError):     
             a.z
         a = None
-        
+
     def test_datatype2_tp2(self):
         @as_dataclass()
         class A:
@@ -120,7 +131,7 @@ class DataObjectTest3(unittest.TestCase):
             with self.assertRaises(TypeError):     
                 weakref.ref(a)
         # print('*')
-        with self.assertRaises(AttributeError):     
+        with self.assertRaises(TypeError):     
             a.__dict__
         with self.assertRaises(AttributeError):     
             a.z = 3
@@ -135,7 +146,7 @@ class DataObjectTest3(unittest.TestCase):
 
             def dummy(self):
                 pass
-            
+
         self.assertEqual(A.__fields__, ('x','y'))
 
     def test_datatype4_tp(self):
@@ -191,7 +202,7 @@ class DataObjectTest3(unittest.TestCase):
         with self.assertRaises(AttributeError):     
             a.z
         a = None
-        
+
     def test_datatype_dict_tp(self):
         class A(dataobject):
             __fields__ = 'x', 'y', '__dict__', '__weakref__'
@@ -210,17 +221,18 @@ class DataObjectTest3(unittest.TestCase):
             self.assertNotEqual(A.__weakrefoffset__, 0)
             weakref.ref(a)
         self.assertEqual(a.__dict__, {})
-        
+
         a.z = 3
+        print(repr(a))
         self.assertEqual(a.z, a.__dict__['z'])
         self.assertEqual(repr(a), "A(x=1, y=2, **{'z': 3})")
         #a = None
-        
+
     def test_subclass_tp(self):
         class A(dataobject):
             x:int
             y:int
-                
+
         class B(A):
             pass
 
@@ -249,7 +261,7 @@ class DataObjectTest3(unittest.TestCase):
 
         class B(A):
             z:int
-                
+
         class C(B):
             pass
 
@@ -270,7 +282,6 @@ class DataObjectTest3(unittest.TestCase):
         with self.assertRaises(AttributeError):     
             c.__dict__
 
-
     def test_subclass3_tp(self):
         class A(dataobject):
             x:int
@@ -279,7 +290,7 @@ class DataObjectTest3(unittest.TestCase):
         class B:
             def norm_1(self):
                 return abs(self.x) + abs(self.y)
-            
+
         class C(A, B):
             pass
 
@@ -303,14 +314,14 @@ class DataObjectTest3(unittest.TestCase):
         class A(dataobject):
             x:int
             y:int
-                
+
         class B(A):
             z:int
-                
+
         class N:
             def norm_1(self):
                 return abs(self.x) + abs(self.y) + abs(self.z)
-                
+
         class C(B, N):
             pass
 
@@ -332,13 +343,13 @@ class DataObjectTest3(unittest.TestCase):
                 weakref.ref(c)
         with self.assertRaises(AttributeError):     
             c.__dict__
-            
+
     def test_defaults_tp(self):
         class A(dataobject):
             x:int = 100
             y:int = 200
             z:int = 300
-        
+
         # a1 = A()
         # self.assertEqual(repr(a1), "A(x=100, y=200, z=300)")
         # self.assertEqual(a1.x, 100)
@@ -354,25 +365,48 @@ class DataObjectTest3(unittest.TestCase):
         # self.assertEqual(a3.x, 1)
         # self.assertEqual(a3.y, 2)
         # self.assertEqual(a3.z, 300)
-        
+
     def test_subclass_defaults_tp(self):
         class A(dataobject):
             x:int
             y:int
-                
+
         class B(A):
-            x:int=0
+            y:int=0
 
         self.assertEqual(A.__fields__, ('x', 'y'))
-        self.assertEqual(A.__defaults__, {})
-                
+        self.assertEqual(A.__defaults__, (None,None))
+
         self.assertEqual(B.__fields__, ('x', 'y'))
-        self.assertEqual(B.__defaults__, {'x':0})
+        self.assertEqual(B.__defaults__, (None, 0))
         b = B(1)
+        self.assertEqual(b.x, 1)
+        self.assertEqual(b.y, 0)
+        self.assertEqual(repr(b), "B(x=1, y=0)")        
+
+    def test_subclass_defaults_2_tp(self):
+        class A(dataobject):
+            x:int=0
+            y:int=1
+
+        class B(A):
+            z:int=2
+
+        self.assertEqual(A.__fields__, ('x', 'y'))
+        self.assertEqual(A.__defaults__, (0,1))
+
+        self.assertEqual(B.__fields__, ('x', 'y', 'z'))
+        self.assertEqual(B.__defaults__, (0, 1, 2))
+        b = B()
         self.assertEqual(b.x, 0)
         self.assertEqual(b.y, 1)
-        self.assertEqual(repr(b), "B(x=0, y=1)")
-        
+        self.assertEqual(b.z, 2)
+        self.assertEqual(repr(b), "B(x=0, y=1, z=2)")        
+        b = B(1)
+        self.assertEqual(b.x, 1)
+        self.assertEqual(b.y, 1)
+        self.assertEqual(b.z, 2)
+        self.assertEqual(repr(b), "B(x=1, y=1, z=2)")        
         
     def test_keyword_args_tp(self):
         class A(dataobject):
@@ -384,7 +418,7 @@ class DataObjectTest3(unittest.TestCase):
             x:int
             y:int
             z:int
-        
+
         a = A(1,2,3)
         self.assertEqual(repr(a), "A(x=1, y=2, z=3)")
         self.assertEqual(a.x, 1)
@@ -400,7 +434,7 @@ class DataObjectTest3(unittest.TestCase):
         self.assertEqual(c.x, 1)
         self.assertEqual(c.y, 2)
         self.assertEqual(c.z, 3)
-            
+
     def test_keyword_args2_tp(self):
         class A(dataobject):
             __fields__ = 'x', 'y', 'z'
@@ -412,8 +446,7 @@ class DataObjectTest3(unittest.TestCase):
         a3 = A(1,"a",3)
         self.assertEqual(a3.x, 1)
         self.assertEqual(a3.y, "a")
-        self.assertEqual(a3.z, 3)
-            
+        self.assertEqual(a3.z, 3)            
 
     def test_keyword_args_defaults2_tp(self):
         class A(dataobject):
@@ -456,7 +489,7 @@ class DataObjectTest3(unittest.TestCase):
         self.assertEqual(a3.x, 1)
         self.assertEqual(a3.y, 2)
         self.assertEqual(a3.z, 3)
-        
+
     def test_datatype_dict2_tp(self):
         class A(dataobject, use_dict=True, use_weakref=True):
             __fields__ = 'x', 'y'
@@ -469,19 +502,18 @@ class DataObjectTest3(unittest.TestCase):
 #         self.assertEqual(A.__weakrefoffset__, 40)
         weakref.ref(a)
         self.assertEqual(a.__dict__, {})
-        
+
         a.z = 3
         self.assertEqual(a.z, a.__dict__['z'])
-        a = None
-        
-        
+        a = None        
+
     def test_defaults2_tp(self):
         class A(dataobject):
             __fields__ = ('x', 'y', 'z')
             x = 100
             y = 200
             z = 300
-                
+
         a1 = A()
         self.assertEqual(a1.x, 100)
         self.assertEqual(a1.y, 200)
@@ -501,36 +533,18 @@ class DataObjectTest3(unittest.TestCase):
             x = 100
             y = 200
             z = 300
-            
-        # class B(A):
-        #     __fields__ = 'z',
-        #     z = 400
-        
-        # self.assertEqual(B.__fields__, ('x','y','z'))
-        # a1 = B()
-        # self.assertEqual(a1.x, 100)
-        # self.assertEqual(a1.y, 200)
-        # self.assertEqual(a1.z, 400)
-        # a2 = B(1)
-        # self.assertEqual(a2.x, 1)
-        # self.assertEqual(a2.y, 200)
-        # self.assertEqual(a2.z, 400)
-        # a3 = B(1,2)
-        # self.assertEqual(a3.x, 1)
-        # self.assertEqual(a3.y, 2)
-        # self.assertEqual(a3.z, 400)
 
     def test_iter2_tp(self):
         class A(dataobject):
             __fields__ = 3
-        
+
         a=A(1, 2.0, "a")
         self.assertEqual(list(iter(a)), [1, 2.0, "a"])
 
     def test_iter3_tp(self):
         class A(dataobject, iterable=True):
             __fields__ = ('x', 'y', 'z')
-        
+
         a=A(1, 2.0, "a")
         self.assertEqual(a.x, 1)
         self.assertEqual(a.y, 2.0)
@@ -540,33 +554,33 @@ class DataObjectTest3(unittest.TestCase):
     def test_iter3_tp2(self):
         class A(dataobject, iterable=True):
             __fields__ = ('x', 'y', 'z')
-        
+
         a=A(1, 2.0, "a")
         self.assertEqual(a.x, 1)
         self.assertEqual(a.y, 2.0)
         self.assertEqual(a.z, "a")        
         self.assertEqual(list(iter(a)), [1, 2.0, "a"])
-        
+
     def test_iter4_tp(self):
         class A(dataobject):
             __fields__ = 'x', 'y', 'z'
-        
+
         a=A(1, 2.0, "a")
         self.assertEqual(a.x, 1)
         self.assertEqual(a.y, 2.0)
         self.assertEqual(a.z, "a")        
         with self.assertRaises(TypeError):
             iter(a)
-        
+
     def test_enable_gc_tp(self):
 
         class A(dataobject):
             __fields__ = 'x', 'y', 'z'
-        
+
 #         @clsconfig(gc=True)
         class B(dataobject, gc=True):
             __fields__ = 'x', 'y', 'z'
-            
+
         a = A(1,2,3)
         b = B(1,2,3)
         self.assertEqual(a.x, b.x)
@@ -617,7 +631,39 @@ class DataObjectTest3(unittest.TestCase):
                 tmp = dumps(p, protocol)
                 q = loads(tmp)
                 self.assertEqual(p, q)
-                
+
+    def test_pickle44_tp(self):
+
+        p = Param(10, 20)
+        for module in (pickle,):
+            loads = getattr(module, 'loads')
+            dumps = getattr(module, 'dumps')
+            for protocol in range(-1, module.HIGHEST_PROTOCOL + 1):
+                tmp = dumps(p, protocol)
+                q = loads(tmp)
+                self.assertEqual(p, q)
+
+    def test_dill(self):
+        print('*** DILL ***')
+        try:
+            import dill
+        except:
+            return
+
+        import warnings
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+
+            p = Param(10, 20)
+            s = dill.dumps(p)
+            print(s)
+            p1 = dill.loads(s)
+            if w:
+                print(w)
+            self.assertEqual(p.x, p1.x)
+            self.assertEqual(p.y, p1.y)
+
     def test_invalid_defaults_tp(self):
         import copy
 
@@ -632,18 +678,18 @@ class DataObjectTest3(unittest.TestCase):
         class A(dataobject):
             x:int
             y:int
-                    
+
         a=A(x=1,y=2)
         b = copy.copy(a)
         self.assertEqual(a, b)
         c = copy.deepcopy(a)
         self.assertEqual(a, c)
-        
+
     def test_signature_tp(self):
-        class A(dataobject):
+        class A(dataobject, fast_new=False):
             x:int
             y:int=2
-                
+
         import inspect
         s = inspect.signature(A)
         px = s.parameters['x']
@@ -654,7 +700,7 @@ class DataObjectTest3(unittest.TestCase):
         self.assertEqual(py.name, 'y')
         self.assertEqual(py.annotation, int)
         self.assertEqual(py.default, 2)
-        
+
     def test_fast_new_tp(self):
         class A(dataobject, fast_new=True):
             __fields__ = 'x', 'y'
@@ -675,7 +721,7 @@ class DataObjectTest3(unittest.TestCase):
         a = A(**{'x':1, 'y':2})
         self.assertEqual(a.x, 1)
         self.assertEqual(a.y, 2)
-            
+
     def test_missing_args1_tp(self):
         class A(dataobject, fast_new=True):
             __fields__ = 'a','b','c'
@@ -684,7 +730,7 @@ class DataObjectTest3(unittest.TestCase):
         self.assertEqual(a.a, 1)
         self.assertEqual(a.b, None)
         self.assertEqual(a.c, None)
-        
+
     def test_missing_args2_tp(self):
         class A(dataobject, fast_new=True):
             __fields__ = 'a','b','c'
@@ -737,35 +783,53 @@ class DataObjectTest3(unittest.TestCase):
                 ll.append(i)
 
             del ll
-        
+
     def test_readonly(self):
-#         @clsconfig(readonly=True)
         class A(dataobject, readonly=True):
             x:int
             y:int
-            
+
         a = A(1,2)
         with self.assertRaises(AttributeError):        
             a.x = -1
         with self.assertRaises(AttributeError):        
             a.y = -2
 
-            
+    def test_readonly_2(self):
+        class A(dataobject, readonly=True, use_dict=True):
+            x:int
+            y:int
+
+        a = A(1,2, z=3)
+        self.assertEqual(a.x, 1)
+        self.assertEqual(a.y, 2)
+        self.assertEqual(a.z, 3)
+
+    def test_readonly_3(self):
+        class A(dataobject, readonly=True):
+            x:int
+            y:int
+            z:int
+
+        a = A(1,2, z=3)
+        self.assertEqual(a.x, 1)
+        self.assertEqual(a.y, 2)
+        self.assertEqual(a.z, 3)
+
     def test_default_arg_enum(self):
         from enum import Enum, auto
-        
+
         class Color(Enum):
             RED = auto()
-            
+
         class Point(dataobject):
             x: float
             y: float
-            color: Color = Color.RED
-        
-        
+            color: Color = Color.RED        
+
         pt = Point(1,2)
         self.assertEqual(pt.color, Color.RED)
-    
+
     if _PY37:
         def test_classvar_1(self):
             from typing import ClassVar
@@ -779,7 +843,7 @@ class DataObjectTest3(unittest.TestCase):
             self.assertEqual(Point.__annotations__, {'x':float,'y':float})   
             pt = Point(1,2)
             self.assertEqual((pt.x, pt.y), (1, 2))
-            
+
         def test_classvar_2(self):
             from typing import ClassVar
             class Point(dataobject):
@@ -792,10 +856,147 @@ class DataObjectTest3(unittest.TestCase):
             self.assertEqual(Point.__annotations__, {'x':float,'y':float})            
             pt = Point(1,2)
             self.assertEqual((pt.x, pt.y), (1, 2))
-            
-                
+
+    def test_initialize_in_init(self):
+        class A(dataobject):
+            x:int
+            y:int
+
+            def __init__(self, x, y):
+                print("__init__")
+                self.x = 2*x
+                self.y = 3*y
+
+        a = A(1,2)
+        self.assertEqual(a.x, 2)
+        self.assertEqual(a.y, 6)
+
+    def test_initialize_in_init2(self):
+        class A(dataobject):
+            x:int
+            y:int
+
+            def __init__(self, *args, **kwds):
+                print("__init__")
+                self.x = 2*kwds['x']
+                self.y = 3*kwds['y']
+
+        a = A(x=1,y=2)
+        self.assertEqual(a.x, 2)
+        self.assertEqual(a.y, 6)
+
+    def test_initialize_in_init3(self):
+        class A(dataobject):
+            x:int
+            y:int
+
+            def __init__(self, x, y=0):
+                print("__init__")
+                self.x = 2*x
+                self.y = 3*y
+
+        a = A(1,y=2)
+        self.assertEqual(a.x, 2)
+        self.assertEqual(a.y, 6)
+        b = A(1)
+        self.assertEqual(b.x, 2)
+        self.assertEqual(b.y, 0)
+
+    def test_initialize_in_init4(self):
+        class A(dataobject):
+            x:int
+            y:int
+
+            def __init__(self, x):
+                print("__init__")
+                self.x = 2*x
+                self.y = self.x + 2
+
+        b = A(1)
+        self.assertEqual(b.x, 2)
+        self.assertEqual(b.y, 4)
+
+    def test_initialize_in_init5(self):
+        class A0(dataobject):
+            x:int
+            y:int
+
+            def __init__(self, x, y):
+                self.x = x
+                self.y = y
+
+        class A(A0):
+            def __init__(self, x, y):
+                print("__init__")
+                pass
+
+        a = A(1,2)
+        self.assertEqual(a.x, None)
+        self.assertEqual(a.y, None)
+
+#     def test_post_init_1(self):
+#         class A(dataobject):
+#             x:int
+#             y:int
+
+#             def __post_init__(self):
+#                 print("__post_init__")
+#                 self.x *= 2
+#                 self.y *= 3
+
+#         a = A(2,3)
+#         self.assertEqual(a.x, 4)
+#         self.assertEqual(a.y, 9)
+
+#     def test_post_init_2(self):
+#         class A(dataobject):
+#             x:int
+#             y:int
+
+#             def __post_init__(self):
+#                 print("__post_init__")
+#                 raise AttributeError("")
+
+#         with self.assertRaises(AttributeError):        
+#             a = A(1,2)
+
+#     def test_post_init_3(self):
+#         class A(dataobject):
+#             x:int
+#             y:int
+
+#             def __init__(self, x, y):
+#                 print("__init__")
+#                 self.x = x
+#                 self.y = y
+#             #
+#             def __post_init__(self):
+#                 print("__post_init__")
+#                 self.x *= 2
+#                 self.y *= 3
+
+#         a = A(2,3)
+#         self.assertEqual(a.x, 4)
+#         self.assertEqual(a.y, 9)
+
+#     def test_post_init_4(self):
+#         class A(dataobject):
+#             x:int
+#             y:int
+
+#             def __init__(self, x, y):
+#                 print("__init__")
+#                 self.x = x
+#                 self.y = y
+#             #
+#             def __post_init__(self):
+#                 print("__post_init__")
+#                 raise AttributeError("")
+
+#         with self.assertRaises(AttributeError):        
+#             a = A(1,2)
+
 def main():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(DataObjectTest3))
     return suite
-

@@ -25,28 +25,19 @@
 __all__ = 'clsconfig', 'datatype'
 
 import sys as _sys
-if 'PyPy' in _sys.version:
-    is_pypy = True
-else:
-    is_pypy = False
-    
-import sys as _sys
 _PY36 = _sys.version_info[:2] >= (3, 6)
 _PY37 = _sys.version_info[:2] >= (3, 7)
 _PY310 = _sys.version_info[:2] >= (3, 10)
 _PY311 = _sys.version_info[:2] >= (3, 11)
     
-    
 import typing
 if _PY37:
     def _is_classvar(a_type):
-        # P.S.: it moved here from dataclasses for now
         return (a_type is typing.ClassVar
                 or (type(a_type) is typing._GenericAlias
                     and a_type.__origin__ is typing.ClassVar))
 else:
     def _is_classvar(a_type):
-        # P.S.: it moved here from dataclasses for now
         return a_type is typing._ClassVar #  or issubclass(a_type, typing.ClassVar)
 
 def clsconfig(*, sequence=False, mapping=False, readonly=False,
@@ -62,10 +53,10 @@ def clsconfig(*, sequence=False, mapping=False, readonly=False,
     return func
 
 def _matching_annotations_and_defaults(annotations, defaults):
-    first_default = 0
+    first_default = False
     for name in annotations:
         if name in defaults:
-            first_default = 1
+            first_default = True
         else:
             if first_default:
                 raise TypeError('A field without default value appears after a field with default value')
@@ -89,16 +80,15 @@ class datatype(type):
     Metatype for creating classes based on dataobject.
     """
     def __new__(metatype, typename, bases, ns, *,
-                gc=False, fast_new=False, readonly=False, iterable=False,
+                gc=False, fast_new=True, readonly=False, iterable=False,
                 deep_dealloc=False, sequence=False, mapping=False,
-                use_dict=False, use_weakref=False, hashable=False, mapping_only=False):
+                use_dict=False, use_weakref=False, hashable=False, 
+                mapping_only=False):
 
         from .utils import check_name, collect_info_from_bases
         from ._dataobject import dataobject
         from ._dataobject import _clsconfig, _dataobject_type_init, dataobjectproperty
         from sys import intern as _intern
-        if is_pypy:
-            from ._dataobject import _hash_func, _iter_func
         if _PY311:
             from ._dataobject import member_new
 
@@ -188,8 +178,7 @@ class datatype(type):
                 fields.remove('__dict__')
                 if '__dict__' in annotations:
                     del annotations['__dict__']
-                use_dict = True
-                options['use_dict'] = True
+                use_dict = options['use_dict'] = True
                 import warnings
                 warnings.warn("Use 'use_dict=True' instead")
 
@@ -197,25 +186,24 @@ class datatype(type):
                 fields.remove('__weakref__')
                 if '__weakref__' in annotations:
                     del annotations['__weakref__']
-                use_weakref = True
-                options['use_weakref'] = True
+                use_weakref = options['use_weakref'] = True
                 import warnings
                 warnings.warn("Use 'use_weakref=True' instead")
 
             if '__defaults__' in ns:
-                defaults = ns['__defaults__']
+                defaults_dict = ns['__defaults__']
             else:
-                defaults = {f:ns[f] for f in fields if f in ns}
-            _matching_annotations_and_defaults(annotations, defaults)
-            
+                defaults_dict = {f:ns[f] for f in fields if f in ns}
+            _matching_annotations_and_defaults(annotations, defaults_dict)
+
             fields_dict = {}
             for fn in fields:
                 fields_dict[fn] = f = {}
                 if fn in annotations:
                     f['type'] = annotations[fn]
-                if fn in defaults:
-                    f['default'] = defaults[fn]
-                
+                if fn in defaults_dict:
+                    f['default'] = defaults_dict[fn]
+
             if readonly:
                 if type(readonly) is type(True):
                     for f in fields_dict.values():
@@ -224,12 +212,12 @@ class datatype(type):
                     for fn in readonly:
                         fields_dict[fn]['readonly'] = True
             fields = [f for f in fields if f in fields_dict]
-                                        
+
             if bases and (len(bases) > 1 or bases[0] is not dataobject):
                 _fields, _fields_dict, _use_dict, _use_weakref = collect_info_from_bases(bases)
                 use_dict = _use_dict or use_dict
                 use_weakref = _use_weakref or use_weakref
-                _defaults = {fn:fd['default'] for fn,fd in _fields_dict.items() if 'default' in fd} 
+                _defaults_dict = {fn:fd['default'] for fn,fd in _fields_dict.items() if 'default' in fd} 
                 _annotations = {fn:fd['type'] for fn,fd in _fields_dict.items() if 'type' in fd} 
 
                 if fields:
@@ -240,31 +228,24 @@ class datatype(type):
                 _fields_dict.update(fields_dict)
                 fields_dict = _fields_dict
 
-                _defaults.update(defaults)
-                defaults = _defaults
+                _defaults_dict.update(defaults_dict)
+                defaults_dict = _defaults_dict
 
                 _annotations.update(annotations)
                 annotations = _annotations
                 del _fields, _fields_dict, _use_dict
-                
+
             fields = tuple(fields)
             n_fields = len(fields)
-                
-            if use_dict:
-                options['use_dict'] = use_dict
-            if use_weakref:
-                options['use_weakref'] = use_weakref
 
-            if fast_new:
-                options['fast_new'] = fast_new
             if has_fields and not fast_new and '__new__' not in ns:
-                __new__ = _make_new_function(typename, fields, defaults, annotations, use_dict)
+                __new__ = _make_new_function(typename, fields, defaults_dict, annotations, use_dict)
                 __new__.__qualname__ = typename + '.' + '__new__'
                 if not __new__.__doc__:
-                    __new__.__doc__ = _make_cls_doc(typename, fields, annotations, defaults, use_dict)
+                    __new__.__doc__ = _make_cls_doc(typename, fields, annotations, defaults)
 
                 ns['__new__'] = __new__
-                
+
         if has_fields and not _PY311:
             for i, name in enumerate(fields):
                 fd = fields_dict[name]
@@ -279,44 +260,7 @@ class datatype(type):
                     else:
                         ds = dataobjectproperty(i, False)
                 ns[name] = ds
-                    
-        if '__repr__' not in ns:
-            if mapping_only:
-                def __repr__(self):
-                    fields = type(self).__fields__
-                    args = ', '.join((name + '=' + repr(self[name])) for name in fields) 
-                    kw = getattr(self, '__dict__', None)
-                    if kw:
-                        return f'{typename}({args}, **{kw})'
-                    else:
-                        return f'{typename}({args})'
-            else:
-                def __repr__(self):
-                    fields = type(self).__fields__
-                    args = ', '.join((name + '=' + repr(getattr(self, name))) for name in fields) 
-                    kw = getattr(self, '__dict__', None)
-                    if kw:
-                        return f'{typename}({args}, **{kw})'
-                    else:
-                        return f'{typename}({args})'
-            __repr__.__qual_name__ =  f'{typename}.__repr__'
 
-            ns['__repr__'] = __repr__
-
-            if '__str__' not in ns:
-                ns['__str__'] = __repr__
-                
-        if is_pypy:
-            if hashable and '__hash__' not in ns:
-                def __hash_func__(self):
-                    return _hash_func(self)
-                ns['__hash__'] = __hash_func__
-
-            if iterable and '__iter__' not in ns:
-                def __iter_func__(self):
-                    return _iter_func(self)
-                ns['__iter__'] = __iter_func__
-                
         module = ns.get('__module__', None)
         if module is None:
             try:
@@ -326,18 +270,37 @@ class datatype(type):
                 pass
         else:
             pass
-
+        
+        has_init = False        
+        if '__init__' in ns:
+            has_init = True
+        else:
+            for base in bases:
+                if base != dataobject and '__init__' in base.__dict__:
+                    has_init = True
+                    ns['__init__'] = base.__dict__['__init__']
+                    break
+                    
         if has_fields:
+            defaults = tuple([defaults_dict.get(fn, None) for fn in fields])
             ns['__fields__'] = fields
             ns['__defaults__'] = defaults
             ns['__annotations__'] = annotations
-            
+
             if _PY310:
                 ns['__match_args__'] = fields
-            
+
             if '__doc__' not in ns:
                 ns['__doc__'] = _make_cls_doc(typename, fields, annotations, defaults, use_dict)
-                
+
+        options.update(dict(
+                gc=gc, fast_new=fast_new, readonly=readonly, iterable=iterable,
+                deep_dealloc=deep_dealloc, sequence=sequence, mapping=mapping,
+                use_dict=use_dict, use_weakref=use_weakref, hashable=hashable, 
+                mapping_only=mapping_only))
+        
+        ns['__options__'] = options
+
         cls = type.__new__(metatype, typename, bases, ns)
 
         if has_fields and _PY311:
@@ -349,54 +312,60 @@ class datatype(type):
                 else:
                     ds = member_new(cls, name, i, 0)
                 setattr(cls, name, ds)
-        
+
         _dataobject_type_init(cls)
-        
+
         _clsconfig(cls, sequence=sequence, mapping=mapping, readonly=readonly,
                         use_dict=use_dict, use_weakref=use_weakref, 
                         iterable=iterable, hashable=hashable,
                         gc=gc, deep_dealloc=deep_dealloc, mapping_only=mapping_only)
         return cls
-    
-#     def __delattr__(cls, name):
-#         from ._dataobject import dataobjectproperty
-#         if name in cls.__dict__:
-#             o = getattr(cls, name)
-#             if type(o) is dataobjectproperty or name in ('__fields__', '__defaults__'):
-#                 raise AttributeError(f"Attribute {name} of the class {cls.__name__} can't be deleted")
-#         type.__delattr__(cls, name)
-        
-#     def __setattr__(cls, name, ob):
-#         if name in ('__fields__', '__defaults__'):
-#             raise AttributeError(f"Attribute {name} of the class {cls.__name__} can't be modified")
-#         type.__setattr__(cls, name, ob)
 
-def _make_new_function(typename, fields, defaults, annotations, use_dict):
+    def __delattr__(cls, name):
+        from ._dataobject import dataobjectproperty
+        if name in cls.__dict__:
+            o = getattr(cls, name)
+            if type(o) is dataobjectproperty or name in {'__fields__', '__defaults__', '__annotations__'}:
+                raise AttributeError(f"Attribute {name} of the class {cls.__name__} can't be deleted")
+        type.__delattr__(cls, name)
 
-    from ._dataobject import dataobject, new
+    def __setattr__(cls, name, ob):
+        if name in {'__fields__', '__defaults__', '__annotations__'}:
+            raise AttributeError(f"Attribute {name} of the class {cls.__name__} can't be modified")
+        type.__setattr__(cls, name, ob)
 
-    if fields and defaults:
-        fields2 = [fn for fn in fields if fn not in defaults] + \
-                  ["%s=%r" % (fn,None) for fn in fields if fn in defaults]
+def _make_new_function(typename, fields, defaults_dict, annotations, use_dict):
+
+    from ._dataobject import dataobject
+
+    if fields and defaults_dict:
+        fields2 = [fn for fn in fields if fn not in defaults_dict] + \
+                  ["%s=%r" % (fn,None) for fn in fields if fn in defaults_dict]
     else:
         fields2 = fields
 
     joined_fields = ', '.join(fields)
     joined_fields2 = ', '.join(fields2)
 
-    if use_dict:
-        new_func_def = f"""
-def __new__(_cls_, {joined_fields2}, **kw):
-    "Create new instance: {typename}({joined_fields2}, **kw)"
-    return _method_new(_cls_, {joined_fields}, **kw)
-"""
-    else:
-        new_func_def = f"""
+    new_func_def = f"""\
 def __new__(_cls_, {joined_fields2}):
     "Create new instance: {typename}({joined_fields2})"
     return _method_new(_cls_, {joined_fields})
 """
-    _method_new = new
+    
+    new_func_def_use_dict = f"""\
+def __new__(_cls_, {joined_fields2}, **kw):
+    "Create new instance: {typename}({joined_fields2}, **kw)"
+    return _method_new(_cls_, {joined_fields}, **kw)
+"""
+    
+    if use_dict:
+        new_func_def = new_func_def_use_dict
+
+    # if has_init:
+    #     _method_new = new_basic
+    # else:
+    _method_new = dataobject.__new__
 
     namespace = dict(_method_new=_method_new)
 
@@ -407,9 +376,9 @@ def __new__(_cls_, {joined_fields2}):
 
     if annotations:
         __new__.__annotations__ = annotations
-        
-    if defaults:
-        __new__.__defaults__ = tuple(defaults.values())
+
+    if defaults_dict:
+        __new__.__defaults__ = tuple(defaults_dict.values())
 
     return __new__
 
@@ -422,15 +391,17 @@ def _type2str(tp):
 def _make_cls_doc(typename, fields, annotations, defaults, use_dict):
 
     fields2 = []
-    for fn in fields:
+    for i, fn in enumerate(fields):
         if fn in annotations:
             tp = annotations[fn]
             fn_txt = "%s:%s" % (fn, (tp if type(tp) is str else _type2str(tp)))            
         else:
             fn_txt = fn
-        if fn in defaults:
-            fn_txt += "=%r" % defaults[fn]
+        defval = defaults[i]
+        if defval is not None:
+            fn_txt += "=%s" % repr(defval)
         fields2.append(fn_txt)
+
     joined_fields2 = ', '.join(fields2)
 
     if use_dict:

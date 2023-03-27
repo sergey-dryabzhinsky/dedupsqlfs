@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 # 
-# Copyright (c) <2015-2020> <Shibzukhov Zaur, szport at gmail dot com>
+# Copyright (c) <2015-2022> <Shibzukhov Zaur, szport at gmail dot com>
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,16 +22,17 @@
 
 
 from .datatype import datatype
-from ._dataobject import dataobject, astuple, asdict, make, clone, update
+from ._dataobject import dataobject, astuple, asdict, clone, update, make
 from ._litelist import litelist, litelist_fromargs
 from ._litetuple import litetuple, mutabletuple
 from .recordclass import recordclass
 from .typing import RecordClass
 from .dataclass import make_dataclass, make_class, join_dataclasses
+# from .dataclass import make
 from .dictclass import make_dictclass
 from .arrayclass import make_arrayclass
 from .adapter import as_dataclass
 
 structclass = make_dataclass
 
-__version__ = '0.18.0.1'
+__version__ = '0.18.3'

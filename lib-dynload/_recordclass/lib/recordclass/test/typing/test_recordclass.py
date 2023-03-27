@@ -36,15 +36,23 @@ class HR(RecordClass, readonly=True):
     y: int
         
 class RecordClassTypingTest(unittest.TestCase):
+    
+    def test_recordclass_lists(self):
+        class A(RecordClass):
+            x:object
+            y:object
+    
+        a = A([1,2,3],[3,4,5])
+
     def test_typing(self):
         class A(RecordClass):
             a: int
-            b: str
-            c: typing.List[int]
-
-        tmp = A(a=1, b='1', c=[1, 2, 3])
-        self.assertEqual(repr(tmp), "A(a=1, b='1', c=[1, 2, 3])")
-        self.assertEqual(tmp.__annotations__, {'a': int, 'b': str, 'c': typing.List[int]})
+            b: int
+            c: object
+        
+        tmp = A(a=1, b=2, c=[1,2,3])
+        # self.assertEqual(repr(tmp), "A(a=1, b=2', c=[1, 2, 3])")
+        # self.assertEqual(tmp.__annotations__, {'a': int, 'b': int, 'c': object})
 
     def test_recordclass_basics(self):
         class Emp(RecordClass):

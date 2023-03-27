@@ -26,7 +26,6 @@
 from setuptools import setup, find_packages
 from setuptools.command.build_ext import build_ext
 from setuptools.extension import Extension
-import os
 import sys
 
 _PY310 = sys.version_info[:2] >= (3, 10)
@@ -35,25 +34,6 @@ _PY310 = sys.version_info[:2] >= (3, 10)
 # extra_compile_args = ["-Wfatal-errors"]
 extra_compile_args = []
 extra_link_args = []
-
-EXTRA_OPT="RC_EXTRAOPT" in os.environ
-if "--extra-optimization" in sys.argv:
-    # Support legacy output format functions
-    EXTRA_OPT=True
-    sys.argv.remove("--extra-optimization")
-
-if EXTRA_OPT:
-    extra_compile_args.insert(0, "-march=native")
-    extra_compile_args.insert(0, "-O3")
-else:
-    extra_compile_args.insert(0, "-O2")
-
-use_cython = 0
-
-if use_cython:
-    from Cython.Distutils import Extension, build_ext
-    from Cython.Compiler import Options
-    Options.fast_fail = True
 
 ext_modules = [
     Extension(
@@ -76,21 +56,6 @@ ext_modules = [
     ),
 ]
 
-if use_cython:
-    ext_modules.append(Extension(
-        "recordclass._linkedlist",
-        ["lib/recordclass/_linkedlist.pyx"],
-        extra_compile_args = extra_compile_args,
-        # extra_link_args = extra_link_args,
-    ))
-else:
-    ext_modules.append(Extension(
-        "recordclass._linkedlist",
-        ["lib/recordclass/_linkedlist.c"],
-        extra_compile_args = extra_compile_args,
-        # extra_link_args = extra_link_args,
-    ))
-
 description = """Mutable variant of namedtuple -- recordclass, which support assignments, and other memory saving variants."""
 
 with open('README.md', encoding='utf-8') as f:
@@ -105,7 +70,7 @@ packages = [ 'recordclass',
 
 setup(
     name = 'recordclass',
-    version = '0.18.0.1',
+    version = '0.18.3',
     description = description,
     author = 'Zaur Shibzukhov',
     author_email = 'szport@gmail.com',

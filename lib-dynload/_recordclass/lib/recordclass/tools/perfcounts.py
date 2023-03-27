@@ -36,22 +36,22 @@ class PointGC(dataobject, sequence=True, gc=True):
         return self.x*self.x + self.y*self.y + self.z*self.z
 
 
-class FastPoint(dataobject, sequence=True, fast_new=True):
-    x:int
-    y:int
-    z:int
+# class FastPoint(dataobject, sequence=True, fast_new=True):
+#     x:int
+#     y:int
+#     z:int
 
-    def norm2(self):
-        return self.x*self.x + self.y*self.y + self.z*self.z
+#     def norm2(self):
+#         return self.x*self.x + self.y*self.y + self.z*self.z
 
     
-class FastPointGC(dataobject, sequence=True, fast_new=True, gc=True):
-    x:int
-    y:int
-    z:int
+# class FastPointGC(dataobject, sequence=True, fast_new=True, gc=True):
+#     x:int
+#     y:int
+#     z:int
 
-    def norm2(self):
-        return self.x*self.x + self.y*self.y + self.z*self.z
+#     def norm2(self):
+#         return self.x*self.x + self.y*self.y + self.z*self.z
 
 
 class PointMap(dataobject, mapping=True, fast_new=True):
@@ -75,13 +75,10 @@ results = {'id':[], 'size':[], 'new':[],
 
 results['id'].extend(
     ['litetuple', 'mutabletuple', 'tuple', 'namedtuple', 'class+slots', 'dataobject',  
-     'dataobject+fast_new', 'dataobject+gc', 'dataobject+fast+gc', 'dict',
-     # 'dataobject+dictlike+fast', 
-     'dataobject+fast+map'])
+     'dataobject+gc', 'dict', 'dataobject+map'])
 
 classes = (litetuple, mutabletuple, tuple, PointNT, PointSlots, 
-           Point, FastPoint, PointGC, FastPointGC, 
-           dict, PointMap)
+           Point, PointGC, dict, PointMap)
 
 N = 300_000
 
@@ -96,7 +93,7 @@ def test_new():
         
     def test_tuple():
         for i in range(N):
-            ob = (i, i, i)
+            ob = tuple((i, i, i))
             prev = ob
 
     def test_dict():
@@ -350,9 +347,7 @@ def test_all(relative=True):
       sys.getsizeof(PointNT(0,0,0)),   
       sys.getsizeof(PointSlots(0,0,0)),   
       sys.getsizeof(Point(0,0,0)),   
-      sys.getsizeof(FastPoint(0,0,0)),   
       sys.getsizeof(PointGC(0,0,0)),   
-      sys.getsizeof(FastPointGC(0,0,0)),   
       sys.getsizeof({'x':0,'y':0, 'z':0}),   
       sys.getsizeof(PointMap(0,0,0)),   
       # sys.getsizeof(PointDict(0,0,0)),   

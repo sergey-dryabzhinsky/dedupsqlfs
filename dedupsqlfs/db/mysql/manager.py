@@ -29,6 +29,7 @@ class DbManager(object):
 
     _db_name = "dedupsqlfs"
     _base_path = "/dev/shm/db"
+    _cluster_path = "/dev/shm/db"
     _autocommit = True
     _synchronous = True
 
@@ -140,7 +141,7 @@ class DbManager(object):
     def getTableEngine(self):
         return self._table_engine
 
-    def setBasepath(self, base_path):
+    def setBasePath(self, base_path):
         self._base_path = base_path
         return self
 
@@ -150,6 +151,15 @@ class DbManager(object):
 
     def getBasePath(self):
         return self._base_path
+
+
+    def setClusterPath(self, cluster_path):
+        self._cluster_path = cluster_path
+        return self
+
+    def getClusterPath(self):
+        return self._cluster_path
+
 
     def getDbName(self):
         return self._db_name
@@ -169,6 +179,10 @@ class DbManager(object):
 
 
     def getTable(self, name, nocreate=False):
+
+        bp = self.getBasePath()
+        cp = self.getClusterPath()
+
         if name not in self._table:
             if name == "option":
                 from dedupsqlfs.db.mysql.table.option import TableOption
@@ -183,6 +197,8 @@ class DbManager(object):
             elif name == "name":
                 from dedupsqlfs.db.mysql.table.name import TableName
                 self._table[ name ] = TableName(self)
+                if cp != bp:
+                    self._table[ name ].setClustered(True)
             elif name == "inode":
                 from dedupsqlfs.db.mysql.table.inode import TableInode
                 self._table[ name ] = TableInode(self)
@@ -202,6 +218,8 @@ class DbManager(object):
             elif name == "block":
                 from dedupsqlfs.db.mysql.table.block import TableBlock
                 self._table[ name ] = TableBlock(self)
+                if cp != bp:
+                    self._table[ name ].setClustered(True)
             elif name == "xattr":
                 from dedupsqlfs.db.mysql.table.xattr import TableInodeXattr
                 self._table[ name ] = TableInodeXattr(self)
@@ -212,6 +230,8 @@ class DbManager(object):
             elif name == "compression_type":
                 from dedupsqlfs.db.mysql.table.compression_type import TableCompressionType
                 self._table[ name ] = TableCompressionType(self)
+                if cp != bp:
+                    self._table[ name ].setClustered(True)
             elif name == "hash_compression_type":
                 from dedupsqlfs.db.mysql.table.hash_compression_type import TableHashCompressionType
                 self._table[ name ] = TableHashCompressionType(self)
@@ -231,6 +251,8 @@ class DbManager(object):
             elif name == "hash":
                 from dedupsqlfs.db.mysql.table.hash import TableHash
                 self._table[ name ] = TableHash(self)
+                if cp != bp:
+                    self._table[ name ].setClustered(True)
             elif name == "inode_hash_block":
                 from dedupsqlfs.db.mysql.table.inode_hash_block import TableInodeHashBlock
                 self._table[ name ] = TableInodeHashBlock(self)

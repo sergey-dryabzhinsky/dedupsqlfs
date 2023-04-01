@@ -610,6 +610,7 @@ def main(): # {{{1
                         help="Don't send log messages to stderr.")
 
     generic.add_argument('--data', dest='data', metavar='DIRECTORY', default="~/data", help="Specify the base location for the files in which metadata and blocks data is stored. Defaults to ~/data")
+    generic.add_argument('--data-clustered', dest='data_clustered', metavar='DIRECTORY', default="~/data", help="Specify the base location for the files in which blocks, hash, names data is stored for multiple nodes backups. Defaults to ~/data, no clustering.")
     generic.add_argument('--name', dest='name', metavar='DATABASE', default="dedupsqlfs", help="Specify the name for the database directory in which metadata and blocks data is stored. Defaults to dedupsqlfs")
     generic.add_argument('--temp', dest='temp', metavar='DIRECTORY', help="Specify the location for the files in which temporary data is stored. By default honour TMPDIR environment variable value.")
     generic.add_argument('--no-transactions', dest='use_transactions', action='store_false', help="Don't use transactions when making multiple related changes, this might make the file system faster or slower (?).")
@@ -648,8 +649,9 @@ def main(): # {{{1
     data.add_argument('--vacuum', dest='vacuum', action='store_true', help="Like defragment, but force SQLite to 'vacuum' databases, MySQL to run OPTIMIZE on tables.")
     data.add_argument('--vacuum-if-last-time-more-than-days', dest='vacuum_older_than', metavar='DAYS_COUNT', type=int, default=0, help="Do vacuum only if last time was more than DAYS_COUNT ago. To disable check - set value less or equal 0.")
     data.add_argument('--new-block-size', dest='new_block_size', metavar='BYTES', default=constants.BLOCK_SIZE_DEFAULT, type=int, help="Specify the new block size in bytes. Defaults to 64kB. (@todo)")
-    data.add_argument('--maximum-block-size', dest='maximum_block_size', metavar='BYTES', default=constants.BLOCK_SIZE_MAX, type=int,
-                      help="R|Specify the maximum block size in bytes for defragmentation.\n Defaults to %dMB. (@todo)" % (constants.BLOCK_SIZE_MAX/1024/1024,))
+    data.add_argument(
+        '--maximum-block-size', dest='maximum_block_size', metavar='BYTES', default=constants.BLOCK_SIZE_MAX, type=int,
+        help="R|Specify the maximum block size in bytes for defragmentation.\n Defaults to %dMB. (@todo)" % (constants.BLOCK_SIZE_MAX/1024/1024,))
 
     data.add_argument('--verify', dest='verify', action='store_true', help="Verify all stored data hashes.")
 
@@ -691,8 +693,9 @@ def main(): # {{{1
     msg += "\nDefaults to %r." % constants.COMPRESSION_TYPE_NONE
 
     grp_compress.add_argument('--recompress', dest='recompress_data', action="store_true", help="Do compression of all data blocks again with selected compresstion methods by --compress param. It may take double block-table free system space!")
-    grp_compress.add_argument('--compress', dest='compression', metavar='METHOD', action="append",
-                              default=[constants.COMPRESSION_TYPE_NONE], help=msg)
+    grp_compress.add_argument(
+        '--compress', dest='compression', metavar='METHOD', action="append",
+        default=[constants.COMPRESSION_TYPE_NONE], help=msg)
 
     grp_compress.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")
     grp_compress.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=1024, help="Minimal block data size for compression. Defaults to 1024 bytes. Value -1 means auto - per method absolute minimum. Do not compress if data size is less than BYTES long. If not forced to.")
@@ -716,9 +719,10 @@ def main(): # {{{1
     msg = "R|Enable compression of snapshot sqlite database files using one of the supported compression programs: %s"
     msg %= ', '.join('%r' % mth for mth in compression_progs)
     msg += ".\nDefaults to %r." % constants.COMPRESSION_PROGS_DEFAULT
-    grp_compress.add_argument('--sqlite-compression-prog', dest='sqlite_compression_prog', metavar='PROGNAME',
-                              choices=compression_progs,
-                              default=constants.COMPRESSION_PROGS_DEFAULT, help=msg)
+    grp_compress.add_argument(
+        '--sqlite-compression-prog', dest='sqlite_compression_prog', metavar='PROGNAME',
+        choices=compression_progs,
+        default=constants.COMPRESSION_PROGS_DEFAULT, help=msg)
 
 
     snapshot = parser.add_argument_group('Snapshot')

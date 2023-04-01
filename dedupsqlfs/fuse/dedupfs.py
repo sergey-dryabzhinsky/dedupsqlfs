@@ -398,7 +398,7 @@ class DedupFS(object): # {{{1
         return self._compressTool.isMethodSelected(method)
 
     def setDataDirectory(self, data_dir_path):
-        self.operations.getManager().setBasepath(data_dir_path)
+        self.operations.getManager().setBasePath(data_dir_path)
         return self
 
     def saveCompressionMethods(self, methods=None):

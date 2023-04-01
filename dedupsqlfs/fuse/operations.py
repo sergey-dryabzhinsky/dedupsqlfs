@@ -144,12 +144,12 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 # Only for tools and for existing fs
                 from dedupsqlfs.db.sqlite.manager import DbManager
                 self.manager = DbManager(dbname=self.getOption("name"))
-                self.manager.setBasepath(os.path.expanduser(self.getOption("data")))
+                self.manager.setBasePath(os.path.expanduser(self.getOption("data")))
                 engine = "sqlite"
                 if not self.manager.isSupportedStorage():
                     from dedupsqlfs.db.mysql.manager import DbManager
                     self.manager = DbManager(dbname=self.getOption("name"))
-                    self.manager.setBasepath(os.path.expanduser(self.getOption("data")))
+                    self.manager.setBasePath(os.path.expanduser(dp))
                     engine = "mysql"
                     if not self.manager.isSupportedStorage():
                         raise RuntimeError("Unsupported storage on %r" % self.getOption("data"))
@@ -157,11 +157,16 @@ class DedupOperations(llfuse.Operations):  # {{{1
             else:
                 raise ValueError("Unknown storage engine: %r" % engine)
 
+            dp = self.getOption("data")
+            dpc = self.getOption("data_clustered")
+
             self.manager.setLogger(self.getLogger())
             self.manager.setTableEngine(self.getOption('table_engine'))
             self.manager.setSynchronous(self.getOption("synchronous"))
             self.manager.setAutocommit(self.getOption("use_transactions"))
-            self.manager.setBasepath(os.path.expanduser(self.getOption("data")))
+            self.manager.setBasePath(os.path.expanduser(dp))
+            if (dp != dpc or not dpc):
+                self.manager.setClusterPath(os.path.expanduser(dpc))
             self.manager.begin()
 
             self.getLogger().info("Databases engine: %s" % engine)
@@ -1218,19 +1223,23 @@ class DedupOperations(llfuse.Operations):  # {{{1
             usage = subv.get_apparent_size_fast(self.mounted_subvolume_name)
 
             # The total number of free blocks available to a non privileged process.
-            stats.f_bavail = host_fs.f_bsize * host_fs.f_bavail / self.block_size
-            if stats.f_bavail < 0:
-                stats.f_bavail = 0
+            #stats.f_bavail = host_fs.f_bsize * host_fs.f_bavail / self.block_size
+            #if stats.f_bavail < 0:
+            #    stats.f_bavail = 0
+
+            stats.f_bavail = 0
 
             # The total number of free blocks in the file system.
-            stats.f_bfree = host_fs.f_frsize * host_fs.f_bfree / self.block_size
+            #stats.f_bfree = host_fs.f_frsize * host_fs.f_bfree / self.block_size
+            stats.f_bfree = 0
 
             # stats.f_bfree = stats.f_bavail
             # The total number of blocks in the file system in terms of f_frsize.
-            stats.f_blocks = stats.f_bavail + usage / self.block_size
-            # stats.f_blocks = int(math.ceil(1.0 * usage / self.block_size))
-            if stats.f_blocks < 0:
-                stats.f_blocks = 0
+            # stats.f_blocks = stats.f_bavail + usage / self.block_size
+            import math
+            stats.f_blocks = int(math.ceil(1.0 * usage / self.block_size))
+            #if stats.f_blocks < 0:
+            #    stats.f_blocks = 0
 
             stats.f_bsize = self.block_size # The file system block size in bytes.
             stats.f_favail = 0 # The number of free file serial numbers available to a non privileged process.

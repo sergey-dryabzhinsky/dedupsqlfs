@@ -170,9 +170,13 @@ class DbManager( object ):
             elif name == "hash_compression_type":
                 from dedupsqlfs.db.sqlite.table.hash_compression_type import TableHashCompressionType
                 self._table[ name ] = TableHashCompressionType(self)
+                if cp != bp:
+                    self._table[ name ].setClustered(True)
             elif name == "hash_sizes":
                 from dedupsqlfs.db.sqlite.table.hash_sizes import TableHashSizes
                 self._table[ name ] = TableHashSizes(self)
+                if cp != bp:
+                    self._table[ name ].setClustered(True)
             elif name == "name_pattern_option":
                 from dedupsqlfs.db.sqlite.table.name_pattern_option import TableNamePatternOption
                 self._table[ name ] = TableNamePatternOption(self)

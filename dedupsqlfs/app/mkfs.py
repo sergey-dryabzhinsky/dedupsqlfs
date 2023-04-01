@@ -82,6 +82,7 @@ def main(): # {{{1
                         help="Don't send log messages to stderr.")
 
     parser.add_argument('--data', dest='data', metavar='DIRECTORY', default="~/data", help="Specify the base location for the files in which metadata and blocks data is stored. Defaults to ~/data")
+    parser.add_argument('--data-clustered', dest='data_clustered', metavar='DIRECTORY', default="~/data", help="Specify the base location for the files in which blocks, hash, names data is stored for multiple nodes backups. Defaults to ~/data, no clustering.")
     parser.add_argument('--name', dest='name', metavar='DATABASE', default="dedupsqlfs", help="Specify the name for the database directory in which metadata and blocks data is stored. Defaults to dedupsqlfs")
     parser.add_argument('--temp', dest='temp', metavar='DIRECTORY', help="Specify the location for the files in which temporary data is stored. By default honour TMPDIR environment variable value.")
     parser.add_argument('-b', '--block-size', dest='block_size', metavar='BYTES', default=1024*64, type=int, help="Specify the maximum block size in bytes" + option_stored_in_db + ". Defaults to 64kB.")

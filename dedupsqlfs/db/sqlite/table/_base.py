@@ -34,6 +34,8 @@ class Table( object ):
     # default start page size for SQLite db file
     _page_size = 512
 
+    _clustered = False
+
     _compressed = False
 
     _compressed_prog = None
@@ -136,8 +138,12 @@ class Table( object ):
 
     def getDbFilePath(self):
         if not self._db_file_path:
+            bp = self.getManager().getBasePath()
+            if self.getClustered():
+                bp = self.getManager().getClusterPath()
+
             self._db_file_path = os.path.join(
-                self.getManager().getBasePath(),
+                bp,
                 self.getManager().getDbName(),
                 "%s.sqlite3" % self.getFileName()
             )
@@ -232,6 +238,15 @@ class Table( object ):
 
     def getCompressed(self):
         return self._compressed
+
+
+    def setClustered(self, flag=True):
+        self._clustered = flag
+        return self
+
+    def getClustered(self):
+        return self._clustered
+
 
     def _compress(self):
         db_path = self.getDbFilePath()

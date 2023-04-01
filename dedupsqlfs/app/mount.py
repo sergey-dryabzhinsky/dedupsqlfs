@@ -104,6 +104,7 @@ def main(): # {{{1
 
     generic.add_argument('--lock-file', dest='lock_file', help="Specify lock file location. Useful to check fs status via content or existsnce.")
     generic.add_argument('--data', dest='data', metavar='DIRECTORY', default="~/data", help="Specify the base location for the files in which metadata and blocks data is stored. Defaults to ~/data")
+    generic.add_argument('--data-clustered', dest='data_clustered', metavar='DIRECTORY', default="~/data", help="Specify the base location for the files in which blocks, hash, names data is stored for multiple nodes backups. Defaults to ~/data, no clustering.")
     generic.add_argument('--name', dest='name', metavar='DATABASE', default="dedupsqlfs", help="Specify the name for the database directory in which metadata and blocks data is stored. Defaults to dedupsqlfs")
     generic.add_argument('--temp', dest='temp', metavar='DIRECTORY', help="Specify the location for the files in which temporary data is stored. By default honour TMPDIR environment variable value.")
     generic.add_argument('-b', '--block-size', dest='block_size', metavar='BYTES', default=1024*64, type=int, help="Specify the maximum block size in bytes" + option_stored_in_db + ". Defaults to 64kB.")
@@ -199,8 +200,9 @@ def main(): # {{{1
         msg += "\n- Method %r will try all compression methods with 'fast' level and choose one with smaller result data." % constants.COMPRESSION_TYPE_FAST
     msg += "\nDefaults to %r." % constants.COMPRESSION_TYPE_NONE
 
-    grp_compress.add_argument('--compress', dest='compression', metavar='METHOD', action="append",
-                              default=[constants.COMPRESSION_TYPE_NONE], help=msg)
+    grp_compress.add_argument(
+        '--compress', dest='compression', metavar='METHOD', action="append",
+        default=[constants.COMPRESSION_TYPE_NONE], help=msg)
 
     grp_compress.add_argument('--force-compress', dest='compression_forced', action="store_true", help="Force compression even if resulting data is bigger than original.")
     grp_compress.add_argument('--minimal-compress-size', dest='compression_minimal_size', metavar='BYTES', type=int, default=512, help="Minimal block data size for compression. Defaults to 512 bytes. Value -1 means auto - per method absolute minimum. Do not compress if data size is less than BYTES long. If not forced to.")
@@ -223,9 +225,10 @@ def main(): # {{{1
     msg = "R|Enable compression of snapshot sqlite database files using one of the supported compression programs: %s"
     msg %= ', '.join('%r' % mth for mth in compression_progs)
     msg += ".\nDefaults to %r." % constants.COMPRESSION_PROGS_DEFAULT
-    grp_compress.add_argument('--sqlite-compression-prog', dest='sqlite_compression_prog', metavar='PROGNAME',
-                              choices=compression_progs,
-                              default=constants.COMPRESSION_PROGS_DEFAULT, help=msg)
+    grp_compress.add_argument(
+        '--sqlite-compression-prog', dest='sqlite_compression_prog', metavar='PROGNAME',
+        choices=compression_progs,
+        default=constants.COMPRESSION_PROGS_DEFAULT, help=msg)
 
     grp_compress.add_argument('--recompress-on-fly', dest='compression_recompress_now', action="store_true", help="Do recompress blocks which compressed with deprecated compression method.")
 

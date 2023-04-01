@@ -13,6 +13,7 @@ class DbManager( object ):
     _table = None
     _db_name = "dedupsqlfs"
     _base_path = "/dev/shm/db"
+    _cluster_path = "/dev/shm/db"
     _autocommit = True
     _synchronous = True
 
@@ -77,7 +78,7 @@ class DbManager( object ):
     def getTableEngine(self):
         return self
 
-    def setBasepath(self, base_path):
+    def setBasePath(self, base_path):
         self._base_path = base_path
         return self
 
@@ -86,6 +87,14 @@ class DbManager( object ):
 
     def getDbName(self):
         return self._db_name
+
+
+    def setClusterPath(self, cluster_path):
+        self._cluster_path = cluster_path
+        return self
+
+    def getClusterPath(self):
+        return self._cluster_path
 
 
     def getModuleVersion(self):
@@ -105,6 +114,10 @@ class DbManager( object ):
         @return: L{dedupsqlfs.db.sqlite.table.Table}
         @rtype: dedupsqlfs.db.sqlite.table.Table
         """
+
+        bp = self.getBasePath()
+        cp = self.getClusterPath()
+
         if name not in self._table:
             if name == "option":
                 from dedupsqlfs.db.sqlite.table.option import TableOption
@@ -119,6 +132,8 @@ class DbManager( object ):
             elif name == "name":
                 from dedupsqlfs.db.sqlite.table.name import TableName
                 self._table[ name ] = TableName(self)
+                if cp != bp:
+                    self._table[ name ].setClustered(True)
             elif name == "inode":
                 from dedupsqlfs.db.sqlite.table.inode import TableInode
                 self._table[ name ] = TableInode(self)
@@ -138,6 +153,8 @@ class DbManager( object ):
             elif name == "block":
                 from dedupsqlfs.db.sqlite.table.block import TableBlock
                 self._table[ name ] = TableBlock(self)
+                if cp != bp:
+                    self._table[ name ].setClustered(True)
             elif name == "xattr":
                 from dedupsqlfs.db.sqlite.table.xattr import TableInodeXattr
                 self._table[ name ] = TableInodeXattr(self)
@@ -148,6 +165,8 @@ class DbManager( object ):
             elif name == "compression_type":
                 from dedupsqlfs.db.sqlite.table.compression_type import TableCompressionType
                 self._table[ name ] = TableCompressionType(self)
+                if cp != bp:
+                    self._table[ name ].setClustered(True)
             elif name == "hash_compression_type":
                 from dedupsqlfs.db.sqlite.table.hash_compression_type import TableHashCompressionType
                 self._table[ name ] = TableHashCompressionType(self)
@@ -167,6 +186,8 @@ class DbManager( object ):
             elif name == "hash":
                 from dedupsqlfs.db.sqlite.table.hash import TableHash
                 self._table[ name ] = TableHash(self)
+                if cp != bp:
+                    self._table[ name ].setClustered(True)
             elif name == "inode_hash_block":
                 from dedupsqlfs.db.sqlite.table.inode_hash_block import TableInodeHashBlock
                 self._table[ name ] = TableInodeHashBlock(self)

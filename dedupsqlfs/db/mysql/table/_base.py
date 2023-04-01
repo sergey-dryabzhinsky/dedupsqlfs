@@ -33,6 +33,8 @@ class Table( object ):
     _manager = None
     _autocommit = True
 
+    _clustered = False
+
     _last_time = None
     _time_spent = None
     _op_count = None
@@ -141,6 +143,8 @@ class Table( object ):
         return self
 
     def getName(self):
+        if self._clustered:
+            return self._table_name + "_cl"
         return self._table_name
 
     def setName(self, tableName):
@@ -170,6 +174,15 @@ class Table( object ):
 
     def shrinkMemory(self):
         return self
+
+
+    def setClustered(self, flag=True):
+        self._clustered = flag
+        return self
+
+    def getClustered(self):
+        return self._clustered
+
 
     def getFileSize(self):
         return self.getSize()

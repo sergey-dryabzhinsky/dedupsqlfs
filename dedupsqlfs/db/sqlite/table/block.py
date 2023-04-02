@@ -23,6 +23,7 @@ class TableBlock( Table ):
 
     def insert( self, hash_id, data):
         """
+        :param hash_id: int
         :param data: bytes
         :return: int
         """
@@ -39,6 +40,7 @@ class TableBlock( Table ):
 
     def update( self, hash_id, data):
         """
+        :param hash_id: int
         :param data: bytes
         :return: int
         """

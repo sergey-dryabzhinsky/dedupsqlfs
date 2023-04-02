@@ -160,12 +160,15 @@ class DedupOperations(llfuse.Operations):  # {{{1
             dp = self.getOption("data")
             dpc = self.getOption("data_clustered")
 
+            self.getLogger().info("Current database path: %s" % dp)
+
             self.manager.setLogger(self.getLogger())
             self.manager.setTableEngine(self.getOption('table_engine'))
             self.manager.setSynchronous(self.getOption("synchronous"))
             self.manager.setAutocommit(self.getOption("use_transactions"))
             self.manager.setBasePath(os.path.expanduser(dp))
             if (dp != dpc or not dpc):
+                self.getLogger().info("Clustered database path: %s" % dpc)
                 self.manager.setClusterPath(os.path.expanduser(dpc))
             self.manager.begin()
 

@@ -22,6 +22,7 @@ def __vacuum_datatable(app, tableName):  # {{{4
     sub_start_time = time()
     app.getLogger().debug(" vacuum %s table", tableName)
     t = app.operations.getTable(tableName)
+    sz = 0
     if t.getClustered():
         app.getLogger().debug(" %s table is clustered! skip, @todo", tableName)
     else:

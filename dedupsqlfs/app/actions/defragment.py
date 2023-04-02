@@ -74,6 +74,10 @@ def __collect_strings(app):
 
     tableName = app.operations.getTable("name")
 
+    if tableName.getClustered():
+        app.getLogger().debug("Table with path segments is clustered! Skip, @todo")
+        return 0, ""
+
     subv = Subvolume(app.operations)
     treeNameIds = subv.prepareTreeNameIds()
 
@@ -378,6 +382,10 @@ def __collect_blocks(app):
     tableBlock = app.operations.getTable("block")
     tableHCT = app.operations.getTable("hash_compression_type")
     tableHSZ = app.operations.getTable("hash_sizes")
+
+    if tableHash.getClustered():
+        app.getLogger().debug("Hashes and blocks are clustered! Skip, @todo")
+        return 0, ""
 
     subv = Subvolume(app.operations)
     indexHashIds = subv.prepareIndexHashIds()

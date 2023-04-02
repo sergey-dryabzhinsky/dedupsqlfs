@@ -21,7 +21,11 @@ def __vacuum_datatable(app, tableName):  # {{{4
 
     sub_start_time = time()
     app.getLogger().debug(" vacuum %s table", tableName)
-    sz = app.operations.getTable(tableName).vacuum()
+    t = app.operations.getTable(tableName)
+    if t.getClustered():
+        app.getLogger().debug(" %s table is clustered! skip, @todo", tableName)
+    else:
+        sz = app.operations.getTable(tableName).vacuum()
     msg = " vacuumed SQLite data store in %s."
     elapsed_time = time() - sub_start_time
     app.getLogger().debug(msg, format_timespan(elapsed_time))

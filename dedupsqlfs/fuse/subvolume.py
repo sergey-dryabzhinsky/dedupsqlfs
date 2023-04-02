@@ -554,6 +554,9 @@ class Subvolume(object):
                     method = hashCT[hash_id]
                 else:
                     hctItem = tableHCT.get(hash_id)
+                    if not hctItem:
+                        self.getLogger().error("Hash compression type not found! hash_id=%r" % hash_id)
+                        continue
                     method = self.getManager().getCompressionTypeName(hctItem["type_id"])
                     hashCT[hash_id] = method
 

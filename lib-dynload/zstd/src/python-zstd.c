@@ -138,9 +138,9 @@ static PyObject *py_zstd_uncompress(PyObject* self, PyObject *args)
 {
 
     PyObject    *result;
-    const char  *source;
-    Py_ssize_t  source_size;
-    uint64_t    dest_size;
+    const char  *source, *src;
+    Py_ssize_t  source_size, ss, seek_frame;
+    uint64_t    dest_size, frame_size;
     char        error = 0;
     size_t      cSize;
 
@@ -157,18 +157,41 @@ static PyObject *py_zstd_uncompress(PyObject* self, PyObject *args)
         PyErr_Format(ZstdError, "Input data invalid or missing content size in frame header.");
         return NULL;
     }
+
+	// Find real dest_size across multiple frames
+	ss = source_size;
+	seek_frame = ss - 1;
+	src = source;
+	while (seek_frame < ss) {
+		seek_frame = ZSTD_findFrameCompressedSize(src, ss);
+		if (ZSTD_isError(seek_frame)) break;
+		src += seek_frame;
+		ss -= seek_frame;
+		if (ss <=0) break;
+		frame_size = (uint64_t) ZSTD_getFrameContentSize(src, ss);
+		if (ZSTD_isError(frame_size)) break;
+		dest_size += frame_size;
+	}
+
     result = PyBytes_FromStringAndSize(NULL, dest_size);
 
     if (result != NULL) {
         char *dest = PyBytes_AS_STRING(result);
 
         Py_BEGIN_ALLOW_THREADS
+		// get real dest_size
         cSize = ZSTD_decompress(dest, dest_size, source, source_size);
         Py_END_ALLOW_THREADS
 
         if (ZSTD_isError(cSize)) {
-            PyErr_Format(ZstdError, "Decompression error: %s", ZSTD_getErrorName(cSize));
-            error = 1;
+			const char *errStr = ZSTD_getErrorName(cSize);
+/*			if (strstr(errStr, "buffer is too small") != NULL) {
+				// reroll decompression with bigger buffer
+				error = 2;
+			} else {*/
+            	PyErr_Format(ZstdError, "Decompression error: %s", errStr);
+            	error = 1;
+//			}
         } else if (cSize != dest_size) {
             PyErr_Format(ZstdError, "Decompression error: length mismatch -> decomp %lu != %lu [header]", (uint64_t)cSize, dest_size);
             error = 1;
@@ -179,6 +202,10 @@ static PyObject *py_zstd_uncompress(PyObject* self, PyObject *args)
         Py_CLEAR(result);
         result = NULL;
     }
+
+	if (!error) {
+    	Py_SET_SIZE(result, cSize);
+	}
 
     return result;
 }
@@ -286,7 +313,7 @@ static int myextension_clear(PyObject *m) {
 
 static struct PyModuleDef moduledef = {
         PyModuleDef_HEAD_INIT,
-        "_zstd",
+        "zstd",
         NULL,
         sizeof(struct module_state),
         ZstdMethods,
@@ -297,24 +324,24 @@ static struct PyModuleDef moduledef = {
 };
 
 #define INITERROR return NULL
-PyObject *PyInit__zstd(void)
+PyObject *PyInit_zstd(void)
 
 #else
 #define INITERROR return
-void init_zstd(void)
+void initzstd(void)
 
 #endif
 {
 #if PY_MAJOR_VERSION >= 3
     PyObject *module = PyModule_Create(&moduledef);
 #else
-    PyObject *module = Py_InitModule("_zstd", ZstdMethods);
+    PyObject *module = Py_InitModule("zstd", ZstdMethods);
 #endif
     if (module == NULL) {
         INITERROR;
     }
 
-    ZstdError = PyErr_NewException("_zstd.Error", NULL, NULL);
+    ZstdError = PyErr_NewException("zstd.Error", NULL, NULL);
     if (ZstdError == NULL) {
         Py_DECREF(module);
         INITERROR;

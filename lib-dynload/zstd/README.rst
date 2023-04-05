@@ -2,7 +2,7 @@
 python-zstd
 =============
 
-.. |releaseW| image:: https://github.com/sergey-dryabzhinsky/python-zstd/actions/workflows/build-wheels.yml/badge.svg?branch=v1.5.2.4
+.. |releaseW| image:: https://github.com/sergey-dryabzhinsky/python-zstd/actions/workflows/build-wheels.yml/badge.svg?branch=v1.5.5.1
     :target: https://github.com/sergey-dryabzhinsky/python-zstd/actions/workflows/build-wheels.yml
 
 .. |masterW| image:: https://github.com/sergey-dryabzhinsky/python-zstd/actions/workflows/build-wheels.yml/badge.svg
@@ -130,10 +130,20 @@ ZSTD_compress (data[, level, threads]): string|bytes
 
   Aliases: *compress(...)*, *dumps(...)*
 
+  Exception if:
+  - level bigger than max level
+
+  Max number of threads:
+  - 32bit system: 64
+  - 64bit system: 256
+  If provided bigger number - silemtly set maximum number (since 1.5.4.1)
+
   Since: 0.1
 
 ZSTD_uncompress (data): string|bytes
   Function, decompress input compressed data block, return decompressed block, or raises Error.
+
+  Support compressed data with multiple/concatenated frames (blocks) (since 1.5.5.1).
 
   Params:
 
@@ -160,6 +170,16 @@ ZSTD_version_number (): int
   Returns ZSTD library version in format: MAJOR*100*100 + MINOR*100 + RELEASE.
 
   Since: 1.3.4.3
+
+ZSTD_threads_count (): int
+  Returns ZSTD determined CPU cores count.
+
+  Since: 1.5.4.1
+
+ZSTD_max_threads_count (): int
+  Returns ZSTD library determined maximum working threads count.
+
+  Since: 1.5.4.1
 
 ZSTD_external (): int
   Returns 0 of 1 if ZSTD library build as external.

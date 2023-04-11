@@ -134,6 +134,9 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
             self.getLogger().info("Selected storage engine: %s" % engine)
 
+            dp = self.getOption("data")
+            self.getLogger().info("Current database path: %r" % dp)
+
             if engine == 'mysql':
                 from dedupsqlfs.db.mysql.manager import DbManager
                 self.manager = DbManager(dbname=self.getOption("name"))
@@ -144,7 +147,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 # Only for tools and for existing fs
                 from dedupsqlfs.db.sqlite.manager import DbManager
                 self.manager = DbManager(dbname=self.getOption("name"))
-                self.manager.setBasePath(os.path.expanduser(self.getOption("data")))
+                self.manager.setBasePath(os.path.expanduser(dp))
                 engine = "sqlite"
                 if not self.manager.isSupportedStorage():
                     from dedupsqlfs.db.mysql.manager import DbManager
@@ -157,19 +160,17 @@ class DedupOperations(llfuse.Operations):  # {{{1
             else:
                 raise ValueError("Unknown storage engine: %r" % engine)
 
-            dp = self.getOption("data")
             dpc = self.getOption("data_clustered")
-
-            self.getLogger().info("Current database path: %s" % dp)
+            if not dpc:
+                dpc = dp
 
             self.manager.setLogger(self.getLogger())
             self.manager.setTableEngine(self.getOption('table_engine'))
             self.manager.setSynchronous(self.getOption("synchronous"))
             self.manager.setAutocommit(self.getOption("use_transactions"))
             self.manager.setBasePath(os.path.expanduser(dp))
-            if (dp != dpc or not dpc):
-                self.getLogger().info("Clustered database path: %s" % dpc)
-                self.manager.setClusterPath(os.path.expanduser(dpc))
+            self.getLogger().info("Clustered database path: %r" % dpc)
+            self.manager.setClusterPath(os.path.expanduser(dpc))
             self.manager.begin()
 
             self.getLogger().info("Databases engine: %s" % engine)

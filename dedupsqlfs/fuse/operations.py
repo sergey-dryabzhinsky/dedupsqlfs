@@ -155,7 +155,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
                     self.manager.setBasePath(os.path.expanduser(dp))
                     engine = "mysql"
                     if not self.manager.isSupportedStorage():
-                        raise RuntimeError("Unsupported storage on %r" % self.getOption("data"))
+                        raise RuntimeError("Unsupported storage on %r" % dp)
 
             else:
                 raise ValueError("Unknown storage engine: %r" % engine)
@@ -164,12 +164,13 @@ class DedupOperations(llfuse.Operations):  # {{{1
             if not dpc:
                 dpc = dp
 
+            self.getLogger().info("Clustered database path: %r" % dpc)
+
             self.manager.setLogger(self.getLogger())
             self.manager.setTableEngine(self.getOption('table_engine'))
             self.manager.setSynchronous(self.getOption("synchronous"))
             self.manager.setAutocommit(self.getOption("use_transactions"))
             self.manager.setBasePath(os.path.expanduser(dp))
-            self.getLogger().info("Clustered database path: %r" % dpc)
             self.manager.setClusterPath(os.path.expanduser(dpc))
             self.manager.begin()
 

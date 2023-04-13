@@ -1592,10 +1592,16 @@ class DedupOperations(llfuse.Operations):  # {{{1
                             tableIndex.update_size(inode, block_number, self.block_size)
 
                 tableBlock = self.getTable("block")
+                tableHash = self.getTable("hash")
 
-                item = tableBlock.get(indexItem["hash_id"])
-                if not item:
-                    self.getLogger().error("get block from DB: block not found! (inode=%i, block_number=%i, hash_id=%s)", inode, block_number, indexItem["hash_id"])
+                itemH = tableHash.get(indexItem["hash_id"])
+                if not itemH:
+                    self.getLogger().error("get hash from DB: hash not found! (inode=%i, block_number=%i, hash_id=%s)", inode, block_number, indexItem["hash_id"])
+                    raise OSError("get hash from DB: hash not found!")
+
+                item = tableBlock.get(itemH.hex())
+                if item is None:
+                    self.getLogger().error("get block from DB: block not found! (hash_value=%s)", itemH.hex())
                     raise OSError("get block from DB: block not found!")
 
             # XXX: how block can be defragmented away?
@@ -1603,7 +1609,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 compTypeId = self.__get_compression_type_by_hash_from_cache(indexItem["hash_id"])
 
                 self.getLogger().debug("-- decompress block")
-                self.getLogger().debug("-- in db size: %s", len(item["data"]))
+                self.getLogger().debug("-- in db size: %s", len(item))
 
                 block.seek(0)
 
@@ -1616,7 +1622,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 # Try all decompression methods
                 if tryAll:
                     try:
-                        bdata = self.__decompress(item["data"], compTypeId)
+                        bdata = self.__decompress(item, compTypeId)
                     except:
                         bdata = False
                     if bdata is False:
@@ -1629,7 +1635,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
                                 continue
 
                             try:
-                                bdata = self.__decompress(item["data"], type_id)
+                                bdata = self.__decompress(item, type_id)
                             except:
                                 bdata = False
                             if bdata is not False:
@@ -1648,7 +1654,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
                 else:
                     # If it fails - OSError raised
-                    block.write(self.__decompress(item["data"], compTypeId))
+                    block.write(self.__decompress(item, compTypeId))
 
                 if compression != constants.COMPRESSION_TYPE_NONE:
                     if self.getOption('compression_recompress_now') and self.application.isDeprecated(compression):
@@ -2264,6 +2270,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
                         count += 1
 
         tableBlock = self.getTable("block")
+        tableHash = self.getTable("hash")
         tableHCT = self.getTable("hash_compression_type")
         tableHSZ = self.getTable("hash_sizes")
 
@@ -2278,12 +2285,14 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
             writed_size = blockSize[ hash_id ]
 
+            hash_value = tableHash.get(hash_id).hex()
+
             cmethod_id = self.getCompressionTypeId(cmethod)
 
             if blocksReCompress.get(hash_id, False) is True:
-                tableBlock.update(hash_id, cdata)
+                tableBlock.update(hash_value, cdata)
             else:
-                tableBlock.insert(hash_id, cdata)
+                tableBlock.insert(hash_value, cdata)
 
             hash_CompressType_id = self.__get_compression_type_by_hash_from_cache(hash_id)
             if hash_CompressType_id:

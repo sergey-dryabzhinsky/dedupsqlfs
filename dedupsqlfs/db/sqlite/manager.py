@@ -151,8 +151,8 @@ class DbManager( object ):
                 self._table[ name ] = TableLink(self)
                 self._table[ name ].setFileName(name)
             elif name == "block":
-                from dedupsqlfs.db.sqlite.table.block import TableBlock
-                self._table[ name ] = TableBlock(self)
+                from dedupsqlfs.db.sqlite.table.block_fs import TableBlockFS
+                self._table[ name ] = TableBlockFS(self)
                 if cp != bp:
                     self._table[ name ].setClustered(True)
             elif name == "xattr":

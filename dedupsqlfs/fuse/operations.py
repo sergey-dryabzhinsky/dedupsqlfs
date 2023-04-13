@@ -63,6 +63,8 @@ class DedupOperations(llfuse.Operations):  # {{{1
         llfuse.Operations.__init__(self, **kwargs)
 
         # Initialize instance attributes.
+        self.block_partitions = 1
+
         self.block_size = constants.BLOCK_SIZE_DEFAULT
         self.hash_function = constants.HASH_FUNCTION_DEFAULT
         self.compression_method = constants.COMPRESSION_TYPE_NONE
@@ -502,8 +504,11 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 self.getLogger().addCallToFilter("none")
 
             # Process the custom command line options defined in __init__().
+            if self.getOption("block_partitions") is not None:
+                self.block_partitions = int(self.getOption("block_partitions"))
+
             if self.getOption("block_size") is not None:
-                self.block_size = self.getOption("block_size")
+                self.block_size = int(self.getOption("block_size"))
 
             if self.block_size < constants.BLOCK_SIZE_MIN:
                 self.getLogger().warn("Block size less than minimal! (%i<%i) Set to default minimal.",
@@ -639,6 +644,12 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
             # Recalc page size for sqlite block table, based on block size
             blockTable = self.getManager().getTable('block')
+            # Set partitioning
+            blockTable.n_parts = self.block_partitions
+            if self.block_partitions > 1:
+                # force to create all tables
+                blockTable.create()
+
             ps = blockTable.getPageSize()
             self.getLogger().debug("DedupFS: block table page_size=%r" % ps)
             if ps < self.block_size:
@@ -1796,7 +1807,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
             self.mounted_subvolume_name = nameRoot
 
-            for name in ("block_size",):
+            for name in ("block_size", "block_partitions"):
                 optTable.insert(name, "%i" % self.getOption(name))
 
             for name in ("hash_function",):
@@ -1897,6 +1908,12 @@ class DedupOperations(llfuse.Operations):  # {{{1
             self.getLogger().warning("Ignoring --hash=%r argument, using previously chosen hash function %r instead",
                 self.hash_function, hash_function)
             self.hash_function = hash_function
+
+        parts = int(options.get("block_partitions"))
+        if hash_function is not None and parts != self.block_partitions:
+            self.getLogger().warning("Ignoring --block-partitions=%r argument, using previously chosen partitions number %r instead",
+                self.block_partitions, parts)
+            self.block_partitions = parts
         pass
 
     def __insert(self, parent_inode, name, mode, size, ctx, rdev=0):  # {{{3

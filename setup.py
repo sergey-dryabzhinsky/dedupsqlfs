@@ -222,7 +222,7 @@ if CYTHON_BUILD:
     setup(
         ext_modules = cythonize(extensions, language_level=3),
         name="dedupsqlfs",
-        version="1.2.952",
+        version="1.2.953-dev",
         packages=["dedupsqlfs",],
         cmdclass = {'build_ext': build_ext}, requires=['llfuse'],
         classifiers=classifiers
@@ -234,7 +234,7 @@ else:
     setup(
         ext_modules = extensions,
         name="dedupsqlfs",
-        version="1.2.952",
+        version="1.2.953-dev",
         packages=["dedupsqlfs",],
         cmdclass = {'build_ext': build_ext}, requires=['llfuse'],
         classifiers=classifiers

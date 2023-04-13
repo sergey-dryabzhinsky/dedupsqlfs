@@ -80,25 +80,26 @@ class TableBlockPartitions( Table ):
         for i in range(0, self.n_parts):
             t = self.getPart(i)
             t.begin()
-        return
+        return self
 
     def rollback( self ):
         for i in range(0, self.n_parts):
             t = self.getPart(i)
             t.rollback()
-        return
+        return self
 
     def commit( self ):
         for i in range(0, self.n_parts):
             t = self.getPart(i)
             t.commit()
-        return
+        return self
 
     def vacuum( self ):
+        retsz = 0
         for i in range(0, self.n_parts):
             t = self.getPart(i)
-            t.vacuum()
-        return
+            retsz += t.vacuum()
+        return retsz
 
     def close( self ):
         for i in range(0, self.n_parts):

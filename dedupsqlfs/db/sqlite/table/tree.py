@@ -19,11 +19,11 @@ class TableTree(Table):
             "parent_id INTEGER, " +
             "name_id INTEGER NOT NULL, " +
             "inode_id INTEGER NOT NULL, " +
-            "UNIQUE (parent_id, name_id)" +
             ");"
         )
         self.createIndexIfNotExists('inode', ('inode_id',))
         self.createIndexIfNotExists('parent_id', ('parent_id', 'id',))
+        self.createIndexIfNotExists('parent_name', ('parent_id', 'name_id',))
         return
 
     def getRowSize(self):

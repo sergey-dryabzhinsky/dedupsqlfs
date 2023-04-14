@@ -24,7 +24,7 @@ Copyright 2013-2020 Sergey Dryabzhinsky <sergey.dryabzhinsky@gmail.com>.
 __name__ = "DedupSQLfs"
 # for fuse mount
 __fsname__ = "dedupsqlfs"
-__fsversion__ = "3.4"
+__fsversion__ = "3.5"
 # Future 1.3
 __version__ = "1.2.953-dev"
 
@@ -32,8 +32,8 @@ __version__ = "1.2.953-dev"
 import sys
 
 if sys.version_info[0] < 3 or \
-        (sys.version_info[0] == 3 and sys.version_info[1] < 2):
-    msg = "Warning: %s(%s, $s) has only been tested on Python 3.2, while you're running Python %d.%d!\n"
+        (sys.version_info[0] == 3 and sys.version_info[1] < 4):
+    msg = "Warning: %s(%s, $s) has been tested on Python 3.4+, while you're running Python %d.%d!\n"
     sys.stderr.write(msg % (__name__, __fsversion__, __version__, sys.version_info[0], sys.version_info[1]))
 
 # Do not abuse GC - we generate alot objects

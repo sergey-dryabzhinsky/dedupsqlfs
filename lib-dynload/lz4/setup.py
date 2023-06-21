@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from setuptools import setup, find_packages, Extension
 import sys
+import os
 from distutils import ccompiler
 
 # Note: if updating LZ4_REQUIRED_VERSION you need to update docs/install.rst as
@@ -11,10 +12,10 @@ LZ4_REQUIRED_VERSION = '>= 1.7.5'
 # use if so. If not, we'll use the bundled libraries.
 liblz4_found = False
 
-EXTRA_OPT=0
+EXTRA_OPT="RC_EXTRAOPT" in os.environ
 if "--extra-optimization" in sys.argv:
     # Support legacy output format functions
-    EXTRA_OPT=1
+    EXTRA_OPT=True
     sys.argv.remove("--extra-optimization")
 
 try:
@@ -145,7 +146,7 @@ if sys.version_info < (3, 0):
 # Finally call setup with the extension modules as defined above.
 setup(
     name='_lz4',
-    version='4.0.0',
+    version='4.3.2',
     python_requires=">=3.4",
     setup_requires=[
         'setuptools',
@@ -179,5 +180,7 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
     ],
 )

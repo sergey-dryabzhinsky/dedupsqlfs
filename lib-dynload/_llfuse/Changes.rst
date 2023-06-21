@@ -4,9 +4,33 @@
 
 .. currentmodule:: llfuse
 
-**WARNING**: Python-LLFUSE is no longer actively developed. Unless you are stuck
-with Python 2.x or libfuse 2.x, we recommended to use the pyfuse3_
-module instead.
+**WARNING**: Python-LLFUSE is no longer actively developed.
+
+Release 1.4.4 (2023-05-21)
+==========================
+
+- CI: use the matrix for cy/py combinations, support and test on Cython 3 beta
+- cy3: cdef void* f(void* d) noexcept with gil, #78
+- cy3: cdef nogil -> noexcept nogil
+- tests: use shutil.which() instead of which(1) executable
+- tests/examples: fix tmpfs: backport fix from pyfuse3
+- tests/examples: fix lltest: add statfs implementation, remove -l from umount
+
+Release 1.4.3 (2023-05-09)
+==========================
+
+* cythonize with Cython 0.29.34 (brings python 3.12 support)
+* also test on python 3.12-dev
+* add a minimal pyproject.toml, #70
+* fix basedir in setup.py (malfunctioned with pip install -e .)
+* tests: fix integer overflow on 32-bit architectures
+
+Release 1.4.2 (2022-05-31)
+==========================
+
+* cythonize with Cython 0.29.30 (brings python 3.11 support)
+* also test on python 3.10 and 3.11-dev
+* remove "nonempty" default mount option, seems unsupported now.
 
 Release 1.4.1 (2021-01-31)
 ==========================
@@ -49,14 +73,14 @@ Release 1.3.6 (2019-02-14)
 * No change upload.
 
 * Python-LLFUSE is no longer actively maintained. Unless you are stuck
-  with Python 2.x or libfuse 2.x, we recommended to use the pyfuse3_
+  with Python 2.x or libfuse 2.x, we recommended to use the pyfuse3
   module instead.
 
 Release 1.3.5 (2018-08-30)
 ==========================
 
-* Add `handle_signals` option to `llfuse.main`
-* Several fixes to `examples/passthroughfs.py`
+* Add ``handle_signals`` option to ``llfuse.main``
+* Several fixes to ``examples/passthroughfs.py``
 * Now compatible with Python 3.7
 
 Release 1.3.4 (2018-04-29)

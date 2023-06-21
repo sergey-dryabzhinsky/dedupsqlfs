@@ -36,26 +36,6 @@ _PY310 = sys.version_info[:2] >= (3, 10)
 extra_compile_args = []
 extra_link_args = []
 
-ext_modules = [
-    Extension(
-        "recordclass._dataobject",
-        ["lib/recordclass/_dataobject.c"],
-        extra_compile_args = extra_compile_args,
-        # extra_link_args = extra_link_args,
-    ),
-    Extension(
-        "recordclass._litetuple",
-        ["lib/recordclass/_litetuple.c"],
-        extra_compile_args = extra_compile_args,
-        # extra_link_args = extra_link_args,
-    ),
-    Extension(
-        "recordclass._litelist",
-        ["lib/recordclass/_litelist.c"],
-        extra_compile_args = extra_compile_args,
-        # extra_link_args = extra_link_args,
-    ),
-]
 
 EXTRA_OPT="RC_EXTRAOPT" in os.environ
 if "--extra-optimization" in sys.argv:
@@ -66,17 +46,38 @@ if "--extra-optimization" in sys.argv:
 if EXTRA_OPT:
     extra_compile_args.insert(0, "-march=native")
     extra_compile_args.insert(0, "-O3")
+    extra_link_args.insert(0, "-Wl,-s")
 else:
     extra_compile_args.insert(0, "-O2")
 
 
+ext_modules = [
+    Extension(
+        "recordclass._dataobject",
+        ["lib/recordclass/_dataobject.c"],
+        extra_compile_args = extra_compile_args,
+        extra_link_args = extra_link_args,
+    ),
+    Extension(
+        "recordclass._litetuple",
+        ["lib/recordclass/_litetuple.c"],
+        extra_compile_args = extra_compile_args,
+        extra_link_args = extra_link_args,
+    ),
+    Extension(
+        "recordclass._litelist",
+        ["lib/recordclass/_litelist.c"],
+        extra_compile_args = extra_compile_args,
+        extra_link_args = extra_link_args,
+    ),
+]
 
 description = """Mutable variant of namedtuple -- recordclass, which support assignments, and other memory saving variants."""
 
 with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
-packages = [ 'recordclass', 
+packages = [ 'recordclass',
              'recordclass.test',
              'recordclass.test.typing',
              'recordclass.typing',
@@ -85,7 +86,7 @@ packages = [ 'recordclass',
 
 setup(
     name = 'recordclass',
-    version = '0.18.3',
+    version = '0.18.4',
     description = description,
     author = 'Zaur Shibzukhov',
     author_email = 'szport@gmail.com',
@@ -115,6 +116,7 @@ setup(
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
         'Operating System :: OS Independent',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],

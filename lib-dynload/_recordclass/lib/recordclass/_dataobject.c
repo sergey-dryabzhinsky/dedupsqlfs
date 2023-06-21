@@ -282,11 +282,11 @@ dataobject_init_vc(PyObject *op, PyObject **args,
     PyObject **items = PyDataObject_ITEMS(op);
     Py_ssize_t i;
 
-    for (i = 0; i < n_args; i++, items++) {
-        PyObject *v = args[i];
+    for (i = 0; i < n_args; i++) {
+        PyObject *v = *(args++);
         py_incref(v);
         py_decref(*items);
-        *items = v;
+        *(items++) = v;
     }
 
     if (kwds) {
@@ -1959,6 +1959,10 @@ _dataobject_type_init(PyObject *module, PyObject *args) {
         // tp->tp_flags &= ~Py_TPFLAGS_PREHEADER;
 #endif
 
+// #if PY_VERSION_HEX >= 0x030B0000
+//         tp->tp_flags &= ~Py_TPFLAGS_IMMUTABLETYPE;
+// #endif
+
     tp->tp_alloc = dataobject_alloc;
 
     // __new__ = PyMapping_HasKeyString(dict, "__new__");
@@ -2223,7 +2227,6 @@ _set_deep_dealloc(PyObject *cls, PyObject *state)
     Py_RETURN_NONE;
 }
 
-
 static PyObject *
 _astuple(PyObject *op)
 {
@@ -2456,7 +2459,6 @@ _tuple_index(PyTupleObject *self, PyObject *value)
     }
     return -1;
 }
-
 
 static int
 _dataobject_update(PyObject *op, PyObject *kwds)

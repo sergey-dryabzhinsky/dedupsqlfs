@@ -1,66 +1,11 @@
-Metadata-Version: 1.2
+Metadata-Version: 2.1
 Name: llfuse
-Version: 1.4.2
+Version: 1.4.4
 Summary: Python bindings for the low-level FUSE API
 Home-page: https://github.com/python-llfuse/python-llfuse/
 Author: Nikolaus Rath
 Author-email: Nikolaus@rath.org
 License: LGPL
-Description: ..
-          NOTE: We cannot use sophisticated ReST syntax (like
-          e.g. :file:`foo`) here because this isn't rendered correctly
-          by PyPi.
-        
-        The Python-LLFUSE Module
-        ========================
-        
-        
-        .. start-intro
-        
-        **Warning - no longer developed!**
-        
-        Python-LLFUSE is no longer actively developed and just receiving
-        community-contributed maintenance to keep it alive for some time.
-        Unless you are stuck with Python 2.x or libfuse 2.x, we recommend
-        to use the pyfuse3_ module instead - see pyfuse3_porting_ for some
-        hints. If you are stuck on Python 2.x, use llfuse<1.4.0.
-        
-        Python-LLFUSE is a set of Python bindings for the low level FUSE_
-        API. It requires at least FUSE 2.8.0 and supports both Python 2.x and
-        3.x. Like FUSE itself, Python-LLFUSE is developed for Linux systems,
-        but it should be compatible with OS-X, FreeBSD and NetBSD as well.
-        
-        Python-LLFUSE releases can be downloaded from PyPi_. The documentation
-        can be `read online`__ and is also included in the ``doc/html``
-        directory of the Python-LLFUSE tarball.
-        
-        
-        .. _pyfuse3: https://github.com/libfuse/pyfuse3
-        .. _pyfuse3_porting: https://github.com/python-llfuse/python-llfuse/issues/33
-        
-        Getting Help
-        ------------
-        
-        Please report any bugs on the `issue tracker`_. For discussion and
-        questions, please use the general `FUSE mailing list`_. A searchable
-        `mailing list archive`_ is kindly provided by Gmane_.
-        
-        
-        Contributing
-        ------------
-        
-        The Python-LLFUSE source code is available on GitHub_.
-        
-        
-        .. __: http://www.rath.org/llfuse-docs/
-        .. _FUSE: http://github.com/libfuse/libfuse
-        .. _FUSE mailing list: https://lists.sourceforge.net/lists/listinfo/fuse-devel
-        .. _issue tracker: https://github.com/python-llfuse/python-llfuse/issues
-        .. _mailing list archive: http://dir.gmane.org/gmane.comp.file-systems.fuse.devel
-        .. _Gmane: http://www.gmane.org/
-        .. _PyPi: https://pypi.python.org/pypi/llfuse/
-        .. _GitHub: https://github.com/python-llfuse/python-llfuse
-        
 Keywords: FUSE,python
 Platform: Linux
 Platform: FreeBSD
@@ -74,6 +19,9 @@ Classifier: Programming Language :: Python :: 3.6
 Classifier: Programming Language :: Python :: 3.7
 Classifier: Programming Language :: Python :: 3.8
 Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
 Classifier: Topic :: Software Development :: Libraries :: Python Modules
 Classifier: Topic :: System :: Filesystems
 Classifier: License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)
@@ -82,3 +30,53 @@ Classifier: Operating System :: MacOS :: MacOS X
 Classifier: Operating System :: POSIX :: BSD :: FreeBSD
 Provides: llfuse
 Requires-Python: >=3.5
+License-File: LICENSE
+
+..
+  NOTE: We cannot use sophisticated ReST syntax (like
+  e.g. :file:`foo`) here because this isn't rendered correctly
+  by PyPi.
+
+The Python-LLFUSE Module
+========================
+
+
+.. start-intro
+
+**Warning - no longer developed!**
+
+Python-LLFUSE is no longer actively developed and just receiving
+community-contributed maintenance to keep it alive for some time.
+
+Python-LLFUSE is a set of Python bindings for the low level FUSE_
+API. It requires at least FUSE 2.8.0 and supports both Python 2.x and
+3.x. Like FUSE itself, Python-LLFUSE is developed for Linux systems,
+but it should be compatible with OS-X, FreeBSD and NetBSD as well.
+
+Python-LLFUSE releases can be downloaded from PyPi_. The documentation
+can be `read online`__ and is also included in the ``doc/html``
+directory of the Python-LLFUSE tarball.
+
+
+Getting Help
+------------
+
+Please report any bugs on the `issue tracker`_. For discussion and
+questions, please use the general `FUSE mailing list`_. A searchable
+`mailing list archive`_ is kindly provided by Gmane_.
+
+
+Contributing
+------------
+
+The Python-LLFUSE source code is available on GitHub_.
+
+
+.. __: http://www.rath.org/llfuse-docs/
+.. _FUSE: http://github.com/libfuse/libfuse
+.. _FUSE mailing list: https://lists.sourceforge.net/lists/listinfo/fuse-devel
+.. _issue tracker: https://github.com/python-llfuse/python-llfuse/issues
+.. _mailing list archive: http://dir.gmane.org/gmane.comp.file-systems.fuse.devel
+.. _Gmane: http://www.gmane.org/
+.. _PyPi: https://pypi.python.org/pypi/llfuse/
+.. _GitHub: https://github.com/python-llfuse/python-llfuse

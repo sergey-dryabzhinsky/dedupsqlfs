@@ -1909,7 +1909,9 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 self.hash_function, hash_function)
             self.hash_function = hash_function
 
-        parts = int(options.get("block_partitions"))
+        parts = options.get("block_partitions")
+        if parts is not None:
+           parts = int(parts)
         if hash_function is not None and parts != self.block_partitions:
             self.getLogger().warning("Ignoring --block-partitions=%r argument, using previously chosen partitions number %r instead",
                 self.block_partitions, parts)

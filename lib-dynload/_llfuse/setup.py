@@ -58,13 +58,13 @@ if DEVELOPER_MODE:
 # to work properly
 sys.path.insert(0, os.path.join(basedir, 'src'))
 
-LLFUSE_VERSION = '1.4.2'
+LLFUSE_VERSION = '1.4.4'
 
 
-EXTRA_OPT=0
+EXTRA_OPT="RC_EXTRAOPT" in os.environ
 if "--extra-optimization" in sys.argv:
     # Support legacy output format functions
-    EXTRA_OPT=1
+    EXTRA_OPT=True
     sys.argv.remove("--extra-optimization")
 
 
@@ -94,12 +94,6 @@ def main():
     # Due to platform specific conditions, these are unavoidable
     compile_args.append('-Wno-unused-parameter')
 
-    if EXTRA_OPT:
-        compile_args.insert(0, "-march=native")
-        compile_args.insert(0, "-O3")
-    else:
-        compile_args.insert(0, "-O2")
-
     # Enable all fatal warnings only when compiling from Mercurial tip.
     # (otherwise we break forward compatibility because compilation with newer
     # compiler may fail if additional warnings are added)
@@ -128,6 +122,14 @@ def main():
     elif os.uname()[0] == 'Darwin':
         c_sources.append('src/darwin_compat.c')
 
+    if EXTRA_OPT:
+        compile_args.insert(0, "-march=native")
+        compile_args.insert(0, "-O3")
+        link_args.insert(0, "-Wl,-s")
+    else:
+        compile_args.insert(0, "-O2")
+
+
     setuptools.setup(
           name='llfuse',
           zip_safe=True,
@@ -150,6 +152,7 @@ def main():
                        'Programming Language :: Python :: 3.9',
                        'Programming Language :: Python :: 3.10',
                        'Programming Language :: Python :: 3.11',
+                       'Programming Language :: Python :: 3.12',
                        'Topic :: Software Development :: Libraries :: Python Modules',
                        'Topic :: System :: Filesystems',
                        'License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)',
@@ -243,7 +246,7 @@ class build_cython(setuptools.Command):
 
         hit = re.match('^Cython version (.+)$', version)
         if not hit or LooseVersion(hit.group(1)) < "0.29":
-            # in fact, we need a very recent Cython version (like 0.29.21) to support py39
+            # in fact, we need a very recent Cython version (like 0.29.24) to support py39
             raise SystemExit('Need Cython 0.29 or newer, found ' + version)
 
         cmd = ['cython', '-Wextra', '--force', '-3', '--fast-fail',

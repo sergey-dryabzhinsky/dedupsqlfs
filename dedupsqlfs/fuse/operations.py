@@ -2155,6 +2155,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
         #     return result
 
         tableHash = self.getTable("hash")
+        tableHashCount = self.getTable("hash_count")
 
         hash_value = self.do_hash(data_block)
         self.getLogger().debug("-- hash_value: %r", hash_value)
@@ -2236,6 +2237,13 @@ class DedupOperations(llfuse.Operations):  # {{{1
             tableIndex.insert(
                 inode, block_number, hash_id, result["real_size"]
             )
+
+            fnd = tableHashCount.find(hash_id)
+            if not fnd:
+                tableHashCount.insert(hash_id)
+            else:
+                tableHashCount.inc(hash_id)
+
             indexItem = {
                 "real_size": result["real_size"],
                 "hash_id": hash_id
@@ -2245,6 +2253,13 @@ class DedupOperations(llfuse.Operations):  # {{{1
             tableIndex.update(
                 inode, block_number, hash_id, result["real_size"]
             )
+
+            fnd = tableHashCount.find(hash_id)
+            if not fnd:
+                tableHashCount.insert(hash_id)
+            else:
+                tableHashCount.inc(hash_id)
+
             indexItem.update({
                 "real_size": result["real_size"],
                 "hash_id": hash_id

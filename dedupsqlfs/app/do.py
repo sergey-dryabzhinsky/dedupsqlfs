@@ -445,6 +445,17 @@ def data_defragment(options, _fuse):
     return ret
 
 
+def data_defragment_clustered(options, _fuse):
+    _fuse.operations.init()
+
+    from dedupsqlfs.app.actions.defragment_clustered import do_defragment_clustered
+
+    ret = do_defragment_clustered(options, _fuse)
+
+    _fuse.operations.destroy()
+    return ret
+
+
 def do(options, compression_methods=None):
     from dedupsqlfs.fuse.dedupfs import DedupFS
     from dedupsqlfs.fuse.operations import DedupOperations
@@ -557,6 +568,9 @@ def do(options, compression_methods=None):
         if options.defragment:
             data_defragment(options, _fuse)
 
+        if options.defragment_clustered:
+            data_defragment_clustered(options, _fuse)
+
         if options.vacuum:
             data_vacuum(options, _fuse)
 
@@ -646,8 +660,9 @@ def main(): # {{{1
 
     data.add_argument('--print-stats', dest='print_stats', action='store_true', help="Print the total apparent size and the actual disk usage of the file system and exit")
     data.add_argument('--check-tree-inodes', dest='check_tree_inodes', action='store_true', help="Check if inodes exists in fs tree on fs usage calculation. Applies to subvolume and snapshot stats calculation too.")
-    data.add_argument('--defragment', dest='defragment', action='store_true', help="Defragment all stored data, do garbage collection.")
-    data.add_argument('--vacuum', dest='vacuum', action='store_true', help="Like defragment, but force SQLite to 'vacuum' databases, MySQL to run OPTIMIZE on tables.")
+    data.add_argument('--defragment', dest='defragment', action='store_true', help="Defragment common stored data, do garbage collection.")
+    data.add_argument('--defragment-clustered', dest='defragment_clustered', action='store_true', help="Defragment clustered stored data, do garbage collection.")
+    data.add_argument('--vacuum', dest='vacuum', action='store_true', help="Optimize tables by size, force SQLite to 'vacuum' databases, MySQL to run OPTIMIZE on tables.")
     data.add_argument('--vacuum-if-last-time-more-than-days', dest='vacuum_older_than', metavar='DAYS_COUNT', type=int, default=0, help="Do vacuum only if last time was more than DAYS_COUNT ago. To disable check - set value less or equal 0.")
     data.add_argument('--new-block-size', dest='new_block_size', metavar='BYTES', default=constants.BLOCK_SIZE_DEFAULT, type=int, help="Specify the new block size in bytes. Defaults to 64kB. (@todo)")
     data.add_argument(

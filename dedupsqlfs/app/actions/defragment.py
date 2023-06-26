@@ -387,11 +387,10 @@ def __collect_blocks(app):
     tableBlock = app.operations.getTable("block")
     tableHCT = app.operations.getTable("hash_compression_type")
     tableHSZ = app.operations.getTable("hash_sizes")
-    tableHCnt = app.operations.getTable("hash_count")
 
-#    if tableHash.getClustered():
-#        app.getLogger().debug("Hashes and blocks are clustered! Skip, @todo")
-#        return 0, ""
+    if tableHash.getClustered():
+        app.getLogger().debug("Hashes and blocks are clustered! Skip, @todo")
+        return 0, ""
 
     subv = Subvolume(app.operations)
     indexHashIds = subv.prepareIndexHashIds()
@@ -434,17 +433,6 @@ def __collect_blocks(app):
         if p != proc:
             proc = p
             app.getLogger().debug("%s (count=%d)", proc, count)
-
-
-    count2 = tableHCnt.count_unused_hashes()
-    if count2:
-        app.getLogger().debug("Clean unused data blocks and hashes by index: %d" % count2)
-        hashes = tableHCnt.get_unused_hashes()
-        id_str =",".join(hashes)
-        tableHash.remove_by_ids(id_str)
-        tableBlock.remove_by_ids(id_str)
-        tableHCT.remove_by_ids(id_str)
-        tableHSZ.remove_by_ids(id_str)
 
     msg = ""
     if count > 0:

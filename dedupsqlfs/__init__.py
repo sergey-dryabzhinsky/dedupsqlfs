@@ -24,7 +24,7 @@ Copyright 2013-2020 Sergey Dryabzhinsky <sergey.dryabzhinsky@gmail.com>.
 __name__ = "DedupSQLfs"
 # for fuse mount
 __fsname__ = "dedupsqlfs"
-__fsversion__ = "3.5"
+__fsversion__ = "3.6"
 # Future 1.3
 __version__ = "1.2.953-dev"
 

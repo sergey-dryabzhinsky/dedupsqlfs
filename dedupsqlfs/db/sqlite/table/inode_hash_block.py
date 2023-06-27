@@ -182,6 +182,18 @@ class TableInodeHashBlock( Table ):
         self.stopTimer('remove_by_inodes')
         return count
 
+    def get_hashid_by_inodes(self, inode_ids):
+        self.startTimer()
+        hashes = ()
+        id_str = ",".join(inode_ids)
+        if id_str:
+            cur = self.getCursor()
+            cur.execute("SELECT `hash_id` FROM `%s` " % self.getName()+
+                        " WHERE `inode_id` IN (%s)" % (id_str,))
+            hashes = (item["hash_id"] for item in iter(cur.fetchone,None))
+        self.stopTimer('get_hashid_by_inodes')
+        return hashes
+
     def get_hash_inode_ids(self):
         self.startTimer()
         cur = self.getCursor()

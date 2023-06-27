@@ -94,8 +94,10 @@ class TableHashSizes( Table ):
         for _i in iter(cur.fetchone, None):
             csizes.append(_i["s"])
 
-        from dedupsqlfs.my_math import quickselect_median
+        if not len(csizes):
+            return 0
 
+        from dedupsqlfs.my_math import quickselect_median
         median = quickselect_median(csizes)
 
         self.stopTimer('get_median_compressed_size')

@@ -389,7 +389,7 @@ def __collect_blocks(app):
     tableHSZ = app.operations.getTable("hash_sizes")
 
     if tableHash.getClustered():
-        app.getLogger().debug("Hashes and blocks are clustered! Skip, @todo")
+        app.getLogger().warning("Hashes and blocks are clustered! Skip, @todo")
         return 0, ""
 
     subv = Subvolume(app.operations)

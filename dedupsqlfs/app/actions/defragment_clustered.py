@@ -75,11 +75,8 @@ def __collect_blocks(app):
     tableHCnt = app.operations.getTable("hash_count")
 
     if not tableHash.getClustered():
-        app.getLogger().debug("Hashes and blocks are not clustered! Skip")
+        app.getLogger().warning("Hashes and blocks are not clustered! Skip")
         return 0, ""
-
-    subv = Subvolume(app.operations)
-    indexHashIds = subv.prepareIndexHashIds()
 
     count2 = tableHCnt.count_unused_hashes()
     if count2:
@@ -98,9 +95,9 @@ def __collect_blocks(app):
         tableHCT.commit()
         tableHSZ.commit()
         msg = "Cleaned up %i unused data block%s and hashes in %%s." % (
-            count, count != 1 and 's' or '',
+            count2, count2 != 1 and 's' or '',
         )
-    return count, msg
+    return count2, msg
 
 
 def do_defragment_clustered(options, _fuse):

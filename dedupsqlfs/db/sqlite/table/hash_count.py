@@ -93,7 +93,7 @@ class TableHashCount( Table ):
         cur = self.getCursor()
         cur.execute("SELECT `hash_id` FROM `%s` " % self.getName()+
                     " WHERE `cnt` <= 0")
-        hashes = (item["hash_id"] for item in iter(cur.fetchone,None))
+        hashes = (str(item["hash_id"]) for item in iter(cur.fetchone,None))
         self.stopTimer('get_unused_hashes')
         return hashes
 

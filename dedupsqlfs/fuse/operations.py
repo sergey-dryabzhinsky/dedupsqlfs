@@ -197,8 +197,8 @@ class DedupOperations(llfuse.Operations):  # {{{1
         if self.mounted_subvolume and table_name in ("tree", "inode", "link", "xattr", "inode_hash_block", "inode_option"):
             table_name += "_%d" % self.mounted_subvolume["id"]
         t = self.getManager().getTable(table_name)
-#        if table_name == "block":
-#            t.setPageSize(self.block_size)
+        if table_name == "block":
+            t.setPageSize(self.block_size)
         if self.getOption("verbosity") < 2:
             t.setEnableTimers(False)
         else:

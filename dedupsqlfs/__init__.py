@@ -33,7 +33,7 @@ import sys
 
 if sys.version_info[0] < 3 or \
         (sys.version_info[0] == 3 and sys.version_info[1] < 4):
-    msg = "Warning: %s(%s, $s) has been tested on Python 3.4+, while you're running Python %d.%d!\n"
+    msg = "Warning: %s(%s, %s) has been tested on Python 3.4+, while you're running Python %d.%d!\n"
     sys.stderr.write(msg % (__name__, __fsversion__, __version__,
                             int(sys.version_info[0]), int(sys.version_info[1])
                            ))

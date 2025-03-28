@@ -31,8 +31,8 @@ n_objects = 100000
 
 def usual_object():
   class CPoint:
-      x=0
-      y=0
+    x=0
+    y=0
     def __init__(self, x=0, y=0):
       self.x=x
       self.y=y
@@ -48,7 +48,7 @@ def slots_object():
 
 memory_usage1 = 0
 def test_speed_usual():
-    global memory_usage1
+  global memory_usage1
   memory_usage_1 = get_memory_usage()
   t=timeit.timeit(usual_object,number=n_objects)
   memory_usage_2 = get_memory_usage()
@@ -59,7 +59,7 @@ def test_speed_usual():
 
 memory_usage2 = 0
 def test_speed_slots():
-    global memory_usage2
+  global memory_usage2
   memory_usage_1 = get_memory_usage()
   t=timeit.timeit(slots_object,number=n_objects)
   memory_usage_2 = get_memory_usage()

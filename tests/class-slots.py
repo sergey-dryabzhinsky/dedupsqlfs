@@ -27,7 +27,7 @@ sys.path.insert( 0, dynloaddir )
 sys.path.insert( 0, ddsqlfsdir )
 sys.path.insert( 0, basedir )
 
-from dedupsqlfs.get_memory_usage import get_memory_usage
+from dedupsqlfs.get_memory_usage import get_real_memory_usage
 from dedupsqlfs.my_formats import format_size
 
 n_objects = 100000
@@ -52,9 +52,9 @@ def slots_object():
 memory_usage1 = 0
 def test_speed_usual():
   global memory_usage1
-  memory_usage_1 = get_memory_usage()
+  memory_usage_1 = get_real_memory_usage()
   t=timeit.timeit(usual_object,number=n_objects)
-  memory_usage_2 = get_memory_usage()
+  memory_usage_2 = get_real_memory_usage()
   memory_usage1 = memory_usage_2 - memory_usage_1
   print("All done in %s seconds" %t)
   pass
@@ -71,14 +71,11 @@ def test_speed_slots():
   pass
 
 def test_memory_usual():
-  t=timeit.timeit(usual_object,number=n_objects)
   print("Memory wasted %s by simple classes" % memory_usage1)
   pass
 
 def test_memory_slots():
-  t=timeit.timeit(slots_object,number=n_objects)
-  memory_usage = get_memory_usage()
-  print("Memory wasted %s by classes wth slots" % memory_usage2)
+  print("Memory wasted %s by classes with slots" % memory_usage2)
   pass
 
 if len(sys.argv) >= 1:

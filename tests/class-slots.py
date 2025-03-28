@@ -24,10 +24,15 @@ dynloaddir = os.path.abspath( os.path.join( basedir, "lib-dynload" ) )
 sys.path.insert( 0, dynloaddir )
 sys.path.insert( 0, basedir )
 
+from dedupsqlfs.get_memory_usage import get_memory_usage
+from dedupsqlfs.my_formats import format_size
+
 n_objects = 100000
 
 def usual_object():
   class CPoint:
+      x=0
+      y=0
     def __init__(self, x=0, y=0):
       self.x=x
       self.y=y
@@ -41,26 +46,47 @@ def slots_object():
       self.y=y
   pass
 
+memory_usage1 = 0
 def test_speed_usual():
-  t=timeit.timeit('usual_object',number=n_objects)
+    global memory_usage1
+  memory_usage_1 = get_memory_usage()
+  t=timeit.timeit(usual_object,number=n_objects)
+  memory_usage_2 = get_memory_usage()
+	memory_usage1 = memory_usage_2 - memory_usage_1
   print("All done in %s seconds" %t)
   pass
 
+
+memory_usage2 = 0
 def test_speed_slots():
-  t=timeit.timeit('slots_object',number=n_objects)
+    global memory_usage2
+  memory_usage_1 = get_memory_usage()
+  t=timeit.timeit(slots_object,number=n_objects)
+  memory_usage_2 = get_memory_usage()
+	memory_usage2 = memory_usage_2 - memory_usage_1
   print("All done in %s seconds" %t)
   pass
 
-test_memory():
+test_memory_usual():
+  t=timeit.timeit(usual_object,number=n_objects)
+  print("Memory wasted %s by simple classes" % memory_usage1)
   pass
 
-if len(sys.argv) > 1:
+test_memory_slots():
+  t=timeit.timeit(slots_object,number=n_objects)
+  memory_usage = get_memory_usage()
+  print("Memory wasted %s by classes wth slots" % memory_usage2)
+  pass
+
+if len(sys.argv) >= 1:
     print("Test speed of creation %s usual objects" % n_objects)
     test_speed_usual()
     print("Test speed of creation %s slots objects" % n_objects)
     test_speed_slots()
 else:
-    print("Test memory consumption of creation %s objects" % n_objects)
-    test_memory()
+    print("Test memory consumption of creation %s simple objects" % n_objects)
+    test_memory_usual()
+    print("Test memory consumption of creation %s slots objects" % n_objects)
+    test_memory_slots()
 print("Done")
 

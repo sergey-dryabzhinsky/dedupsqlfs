@@ -67,12 +67,12 @@ def test_speed_slots():
   print("All done in %s seconds" %t)
   pass
 
-test_memory_usual():
+def test_memory_usual():
   t=timeit.timeit(usual_object,number=n_objects)
   print("Memory wasted %s by simple classes" % memory_usage1)
   pass
 
-test_memory_slots():
+def test_memory_slots():
   t=timeit.timeit(slots_object,number=n_objects)
   memory_usage = get_memory_usage()
   print("Memory wasted %s by classes wth slots" % memory_usage2)

@@ -21,7 +21,10 @@ basedir = os.path.abspath( os.path.join( currentdir, "..", ".." ) )
 
 dynloaddir = os.path.abspath( os.path.join( basedir, "lib-dynload" ) )
 
+ddsqlfsdir = os.path.abspath( os.path.join( basedir, dirname ) )
+
 sys.path.insert( 0, dynloaddir )
+sys.path.insert( 0, ddsqlfsdir )
 sys.path.insert( 0, basedir )
 
 from dedupsqlfs.get_memory_usage import get_memory_usage

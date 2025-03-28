@@ -86,7 +86,7 @@ if len(sys.argv) >= 1:
     test_speed_usual()
     print("Test speed of creation %s slots objects" % n_objects)
     test_speed_slots()
-else:
+#else:
     print("Test memory consumption of creation %s simple objects" % n_objects)
     test_memory_usual()
     print("Test memory consumption of creation %s slots objects" % n_objects)

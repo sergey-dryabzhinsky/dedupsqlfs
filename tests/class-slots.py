@@ -52,7 +52,7 @@ def test_speed_usual():
   memory_usage_1 = get_memory_usage()
   t=timeit.timeit(usual_object,number=n_objects)
   memory_usage_2 = get_memory_usage()
-	memory_usage1 = memory_usage_2 - memory_usage_1
+  memory_usage1 = memory_usage_2 - memory_usage_1
   print("All done in %s seconds" %t)
   pass
 
@@ -63,7 +63,7 @@ def test_speed_slots():
   memory_usage_1 = get_memory_usage()
   t=timeit.timeit(slots_object,number=n_objects)
   memory_usage_2 = get_memory_usage()
-	memory_usage2 = memory_usage_2 - memory_usage_1
+  memory_usage2 = memory_usage_2 - memory_usage_1
   print("All done in %s seconds" %t)
   pass
 

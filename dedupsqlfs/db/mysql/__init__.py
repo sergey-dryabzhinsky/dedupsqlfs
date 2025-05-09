@@ -14,7 +14,7 @@ def get_table_engines():
 
     try:
         output = subprocess.check_output([mysqld_bin, "--verbose", "--help"], stderr=subprocess.DEVNULL)
-        table_engines = ['MyISAM', 'InnoDB',]
+        table_engines = ['MyISAM', 'InnoDB','MEMORY']
         if output.find(b'--aria[='):
             table_engines.append('Aria')
         if output.find(b'--tokudb[='):

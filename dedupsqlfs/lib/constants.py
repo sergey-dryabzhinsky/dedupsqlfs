@@ -6,7 +6,7 @@ Constants for modules
 __author__ = 'sergey'
 
 COMPRESSION_SUPPORTED=(
-    'lzo', 'zlib', 'bz2', 'xz', 'snappy',
+    'lzo', 'zlib', 'deflate', 'bz2', 'xz', 'snappy',
     'lz4', 'brotli', 'zstd',
 )
 COMPRESSION_READONLY=()

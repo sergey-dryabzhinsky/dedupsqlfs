@@ -117,6 +117,9 @@ class BaseCompressTool(object):
         elif name == "zlib":
             from dedupsqlfs.compression.zlib import ZlibCompression
             self._compressors[name] = ZlibCompression()
+        elif name == "deflate":
+            from dedupsqlfs.compression.zlib import DeflateCompression
+            self._compressors[name] = DeflateCompression()
         elif name == "brotli":
             from dedupsqlfs.compression.brotli import BrotliCompression
             self._compressors[name] = BrotliCompression()
@@ -156,18 +159,6 @@ class BaseCompressTool(object):
         elif name == "zstd":
             from dedupsqlfs.compression.zstd import ZstdCompression
             self._compressors[name] = ZstdCompression()
-        elif name == "zstd036":
-            from dedupsqlfs.compression.zstd036 import Zstd036Compression
-            self._compressors[name] = Zstd036Compression()
-        elif name == "zstd047":
-            from dedupsqlfs.compression.zstd047 import Zstd047Compression
-            self._compressors[name] = Zstd047Compression()
-        elif name == "zstd061":
-            from dedupsqlfs.compression.zstd061 import Zstd061Compression
-            self._compressors[name] = Zstd061Compression()
-        elif name == "zstd001":
-            from dedupsqlfs.compression.zstd001 import Zstd001Compression
-            self._compressors[name] = Zstd001Compression()
         else:
             raise ValueError("Unknown compression method! %r" % name)
 

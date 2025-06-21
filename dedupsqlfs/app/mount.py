@@ -39,8 +39,9 @@ def fuse_mount(options, compression_methods=None):
             fsname="dedupsqlfs", allow_root=True)
 
         logger = ops.getApplication().getLogger()
-        logger.info("Mount: DeDupSQLfs %s/%s, llFuse %s, recordclass %s, Python %s" % (
+        logger.info("Mount: DeDupSQLfs %s/%s, UUID(%s) llFuse %s, recordclass %s, Python %s" % (
             dedupsqlfs.__version__, dedupsqlfs.__fsversion__,
+            _fuse.getUuid(),
             dedupsqlfs.fuse.dedupfs.fuse.__version__,
             dedupsqlfs.lib.cache.index.RC_VERSION,
             sys.version.split()[0])

@@ -12,6 +12,7 @@ try:
     import time
     import traceback
     import subprocess
+    import uuid
 except ImportError as e:
     msg = "Error: Failed to load one of the required Python modules! (%s)\n"
     sys.stderr.write(msg % str(e))
@@ -112,6 +113,17 @@ class DedupFS(object): # {{{1
 
         pass
 
+    def getUuid(self):
+        manager = self.operations.getManager()
+
+        toption = manager.getTable('option')
+        
+        has_uuid = toption.get('uuid')
+        
+        if not has_uuid:
+            has_uuid = ""+uuid.uuid4()
+            toption.insert('uuid', has_uuid)
+        return has_uuid
 
     def startCacheFlusher(self):
         if not self.mountpoint:

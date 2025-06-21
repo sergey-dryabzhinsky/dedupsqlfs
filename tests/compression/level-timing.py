@@ -371,6 +371,7 @@ DECOMPRESSION_SUPPORTED=[
     ('zstd' , list(range(-5,0)) + list(range(1,21)), do_level_dtest,),
     ('brotli' , range(0,12), do_level_dtest,),
     ('zlib' , range(0,10), do_level_dtest,),
+    ('deflate' , range(0,10), do_level_dtest,),
     ('bz2' , range(1,10), do_level_dtest,),
     ('xz' , range(0,10), do_level_dtest,),
     ]

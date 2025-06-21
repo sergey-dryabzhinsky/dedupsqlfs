@@ -19,7 +19,7 @@ sys.path.insert( 0, dynloaddir )
 sys.path.insert( 0, basedir )
 os.chdir(basedir)
 
-COMPRESSION_SUPPORTED=('lzo', 'zlib', 'bz2', 'xz', 'snappy', 'lz4', 'zstd', 'brotli',)
+COMPRESSION_SUPPORTED=('lzo', 'zlib', 'deflate', 'bz2', 'xz', 'snappy', 'zstd', 'brotli',)
 
 CLENGTHS={}
 
@@ -51,7 +51,7 @@ for l in range(1, 256, 1):
 
         CLENGTHS[ c ]["length"] = l
 
-        s = b'a' * l
+        s = b'\0' * l
         cs = method(s)
         if len(s) > len(cs):
             CLENGTHS[ c ]["done"] = True

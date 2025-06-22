@@ -33,20 +33,13 @@ from dedupsqlfs.get_memory_usage import get_real_memory_usage
 from dedupsqlfs.my_formats import format_size
 
 try:
-    # Our lib-dynload module
-    from _recordclass import loaded
-    print(loaded)
-    if loaded:
-        from _recordclass import module as recordclass
-        from _recordclass import __version__ as RC_VERSION
-        print(RC_VERSION)
-except Exception as e:
-    print(e)
-    pass
-try:
     from recordclass import make_dataclass
 except Exception as e:
-    print(e)
+    def make_dataclass(classname, properteies, defaults):
+        class cp(object):
+          x=0
+          y=0
+        return cp
     pass
 
 if make_dataclass is not None:

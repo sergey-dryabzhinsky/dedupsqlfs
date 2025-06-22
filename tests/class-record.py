@@ -33,6 +33,7 @@ from dedupsqlfs.get_memory_usage import get_real_memory_usage
 from dedupsqlfs.my_formats import format_size
 
 try:
+    from _recordclass import module as recordclass, loaded
     from recordclass import make_dataclass
 except Exception as e:
     def make_dataclass(classname, properteies, defaults):

@@ -105,6 +105,7 @@ def main(): # {{{1
 
     generic.add_argument('--lock-file', dest='lock_file', help="Specify lock file location. Useful to check fs status via content or existsnce.")
     generic.add_argument('--data', dest='data', metavar='DIRECTORY', default="~/data", help="Specify the base location for the files in which metadata and blocks data is stored. Defaults to ~/data")
+    generic.add_argument('--data-in-memory', dest='data_in_memory', action='store_true', help="Enable FS only in memory storage for data (for tests).")
     generic.add_argument('--data-clustered', dest='data_clustered', metavar='DIRECTORY', default=None, help="Specify the base location for the files in which blocks, hash, names data is stored for multiple nodes backups. Defaults to --data value, no clustering.")
     generic.add_argument('--block-partitions', dest='block_partitions', metavar='COUNT', default=1, type=int, help="Store block data across several (COUNT) tables to make them smaller. Default 1.")
     generic.add_argument('--name', dest='name', metavar='DATABASE', default="dedupsqlfs", help="Specify the name for the database directory in which metadata and blocks data is stored. Defaults to dedupsqlfs")

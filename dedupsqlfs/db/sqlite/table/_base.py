@@ -137,6 +137,8 @@ class Table( object ):
         return self._manager
 
     def getDbFilePath(self):
+        if self._table_file_name==":memory:":
+            self._db_file_path = ":memory:"
         if not self._db_file_path:
             bp = self.getManager().getBasePath()
             if self.getClustered():
@@ -266,12 +268,13 @@ class Table( object ):
         import sqlite3
 
         db_path = self.getDbFilePath()
+        print("%s->connect(%s)" % (self._table_name, db_path))
+        if db_path!=':memory:':
+            db_dir = os.path.dirname(db_path)
+            if not os.path.exists(db_dir):
+                os.makedirs(db_dir)
 
-        db_dir = os.path.dirname(db_path)
-        if not os.path.exists(db_dir):
-            os.makedirs(db_dir)
-
-        self._decompress()
+            self._decompress()
 
         pageSize = self.calcFilePageSize()
 
@@ -477,6 +480,7 @@ class Table( object ):
         return newSize - oldSize
 
     def close(self, nocompress=False):
+        print("%s->close()"%(self._table_name))
         if self._curr:
             self._curr.close()
             self._curr = None

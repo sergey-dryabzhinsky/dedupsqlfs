@@ -60,8 +60,9 @@ for d in dirs:
     except:
         pass
 
-    print(version)
-    print(dir(mod))
+    # debug
+#    print(version)
+#    print(dir(mod))
     compress = mod.compress
     decompress = mod.decompress
 

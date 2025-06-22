@@ -7,7 +7,7 @@ __author__ = 'sergey'
 
 COMPRESSION_SUPPORTED=(
     'lzo', 'zlib', 'deflate', 'bz2', 'xz', 'snappy',
-    'lz4', 'brotli', '__zstd',
+    'lz4', 'brotli', 'zstd',
 )
 COMPRESSION_READONLY=()
 COMPRESSION_TYPE_BEST="all_best"

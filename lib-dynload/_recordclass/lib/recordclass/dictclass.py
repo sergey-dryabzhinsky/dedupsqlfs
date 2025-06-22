@@ -1,8 +1,6 @@
-# coding: utf-8
-
 # The MIT License (MIT)
 
-# Copyright (c) «2021-2022» «Shibzukhov Zaur, szport at gmail dot com»
+# Copyright (c) «2021-2024» «Shibzukhov Zaur, szport at gmail dot com»
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software - recordclass library - and associated documentation files
@@ -44,12 +42,12 @@ def make_dictclass(typename, keys, defaults=None, *, bases=None, namespace=None,
 
     keys, annotations, defaults = process_fields(keys, defaults, False, ())
     typename = check_name(typename)
-    
+
     if namespace is None:
         ns = {}
     else:
         ns = namespace.copy()
-        
+
     n_keys = len(keys)
     n_defaults = len(defaults) if defaults else 0
 
@@ -61,7 +59,7 @@ def make_dictclass(typename, keys, defaults=None, *, bases=None, namespace=None,
     ns['__fields__'] = keys
     ns['__annotations__'] = annotations
     ns['__defaults__'] = defaults
-    
+
     if readonly:
         raise TypeError('Immutable type can not support dict-like interface')
 
@@ -88,9 +86,9 @@ def make_dictclass(typename, keys, defaults=None, *, bases=None, namespace=None,
         return (key in self.__fields__)
 
     ns.update({
-        'keys': keys, 
-        'items': items, 
-        'values': values, 
+        'keys': keys,
+        'items': items,
+        'values': values,
         'get': get,
         'update': update,
     })
@@ -110,7 +108,7 @@ def make_dictclass(typename, keys, defaults=None, *, bases=None, namespace=None,
 
     ns['__module__'] = module
 
-    cls = datatype(typename, bases, ns, 
+    cls = datatype(typename, bases, ns,
                    gc=False, fast_new=fast_new,
                    readonly=readonly, iterable=True,
                    mapping=True, sequence=False,
@@ -136,6 +134,6 @@ class DictclassStorage:
         key = (name, keys)
         cls = self._storage.get(key, None)
         if cls is None:
-            cls = make_datadict(name, keys, defaults, **kw)
+            cls = make_dictclass(name, keys, defaults, **kw)
             self._storage[key] = cls
         return cls

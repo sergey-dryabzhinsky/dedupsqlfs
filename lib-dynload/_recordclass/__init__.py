@@ -42,7 +42,7 @@ for d in dirs:
 
     loaded = True
 
-    __version__ = "0.18.4"
+    __version__ = "0.23.1"
 
     sys.path.pop(0)
 

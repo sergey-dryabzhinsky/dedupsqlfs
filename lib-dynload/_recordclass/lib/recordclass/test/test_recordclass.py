@@ -13,11 +13,7 @@ import sys
 # except:
 #     from test import test_support as support
 
-if 'PyPy' in sys.version:
-    is_pypy = True
-else:
-    is_pypy = False
-    from recordclass.utils import headgc_size, ref_size, pyobject_size, pyvarobject_size, pyssize
+from recordclass.utils import headgc_size, ref_size, pyobject_size, pyvarobject_size, pyssize
 
 
 TestNT = recordclass('TestNT', 'x y z')    # type used for pickle tests
@@ -69,7 +65,7 @@ class RecordClassTest(unittest.TestCase):
 #         ]:
 #             self.assertEqual(recordclass('NT', spec, rename=True).__fields__, renamed)
 
-            
+
     def test_defaults(self):
         Point = recordclass('Point', 'x y', defaults=(10, 20))              # 2 defaults
         self.assertEqual(Point(1, 2), Point(1, 2))
@@ -84,7 +80,7 @@ class RecordClassTest(unittest.TestCase):
         self.assertEqual(Point(1, 2), Point(1, 2))
         # with self.assertRaises(TypeError):
         #     Point(1)
-            
+
         # with self.assertRaises(TypeError):                                  # catch too few args
         #     Point()
         with self.assertRaises(TypeError):                                  # catch too many args
@@ -107,7 +103,7 @@ class RecordClassTest(unittest.TestCase):
         self.assertEqual(Point(1, 2), Point(1, 2))
         self.assertEqual(Point(1), Point(1, 20))
         self.assertEqual(Point(), Point(10, 20))
-            
+
     def test_instance(self):
         Point = recordclass('Point', 'x y')
         p = Point(11, 22)
@@ -116,9 +112,7 @@ class RecordClassTest(unittest.TestCase):
         self.assertEqual(p, Point(y=22, x=11))
         self.assertEqual(p, Point(*(11, 22)))
         self.assertEqual(p, Point(**dict(x=11, y=22)))
-        print('1')
         self.assertRaises(TypeError, eval, 'Point(XXX=1, y=2)', locals())   # wrong keyword argument
-        print('2')
         # self.assertRaises(TypeError, eval, 'Point(x=1)', locals())          # missing keyword argument
         self.assertEqual(repr(p), 'Point(x=11, y=22)')
         #self.assertNotIn('__weakref__', dir(p))
@@ -141,12 +135,12 @@ class RecordClassTest(unittest.TestCase):
         Point = recordclass('Point', ('x', 'y'))
         p = Point(x=11, y=22)
         self.assertEqual(repr(p), 'Point(x=11, y=22)')
-        
+
     def test_readonly_instance(self):
         Point = recordclass('Point', ('x', 'y'), readonly=True)
         p = Point(11, 22)
         self.assertRaises(AttributeError, eval, 'p._replace(z=1)', locals())          # inval keyword argument
-        
+
     def test_gc(self):
         Point = recordclass('Point', 'x y')
         Point_gc = recordclass('Point_gc', 'x y', gc=True)
@@ -191,8 +185,8 @@ class RecordClassTest(unittest.TestCase):
         # n = 5000
         n = 254 # SyntaxError: more than 255 arguments:
         import string, random
-        names = list(set(''.join([random.choice(string.ascii_letters)
-                                  for j in range(10)]) for i in range(n)))
+        names = list({''.join([random.choice(string.ascii_letters)
+                                  for j in range(10)]) for i in range(n)})
         n = len(names)
         Big = recordclass('Big', names)
         b = Big(*range(n))
@@ -210,7 +204,7 @@ class RecordClassTest(unittest.TestCase):
         b2_expected[-5] = 42
         self.assertEqual(b2, Big(*tuple(b2_expected)))
         self.assertEqual(b.__fields__, tuple(names))
-        
+
     # def test_annotations(self):
     #     C = recordclass('C', [('x',int),('y',int)])
     #     self.assertEqual(C.__new__.__annotations__, {'x':int, 'y':int})
@@ -284,19 +278,20 @@ class RecordClassTest(unittest.TestCase):
         class B(A):
             pass
         self.assertEqual(repr(B(1)), 'B(x=1)')
-        
+
     def test_hash(self):
         A = recordclass('A', 'x y', readonly=True)
+        # print(A.__options__)
         a = A(1, 2)
-        self.assertNotEqual(hash(a), None)
-        hash_a = hash(a)
-        #self.assertEqual(hash(a), hash(tuple(a)))
+        self.assertNotEqual(hash(a), id(a))
         B = recordclass('B', 'x y', hashable=True)
+        # print(B.__options__)
         b = B(1, 2)
         hash_b = hash(b)
         #self.assertEqual(hash_b, hash(tuple(b)))
         b.x = -1
         self.assertNotEqual(hash(b), hash_b)
+        self.assertNotEqual(hash(b), id(b))
 
     def test_hash2(self):
         A = recordclass('A', 'x y', hashable=True)
@@ -334,15 +329,15 @@ class RecordClassTest(unittest.TestCase):
 #         print(dir(B))
         b = B(1,2)
         hash(b)
-        
+
     def test_caching(self):
         rs = RecordclassStorage()
         A = rs.recordclass('A', ('x', 'y'))
         B = rs.recordclass('A', ['x', 'y'])
         self.assertEqual(A, B)
-        
+
 
 def main():
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(RecordClassTest))
+    suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(RecordClassTest))
     return suite

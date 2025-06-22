@@ -1,8 +1,6 @@
-# coding: utf-8
-
 # The MIT License (MIT)
 
-# Copyright (c) «2017-2022» «Shibzukhov Zaur, szport at gmail dot com»
+# Copyright (c) «2017-2024» «Shibzukhov Zaur, szport at gmail dot com»
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software - recordclass library - and associated documentation files
@@ -26,12 +24,18 @@ from .utils import process_fields
 from .utils import check_name, collect_info_from_bases
 from ._dataobject import dataobject
 
+try:
+    from ._dataobject import datastruct
+except:
+    datastruct = dataobject
+
 __all__ = 'make_dataclass', 'join_dataclasses', 'DataclassStorage'
 
 def make_dataclass(typename, fields, defaults=None, *, bases=None, namespace=None,
                    use_dict=False, use_weakref=False, hashable=False,
                    sequence=False, mapping=False, iterable=False, readonly=False, invalid_names=(),
-                   deep_dealloc=False, module=None, fast_new=True, rename=False, gc=False):
+                   deep_dealloc=False, module=None, fast_new=True, rename=False, gc=False,
+                   immutable_type=False, copy_default=False, match=None):
 
     """Returns a new class with named fields and small memory footprint.
 
@@ -56,9 +60,9 @@ def make_dataclass(typename, fields, defaults=None, *, bases=None, namespace=Non
     from .datatype import datatype
     import sys as _sys
 
-    fields, annotations, defaults = process_fields(fields, defaults, rename, invalid_names)
+    fields, annotations, defaults, match = process_fields(fields, defaults, rename, invalid_names)
     typename = check_name(typename)
-    
+
     if namespace is None:
         ns = {}
     else:
@@ -79,17 +83,29 @@ def make_dataclass(typename, fields, defaults=None, *, bases=None, namespace=Non
 
     ns['__module__'] = module
 
-    cls = datatype(typename, bases, ns, 
-                   gc=gc, fast_new=fast_new,
+    cls = datatype(typename, bases, ns,
                    readonly=readonly, iterable=iterable,
                    mapping=mapping, sequence=sequence,
                    use_dict=use_dict, use_weakref=use_weakref,
-                   hashable=hashable
-                   )
+                   gc=gc, fast_new=fast_new,
+                   hashable=hashable, immutable_type=immutable_type,
+                   copy_default=copy_default, match=match)
 
     return cls
 
 make_class = make_dataclass
+
+def make_structclass(typename, fields, defaults=None, *, bases=(datastruct,), namespace=None,
+                   use_weakref=False, hashable=False,
+                   sequence=False, mapping=False, iterable=False, readonly=False,
+                   module=None, fast_new=True, gc=False,
+                   copy_default=False, match=None):
+    return make_dataclass(typename, fields, defaults=defaults, bases=bases, namespace=namespace,
+                   use_dict=False, use_weakref=use_weakref, hashable=hashable,
+                   sequence=sequence, mapping=mapping, iterable=iterable, readonly=readonly, invalid_names=(),
+                   deep_dealloc=False, module=module, fast_new=True, rename=False, gc=gc,
+                   immutable_type=True, copy_default=copy_default, match=match)
+
 
 class DataclassStorage:
     #
@@ -133,4 +149,3 @@ def join_dataclasses(name, classes, *, readonly=False, use_dict=False, gc=False,
     return make_dataclass(name, _attrs,
                           readonly=readonly, use_dict=use_dict, gc=gc, use_weakref=use_weakref,
                           hashable=hashable, sequence=sequence, iterable=iterable, module=module)
-    

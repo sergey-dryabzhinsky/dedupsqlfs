@@ -118,7 +118,7 @@ class BaseCompressTool(object):
             from dedupsqlfs.compression.zlib import ZlibCompression
             self._compressors[name] = ZlibCompression()
         elif name == "deflate":
-            from dedupsqlfs.compression.zlib import DeflateCompression
+            from dedupsqlfs.compression.deflate import DeflateCompression
             self._compressors[name] = DeflateCompression()
         elif name == "brotli":
             from dedupsqlfs.compression.brotli import BrotliCompression

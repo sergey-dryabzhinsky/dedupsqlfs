@@ -18,6 +18,7 @@ class DbManager( object ):
     _synchronous = True
 
     _log = None
+    _app = None
 
     _compression_prog = None
 
@@ -55,8 +56,18 @@ class DbManager( object ):
         self._log = logger
         return self
 
+    def setApp(self, app):
+        self._app = app
+        return self
+
     def getLogger(self):
         return self._log
+
+    def getApp(self):
+        return self._app
+
+    def getAppOption(self, name):
+        return self._app.getOption(name)
 
     def setSynchronous(self, flag=True):
         self._synchronous = flag == True
@@ -216,6 +227,8 @@ class DbManager( object ):
             else:
                 raise ValueError("Unknown database %r" % name)
 
+            if self.getAppOption("data_in_memory"):
+                self._table[name].setFileName(":memory:")
             if not nocreate:
                 if not self._table[ name ].hasTable():
                     self._table[ name ].create()

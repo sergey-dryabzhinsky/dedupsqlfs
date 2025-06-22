@@ -166,6 +166,8 @@ class DedupOperations(llfuse.Operations):  # {{{1
             if not dpc:
                 dpc = dp
 
+            self.manager.setApp(self.application )
+
             self.getLogger().info("Clustered database path: %r" % dpc)
 
             self.manager.setLogger(self.getLogger())

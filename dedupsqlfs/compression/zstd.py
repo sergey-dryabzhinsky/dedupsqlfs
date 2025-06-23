@@ -13,7 +13,8 @@ from dedupsqlfs.compression import BaseCompression
 
 class ZstdCompression(BaseCompression):
 
-    _method_name = "zstd"
+    # new bundled module name
+    _method_name = "__zstd"
 
     _minimal_size = 18
 

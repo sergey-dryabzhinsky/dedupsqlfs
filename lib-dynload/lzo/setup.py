@@ -23,8 +23,8 @@ else:
         extra_compile_args.insert(0, "-O2")
 
 setup(
-    name = "lzo",
-    version = "1.14",
+    name = "_lzo",
+    version = "1.15",
     packages=[],
     package_dir={'': 'src'},
     ext_modules = [

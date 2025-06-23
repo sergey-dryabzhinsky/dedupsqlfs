@@ -17,9 +17,10 @@ PY=`which $PY`
 
 EXTRA_OPT=$1
 if [ -n "${EXTRA_OPT}" ]; then
-#	EXTRA_OPT="--extra-optimization"
+	EXTRA_OPT="--extra-optimization"
 	export RC_EXTRAOPT=1
 	export CFLAGS="-O3 -march=native"
+	export CXXFLAGS="-O3 -march=native"
 else
 	EXTRA_OPT=""
 fi

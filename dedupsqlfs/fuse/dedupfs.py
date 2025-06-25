@@ -58,6 +58,7 @@ from dedupsqlfs.fuse.helpers.logger import DDSFlogger
 from dedupsqlfs.fuse.compress.mp import MultiProcCompressTool, BaseCompressTool
 from dedupsqlfs.fuse.compress.mt import MultiThreadCompressTool
 from dedupsqlfs.lib import constants
+from dedupsqlfs import __fsversion__ as FS_VERSION
 from subprocess import Popen
 
 # Storage for options and DB interface
@@ -75,6 +76,8 @@ class DedupFS(object): # {{{1
         self.options = dict(vars(options))
 
         self._readonly = False
+
+        self._fs_ver = FS_VERSION
 
         self._cache_flusher_proc = None
 
@@ -121,7 +124,7 @@ class DedupFS(object): # {{{1
         has_uuid = toption.get('uuid')
         
         if not has_uuid:
-            has_uuid = ""+uuid.uuid4()
+            has_uuid = ""+str(uuid.uuid4())
             toption.insert('uuid', has_uuid)
         return has_uuid
 
@@ -217,6 +220,12 @@ class DedupFS(object): # {{{1
 
         self._fixCompressionOptions()
         self._compressTool.init(self.getLogger())
+        manager = self.operations.getManager()
+        fs_ver = manager.getTable('option').get('fsversion')
+        if fs_ver:
+            self._fs_ver = fs_ver
+        else:
+            manager.getTable('option').insert('fsversion',self._fs_ver)
         return
 
 
@@ -418,10 +427,10 @@ class DedupFS(object): # {{{1
             manager = self.operations.getManager()
             table = manager.getTable("compression_type")
             for m in methods:
-
                 if m and m.find(":") != -1:
                     m, level = m.split(":")
 
+                print(m)
                 m_id = table.find(m)
                 if not m_id:
                     table.insert(m)

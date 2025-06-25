@@ -8,7 +8,7 @@ Class for ZLIB compression helper
 
 from dedupsqlfs.compression import BaseCompression
 
-class Deflate9Compression(BaseCompression):
+class DeflateCompression(BaseCompression):
 
     _method_name = "deflate"
 

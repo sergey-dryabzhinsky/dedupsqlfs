@@ -123,6 +123,11 @@ class DedupOperations(llfuse.Operations):  # {{{1
         self.application = application
         return self
 
+
+    def getMyUuid(self):
+        return self.application.getUuid()
+
+
     def getManager(self):
         """
         @return: DbManager
@@ -2160,6 +2165,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
         tableHash = self.getTable("hash")
         tableHashCount = self.getTable("hash_count")
+        tableHashOwner = self.getTable("hash_owner")
 
         hash_value = self.do_hash(data_block)
         self.getLogger().debug("-- hash_value: %r", hash_value)
@@ -2179,8 +2185,15 @@ class DedupOperations(llfuse.Operations):  # {{{1
             self.getLogger().debug("-- hash_id: %r", hash_id)
             result["hash"] = hash_id
 
+            cnt = tableHashOwner.hashHasOwner(hash_id, self.getMyUuid())
+            if not cnt:
+              cnt = tableHashOwner.addHashOwner(hash_id, self.getMyUuid())
             self.reportHelper.bytes_written += block_length
         else:
+            cnt = tableHashOwner.hashHasOwner(hash_id, self.getMyUuid())
+            if not cnt:
+              cnt = tableHashOwner.addHashOwner(hash_id, self.getMyUuid())
+
             hash_CompressType_id = self.__get_compression_type_by_hash_from_cache(hash_id)
 
             # It may not be at this time because at first time only hashes

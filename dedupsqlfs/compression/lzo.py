@@ -10,7 +10,7 @@ from dedupsqlfs.compression import BaseCompression
 
 class LzoCompression(BaseCompression):
 
-    _method_name = "lzo"
+    _method_name = "__lzo"
 
     _minimal_size = 38
 

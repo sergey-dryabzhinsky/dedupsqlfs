@@ -10,7 +10,7 @@ from dedupsqlfs.compression import BaseCompression
 
 class Lz4Compression(BaseCompression):
 
-    _method_name = "lz4"
+    _method_name = "_lz4"
 
     _minimal_size = 15
 

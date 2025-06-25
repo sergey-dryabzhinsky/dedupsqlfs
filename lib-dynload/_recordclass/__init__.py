@@ -35,6 +35,7 @@ for d in dirs:
     if found <= 1:
         continue
 
+    svp = sys.path.pop(0)
     sys.path.insert(0, os.path.join(build_dir, d) )
 
     import importlib
@@ -45,10 +46,11 @@ for d in dirs:
     __version__ = "0.23.1"
 
     sys.path.pop(0)
+    sys.path.insert(0, svp)
 
     del importlib
 
     break
 
-del p1, p2, d, found
+del p1, p2, d, found, svp
 del curpath, currentdir, build_dir, dirs

@@ -180,8 +180,20 @@ def main(): # {{{1
     compression_methods_cmd = [constants.COMPRESSION_TYPE_NONE]
     for modname in constants.COMPRESSION_SUPPORTED:
         try:
-            module = __import__(modname)
-            # print(modname, dir(module))
+            if modname=='zstd':
+                lmod='zstd'
+            else:
+                lmod = modname
+            if modname=='lzr':
+                lmod='_lz4'
+            else:
+                lmod = modname
+            if modname=='lzo':
+                lmod='__lzo'
+            else:
+                lmod = modname
+            module = __import__(lmod)
+#            print(modname, dir(module))
             if hasattr(module, 'compress') and hasattr(module, 'decompress'):
                 compression_methods.append(modname)
                 if modname not in constants.COMPRESSION_READONLY:

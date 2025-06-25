@@ -208,6 +208,11 @@ class DbManager( object ):
                 self._table[ name ] = TableHashCount(self)
                 if cp != bp:
                     self._table[ name ].setClustered(True)
+            elif name == "hash_owner":
+                from dedupsqlfs.db.sqlite.table.hash_owner import TableHashOwner
+                self._table[ name ] = TableHashOwner(self)
+                if cp != bp:
+                    self._table[ name ].setClustered(True)
             elif name == "inode_hash_block":
                 from dedupsqlfs.db.sqlite.table.inode_hash_block import TableInodeHashBlock
                 self._table[ name ] = TableInodeHashBlock(self)

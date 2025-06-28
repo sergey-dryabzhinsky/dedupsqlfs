@@ -4,6 +4,7 @@ __author__ = "sergey"
 
 
 from time import time
+from datetime import datetime
 import logging
 
 from dedupsqlfs.my_formats import format_size, format_timespan
@@ -87,6 +88,8 @@ class ReportHelper:
     def __print_stats(self):
         if self.get_logger().isEnabledFor(logging.INFO) and self.get_option("verbose_stats"):
             self.get_logger().info('-' * 79)
+            now = datetime.now()
+            self.get_logger().info(now.strftime("report time: %F %T"))
             self.__report_memory_usage()
             self.__report_memory_usage_real()
             self.__report_compressed_usage()

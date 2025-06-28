@@ -24,14 +24,18 @@ class CacheItem:
 
 make_dataclass = None
 RC_VERSION = "0.0.0"
-
+import sys
 try:
     # Our lib-dynload module
     from _recordclass import loaded
+    print(loaded)
     if loaded:
         from _recordclass import module as recordclass
-        from _recordclass import __version__ as RC_VERSION
-except:
+        from _recordclass import module
+        RC_VERSION = module.__version__
+except Exception as e:
+#    print(e)
+#    print(sys.path)
     pass
 
 try:

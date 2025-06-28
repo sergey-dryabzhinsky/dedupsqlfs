@@ -112,6 +112,8 @@ def main(): # {{{1
     generic.add_argument('--temp', dest='temp', metavar='DIRECTORY', help="Specify the location for the files in which temporary data is stored. By default honour TMPDIR environment variable value.")
     generic.add_argument('-b', '--block-size', dest='block_size', metavar='BYTES', default=1024*64, type=int, help="Specify the maximum block size in bytes" + option_stored_in_db + ". Defaults to 64kB.")
 
+    generic.add_argument('--journal-mode', dest='journal_mode', metavar='MODE (str)', choices=('wal','memory','off',), default='wal', help="Journal mode for files by engine sqlite. One of: wal, memory, off. Default - wal.")
+    generic.add_argument('--auto-vacuum', dest='auto_vacuum', metavar='MODE (int)',type=int, choices=(0,1,2,),default=2, help="Auto vacuum mode for files (truncate if possible) by engine sqlite. One of: 0,1,2. Which is:0 - none,1 - full, 2 - incremental. Default: incremental - 2.")
     generic.add_argument('--mount-subvolume', dest='mounted_subvolume', metavar='NAME', default=None, help="Use subvolume NAME as root fs.")
 
     generic.add_argument('--memory-limit', dest='memory_limit', action='store_true', help="Use some lower values for less memory consumption.")

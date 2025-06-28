@@ -56,7 +56,7 @@ if not imported:
 
         break
 
-    del found, d
+    del d
 
 if not imported:
     path = sys.path.pop(0)

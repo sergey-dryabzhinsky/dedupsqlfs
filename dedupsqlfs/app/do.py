@@ -615,6 +615,8 @@ def main(): # {{{1
         conflict_handler="resolve")
 
     # Register some custom command line options with the option parser.
+    option_stored_in_db = " (this option is only useful when creating a new database, because your choice is stored in the database and can't be changed after that)"
+
     generic = parser.add_argument_group('Generic')
 
     generic.add_argument('-h', '--help', action='help', help="show this help message followed by the command line options defined by the Python FUSE binding and exit")
@@ -632,6 +634,9 @@ def main(): # {{{1
     generic.add_argument('--no-transactions', dest='use_transactions', action='store_false', help="Don't use transactions when making multiple related changes, this might make the file system faster or slower (?).")
     generic.add_argument('--no-sync', dest='synchronous', action='store_false', help="Disable SQLite's normal synchronous behavior which guarantees that data is written to disk immediately, because it slows down the file system too much (this means you might lose data when the mount point isn't cleanly unmounted).")
 
+    generic.add_argument('-b', '--block-size', dest='block_size', metavar='BYTES', default=1024*64, type=int, help="Specify the maximum block size in bytes" + option_stored_in_db + ". Defaults to 64kB.")
+    generic.add_argument('--journal-mode', dest='journal_mode', metavar='MODE (str)', choices=('wal','memory','off',), default='wal', help="Journal mode for files by engine sqlite. One of: wal, memory, off. Default - wal")
+    generic.add_argument('--auto-vacuum', dest='auto_vacuum', metavar='MODE (int)',type=int, choices=(0,1,2,),default=2, help="Auto vacuum mode for files (truncate if possible) by engine sqlite. One of: 0,1,2. Which is:0 - none,1 - full, 2 - incremental. Default: incremental - .")
     generic.add_argument('--memory-limit', dest='memory_limit', action='store_true', help="Use some lower values for less memory consumption.")
 
     generic.add_argument('--cpu-limit', dest='cpu_limit', metavar='NUMBER', default=0, type=int, help="Specify the maximum CPU count to use in multiprocess compression. Defaults to 0 (auto).")
@@ -671,6 +676,16 @@ def main(): # {{{1
         help="R|Specify the maximum block size in bytes for defragmentation.\n Defaults to %dMB. (@todo)" % (constants.BLOCK_SIZE_MAX/1024/1024,))
 
     data.add_argument('--verify', dest='verify', action='store_true', help="Verify all stored data hashes.")
+
+    # Dynamically check for supported hashing algorithms.
+    msg = "Specify the hashing algorithm that will be used to recognize duplicate data blocks: one of %s. Choose wisely - it can't be changed on the fly."
+    hash_functions = list({}.fromkeys([h.lower() for h in hashlib.algorithms_available]).keys())
+    hash_functions.sort()
+    work_hash_funcs = set(hash_functions) & constants.WANTED_HASH_FUCTIONS
+    msg %= ', '.join('%r' % fun for fun in work_hash_funcs)
+    defHash = 'md5' # Hope it will be there always. Stupid.
+    msg += ". Defaults to %r." % defHash
+    data.add_argument('--hash', dest='hash_function', metavar='FUNCTION', choices=work_hash_funcs, default=defHash, help=msg)
 
     # Dynamically check for supported hashing algorithms.
     msg = "Specify the hashing algorithm that will be used to recognize duplicate data blocks: one of %s. Choose wisely - it can't be changed on the fly."

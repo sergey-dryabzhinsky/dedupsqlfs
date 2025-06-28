@@ -26,7 +26,7 @@ __name__ = "DedupSQLfs"
 __fsname__ = "dedupsqlfs"
 __fsversion__ = "3.8"
 # Future 1.3
-__version__ = "1.2.955"
+__version__ = "1.2.956-dev"
 
 # Check the Python version, warn the user if untested.
 import sys

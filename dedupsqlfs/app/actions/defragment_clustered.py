@@ -73,26 +73,41 @@ def __collect_blocks(app):
     tableHCT = app.operations.getTable("hash_compression_type")
     tableHSZ = app.operations.getTable("hash_sizes")
     tableHCnt = app.operations.getTable("hash_count")
+    tableHOwn = app.operations.getTable("hash_owner")
 
     if not tableHash.getClustered():
         app.getLogger().warning("Hashes and blocks are not clustered! Skip")
         return 0, ""
 
     count2 = tableHCnt.count_unused_hashes()
+    app.getLogger().info("Found %d unused data blocks and hashes by index" % count2)
     if count2:
-        app.getLogger().debug("Clean unused data blocks and hashes by index: %d" % count2)
+        app.getLogger().info("Clean unused data blocks and hashes by index: %d" % count2)
         hashes = tableHCnt.get_unused_hashes()
         id_str =",".join(hashes)
-        tableHash.remove_by_ids(id_str)
-        tableBlock.remove_by_ids(id_str)
-        tableHCT.remove_by_ids(id_str)
-        tableHSZ.remove_by_ids(id_str)
+
+        cnt=tableHash.remove_by_ids(id_str)
+        app.getLogger().info("Clean %d unused hashes" % cnt)
+
+        cnt=tableBlock.remove_by_ids(id_str)
+        app.getLogger().info("Clean %d unused blocks" % cnt)
+
+        cnt=tableHCT.remove_by_ids(id_str)
+        app.getLogger().info("Clean %d unused compression types" % cnt)
+
+        cnt=tableHOwn.remove_by_ids(id_str)
+        app.getLogger().info("Clean %d unused owners" % cnt)
+
+        cnt=tableHSZ.remove_by_ids(id_str)
+        app.getLogger().info("Clean %d unused sizes" % cnt)
+
 
     msg = ""
     if count2 > 0:
         tableHash.commit()
         tableBlock.commit()
         tableHCT.commit()
+        tableHOwn.commit()
         tableHSZ.commit()
         msg = "Cleaned up %i unused data block%s and hashes in %%s." % (
             count2, count2 != 1 and 's' or '',
@@ -111,4 +126,5 @@ def do_defragment_clustered(options, _fuse):
     @type  _fuse: dedupsqlfs.fuse.dedupfs.DedupFS
     """
     __collect_garbage(_fuse)
+    __collect_blocks(_fuse)
     return 0

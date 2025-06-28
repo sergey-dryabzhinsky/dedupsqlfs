@@ -34,6 +34,7 @@ except ImportError:
 if not loaded:
     # Try to load the Python FUSE binding.
     try:
+        import llfuse
         import llfuse as fuse
     except ImportError:
         sys.stderr.write("Error: The Python FUSE binding isn't installed!\n" + \
@@ -41,7 +42,7 @@ if not loaded:
             " and `sudo pip3 install llfuse`.\n")
         sys.exit(1)
 
-FUSEError = fuse.FUSEError
+FUSEError = llfuse.FUSEError
 
 # Local modules that are mostly useful for debugging.
 from dedupsqlfs.lib import constants
@@ -198,6 +199,12 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
             self.flushCompressionType()
 
+            jm = self.getOption("journal_mode")
+            self.getLogger().info("Set journal mode to %r",jm)
+            self.manager.setJournalMode(jm)
+            av = self.getOption("auto_vacuum")
+            self.getLogger().info("Set auto vacuum mode to %r",int(av))
+            self.manager.setAutoVacuum(int(av))
         return self.manager
 
     def getTable(self, table_name):
@@ -501,9 +508,9 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
         xattrs = self.__get_cached_xattrs(inode)
         if not xattrs:
-            raise FUSEError(llfuse.ENOATTR)
+            raise FUSEError(fuse.ENOATTR)
         if name not in xattrs:
-            raise FUSEError(llfuse.ENOATTR)
+            raise FUSEError(fuse.ENOATTR)
         return xattrs[name]
 
     def init(self):  # {{{3
@@ -1913,8 +1920,9 @@ class DedupOperations(llfuse.Operations):  # {{{1
                 self.cached_blocks.setBlockSize(self.block_size)
 
         hash_function = options.get("hash_function")
-        if hash_function is not None and hash_function != self.hash_function:
-            self.getLogger().warning("Ignoring --hash=%r argument, using previously chosen hash function %r instead",
+        if hash_function not in (None,"None",):
+            if hash_function != self.hash_function:
+                self.getLogger().warning("Ignoring --hash=%r argument, using previously chosen hash function %r instead",
                 self.hash_function, hash_function)
             self.hash_function = hash_function
 

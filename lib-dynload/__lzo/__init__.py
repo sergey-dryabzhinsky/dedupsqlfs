@@ -15,7 +15,10 @@ if not os.path.isdir(build_dir):
     build_dir = os.path.abspath( os.path.join(currentdir, "..", "..", "lib-dynload", "__lzo", "build") )
 
 version = False
-dirs = os.listdir(build_dir)
+if os.path.isdir(build_dir):
+    dirs = os.listdir(build_dir)
+else: dirs = []
+found = 0
 for d in dirs:
 
     found = 0
@@ -32,9 +35,13 @@ for d in dirs:
     if found <= 1:
         continue
 
+    break
+
+import importlib
+svp = sys.path.pop(0)
+if found:
     sys.path.insert(0, os.path.join(build_dir, d) )
 
-    import importlib
     try:
         module = importlib.import_module("_lzo")
 #        print(dir(module))
@@ -43,9 +50,12 @@ for d in dirs:
         found = False
         version = "1.15/exc"
         pass
+else:
     # try system or pypi module
     try:
+        sys.path.insert(0, svp)
         module = importlib.import_module("lzo")
+
 #        print(dir(module))
         version = module.LZO_VERSION_STRING
     except:
@@ -53,15 +63,15 @@ for d in dirs:
         pass
 
     if version:
-        print(version)
+      #  print(version)
         compress = module.compress
         decompress = module.decompress
 
     sys.path.pop(0)
 
-    del importlib, module
+    del importlib
 
-    break
+sys.path.insert(0, svp)
 
-del p1, p2, d, found
+del p1, p2, svp, found
 del curpath, currentdir, build_dir, dirs

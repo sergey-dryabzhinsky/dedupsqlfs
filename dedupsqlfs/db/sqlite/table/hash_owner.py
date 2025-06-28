@@ -45,6 +45,7 @@ class TableHashOwner( Table ):
     def addHashOwner( self, hash_id, uuid):
         """
         :param hash_id: int
+        :param uuid: str
         :return: None
         """
         self.startTimer()
@@ -54,5 +55,16 @@ class TableHashOwner( Table ):
         ))
         self.stopTimer('addHashOwner')
         return None
+
+    def remove_by_ids(self, id_str):
+        self.startTimer()
+        count = 0
+        if id_str:
+            cur = self.getCursor()
+            cur.execute("DELETE FROM `%s` " % self.getName()+
+                        " WHERE `hash_id` IN (%s)" % (id_str,))
+            count = cur.rowcount
+        self.stopTimer('remove_by_ids')
+        return count
 
     pass

@@ -34,6 +34,7 @@ except ImportError:
 if not loaded:
     # Try to load the Python FUSE binding.
     try:
+        import llfuse
         import llfuse as fuse
     except ImportError:
         sys.stderr.write("Error: The Python FUSE binding isn't installed!\n" + \
@@ -226,6 +227,7 @@ class DedupFS(object): # {{{1
             self._fs_ver = fs_ver
         else:
             manager.getTable('option').insert('fsversion',self._fs_ver)
+        self.getLogger().info("FS Version: %s" % self._fs_ver)
         return
 
 
@@ -430,7 +432,7 @@ class DedupFS(object): # {{{1
                 if m and m.find(":") != -1:
                     m, level = m.split(":")
 
-                print(m)
+    #            print(m)
                 m_id = table.find(m)
                 if not m_id:
                     table.insert(m)

@@ -268,7 +268,7 @@ class Table( object ):
         import sqlite3
 
         db_path = self.getDbFilePath()
-        print("%s->connect(%s)" % (self._table_name, db_path))
+#        print("%s->connect(%s)" % (self._table_name, db_path))
         if db_path!=':memory:':
             db_dir = os.path.dirname(db_path)
             if not os.path.exists(db_dir):
@@ -286,8 +286,7 @@ class Table( object ):
         conn.text_factory = bytes
 
         # Set journal mode early as possible
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA journal_size_limit=0")
+        conn.execute("PRAGMA journal_size_limit=-1")
 
         # Dirty hack again for pypy
         isPyPy = platform.python_implementation() == 'PyPy'
@@ -344,6 +343,16 @@ class Table( object ):
 
     def shrinkMemory(self):
         self.getConnection().execute('PRAGMA shrink_memory')
+        return self
+
+    def setJournalMode(self, mode):
+        if mode=='off':
+          self.getLogger().warning("Warning: Disabling journal, you might lose data!")
+        self.getConnection().execute('PRAGMA journal_mode=%s' % (mode.upper(),))
+        return self
+
+    def setAutoVacuum(self, mode):
+        self.getConnection().execute('PRAGMA auto_vacuum=%d' % (mode,))
         return self
 
     def hasTable(self):
@@ -480,7 +489,7 @@ class Table( object ):
         return newSize - oldSize
 
     def close(self, nocompress=False):
-        print("%s->close()"%(self._table_name))
+#        print("%s->close()"%(self._table_name))
         if self._curr:
             self._curr.close()
             self._curr = None

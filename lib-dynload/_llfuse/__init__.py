@@ -17,7 +17,11 @@ if not os.path.isdir(build_dir):
 module = None
 loaded = False
 
-dirs = os.listdir(build_dir)
+if os.path.isdir(build_dir):
+    dirs = os.listdir(build_dir)
+else: dirs = []
+
+found = 0
 for d in dirs:
 
     found = 0
@@ -34,18 +38,26 @@ for d in dirs:
     if found <= 1:
         continue
 
+    break
+
+if found:
+    print(d)
+    svp = sys.path.pop(0)
     sys.path.insert(0, os.path.join(build_dir, d) )
 
     import importlib
-    module = importlib.import_module("llfuse")
-
-    loaded = True
+    try:
+        module = importlib.import_module("llfuse")
+        loaded = True
+    except Excepion as e:
+        print(e)
+        loaded = False
+        pass
 
     sys.path.pop(0)
+    sys.path.insert(0, svp)
 
     del importlib
-
-    break
 
 del p1, p2, d, found
 del curpath, currentdir, build_dir, dirs

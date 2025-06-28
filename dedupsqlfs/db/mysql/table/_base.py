@@ -20,7 +20,7 @@ class Table( object ):
     _conn = None
     _curr = None
 
-    # InnoDB, MyISAM, Aria, TokuDB
+    # InnoDB, MyISAM, Aria, TokuDB, MEMORY
     _engine = "MyISAM"
     # Only InnoDB, TokuDB
     _compressed = True
@@ -173,6 +173,9 @@ class Table( object ):
         return 0
 
     def shrinkMemory(self):
+        return self
+
+    def setJournalMode(self, mode):
         return self
 
 

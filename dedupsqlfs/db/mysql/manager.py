@@ -797,6 +797,11 @@ class DbManager(object):
             t.shrinkMemory()
         return self
 
+    def setJournalMode(self, mode):
+        for name, t in self._table.items():
+            t.setJournalMode(mode)
+        return self
+
     def getOperationsCount(self):
         s = 0
         for name, t in self._table.items():

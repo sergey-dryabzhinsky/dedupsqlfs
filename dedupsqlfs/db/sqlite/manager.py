@@ -287,6 +287,16 @@ class DbManager( object ):
             t.shrinkMemory()
         return self
 
+    def setJournalMode(self, mode):
+        for name, t in self._table.items():
+            t.setJournalMode(mode)
+        return self
+
+    def setAutoVacuum(self, mode):
+        for name, t in self._table.items():
+            t.setAutoVacuum(mode)
+        return self
+
     def isSupportedStorage(self):
         s = False
         for name in self.tables:

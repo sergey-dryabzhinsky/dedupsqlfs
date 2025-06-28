@@ -32,6 +32,7 @@ def __collect_garbage(app):
         __collect_xattrs,
         __collect_links,
         __collect_indexes,
+        __collect_owner,
         __collect_blocks
     ]
 
@@ -369,6 +370,38 @@ def __collect_indexes(app):
     if count > 0:
         tableIndex.commit()
         msg = "Cleaned up %i unused index entr%s in %%s." % (count, count != 1 and 'ies' or 'y')
+    return count, msg
+
+
+def __collect_owner(app):
+    """
+    Collect all ihases not linked to inodes
+    And remove link to them
+
+    @param app:
+    @type app: dedupsqlfs.fuse.dedupfs.DedupFS
+    @return: string
+    """
+
+    tableHCnt = app.operations.getTable("hash_count")
+    tableHOwn = app.operations.getTable("hash_owner")
+
+    app.getLogger().debug("Get unused hashes...")
+
+    if tableHash.getClustered():
+        app.getLogger().warning("Hashes and blocks are clustered! Skip, @todo")
+        return 0, ""
+
+    hashes = tableHCnt.get_unused_hashes()
+    id_str =",".join(hashes)
+
+    app.getLogger().debug("Cleaup uuids table...")
+    count += tableHOwn.remove_by_ids(id_str)
+
+    msg = ""
+    if count > 0:
+        tableHOwn.commit()
+        msg = "Cleaned up %i unused uuid entr%s in %%s." % (count, count != 1 and 'ies' or 'y')
     return count, msg
 
 

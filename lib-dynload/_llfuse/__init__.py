@@ -41,7 +41,7 @@ for d in dirs:
     break
 
 if found:
-    print(d)
+#    print(d)
     svp = sys.path.pop(0)
     sys.path.insert(0, os.path.join(build_dir, d) )
 

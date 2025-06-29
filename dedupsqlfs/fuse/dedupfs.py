@@ -12,6 +12,7 @@ try:
     import time
     import traceback
     import subprocess
+    from datetime import datetime
     import uuid
 except ImportError as e:
     msg = "Error: Failed to load one of the required Python modules! (%s)\n"
@@ -81,6 +82,8 @@ class DedupFS(object): # {{{1
         self._fs_ver = FS_VERSION
 
         self._cache_flusher_proc = None
+
+        self.mount_time = None
 
         self.mountpoint = mountpoint
         self.operations = operations

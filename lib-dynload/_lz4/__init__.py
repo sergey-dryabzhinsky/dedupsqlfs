@@ -45,7 +45,7 @@ if found:
     try:
         module = importlib.import_module("_block")
 #        from _lz4.block import _block as module
-        print("bundled")
+#        print("bundled")
     except Exception as e:
         print(e)
         module = None
@@ -54,9 +54,9 @@ if found:
     # try system or pypi
 else: # not found
     try:
-        print(sys.path)
+#        print(sys.path)
         from lz4.block import _block as module
-        print("system")
+#        print("system")
     except Exception as e:
         print(e)
         pass

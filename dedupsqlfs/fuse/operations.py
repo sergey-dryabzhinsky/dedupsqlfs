@@ -13,6 +13,7 @@ try:
     import os
     import stat
     from time import time
+    from datetime import datetime
     import traceback
 except ImportError as e:
     msg = "Error: Failed to load one of the required Python modules! (%s)\n"
@@ -51,13 +52,14 @@ from dedupsqlfs.lib.cache.simple import CacheTTLseconds, CompressionSizesValue
 from dedupsqlfs.lib.cache.storage import StorageTimeSize
 from dedupsqlfs.lib.cache.index import IndexTime
 from dedupsqlfs.lib.cache.inodes import InodesTime
+from dedupsqlfs.lib.timers_ops import TimersOps
 from dedupsqlfs.fuse.subvolume import Subvolume
 from dedupsqlfs.fuse.helpers.repr import entry_attributes_to_dict, setattr_fields_to_dict
 from dedupsqlfs.fuse.helpers.report import ReportHelper
 from dedupsqlfs import __fsversion__
 
 
-class DedupOperations(llfuse.Operations):  # {{{1
+class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
 
     def __init__(self, **kwargs):  # {{{2
 
@@ -634,6 +636,7 @@ class DedupOperations(llfuse.Operations):  # {{{1
 
             if not self.isReadonly():
                 self.__init_store()
+                self.application.mount_time = datetime.now()
 
             self.mounted_subvolume_name = self.getOption("mounted_subvolume")
             if self.mounted_subvolume_name is not None:

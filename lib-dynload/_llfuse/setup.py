@@ -58,7 +58,7 @@ if DEVELOPER_MODE:
 # to work properly
 sys.path.insert(0, os.path.join(basedir, 'src'))
 
-LLFUSE_VERSION = '1.4.4'
+LLFUSE_VERSION = '1.5.1'
 
 
 EXTRA_OPT="RC_EXTRAOPT" in os.environ

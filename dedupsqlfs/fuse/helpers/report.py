@@ -90,6 +90,7 @@ class ReportHelper:
             self.get_logger().info('-' * 79)
             now = datetime.now()
             self.get_logger().info(now.strftime("report time: %F %T"))
+            self.get_logger().info("Mounted time: %s",str(now-self.application.application.mount_time))
             self.__report_memory_usage()
             self.__report_memory_usage_real()
             self.__report_compressed_usage()

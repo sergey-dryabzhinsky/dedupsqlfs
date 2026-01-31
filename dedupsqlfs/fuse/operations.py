@@ -1297,7 +1297,13 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
             # Create an inode to hold the symbolic link.
             inode, parent_ino = self.__insert(inode_parent, name, self.link_mode, len(target), ctx)
             # Save the symbolic link's target.
-            self.getTable("link").insert(inode, target)
+            tgt = self.getTable("link").find_by_inode(inode)
+            if tgt:
+                self.getLogger().warn("maybe cycling link, inode(%d) already have link(%r)", inode, tgt)
+            	if tgt <> target:
+                    self.getLogger().warn("odl target(%r) <> new(%r)", tgt, target)
+            else:
+            	self.getTable("link").insert(inode, target)
             attr = self.__getattr(inode)
             self.__cache_meta_hook()
             return attr

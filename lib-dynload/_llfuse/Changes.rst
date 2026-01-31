@@ -6,6 +6,42 @@
 
 **WARNING**: Python-LLFUSE is no longer actively developed.
 
+Release 1.5.2 (2025-12-22)
+==========================
+
+- Support and test on Python 3.14 also.
+- CI: test on Ubuntu 24.04
+- Cythonized using Cython 3.2.3.
+- setup.py:
+
+  - use SPDX license metadata (the old style was deprecated),
+    also require setuptools >= 78.1.1, #104
+  - remove tests_require (not supported anymore)
+- get rid of sphinx build warnings, #56
+- README: link to mfusepy project
+
+
+Release 1.5.1 (2024-08-31)
+==========================
+
+- Support and test on Python 3.13 also.
+- Cythonized using Cython 3.0.11 to get Python 3.13 support.
+- Misc. CI and readthedocs related changes.
+
+
+Release 1.5.0 (2023-08-08)
+==========================
+
+- Note: this is first pyfuse3 release supporting the Cython 3.0.0 release.
+- Cythonized using Cython 3.0.0 release.
+- Drop Python 3.5, 3.6, 3.7 support, see #69.
+  Minimum requirement is Python 3.8 now.
+- Get rid of PyEval_InitThreads, #55.
+- CI: also test on python 3.12 / cython 3.0 release
+- Tell Cython that callbacks may raise exceptions, #90.
+- Misc. CI, testing, build related fixes/improvements.
+
+
 Release 1.4.4 (2023-05-21)
 ==========================
 

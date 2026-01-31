@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 
-# Copyright (c) «2017-2024» «Shibzukhov Zaur, szport at gmail dot com»
+# Copyright (c) «2017-2025» «Shibzukhov Zaur, szport at gmail dot com»
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software - recordclass library - and associated documentation files
@@ -117,6 +117,10 @@ class datatype(type):
             bases = (dataobject,)
 
         annotations = ns.get('__annotations__', {})
+        if len(annotations) == 0:
+            annotate_func = ns.get("__annotate_func__", None)
+            if annotate_func is not None:
+                annotations = annotate_func(0)
         classvars = {fn for fn,tp in annotations.items() \
                         if _is_classvar(tp)}
 
@@ -196,6 +200,17 @@ class datatype(type):
                 defaults_dict = ns['__defaults__']
             else:
                 defaults_dict = {f:ns[f] for f in fields if f in ns}
+                for name in defaults_dict:
+                    val = defaults_dict[name]
+                    if type(val) is Field:
+                        fd = fields_dict[name]
+                        for a,v in val.items():
+                            if a == 'default':
+                                continue
+                            fd[a] = v
+                        if 'default' in val:
+                            defaults_dict[name] = val['default']
+
             _matching_annotations_and_defaults(annotations, defaults_dict)
 
             for fn,val in defaults_dict.items():

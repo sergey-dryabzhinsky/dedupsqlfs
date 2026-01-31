@@ -904,7 +904,12 @@ There is builtin more fast deallocation method using finalization mechanizm when
 
 For more details see notebook [example_datatypes](https://github.com/intellimath/recordclass/tree/main/examples/example_datatypes.ipynb).
 
-### Changes:
+## Changes:
+
+#### 0.24:
+
+* Fix `__annotations__` for python 3.14
+* Start support of python 3.14
 
 #### 0.23.1:
 

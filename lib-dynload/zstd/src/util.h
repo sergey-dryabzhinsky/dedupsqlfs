@@ -66,7 +66,25 @@ extern "C" {
     typedef struct stat stat_t;
 #endif
 
+#if defined(_WIN32) || defined(WIN32)
+ static int numLogicalCores = 1;
+ static time_t lastTimeCached = 0;
+ static int util_cpuCoresCacheTTL = 60;
+#else
+__attribute__((unused)) static int numLogicalCores = 1;
+__attribute__((unused)) static time_t lastTimeCached = 0;
+__attribute__((unused)) static int util_cpuCoresCacheTTL = 60;
+#endif
+#if defined(__linux__)
 int UTIL_countAvailableCores(void);
+int UTIL_countAvailableCores_posix_sysconf(void);
+int UTIL_countAvailableCores_parse_cpuinfo(void);
+#else
+int UTIL_countAvailableCores(void);
+#endif
+int UTIL_setCpuCoresCacheTTL(int cacheTTL);
+int UTIL_stopCpuCoresCache(void);
+
 
 #if defined (__cplusplus)
 }

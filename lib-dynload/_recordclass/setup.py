@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 #
-# Copyright (c) <2015-2024> <Shibzukhov Zaur, szport at gmail dot com>
+# Copyright (c) <2015-2025> <Shibzukhov Zaur, szport at gmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -140,6 +140,7 @@ setup(
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
         'Programming Language :: Python :: 3.13',
+        'Programming Language :: Python :: 3.14',
         'Operating System :: OS Independent',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],

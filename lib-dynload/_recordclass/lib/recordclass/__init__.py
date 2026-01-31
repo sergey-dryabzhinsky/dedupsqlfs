@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 #
-# Copyright (c) <2015-2024> <Shibzukhov Zaur, szport at gmail dot com>
+# Copyright (c) <2015-2025> <Shibzukhov Zaur, szport at gmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +21,7 @@
 # THE SOFTWARE.
 
 
-from recordclass.datatype import datatype, MATCH
+from recordclass.datatype import datatype, Field, MATCH
 from recordclass._dataobject import dataobject, datastruct, astuple, asdict, clone, update, make, Factory
 from recordclass._litelist import litelist, litelist_fromargs
 from recordclass._litetuple import litetuple, mutabletuple

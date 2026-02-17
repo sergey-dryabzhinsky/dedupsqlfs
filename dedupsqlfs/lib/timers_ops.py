@@ -7,6 +7,7 @@ from time import time
 class TimersOps( object ):
 
     _last_time = None
+    _last_time_op = None
     _time_spent = None
     _op_count = None
 
@@ -16,6 +17,7 @@ class TimersOps( object ):
 
     def __init__(self, manager):
         self._time_spent = {}
+        self._last_time_op = {}
         self._op_count = {}
         pass
 
@@ -61,19 +63,25 @@ class TimersOps( object ):
         self._time_spent[ op ] += time() - start_time
         return self
 
-    def startTimer(self):
+    def startTimer(self, op=None):
         if not self._enable_timers:
             return self
         self._last_time = time()
+        if op:
+            self._last_time_op[op] = time()
         return self
 
     def stopTimer(self, op):
         if not self._enable_timers:
             return self
 
+        if op in self._last_time_op:
+            lt = self._last_time_op[op]
+        else: lt = self._last_time
         self.incOperationsCount(op)
-        self.incOperationsTimeSpent(op, self._last_time)
+        self.incOperationsTimeSpent(op, lt)
 
         self._last_time = None
+        self._last_time_op[op] = None
         return self
 

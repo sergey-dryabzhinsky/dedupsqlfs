@@ -28,7 +28,7 @@ import sys
 try:
     # Our lib-dynload module
     from _recordclass import loaded
-    print(loaded)
+#    print(loaded)
     if loaded:
         from _recordclass import module as recordclass
         from _recordclass import module

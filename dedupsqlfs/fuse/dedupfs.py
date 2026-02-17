@@ -88,6 +88,7 @@ class DedupFS(object): # {{{1
         self.mountpoint = mountpoint
         self.operations = operations
         self.operations.setApplication(self)
+        self.operations.setEnableTimers(self.getOption("verbose_stats_detailed"))
 
         # Initialize a Logger() object to handle logging.
         self.logger = DDSFlogger(application=self)
@@ -107,6 +108,12 @@ class DedupFS(object): # {{{1
         self.getLogger().debug("DedupFS options: %r", self.options)
         self.getLogger().debug("DedupFS mount options: %r", self._opts)
         self.getLogger().debug("DedupFS mountpoint: %r", self.mountpoint)
+        self.getLogger().info("DedupFS multi-cpu: %r", self.getOption("multi_cpu"))
+        self.getLogger().info("DedupFS cpu-limit: %r", self.getOption("cpu_limit"))
+        self.getLogger().info("DedupFS partitions: %r", self.getOption("block_partitions"))
+        self.getLogger().info("DedupFS clustered: %r", self.getOption("data_clustered") and True or False)
+        self.getLogger().info("DedupFS blocks-on-fs: %r", self.getOption("block_data_storage_on_fs") )
+        self.getLogger().info("DedupFS synchronous: %r", self.getOption("synchronous") )
 
         if self.getOption("multi_cpu") == "process":
             self._compressTool = MultiProcCompressTool()

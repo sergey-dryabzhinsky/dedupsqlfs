@@ -5,6 +5,7 @@ __author__ = 'sergey'
 from sqlite3 import Binary
 from dedupsqlfs.db.sqlite.table import Table
 from dedupsqlfs.db.sqlite.table.block import TableBlock
+from dedupsqlfs.db.sqlite.table.block_fs import TableBlockFs
 
 class TableBlockPartitions( Table ):
 
@@ -21,7 +22,10 @@ class TableBlockPartitions( Table ):
             self.parts = {}
         
         if n not in self.parts:
-            self.parts[n] = TableBlock(self._manager)
+            if self._manager.getAppOption("block_data_storage_on_fs"):
+                self.parts[n] = TableBlockFs(self._manager)
+            else:
+                self.parts[n] = TableBlock(self._manager)
             self.parts[n].setClustered( self._clustered )
             self.parts[n].setName( "block_%03d" % n )
             self.parts[n].setFileName( "block_%03d" % n )

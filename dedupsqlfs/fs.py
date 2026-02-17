@@ -8,6 +8,19 @@ __author__ = 'sergey'
 import os
 
 
+def mymakedirs(path, mode=0o755, exist_ok=False):
+    import subprocess
+    cmd = []
+    cmd.append("/bin/mkdir")
+    if mode:
+        cmd.append("-m")
+        cmd.append("%o"%mode)
+    if exist_ok:
+        cmd.append("-p")
+    cmd.append(path)
+#    print(cmd)
+    cs = subprocess.run(cmd)
+
 def which(bin_exe):
     """
     Поиск исполняемого файла

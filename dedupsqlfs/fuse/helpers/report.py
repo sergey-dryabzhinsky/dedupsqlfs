@@ -99,7 +99,9 @@ class ReportHelper:
             if self.get_option("verbose_stats_detailed"):
                 self.__report_timings()
                 self.__report_database_timings()
+                self.__report_fs_timings()
                 self.__report_database_operations()
+                self.__report_fs_operations()
                 self.__report_cache_timings()
                 self.__report_cache_operations()
             self.get_logger().info(' ' * 79)
@@ -185,6 +187,31 @@ class ReportHelper:
                     self.get_logger().info(
                         " - %-*s%s (%.1f%%)", maxdescwidth, description + ':', format_timespan(timespan), percentage)
 
+    def __report_fs_timings(self):  # {{{3
+        if self.get_logger().isEnabledFor(logging.INFO):
+            timings = []
+            alltime = 0
+            tn="Operations"
+            opTimes = self.application.getTimeSpent()
+            for op, timespan in opTimes.items():
+                timings.append((timespan, 'FS operations - operation %r(%r) timings' % (tn, op,),))
+                alltime += timespan
+
+            maxdescwidth = max([len(l) for t, l in timings]) + 3
+            timings.sort(reverse=True)
+
+            self.get_logger().info("FS all operations timings: %s", format_timespan(alltime))
+
+            printed_heading = False
+            for timespan, description in timings:
+                percentage = 100.0 * timespan / alltime
+                if percentage >= 0.1:
+                    if not printed_heading:
+                        self.get_logger().info("Cumulative timings of slowest tables:")
+                        printed_heading = True
+                    self.get_logger().info(
+                        " - %-*s%s (%.1f%%)", maxdescwidth, description + ':', format_timespan(timespan), percentage)
+
     def __report_database_operations(self):  # {{{3
         if self.get_logger().isEnabledFor(logging.INFO):
             counts = []
@@ -201,6 +228,31 @@ class ReportHelper:
             counts.sort(reverse=True)
 
             self.get_logger().info("Database all operations: %s", allcount)
+
+            printed_heading = False
+            for count, description in counts:
+                percentage = 100.0 * count / allcount
+                if percentage >= 0.1:
+                    if not printed_heading:
+                        self.get_logger().info("Cumulative count of operations:")
+                        printed_heading = True
+                    self.get_logger().info(
+                        " - %-*s%s (%.1f%%)", maxdescwidth, description + ':', count, percentage)
+
+    def __report_fs_operations(self):  # {{{3
+        if self.get_logger().isEnabledFor(logging.INFO):
+            counts = []
+            allcount = 0
+            opn="Operations"
+            opCount = self.application.getOperationsCount()
+            for op, count in opCount.items():
+                counts.append((count, 'FS operations - operation %r(%r) count' % (opn, op,),))
+                allcount += count
+
+            maxdescwidth = max([len(l) for t, l in counts]) + 3
+            counts.sort(reverse=True)
+
+            self.get_logger().info("FS all operations: %s", allcount)
 
             printed_heading = False
             for count, description in counts:

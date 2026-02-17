@@ -61,9 +61,15 @@ from dedupsqlfs import __fsversion__
 
 class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
 
+    fs_ops = (
+      "access",
+      "create"
+    )
+
     def __init__(self, **kwargs):  # {{{2
 
         llfuse.Operations.__init__(self, **kwargs)
+        TimersOps.__init__(self, self)
 
         # Initialize instance attributes.
         self.block_partitions = 1
@@ -282,9 +288,12 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         @return:
         @rtype: bool
         """
+        self.startTimer()
         self.getLogger().logCall('access', '->(inode=%i, mode=%o)', inode, mode)
         if mode != os.F_OK and not self.__access(inode, mode, ctx):
+            self.stopTimer("access")
             return False
+        self.stopTimer("access")
         return True
 
     def create(self, inode_parent, name, mode, flags, ctx):
@@ -309,6 +318,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         @return: @raise FUSEError:
         @rtype: tuple
         """
+        self.startTimer("create")
         self.getLogger().logCall('create', '->(inode_parent=%i, name=%r, mode=%o, flags=%o)',
                         inode_parent, name, mode, flags)
         if self.isReadonly(): return errno.EROFS
@@ -325,7 +335,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
             inode, parent_ino = self.__insert(inode_parent, name, mode, 0, ctx)
         else:
             if flags & os.O_CREAT and flags & os.O_EXCL:
-                self.getLogger().logCall('open', '-- exception for existed file! cant create!')
+                self.getLogger().logCall('create', '-- exception for existed file! cant create!')
                 raise FUSEError(errno.EIO)
 
             inode = node["inode_id"]
@@ -337,10 +347,12 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
 
         self.getLogger().logCall('create', '<-(created inode=%i, attrs=%r)', fh, entry_attributes_to_dict(attrs))
 
+        self.stopTimer("create")
         return fh, attrs
 
     def destroy(self):  # {{{3
 
+        self.startTimer()
         # Stop flushing thread if it started
         self.getApplication().stopCacheFlusher()
 
@@ -376,10 +388,12 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
             self.__except_to_status('destroy', e, errno.EIO)
 
         self.getApplication().addLockMessage("destroy-done")
+        self.stopTimer("destroy")
 
         return 0
 
     def flush(self, fh):
+        self.startTimer("flush")
         try:
             self.getLogger().logCall('flush', '->(fh=%i)', fh)
 
@@ -401,6 +415,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         except Exception as e:
             self.__rollback_changes()
             raise self.__except_to_status('flush', e, errno.EIO)
+        self.stopTimer("flush")
 
     def forget(self, inode_list):
         """
@@ -408,6 +423,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         @param inode_list: inode_list is a list of (inode, nlookup) tuples. 
         @return: 
         """
+        self.startTimer()
         try:
             self.getLogger().logCall('forget', '->(inode_list=%r)', inode_list)
             # clear block cache
@@ -420,6 +436,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         except Exception as e:
             self.__rollback_changes()
             self.__except_to_status('forget', e, errno.EIO)
+        self.stopTimer("forget")
 
     def fsync(self, fh, datasync):
         """
@@ -429,6 +446,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         @param datasync: force sync data
         @return: None
         """
+        selt.startTimer()
         self.getLogger().logCall('fsync', '->(fh=%i, datasync=%r)', fh, datasync)
 
         if self.isReadonly():
@@ -456,8 +474,10 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         except Exception as e:
             self.__rollback_changes()
             raise self.__except_to_status('fsync', e, errno.EIO)
+        self.stopTimer("fsync")
 
     def fsyncdir(self, fh, datasync):
+        selt.startTimer()
         self.getLogger().logCall('fsyncdir', '->(fh=%i, datasync=%r)', fh, datasync)
         if self.isReadonly():
             raise FUSEError(errno.EROFS)
@@ -470,6 +490,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
             self.cached_attrs.flush(fh)
 
         self.__cache_meta_hook()
+        self.stopTimer("fsyncdir")
 
     def getattr(self, inode, ctx):  # {{{3
         """
@@ -484,10 +505,12 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         @return:
         @rtype: llfuse.EntryAttributes
         """
+        self.startTimer("getattr")
         self.getLogger().logCall('getattr', '->(inode=%r)', inode)
         v = self.__get_inode_row(inode)
         attr = self.__fill_attr_inode_row(v)
         self.getLogger().logCall('getattr', '<-(inode=%r, attr=%r)', inode, v)
+        self.stopTimer("getattr")
         return attr
 
     def getxattr(self, inode, name, ctx):  # {{{3
@@ -506,6 +529,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         @return:
         @rtype: bytes
         """
+        self.startTimer()
         self.getLogger().logCall('getxattr', '->(inode=%r, name=%r)', inode, name)
 
         xattrs = self.__get_cached_xattrs(inode)
@@ -513,9 +537,11 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
             raise FUSEError(fuse.ENOATTR)
         if name not in xattrs:
             raise FUSEError(fuse.ENOATTR)
+        self.stopTimer("getxattr")
         return xattrs[name]
 
     def init(self):  # {{{3
+        self.startTimer()
         try:
             # Disable log for fuse functions
             if self.getOption("verbosity") < 2:
@@ -684,6 +710,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
             self.getApplication().addLockMessage("inited")
 
             self.getLogger().debug("DedupFS: inited and mounted")
+            self.stopTimer("init")
             return 0
         except Exception as e:
             self.__except_to_status('init', e, errno.EIO)
@@ -711,6 +738,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         @return:
         @rtype: llfuse.EntryAttributes
         """
+        self.startTimer()
         self.getLogger().logCall('link', '->(inode=%r, parent_inode=%r, new_name=%r)', inode, new_parent_inode, new_name)
         if self.isReadonly(): raise FUSEError(errno.EROFS)
 
@@ -730,7 +758,9 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
 
         self.__cache_meta_hook()
 
-        return self.__fill_attr_inode_row(attr)
+        iattr = self.__fill_attr_inode_row(attr)
+        self.stopTimer("link")
+        return iattr
 
     def listxattr(self, inode, ctx):
         """
@@ -745,12 +775,15 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         @return: list of bytes
         @rtype: list
         """
+        self.startTimer()
         self.getLogger().logCall('listxattr', '->(inode=%r)', inode)
         xattrs = self.__get_cached_xattrs(inode)
         self.getLogger().logCall('listxattr', '<-(xattrs=%r)', xattrs)
         if not xattrs:
             return []
-        return xattrs.keys()
+        xkeys = xattrs.keys()
+        self.stopTimer("listxattr")
+        return xkeys
 
     def lookup(self, parent_inode, name, ctx):
         """
@@ -768,6 +801,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         @return:
         @rtype: llfuse.EntryAttributes
         """
+        self.startTimer("lookup")
         self.getLogger().logCall('lookup', '->(parent_inode=%r, name=%r)', parent_inode, name)
 
         if name == b'.':
@@ -786,6 +820,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         self.getLogger().logCall('lookup', '<-(attr=%r)', v)
 
         self.__cache_meta_hook()
+        self.stopTimer("lookup")
         return attr
 
     def mkdir(self, parent_inode, name, mode, ctx):  # {{{3
@@ -807,6 +842,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         @return:
         @rtype: llfuse.EntryAttributes
         """
+        self.startTimer("mkdir")
         if self.isReadonly(): raise FUSEError(errno.EROFS)
 
         try:
@@ -830,7 +866,9 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
 
             self.__cache_meta_hook()
 
-            return self.__getattr(inode)
+            attr = self.__getattr(inode)
+            self.stopTimer("mkdir")
+            return attr
         except FUSEError:
             self.__rollback_changes()
             raise
@@ -860,6 +898,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         @return:
         @rtype: llfuse.EntryAttributes
         """
+        self.startTimer()
         if self.isReadonly():
             raise FUSEError(errno.EROFS)
 
@@ -872,11 +911,13 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         except Exception as e:
             self.__rollback_changes()
             raise self.__except_to_status('mknod', e, errno.EIO)
+        self.stopTimer("mknod")
 
     def open(self, inode, flags, ctx):  # {{{3
         """
         Return filehandler ID
         """
+        self.startTimer("open")
         self.getLogger().logCall('open', '->(inode=%i, flags=%o)', inode, flags)
         # Make sure the file exists?
 
@@ -890,10 +931,12 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
             row["size"] = 0
             self.cached_attrs.set(inode, row, writed=True)
 
+        self.stopTimer("open")
         # Make sure the file is readable and/or writable.
         return inode
 
     def opendir(self, inode, ctx):  # {{{3
+        self.startTimer()
         self.getLogger().logCall('opendir', 'opendir(inode=%i)', inode)
         # Make sure the file exists?
         self.__get_tree_node_by_inode(inode)
@@ -902,6 +945,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         if not self.isReadonly():
             self.__setattr_atime(inode)
 
+        self.stopTimer("opendir")
         return inode
 
     def read(self, fh, offset, size):  # {{{3
@@ -909,6 +953,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         @param fh: file handler number - inode.id
         @type  fh: int
         """
+        self.startTimer()
         try:
             start_time = time()
 
@@ -933,6 +978,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
             self.__cache_block_hook()
 
             self.reportHelper.time_spent_reading += time() - start_time
+            self.stopTimer("read")
             return data
         except Exception as e:
             return self.__except_to_status('read', e, code=errno.EIO)
@@ -963,26 +1009,32 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
             yield (name, attrs, node["id"],)
 
     def readlink(self, inode, ctx):  # {{{3
+        self.startTimer()
         self.getLogger().logCall('readlink', '->(inode=%i)', inode)
 
         target = self.getTable("link").find_by_inode(inode)
         if not target:
             raise FUSEError(errno.ENOENT)
+        self.stopTimer("readlink")
         return target
 
     def release(self, fh):  # {{{3
+        self.startTimer("release")
         self.getLogger().logCall('release', '->(fh=%i)', fh)
         #self.__flush_inode_cached_blocks(fh, clean=True)
         self.cached_blocks.expire(fh)
         self.cached_attrs.expire(fh)
         self.__cache_block_hook()
         self.__cache_meta_hook()
+        self.stopTimer("release")
         return 0
 
     def releasedir(self, fh):
+        self.startTimer()
         self.getLogger().logCall('releasedir', '->(fh=%r)', fh)
         self.cached_attrs.expire(fh)
         self.__cache_meta_hook()
+        self.stopTimer("releasedir")
         return 0
 
     def removexattr(self, inode, name, ctx):
@@ -1005,6 +1057,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
             raise FUSEError(errno.EROFS)
 
         try:
+            self.startTimer()
             self.getLogger().logCall('removexattr', '->(inode=%i, name=%r)', inode, name)
 
             xattrs = self.__get_cached_xattrs(inode)
@@ -1018,6 +1071,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
             self.cached_xattrs.set(inode, xattrs)
             self.getLogger().logCall('removexattr', '<-(xattrs=%r)', xattrs)
             self.__setattr_ctime(inode)
+            self.stopTimer("removexattr")
             return 0
         except FUSEError:
             raise
@@ -1026,6 +1080,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
             raise self.__except_to_status('removexattr', e, errno.ENOENT)
 
     def rename(self, inode_parent_old, name_old, inode_parent_new, name_new, ctx):  # {{{3
+        self.startTimer()
         if self.isReadonly():
             raise FUSEError(errno.EROFS)
 
@@ -1064,9 +1119,11 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         except Exception as e:
             self.__rollback_changes()
             raise self.__except_to_status('rename', e, errno.ENOENT)
+        self.stopTimer("rename")
         return 0
 
     def rmdir(self, inode_parent, name, ctx):  # {{{3
+        self.startTimer()
         if self.isReadonly():
             raise FUSEError(errno.EROFS)
 
@@ -1077,6 +1134,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
                 self.__setattr_mtime(inode_parent)
 
             self.__remove(inode_parent, name, check_empty=True)
+            self.stopTimer("rmdir")
             return 0
         except Exception as e:
             self.__rollback_changes()
@@ -1102,6 +1160,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         @return:
         @rtype: llfuse.EntryAttributes
         """
+        self.startTimer("setattr")
         if self.isReadonly():
             raise FUSEError(errno.EROFS)
 
@@ -1157,7 +1216,9 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
 
             self.__cache_meta_hook()
 
-            return self.__fill_attr_inode_row(row)
+            attr = self.__fill_attr_inode_row(row)
+            self.stopTimer("setattr")
+            return attr
         except Exception as e:
             self.__rollback_changes()
             raise self.__except_to_status('setattr', e, errno.EIO)

@@ -386,8 +386,8 @@ class DedupFS(object): # {{{1
             for i in range(len(methods)):
                 method = methods[i]
                 level = defaultLevel
-                if method and method.find(":") != -1:
-                    method, level = method.split(":")
+                if method and method.find("-") != -1:
+                    method, level = method.split("-")
                     methods[i] = method
                 if method in (constants.COMPRESSION_TYPE_BEST, constants.COMPRESSION_TYPE_FAST, constants.COMPRESSION_TYPE_DEFAULT,):
                     auto_type = method

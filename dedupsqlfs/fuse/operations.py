@@ -9,9 +9,11 @@ try:
     from io import BytesIO
     import errno
     import hashlib
+    import math
     from math import floor, ceil, modf
     import os
     import stat
+    import shutil
     from time import time
     from datetime import datetime
     import traceback
@@ -1265,13 +1267,15 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
             raise self.__except_to_status('__setattr_mtime', e, errno.EIO)
 
     def setxattr(self, inode, name, value, ctx):
-        if self.isReadonly():
-            raise FUSEError(errno.EROFS)
+        self.startTimer("setxattr")
 
         try:
             self.getLogger().logCall('setxattr', '->(inode=%i, name=%r, value=%r)', inode, name, value)
 
             xattrs = self.__get_cached_xattrs(inode)
+            if self.isReadonly():
+                self.stopTimer("setxattr")
+                raise FUSEError(errno.EROFS)
 
             newxattr = False
             if not xattrs:
@@ -1295,22 +1299,27 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
 
             # Update cache ttl
             self.cached_xattrs.set(inode, xattrs)
+            self.stopTimer("setxattr")
 
             return 0
         except FUSEError:
+            self.stopTimer("setxattr")
             raise
         except Exception as e:
             self.__rollback_changes()
+            self.stopTimer("setxattr")
             raise self.__except_to_status('setxattr', e, errno.ENOENT)
 
     def stacktrace(self):
         self.getLogger().logCall('stacktrace', '->()')
 
     def statfs(self, ctx):  # {{{3
+        self.startTimer("statfs")
         try:
             self.getLogger().logCall('statfs', '->()')
             # Use os.statvfs() to report the host file system's storage capacity.
-            host_fs = os.statvfs(os.path.expanduser( self.getOption("data")) )
+            data_dir = os.path.expanduser( self.getOption("data"))
+            host_fs = os.statvfs(data_dir )
 
             stats = llfuse.StatvfsData()
 
@@ -1323,32 +1332,41 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
             #if stats.f_bavail < 0:
             #    stats.f_bavail = 0
 
-            stats.f_bavail = 0
+            host_fs_block_size = hst_fs.f_frsize
+            host_fs_available_space = host_fs.f_bavail * block_size  # Available to unprivileged users
+            stats.f_bavail = int(math.ceil(1.0 * host_fs_available_space / self.block_size))
 
             # The total number of free blocks in the file system.
             #stats.f_bfree = host_fs.f_frsize * host_fs.f_bfree / self.block_size
-            stats.f_bfree = 0
+            #stats.f_bfree = 0
 
-            # stats.f_bfree = stats.f_bavail
+            stats.f_bfree = stats.f_bavail
             # The total number of blocks in the file system in terms of f_frsize.
             # stats.f_blocks = stats.f_bavail + usage / self.block_size
-            import math
             stats.f_blocks = int(math.ceil(1.0 * usage / self.block_size))
             #if stats.f_blocks < 0:
             #    stats.f_blocks = 0
 
             stats.f_bsize = self.block_size # The file system block size in bytes.
-            stats.f_favail = 0 # The number of free file serial numbers available to a non privileged process.
-            stats.f_ffree = 0 # The total number of free file serial numbers.
-            stats.f_files = 0 # The total number of file serial numbers.
+            # avail space % min page size
+            #stats.f_favail = 0 # The number of free file serial numbers available to a non privileged process.
+            stats.f_favail = host_fs_available_space % 512 # The number of free file serial numbers available to a non privileged process.
+            #stats.f_ffree = 0 # The total number of free file serial numbers.
+            stats.f_ffree = stats.f_favail # The total number of free file serial numbers.
+
+            cnt = self.getTable("inode").get_count()
+            stats.f_files = cnt # The total number of file serial numbers.
             # File system flags. Symbols are defined in the <sys/statvfs.h> header file to refer to bits in this field (see The f_flags field).
             stats.f_frsize = self.block_size # The fundamental file system block size in bytes.
             stats.f_namemax = 65000
+            self.stopTimer("statfs")
             return stats
         except Exception as e:
+            self.stopTimer("statfs")
             raise self.__except_to_status('statfs', e, errno.EIO)
 
     def symlink(self, inode_parent, name, target, ctx):  # {{{3
+        self.startTimer("symlink")
         try:
             self.getLogger().logCall('symlink', '->(inode_parent=%i, name=%r, target=%r)',
                             inode_parent, name, target)
@@ -1361,20 +1379,24 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
             tgt = self.getTable("link").find_by_inode(inode)
             if tgt:
                 self.getLogger().warn("maybe cycling link, inode(%d) already have link(%r)", inode, tgt)
-            	if tgt <> target:
-                    self.getLogger().warn("odl target(%r) <> new(%r)", tgt, target)
+                if tgt != target:
+                    self.getLogger().warn("old target(%r) <> new(%r)", tgt, target)
             else:
-            	self.getTable("link").insert(inode, target)
+                self.getTable("link").insert(inode, target)
             attr = self.__getattr(inode)
             self.__cache_meta_hook()
+            self.stopTimer("symlink")
             return attr
         except FUSEError:
+            self.stopTimer("symlink")
             raise
         except Exception as e:
+            self.stopTimer("symlink")
             self.__rollback_changes()
             raise self.__except_to_status('symlink', e, errno.EIO)
 
     def unlink(self, parent_inode, name, ctx):  # {{{3
+        self.startTimer("unlink")
         try:
             self.getLogger().logCall('unlink', '->(parent_inode=%i, name=%r)', parent_inode, name)
             if self.isReadonly():
@@ -1385,9 +1407,11 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
             self.__remove(parent_inode, name)
             self.__cache_meta_hook()
         except FUSEError:
+            self.stopTimer("unlink")
             raise
         except Exception as e:
             self.__rollback_changes()
+            self.stopTimer("unlink")
             raise self.__except_to_status('unlink', e, errno.EIO)
 
     def write(self, fh, offset, buf):  # {{{3

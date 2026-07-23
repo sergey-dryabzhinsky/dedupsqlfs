@@ -1011,7 +1011,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
             yield (name, attrs, node["id"],)
 
     def readlink(self, inode, ctx):  # {{{3
-        self.startTimer()
+        self.startTimer("readlink")
         self.getLogger().logCall('readlink', '->(inode=%i)', inode)
 
         target = self.getTable("link").find_by_inode(inode)
@@ -1032,7 +1032,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         return 0
 
     def releasedir(self, fh):
-        self.startTimer()
+        self.startTimer("releasedir")
         self.getLogger().logCall('releasedir', '->(fh=%r)', fh)
         self.cached_attrs.expire(fh)
         self.__cache_meta_hook()

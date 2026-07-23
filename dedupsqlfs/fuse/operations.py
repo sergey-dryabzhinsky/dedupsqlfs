@@ -1333,7 +1333,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
             #    stats.f_bavail = 0
 
             host_fs_block_size = host_fs.f_frsize
-            host_fs_available_space = host_fs.f_bavail * block_size  # Available to unprivileged users
+            host_fs_available_space = host_fs.f_bavail * host_fs_block_size  # Available to unprivileged users
             stats.f_bavail = int(math.ceil(1.0 * host_fs_available_space / self.block_size))
 
             # The total number of free blocks in the file system.

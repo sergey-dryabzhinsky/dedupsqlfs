@@ -30,7 +30,7 @@ class SimpleCacheFlusher(object):
         if not os.path.isdir(self.mount_point):
             raise ValueError("Value of mouht_point must be existing directory path!")
 
-        self.flush_filepath = os.path.join(self.mount_point, '.dedupsqlfs.io')
+        self.flush_filepath = os.path.join(self.mount_point, '.dedupsqlfs.flush')
         self._stop_flag = False
 
     def _do_flush(self):

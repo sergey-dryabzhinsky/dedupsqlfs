@@ -290,7 +290,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         @return:
         @rtype: bool
         """
-        self.startTimer()
+        self.startTimer("access")
         self.getLogger().logCall('access', '->(inode=%i, mode=%o)', inode, mode)
         if mode != os.F_OK and not self.__access(inode, mode, ctx):
             self.stopTimer("access")

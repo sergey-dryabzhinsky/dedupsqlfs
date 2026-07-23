@@ -938,7 +938,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         return inode
 
     def opendir(self, inode, ctx):  # {{{3
-        self.startTimer()
+        self.startTimer("openfir")
         self.getLogger().logCall('opendir', 'opendir(inode=%i)', inode)
         # Make sure the file exists?
         self.__get_tree_node_by_inode(inode)

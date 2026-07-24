@@ -90,6 +90,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         self.cache_block_write_timeout = 10
         self.cache_block_read_timeout = 10
         self.cache_block_write_size = -1
+        self.input_writed_size = -1
         self.cache_block_read_size = -1
         self.flush_interval = 5
         self.flushBlockSize_interval = 1
@@ -1423,6 +1424,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
 
             self.getLogger().logCall('write', '->(fh=%i, offset=%i)', fh, offset)
 
+            self.reportHelper.bytes_input_written += += len(buf)
             length = self.__write_block_data_by_offset(fh, offset, buf)
 
             self.getLogger().logCall('write', 'length(writed)=%i', length)

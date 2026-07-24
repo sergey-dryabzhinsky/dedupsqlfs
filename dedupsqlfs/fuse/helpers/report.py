@@ -356,6 +356,8 @@ class ReportHelper:
             ratio = 0
         msg = "Current input bytes written is %s / output written in db %s" % (
         format_size(self.bytes_input_written), format_size(self.bytes_written))
+        self.get_logger().info(msg + '.')
+
         msg = "Current stream bytes compression ratio is %.2f%%" % ratio
         difference = abs(ratio - self.compressed_ratio)
         if self.compressed_ratio != 0 and difference:

@@ -370,7 +370,8 @@ class ReportHelper:
     def __report_throughput(self, nbytes=None, nseconds=None, label=None):  # {{{3
         if nbytes == None:
             self.__report_throughput(self.bytes_read, self.time_spent_reading, "read")
-            self.__report_throughput((self.bytes_written + self.bytes_deduped), self.time_spent_writing, "write")
+            self.__report_throughput((self.bytes_written + self.bytes_deduped), self.time_spent_writing, "write db")
+            self.__report_throughput(self.bytes_input_written, self.time_spent_writing, "input write")
             self.__report_throughput((self.bytes_written_compressed + self.bytes_deduped), self.time_spent_writing, "write compressed")
         else:
             if nbytes > 0:

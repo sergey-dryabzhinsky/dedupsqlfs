@@ -1424,7 +1424,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
 
             self.getLogger().logCall('write', '->(fh=%i, offset=%i)', fh, offset)
 
-            self.reportHelper.bytes_input_written += += len(buf)
+            self.reportHelper.bytes_input_written += len(buf)
             length = self.__write_block_data_by_offset(fh, offset, buf)
 
             self.getLogger().logCall('write', 'length(writed)=%i', length)

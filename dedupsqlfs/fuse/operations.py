@@ -425,7 +425,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
         @param inode_list: inode_list is a list of (inode, nlookup) tuples. 
         @return: 
         """
-        self.startTimer()
+        self.startTimer("forget")
         try:
             self.getLogger().logCall('forget', '->(inode_list=%r)', inode_list)
             # clear block cache

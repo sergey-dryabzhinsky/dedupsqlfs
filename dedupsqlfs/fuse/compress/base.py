@@ -108,8 +108,8 @@ class BaseCompressTool(object):
     def appendCompression(self, name):
 
         level = None
-        if name and name.find(":") != -1:
-            name, level = name.split(":")
+        if name and name.find("-") != -1:
+            name, level = name.split("-")
 
         if name == "none":
             from dedupsqlfs.compression.none import NoneCompression

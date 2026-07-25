@@ -439,8 +439,8 @@ class DedupFS(object): # {{{1
             manager = self.operations.getManager()
             table = manager.getTable("compression_type")
             for m in methods:
-                if m and m.find(":") != -1:
-                    m, level = m.split(":")
+                if m and m.find("-") != -1:
+                    m, level = m.split("-")
 
     #            print(m)
                 m_id = table.find(m)

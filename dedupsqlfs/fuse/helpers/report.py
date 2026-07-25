@@ -355,7 +355,7 @@ class ReportHelper:
             ratio = (self.bytes_written - self.bytes_written_compressed) * 100.0 / self.bytes_written
         else:
             ratio = 0
-        msg = "Current input bytes written is %s / output written in db %s" % (
+        msg = "Current input bytes written is %s / compressed bytes written in db %s" % (
         format_size(self.bytes_input_written), format_size(self.bytes_written_compressed))
         self.get_logger().info(msg + '.')
 

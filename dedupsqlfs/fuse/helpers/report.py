@@ -30,6 +30,7 @@ class ReportHelper:
         self.bytes_deduped_last = 0
         self.bytes_written = 0
         self.bytes_input_written = 0
+        self.bytes_db_written = 0
         self.bytes_written_compressed = 0
 
         self.compressed_ratio = 0
@@ -208,7 +209,7 @@ class ReportHelper:
                 percentage = 100.0 * timespan / alltime
                 if percentage >= 0.1:
                     if not printed_heading:
-                        self.get_logger().info("Cumulative timings of slowest tables:")
+                        self.get_logger().info("Cumulative timings of slowest operations:")
                         printed_heading = True
                     self.get_logger().info(
                         " - %-*s%s (%.1f%%)", maxdescwidth, description + ':', format_timespan(timespan), percentage)
@@ -355,7 +356,7 @@ class ReportHelper:
         else:
             ratio = 0
         msg = "Current input bytes written is %s / output written in db %s" % (
-        format_size(self.bytes_input_written), format_size(self.bytes_written))
+        format_size(self.bytes_input_written), format_size(self.bytes_written_compressed))
         self.get_logger().info(msg + '.')
 
         msg = "Current stream bytes compression ratio is %.2f%%" % ratio
@@ -370,7 +371,7 @@ class ReportHelper:
     def __report_throughput(self, nbytes=None, nseconds=None, label=None):  # {{{3
         if nbytes == None:
             self.__report_throughput(self.bytes_read, self.time_spent_reading, "read")
-            self.__report_throughput((self.bytes_written + self.bytes_deduped), self.time_spent_writing, "write db")
+            self.__report_throughput((self.bytes_db_written + self.bytes_deduped), self.time_spent_writing, "write db")
             self.__report_throughput(self.bytes_input_written, self.time_spent_writing, "input write")
             self.__report_throughput((self.bytes_written_compressed + self.bytes_deduped), self.time_spent_writing, "write compressed")
         else:

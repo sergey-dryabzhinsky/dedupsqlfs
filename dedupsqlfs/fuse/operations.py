@@ -2375,6 +2375,7 @@ class DedupOperations(llfuse.Operations,TimersOps):  # {{{1
                 inode, block_number, hash_id, result["real_size"]
             )
 
+            self.reportHelper.bytes_db_written += result["real_size"]
             fnd = tableHashCount.find(hash_id)
             if not fnd:
                 tableHashCount.insert(hash_id)

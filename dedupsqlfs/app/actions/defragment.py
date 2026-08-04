@@ -383,6 +383,7 @@ def __collect_owner(app):
     @return: string
     """
 
+    tableHash = app.operations.getTable("hash")
     tableHCnt = app.operations.getTable("hash_count")
     tableHOwn = app.operations.getTable("hash_owner")
 

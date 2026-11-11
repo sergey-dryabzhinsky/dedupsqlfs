@@ -59,5 +59,5 @@ if found:
 
     del importlib
 
-del p1, p2, d, found
+del p1, p2, found
 del curpath, currentdir, build_dir, dirs

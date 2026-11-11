@@ -150,7 +150,7 @@ static PyObject *py_zstd_is_debug_info_enabled(PyObject* self, PyObject *args);
 static PyObject *py_zstd_is_debug_error_enabled(PyObject* self, PyObject *args);
 
 #if PY_MAJOR_VERSION < 3
-PyMODINIT_FUNC initzstd(void);
+PyMODINIT_FUNC init_zstd(void);
 #endif
 
 #if PY_MAJOR_VERSION < 3

@@ -10,7 +10,7 @@ THIS_DIR=`dirname $0`
 
 if [ -z "$PY" ]; then
 	# generic
-	PY=python3
+	PY=python3.9
 fi
 
 PY=`which $PY`

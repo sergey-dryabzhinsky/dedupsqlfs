@@ -749,12 +749,12 @@ struct module_state {
     PyObject *error;
 };
 
-static int init_py_zstd(PyObject *module) {
+static int init_py__zstd(PyObject *module) {
     if (module == NULL) {
         return -1;
     }
 
-    ZstdError = PyErr_NewException("zstd.Error", NULL, NULL);
+    ZstdError = PyErr_NewException("_zstd.Error", NULL, NULL);
     if (ZstdError == NULL) {
         Py_DECREF(module);
         return -1;
@@ -798,7 +798,7 @@ static void myextension_free(void *self) {
 //Slots not supported in Python 3.4
 #if PY_MINOR_VERSION >= 5
 static PyModuleDef_Slot ZstdModuleDefSlots[] = {
-    {Py_mod_exec, (void *)(uintptr_t)init_py_zstd},
+    {Py_mod_exec, (void *)(uintptr_t)init_py__zstd},
     #if PY_MINOR_VERSION >= 12
     {Py_mod_multiple_interpreters, (void *)(uintptr_t)Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
     #endif
@@ -808,7 +808,7 @@ static PyModuleDef_Slot ZstdModuleDefSlots[] = {
 
 static struct PyModuleDef moduledef = {
         PyModuleDef_HEAD_INIT,
-        "zstd",
+        "_zstd",
         NULL,
         sizeof(struct module_state),
         ZstdMethods,
@@ -826,11 +826,11 @@ static struct PyModuleDef moduledef = {
 
 
 
-PyObject *PyInit_zstd(void)
+PyObject *PyInit__zstd(void)
 
 #else
 
-void initzstd(void)
+void init_zstd(void)
 
 #endif
 {

@@ -581,7 +581,7 @@ ld=f.read()
 f.close()
 
 setup(
-    name='zstd',
+    name='_zstd',
     version=PKG_VERSION_STR,
     description="ZSTD Bindings for Python",
     long_description=ld,
